@@ -1,9 +1,8 @@
-var combrep // recursive
-combrep = Fn.new { |n, lst|
+var Combrep = Fn.new { |n, lst|
     if (n == 0 ) return [[]]
     if (lst.count == 0) return []
-    var r = combrep.call(n, lst[1..-1])
-    for (x in combrep.call(n-1, lst)) {
+    var r = Combrep.call(n, lst[1..-1])
+    for (x in Combrep.call(n-1, lst)) {
         var y = x.toList
         y.add(lst[0])
         r.add(y)
@@ -11,5 +10,5 @@ combrep = Fn.new { |n, lst|
     return r
 }
 
-System.print(combrep.call(2, ["iced", "jam", "plain"]))
-System.print(combrep.call(3, (1..10).toList).count)
+System.print(Combrep.call(2, ["iced", "jam", "plain"]))
+System.print(Combrep.call(3, (1..10).toList).count)

@@ -70,5 +70,6 @@ KTHXBYE</lang>
 
 for txt in testtexts:
     text2 = sub(r'<lang\s+\"?([\w\d\s]+)\"?\s?>', r'<syntaxhighlight lang=\1>', txt)
-    text2 = sub(r'<lang\s*>', r'<syntaxhighlight lang=text>', text2)
-    text2 = sub(r'</lang\s*>', r'
+    text2 = sub(r'<lang\s*>', '<syntaxhighlight lang=text>', text2)
+    text2 = sub(r'</lang\s*>', '</syntax'+'highlight>', text2)
+    print(txt, '\n=>\n', text2)

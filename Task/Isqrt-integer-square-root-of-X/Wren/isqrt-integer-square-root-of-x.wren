@@ -1,5 +1,5 @@
-import "/big" for BigInt
-import "/fmt" for Fmt
+import "./big" for BigInt
+import "./fmt" for Fmt
 
 var isqrt = Fn.new { |x|
     if (!(x is BigInt && x >= BigInt.zero)) {

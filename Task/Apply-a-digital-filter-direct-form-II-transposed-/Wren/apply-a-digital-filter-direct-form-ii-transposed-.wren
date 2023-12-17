@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var filter = Fn.new { |a, b, signal|
     var result = List.filled(signal.count, 0)

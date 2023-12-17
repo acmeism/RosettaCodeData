@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 // 'cpx' returns integer index from 0 to 31 corresponding to compass point.
 // Input heading h is in degrees.  Note this index is a zero-based index
@@ -61,6 +61,6 @@ var i = 0
 for (h in r) {
     var index = i%32 + 1  // printable index computed per pseudocode
     var d = degreesToCompassPoint.call(h)
-    System.print("%(Fmt.d(4, index))   %(Fmt.s(-19, d)) %(Fmt.f(7, h, 2))°")
+    Fmt.print("$4d  $-19s $7.2f°", index, d, h)
     i = i + 1
 }

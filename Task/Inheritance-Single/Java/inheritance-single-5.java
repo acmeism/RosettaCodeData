@@ -1,3 +1,0 @@
-public class Collie extends Dog{
-   //functions go here...
-}

@@ -1,21 +1,7 @@
 import "./set" for Set
 import "./seq" for Lst
+import "./math" for Int
 import "./fmt" for Fmt
-
-var totient = Fn.new { |n|
-    var tot = n
-    var i = 2
-    while (i*i <= n) {
-        if (n%i == 0) {
-            while(n%i == 0) n = (n/i).floor
-            tot = tot - (tot/i).floor
-        }
-        if (i == 2) i = 1
-        i = i + 2
-    }
-    if (n > 1) tot = tot - (tot/n).floor
-    return tot
-}
 
 var pps = Set.new()
 
@@ -52,21 +38,21 @@ var achilles = achillesSet.toList
 achilles.sort()
 
 System.print("First 50 Achilles numbers:")
-for (chunk in Lst.chunks(achilles[0..49], 10)) Fmt.print("$4d", chunk)
+Fmt.tprint("$4d", achilles.take(50), 10)
 
 System.print("\nFirst 30 strong Achilles numbers:")
 var strongAchilles = []
 var count = 0
 var n = 0
 while (count < 30) {
-    var tot = totient.call(achilles[n])
+    var tot = Int.totient(achilles[n])
     if (achillesSet.contains(tot)) {
         strongAchilles.add(achilles[n])
         count = count + 1
     }
     n = n + 1
 }
-for (chunk in Lst.chunks(strongAchilles, 10)) Fmt.print("$5d", chunk)
+Fmt.tprint("$5d", strongAchilles, 10)
 
 System.print("\nNumber of Achilles numbers with:")
 for (d in 2..maxDigits) {

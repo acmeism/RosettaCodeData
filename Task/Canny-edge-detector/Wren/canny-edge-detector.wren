@@ -8,7 +8,7 @@ var MaxBrightness = 255
 class Canny {
     construct new(inFile, outFile) {
         Window.title = "Canny edge detection"
-        var image1 = ImageData.loadFromFile(inFile)
+        var image1 = ImageData.load(inFile)
         var w = image1.width
         var h = image1.height
         Window.resize(w * 2 + 20, h)

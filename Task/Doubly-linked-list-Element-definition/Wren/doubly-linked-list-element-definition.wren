@@ -1,4 +1,4 @@
-import "/llist" for DNode
+import "./llist" for DNode
 
 var dn1 = DNode.new(1)
 var dn2 = DNode.new(2)

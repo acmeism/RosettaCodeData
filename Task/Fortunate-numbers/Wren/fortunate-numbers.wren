@@ -1,8 +1,7 @@
-import "/math" for Int
-import "/big" for BigInt
-import "/sort" for Sort
-import "/seq" for Lst
-import "/fmt" for Fmt
+import "./math" for Int
+import "./big" for BigInt
+import "./seq" for Lst
+import "./fmt" for Fmt
 
 var primes = Int.primeSieve(379)
 var primorial = BigInt.one
@@ -18,7 +17,6 @@ for (prime in primes) {
         j = j + 2
     }
 }
-fortunates = Lst.distinct(fortunates)
-Sort.quick(fortunates)
+fortunates = Lst.distinct(fortunates).sort()
 System.print("After sorting, the first 50 distinct fortunate numbers are:")
-for (chunk in Lst.chunks(fortunates[0..49], 10)) Fmt.print("$3d", chunk)
+Fmt.tprint("$3d", fortunates[0..49], 10)

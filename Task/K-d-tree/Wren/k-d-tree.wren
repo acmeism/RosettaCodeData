@@ -1,7 +1,7 @@
-import "/dynamic" for Tuple
-import "/math" for Nums
-import "/seq" for Lst
-import "/sort" for Sort
+import "./dynamic" for Tuple
+import "./math" for Nums
+import "./seq" for Lst
+import "./sort" for Sort
 import "random" for Random
 
 // A Point is represented by a 2 element List of Nums

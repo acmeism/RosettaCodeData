@@ -1,4 +1,4 @@
-import "/pattern" for Pattern
+import "./pattern" for Pattern
 
 /* if string is empty, returns zero */
 var toDoubleOrZero = Fn.new { |s|

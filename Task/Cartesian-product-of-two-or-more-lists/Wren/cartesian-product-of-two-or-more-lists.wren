@@ -1,4 +1,4 @@
-import "/seq" for Lst
+import "./seq" for Lst
 
 var prod2 = Fn.new { |l1, l2|
     var res = []

@@ -8,15 +8,15 @@ var jacobsthalLucas = Fn.new { |n| (BigInt.one << n) + ((n%2 == 0) ? 1 : -1) }
 
 System.print("First 30 Jacobsthal numbers:")
 var js = (0..29).map { |i| jacobsthal.call(i) }.toList
-for (chunk in Lst.chunks(js, 5)) Fmt.print("$,12i", chunk)
+Fmt.tprint("$,12i", js, 5)
 
 System.print("\nFirst 30 Jacobsthal-Lucas numbers:")
 var jsl = (0..29).map { |i| jacobsthalLucas.call(i) }.toList
-for (chunk in Lst.chunks(jsl, 5)) Fmt.print("$,12i", chunk)
+Fmt.tprint("$,12i", jsl, 5)
 
 System.print("\nFirst 20 Jacobsthal oblong numbers:")
 var oblongs = (0..19).map { |i| js[i] * js[i+1] }.toList
-for (chunk in Lst.chunks(oblongs, 5)) Fmt.print("$,14i", chunk)
+Fmt.tprint("$,14i", oblongs, 5)
 
 var primes = js.where { |j| j.isProbablePrime(10) }.toList
 var count = primes.count

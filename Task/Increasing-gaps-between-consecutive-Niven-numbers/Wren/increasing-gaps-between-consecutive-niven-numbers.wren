@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var newSum // recursive
 newSum = Fn.new {
@@ -40,7 +40,7 @@ var n = h.call()
 while (n <= 1e9) {
     var g = n - pn
     if (g > pg) {
-        System.print("%(Fmt.d(3, g))   %(Fmt.dc(13, i))   %(Fmt.dc(14, pn))")
+        Fmt.print("$3d   $,13d   $,14d", g, i, pn)
         pg = g
     }
     pn = n

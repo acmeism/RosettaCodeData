@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var fibN = Fn.new { |initial, numTerms|
     var n = initial.count

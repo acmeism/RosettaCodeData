@@ -1,5 +1,4 @@
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public final class FunctionalCoverageTree {
@@ -7,12 +6,12 @@ public final class FunctionalCoverageTree {
 	public static void main(String[] aArgs) {		
 		FCNode cleaning = new FCNode("Cleaning", 1, 0.0);
 		
-		List<FCNode> houses = Arrays.asList(
+		List<FCNode> houses = List.of(
 			new FCNode("House_1", 40, 0.0),
 			new FCNode("House_2", 60, 0.0) );		
 		cleaning.addChildren(houses);
 		
-		List<FCNode> house_1 = Arrays.asList(
+		List<FCNode> house_1 = List.of(
 			new FCNode("Bedrooms", 1, 0.25),
 			new FCNode("Bathrooms", 1, 0.0),
 			new FCNode("Attic", 1, 0.75),
@@ -23,33 +22,33 @@ public final class FunctionalCoverageTree {
 			new FCNode("Garden",1, 0.8) );		
 		houses.get(0).addChildren(house_1);
 		
-		List<FCNode> bathrooms_house_1 = Arrays.asList(
+		List<FCNode> bathrooms_house_1 = List.of(
 			new FCNode("Bathroom_1", 1, 0.5),
 			new FCNode("Bathroom_2", 1, 0.0),
 			new FCNode("Outside_lavatory", 1, 1.0) );
 		house_1.get(1).addChildren(bathrooms_house_1);
 		
-		List<FCNode> living_rooms_house_1 = Arrays.asList(
+		List<FCNode> living_rooms_house_1 = List.of(
 			new FCNode("lounge", 1, 0.0),
 			new FCNode("Dining_room", 1, 0.0),
 			new FCNode("Conservatory", 1, 0.0),
 			new FCNode("Playroom", 1, 1.0) );
 		house_1.get(4).addChildren(living_rooms_house_1);
 		
-		List<FCNode> house_2 = Arrays.asList(
+		List<FCNode> house_2 = List.of(
 			new FCNode("Upstairs", 1, 0.15),
 			new FCNode("Ground_floor", 1, 0.316667),
 			new FCNode("Basement", 1, 0.916667));
 		houses.get(1).addChildren(house_2);
 		
-		List<FCNode> upstairs = Arrays.asList(
+		List<FCNode> upstairs = List.of(
 			new FCNode("Bedrooms", 1, 0.0),
 			new FCNode("Bathroom", 1, 0.0),
 			new FCNode("Toilet", 1, 0.0),
 			new FCNode("Attics", 1, 0.6) );
 		house_2.get(0).addChildren(upstairs);
 		
-		List<FCNode> ground_floor = Arrays.asList(
+		List<FCNode> ground_floor = List.of(
 			new FCNode("Kitchen", 1, 0.0),
 			new FCNode("Living_rooms", 1, 0.0),
 			new FCNode("Wet_room_&_toilet", 1, 0.0),
@@ -58,20 +57,20 @@ public final class FunctionalCoverageTree {
 			new FCNode("Hot_tub_suite", 1, 1.0) );
 		house_2.get(1).addChildren(ground_floor);
 		
-		List<FCNode> basement = Arrays.asList(
+		List<FCNode> basement = List.of(
 			new FCNode("Cellars", 1, 1.0),
 			new FCNode("Wine_cellar", 1, 1.0),
 			new FCNode("Cinema", 1, 0.75) );
 		house_2.get(2).addChildren(basement);
 		
-		List<FCNode> bedrooms = Arrays.asList(
+		List<FCNode> bedrooms = List.of(
 			new FCNode("Suite_1", 1, 0.0),
 			new FCNode("Suite_2", 1, 0.0),
 			new FCNode("Bedroom_3",1, 0.0),
 			new FCNode("Bedroom_4",1, 0.0) );
 		upstairs.get(0).addChildren(bedrooms);
 		
-		List<FCNode> living_rooms_house_2 = Arrays.asList(
+		List<FCNode> living_rooms_house_2 = List.of(
 			new FCNode("lounge", 1, 0.0),
 			new FCNode("Dining_room", 1, 0.0),
 			new FCNode("Conservatory", 1, 0.0),

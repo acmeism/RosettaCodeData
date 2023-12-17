@@ -1,34 +1,17 @@
 const std = @import("std");
 
-const debug = std.debug;
 const math = std.math;
 
 test "infinity" {
-    const infinite_f16 = math.inf(f16);
-    const infinite_f32 = math.inf(f32);
-    const infinite_f64 = math.inf(f64);
-    const infinite_f128 = math.inf(f128);
+    const expect = std.testing.expect;
 
-    // Any other types besides these four floating types are not implemented.
+    const float_types = [_]type{ f16, f32, f64, f80, f128, c_longdouble };
+    inline for (float_types) |T| {
+        const infinite_value: T = comptime std.math.inf(T);
 
-    debug.assert(math.isInf(infinite_f16));
-    debug.assert(math.isInf(infinite_f32));
-    debug.assert(math.isInf(infinite_f64));
-    debug.assert(math.isInf(infinite_f128));
-
-    debug.assert(math.isPositiveInf(infinite_f16));
-    debug.assert(math.isPositiveInf(infinite_f32));
-    debug.assert(math.isPositiveInf(infinite_f64));
-    debug.assert(math.isPositiveInf(infinite_f128));
-
-    debug.assert(math.isNegativeInf(-infinite_f16));
-    debug.assert(math.isNegativeInf(-infinite_f32));
-    debug.assert(math.isNegativeInf(-infinite_f64));
-    debug.assert(math.isNegativeInf(-infinite_f128));
-
-    debug.assert(!math.isFinite(infinite_f16));
-    debug.assert(!math.isFinite(infinite_f32));
-    debug.assert(!math.isFinite(infinite_f64));
-    // isFinite(f128) is not implemented.
-    //debug.assert(!math.isFinite(infinite_f128));
+        try expect(math.isInf(infinite_value));
+        try expect(math.isPositiveInf(infinite_value));
+        try expect(!math.isNegativeInf(infinite_value));
+        try expect(!math.isFinite(infinite_value));
+    }
 }

@@ -1,5 +1,5 @@
-import "/complex" for Complex, CMatrix
-import "/fmt" for Fmt
+import "./complex" for Complex, CMatrix
+import "./fmt" for Fmt
 
 var cm1 = CMatrix.new(
     [

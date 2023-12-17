@@ -1,8 +1,7 @@
   -> $str {
     my $i = 0;
     print "\n{$str.raku} (length: {$str.chars}), has ";
-    my %m;
-    %m{$_}.push: ++$i for $str.comb;
+    my %m = $str.comb.Bag;
     if any(%m.values) > 1 {
         say "duplicated characters:";
         say "'{.key}' ({.key.uninames}; hex ordinal: {(.key.ords).fmt: "0x%X"})" ~

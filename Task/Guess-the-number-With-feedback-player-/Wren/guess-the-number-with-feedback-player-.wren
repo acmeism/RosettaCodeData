@@ -1,5 +1,5 @@
 import "io" for Stdin, Stdout
-import "/str" for Char
+import "./str" for Char
 
 var hle
 var lowest = 1

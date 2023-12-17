@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/str" for Str
+import "./fmt" for Fmt
+import "./str" for Str
 
 var table =
     "Add ALTer  BAckup Bottom  CAppend Change SCHANGE  CInsert CLAst COMPress COpy " +

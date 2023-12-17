@@ -46,10 +46,10 @@ bool is_probably_prime(const big_int& n) {
     return mpz_probab_prime_p(n.get_mpz_t(), 25) != 0;
 }
 
-std::string abbreviate(const std::string& str, size_t n) {
+std::string abbreviate(std::string str, size_t max_digits) {
     size_t len = str.size();
-    if (len > n)
-        return str.substr(0, n / 2) + "..." + str.substr(len - n / 2);
+    if (len > max_digits)
+        str.replace(max_digits / 2, len - max_digits, "...");
     return str;
 }
 

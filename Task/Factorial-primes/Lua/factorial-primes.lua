@@ -10,7 +10,7 @@ do -- find some factorial primes - primes that are f - 1 or f + 1
             local rootP = math.floor( math.sqrt( p ) )
             while i <= rootP and prime do
                 prime = p % i ~= 0
-                i     = i + 1
+                i     = i + 2
             end
             return prime
         end

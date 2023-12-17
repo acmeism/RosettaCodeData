@@ -1,4 +1,4 @@
-/* cullen_and_woodall_numbers2.wren */
+/* Cullen_and_woodall_numbers_2.wren */
 
 import "./gmp" for Mpz
 

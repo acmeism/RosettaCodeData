@@ -1,5 +1,5 @@
 import "random" for Random
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var rand = Random.new()
 
@@ -40,8 +40,8 @@ var doTrials = Fn.new{ |trials, np, strategy|
                 }
             }
             if (!nextPrisoner) {
-               nextTrial = true
-               break
+                nextTrial = true
+                break
             }
         }
         if (!nextTrial) pardoned = pardoned + 1

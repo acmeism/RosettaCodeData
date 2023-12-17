@@ -1,5 +1,5 @@
-import "/dynamic" for Struct
-import "/fmt" for Fmt
+import "./dynamic" for Struct
+import "./fmt" for Fmt
 
 var gmooh = """
 .........00000.........

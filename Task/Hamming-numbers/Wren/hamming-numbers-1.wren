@@ -1,4 +1,4 @@
-import "/big" for BigInt, BigInts
+import "./big" for BigInt, BigInts
 
 var primes = [2, 3, 5].map { |p| BigInt.new(p) }.toList
 

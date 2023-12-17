@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var d2d = Fn.new { |d| d % 360 }
 var g2g = Fn.new { |g| g % 400 }

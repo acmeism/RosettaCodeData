@@ -1,5 +1,5 @@
-import "/fmt" for Conv
-import "/ioutil" for Input
+import "./fmt" for Conv
+import "./ioutil" for Input
 import "random" for Random
 
 var total = 0

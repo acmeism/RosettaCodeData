@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/math" for Math
+import "./fmt" for Fmt
+import "./math" for Math
 
 var ld10 = Math.ln2 / Math.ln10
 

@@ -1,6 +1,6 @@
 import "random" for Random
-import "/math" for Int
-import "/fmt" for Fmt
+import "./math" for Int
+import "./fmt" for Fmt
 
 var genFactBaseNums = Fn.new { |size, countOnly|
     var results = []

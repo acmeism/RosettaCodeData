@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var jacobi = Fn.new { |a, n|
     if (!n.isInteger || n <= 0 || n%2 == 0) {
@@ -26,8 +26,8 @@ System.print("n/a   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15")
 System.print("---------------------------------------------------------------")
 var n = 1
 while (n < 31) {
-    System.write(Fmt.d(3, n))
-    for (a in 1..15) System.write(Fmt.d(4, jacobi.call(a, n)))
+    Fmt.write("$3d", n)
+    for (a in 1..15) Fmt.write("$4d", jacobi.call(a, n))
     System.print()
     n = n + 2
 }

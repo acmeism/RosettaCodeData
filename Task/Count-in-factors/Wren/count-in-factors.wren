@@ -1,4 +1,4 @@
-import "/math" for Int
+import "./math" for Int
 
 for (r in [1..9, 2144..2154, 9987..9999]) {
     for (i in r) {

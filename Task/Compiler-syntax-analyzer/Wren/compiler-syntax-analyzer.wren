@@ -1,6 +1,6 @@
-import "/dynamic" for Enum, Struct, Tuple
-import "/fmt" for Fmt
-import "/ioutil" for FileUtil
+import "./dynamic" for Enum, Struct, Tuple
+import "./fmt" for Fmt
+import "./ioutil" for FileUtil
 
 var tokens = [
     "EOI",

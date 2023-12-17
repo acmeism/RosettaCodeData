@@ -1,4 +1,4 @@
-/* fork.wren */
+/* Fork.wren */
 
 class C {
     foreign static fork()

@@ -1,7 +1,7 @@
 fn pfac_sum(i int) int {
     mut sum := 0
-    for p := 1;p <= i/2;p++{
-        if i%p == 0 {
+    for p := 1; p <= i / 2; p++{
+        if i % p == 0 {
             sum += p
         }
     }

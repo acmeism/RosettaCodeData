@@ -24,7 +24,7 @@ uint64_t multiply_modulus(uint64_t a, uint64_t b, const uint64_t& modulus) {
         if ( a % 2 == 1 ) {
         	result = ( result + b ) % modulus;
         };
-        b = ( b * 2 ) % modulus;
+        b = ( b << 1 ) % modulus;
         a >>= 1;
     }
     return result;

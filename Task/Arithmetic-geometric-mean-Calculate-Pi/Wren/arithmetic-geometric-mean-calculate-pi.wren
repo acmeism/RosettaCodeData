@@ -1,4 +1,4 @@
-import "/big" for BigRat
+import "./big" for BigRat
 
 var digits = 500
 var an = BigRat.one

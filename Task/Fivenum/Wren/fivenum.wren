@@ -1,4 +1,4 @@
-import "/sort" for Sort
+import "./sort" for Sort
 
 var fivenum = Fn.new { |a|
     Sort.quick(a)

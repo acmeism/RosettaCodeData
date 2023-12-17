@@ -1,6 +1,6 @@
-import "/date" for Date
-import "/seq" for Lst
-import "/fmt" for Fmt
+import "./date" for Date
+import "./seq" for Lst
+import "./fmt" for Fmt
 
 class FrenchRCDate {
     /* uses the 'continuous method' for years after 1805 */

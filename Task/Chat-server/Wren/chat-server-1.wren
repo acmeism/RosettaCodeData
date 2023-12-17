@@ -1,4 +1,4 @@
-/* chat_server.wren */
+/* Chat_server.wren */
 
 class Clients {
     foreign static max

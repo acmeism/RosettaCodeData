@@ -1,4 +1,4 @@
-/* fermat_numbers_gmp.wren */
+/* fermat_numbers_2.wren */
 
 import "./gmp" for Mpz
 import "./ecm" for Ecm

@@ -6,7 +6,7 @@
 
 std::string join(const std::string& delimiter, const std::vector<std::string>& list) {
 	return list.empty() ? "" : std::accumulate(++list.begin(), list.end(), list[0],
-											   [delimiter](auto& a, auto& b) { return a + delimiter + b; });
+								   [delimiter](auto& a, auto& b) { return a + delimiter + b; });
 }
 
 std::vector<std::string> amb(std::function<bool(std::string&, std::string&)> func,

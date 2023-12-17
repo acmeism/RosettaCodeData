@@ -1,4 +1,4 @@
-import std.algorithm; //.comparison for min and max
+import std.algorithm;
 import std.stdio;
 
 immutable EPS = 0.001;
@@ -79,7 +79,11 @@ void test(double x1, double y1, double x2, double y2, double x3, double y3, doub
 
 void main() {
     test(1.5, 2.4, 5.1, -3.1, -3.8, 1.2, 0, 0);
+	writeln;
+	
     test(1.5, 2.4, 5.1, -3.1, -3.8, 1.2, 0, 1);
+	writeln;
+	
     test(1.5, 2.4, 5.1, -3.1, -3.8, 1.2, 3, 1);
     writeln;
 

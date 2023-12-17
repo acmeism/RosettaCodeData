@@ -1,0 +1,161 @@
+begin enum 123
+  _lf
+  _rt
+  _dn
+  _up
+  _new
+  _end
+end enum
+str63 bd
+colorref color(11)
+byte zs
+
+void local fn initialize
+  subclass window 1, @"2048",(0,0,438,438)
+  fn WindowSetBackgroundColor( 1, fn ColorBlack )
+  color(0)  = fn ColorDarkGray
+  color(1)  = fn ColorGray
+  color(2)  = fn ColorLightGray
+  color(3)  = fn ColorBlue
+  color(4)  = fn ColorBrown
+  color(5)  = fn ColorCyan
+  color(6)  = fn ColorGreen
+  color(7)  = fn ColorMagenta
+  color(8)  = fn ColorOrange
+  color(9)  = fn ColorPurple
+  color(10) = fn ColorYellow
+  color(11) = fn ColorRed
+end fn
+
+void local  fn drawBoard
+  int x, y,r = 1, add
+  cls
+  for y = 320 to 20 step -100
+    for x = 20 to 320 step 100
+      rect fill (x,y,98,98),color( bd[r] )
+      select bd[r]
+        case <  4 : add = 40
+        case <  7 : add = 30
+        case < 10 : add = 20
+        case else : add =  6
+      end select
+      if bd[r] then print %(x+add, y+25)2^bd[r]
+      r++
+    next
+  next
+end fn
+
+local fn finish( won as bool )
+  CFStringRef s = @"GAME OVER"
+  CGRect r      = fn windowContentRect( 1 )
+  r.origin.y   += r.size.height - 20
+  r.size.height = 100
+  window 2,,r,NSwindowStyleMaskBorderless
+  if won
+    fn windowSetBackgroundColor( 2, color(11) )
+    s = @"CONGRATULATIONS—YOU DID IT!!"
+    text,24,fn ColorBlack,,NSTextAlignmentCenter
+  else
+    fn windowSetBackgroundColor( 2, fn ColorBlack )
+    text,24,fn ColorWhite,,NSTextAlignmentCenter
+  end if
+  print s
+  button _new,,,@"New Game", (229,20,100,32)
+  button _end,,,@"Quit",     (109,20,100,32)
+end fn
+
+void local  fn newGame
+  int r
+  text @"Arial bold", 36, fn ColorBlack, fn ColorClear
+  bd = chr$(0)
+  for r = 1 to 4
+    bd += bd
+  next
+  bd[rnd(16)] ++
+  do
+    r = rnd(16)
+  until bd[r] == 0
+  bd[r]++
+  zs = 14
+  fn drawBoard
+end fn
+
+local fn play( st as short, rd as short, cd as short )
+  short a, b, c, t, moved = 0
+
+  for a = st to st + rd * 3 step rd
+    //  SHIFT
+    t = a
+    for b = a to a + cd * 3 step cd
+      if bd[b]
+        if t <> b then swap bd[t], bd[b] : moved ++
+        t += cd
+      end if
+    next
+    //  MERGE
+    for b = a to a + cd * 2 step cd
+      if bd[b] > 0 && bd[b] == bd[b+cd]
+        bd[b]++ : c = b + cd
+        //  FILL IN
+        while c <> a+cd*3
+          bd[c] = bd[c+cd] : c += cd
+        wend
+        bd[c] = 0
+        //  CHECK FOR WIN
+        if bd[b] == 11 then fn drawBoard : fn finish( yes ) : exit fn
+        zs ++ : moved ++
+      end if
+    next
+  next
+
+  fn drawBoard
+  if moved == 0 then exit fn
+
+  //  GROW
+  b = 0 : c = rnd(zs)
+  while c
+    b ++
+    if bd[b] == 0 then c--
+  wend
+  if rnd(10) - 1 then bd[b]++ else bd[b] = 2
+  zs--
+  timerbegin 0.25
+    fn drawBoard
+  timerend
+  if zs then exit fn
+
+  //  IS GAME OVER?
+  for a = 1 to 12
+    if bd[a] == bd[a+4] then exit fn
+  next
+  for a = 1 to 13 step 4
+    if bd[a] == bd[a+1] || bd[a+1] == bd[a+2] || bd[a+2] == bd[a+3]¬
+      then exit fn
+    next
+
+    fn finish( no )
+end fn
+
+local fn doDialog(ev as long,tag as long, wnd as long)
+  select ev
+    case _windowKeyDown : if window() == 2 then exit fn
+      select fn EventKeyCode
+        case _up  : fn play(13, 1, -4)
+        case _dn  : fn play( 1, 1,  4)
+        case _lf  : fn play( 1, 4,  1)
+        case _rt  : fn play( 4, 4, -1)
+        case else : exit fn
+      end select
+      DialogEventSetBool(yes)
+    case _btnClick : window close 2
+      if tag == _end then end
+      fn newGame
+    case _windowWillClose : if wnd == 1 then end
+  end select
+end fn
+
+fn initialize
+fn newGame
+on dialog fn doDialog
+
+handleevents

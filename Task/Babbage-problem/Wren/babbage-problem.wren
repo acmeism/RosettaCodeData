@@ -4,7 +4,7 @@
     However, we can skip numbers which don't end in 4 or 6 as their squares can't end in 6.
 */
 
-import "/fmt" for Fmt                // this enables us to format numbers with thousand separators
+import "./fmt" for Fmt                // this enables us to format numbers with thousand separators
 var start = 269696.sqrt.ceil         // get the next integer higher than (or equal to) the square root
 start = (start/2).ceil * 2           // if it's odd, use the next even integer
 var i = start                        // assign it to a variable 'i' for use in the following loop

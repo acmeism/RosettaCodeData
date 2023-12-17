@@ -76,7 +76,7 @@ class ImageConvolution {
     }
 
     getArrayDatasFromImage(filename) {
-        var inputImage = ImageData.loadFromFile(filename)
+        var inputImage = ImageData.load(filename)
         inputImage.draw(0, 0)
         Canvas.print(filename, _width * 1/6,  _height * 5/6, Color.white)
         var width  = inputImage.width

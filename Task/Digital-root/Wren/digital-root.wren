@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var sumDigits = Fn.new { |n|
     var sum = 0

@@ -1,4 +1,4 @@
-/* distributed_programming_client.wren */
+/* Distributed_programming_client.wren */
 
 import "./fmt" for Fmt
 

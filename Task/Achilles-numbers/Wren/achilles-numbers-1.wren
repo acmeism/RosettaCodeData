@@ -6,21 +6,6 @@ var maxDigits = 8
 var limit = 10.pow(maxDigits)
 var c = Int.primeSieve(limit-1, false)
 
-var totient = Fn.new { |n|
-    var tot = n
-    var i = 2
-    while (i*i <= n) {
-        if (n%i == 0) {
-            while(n%i == 0) n = (n/i).floor
-            tot = tot - (tot/i).floor
-        }
-        if (i == 2) i = 1
-        i = i + 2
-    }
-    if (n > 1) tot = tot - (tot/n).floor
-    return tot
-}
-
 var isPerfectPower = Fn.new { |n|
     if (n == 1) return true
     var x = 2
@@ -63,7 +48,7 @@ var isAchilles = Fn.new { |n| c[n] && isPowerful.call(n) && !isPerfectPower.call
 
 var isStrongAchilles = Fn.new { |n|
     if (!isAchilles.call(n)) return false
-    var tot = totient.call(n)
+    var tot = Int.totient(n)
     return isAchilles.call(tot)
 }
 
@@ -78,7 +63,7 @@ while (count < 50) {
     }
     n = n + 1
 }
-for (chunk in Lst.chunks(achilles, 10)) Fmt.print("$4d", chunk)
+Fmt.tprint("$4d", achilles, 10)
 
 System.print("\nFirst 30 strong Achilles numbers:")
 var strongAchilles = []
@@ -91,7 +76,7 @@ while (count < 30) {
     }
     n = n + 1
 }
-for (chunk in Lst.chunks(strongAchilles, 10)) Fmt.print("$5d", chunk)
+Fmt.tprint("$5d", strongAchilles, 10)
 
 System.print("\nNumber of Achilles numbers with:")
 var pow = 10

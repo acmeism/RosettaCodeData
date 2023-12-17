@@ -1,4 +1,4 @@
-import "/fmt" for Conv
+import "./fmt" for Conv
 
 var i = 0
 while (true) {

@@ -1,4 +1,4 @@
-import "/math" for Int
+import "./math" for Int
 
 var LIMIT = 999999
 var primes = Int.primeSieve(LIMIT)

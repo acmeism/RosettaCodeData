@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var timeToDegs = Fn.new { |time|
     var t = time.split(":")
@@ -15,7 +15,7 @@ var degsToTime = Fn.new { |d|
     var m = s % 3600
     s = m % 60
     m = (m / 60).floor
-    return "%(Fmt.d(2, h)):%(Fmt.d(2, m)):%(Fmt.d(2, s))"
+    return Fmt.swrite("$2d:$2d:$2d", h, m, s)
 }
 
 var meanAngle = Fn.new { |angles|

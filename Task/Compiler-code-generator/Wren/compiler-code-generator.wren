@@ -1,7 +1,7 @@
-import "/dynamic" for Enum, Struct, Tuple
-import "/crypto" for Bytes
-import "/fmt" for Fmt
-import "/ioutil" for FileUtil
+import "./dynamic" for Enum, Struct, Tuple
+import "./crypto" for Bytes
+import "./fmt" for Fmt
+import "./ioutil" for FileUtil
 
 var nodes = [
     "Ident",

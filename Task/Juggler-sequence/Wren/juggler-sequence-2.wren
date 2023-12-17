@@ -1,4 +1,4 @@
-/* juggler-gmp.wren */
+/* Juggler_sequence_2.wren */
 
 import "./gmp" for Mpz
 import "./fmt" for Fmt

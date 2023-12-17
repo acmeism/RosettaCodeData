@@ -1,4 +1,4 @@
-/* get_system_command_output.go */
+/* Get_system_command_output.go */
 package main
 
 import (
@@ -29,7 +29,7 @@ func getCommandOutput(vm *wren.VM, parameters []any) (any, error) {
 
 func main() {
     vm := wren.NewVM()
-    fileName := "get_system_command_output.wren"
+    fileName := "Get_system_command_output.wren"
     methodMap := wren.MethodMap{"static output(_,_)": getCommandOutput}
     classMap := wren.ClassMap{"Command": wren.NewClass(nil, nil, methodMap)}
     module := wren.NewModule(classMap)

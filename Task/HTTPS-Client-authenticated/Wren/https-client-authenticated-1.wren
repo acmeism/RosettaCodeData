@@ -1,4 +1,4 @@
-/* https_client-authenticated.wren */
+/* HTTPS_Client-authenticated.wren */
 
 var CURLOPT_URL       = 10002
 var CURLOPT_SSLCERT   = 10025

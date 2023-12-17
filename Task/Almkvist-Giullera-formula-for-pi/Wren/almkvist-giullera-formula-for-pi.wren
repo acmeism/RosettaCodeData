@@ -1,5 +1,5 @@
-import "/big" for BigInt, BigRat
-import "/fmt" for Fmt
+import "./big" for BigInt, BigRat
+import "./fmt" for Fmt
 
 var factorial = Fn.new { |n|
     if (n < 2) return BigInt.one

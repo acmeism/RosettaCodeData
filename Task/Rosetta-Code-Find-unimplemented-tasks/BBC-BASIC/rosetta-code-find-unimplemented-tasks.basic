@@ -1,0 +1,81 @@
+      SYS "LoadLibrary", "URLMON.DLL" TO U%
+      IF U% == 0 ERROR 100, "DLL not available in your OS"
+      SYS "GetProcAddress", U%, "URLDownloadToFileA" TO U%
+
+      Q$=CHR$34             : REM The quote
+      BlkSize%=256 * 1024   : REM 256k must be enough
+      DIM Blk% BlkSize% - 1 : REM Reserve memory block to load data into
+
+      PROCFetchData("Programming_Tasks")
+
+      REM Count number of tasks and declare and populate Task$() array.
+      P%=Blk%
+      REPEAT
+        I%=INSTR($$P%, "title")
+        IF I% Tasks%+=1 : P%+=I%
+      UNTIL I% == 0
+      DIM Task$(Tasks%-1)
+      P%=Blk%
+      FOR I%=0 TO Tasks% - 1
+        Task$(I%)=FNValue(P%, "title")
+      NEXT
+
+      PROCShowUnimplemented("BBC_BASIC")
+      PROCShowUnimplemented("C++")
+      END
+
+      REM -------------------------------------------------------------------------
+      REM Compare each task title against loaded language data in memory.
+      DEF PROCShowUnimplemented(language$)
+      LOCAL i%, j%, mem%, n%
+
+      PROCFetchData(language$)
+      mem%=Blk%
+      PRINT "Unimplemented tasks for the '" language$ "' programming language:"
+      FOR i%=0 TO Tasks% - 1
+        j%=INSTR($$mem%, Task$(i%))
+        IF j% THEN
+          mem%+=j%
+        ELSE
+          n%+=1
+          PRINT " -" Task$(i%)
+        ENDIF
+      NEXT
+      PRINT "Total is: ";n% '
+      ENDPROC
+
+      REM -------------------------------------------------------------------------
+      REM Stitch the pages for this category together in the memory block.
+      DEF PROCFetchData(category$)
+      LOCAL mem%, continue$, e%, f%, tempfile$, url$
+
+      tempfile$=@tmp$ + "result.json"
+      mem%=Blk%
+      REPEAT
+        url$="http://www.rosettacode.org/w/api.php?" +\
+        \    "action=query&list=categorymembers&cmtitle=Category:" + category$ +\
+        \    "&cmlimit=500&format=json&cmcontinue=" + continue$
+
+        SYS U%, 0, url$, tempfile$, 0, 0 TO e%      : REM Get one page to a file
+        IF e% ERROR 100, "Can't get data from Rosetta API"
+
+        f%=OPENINtempfile$ : e%=EXT#f% : CLOSE#f%   : REM Get file size
+        IF mem% - Blk% + e% > BlkSize% ERROR 100, "Insufficient memory to load data"
+        OSCLI "LOAD " + tempfile$ + " " + STR$~mem% : REM Append to previous
+        e%=mem% + e%
+        ?e%=0                                       : REM Terminating 0x00
+        continue$=FNValue(mem%, "cmcontinue")       : REM Loaded page contains this name?
+        mem%=e%                                     : REM Advance memory pointer
+      UNTIL continue$ == ""
+      ENDPROC
+
+      REM -------------------------------------------------------------------------
+      REM Retrieve value for a JSON name from address p% and advance p% afterwards.
+      DEF FNValue(RETURN p%, name$)
+      LOCAL s%
+
+      name$=Q$ + name$ + Q$ + ":"
+      s%=INSTR($$p%, name$)
+      IF s% == 0 THEN =""
+      p%+=s% + LENname$
+      =LEFT$($$p%, INSTR($$p%, Q$) - 1)

@@ -1,6 +1,6 @@
-/* hailstone2.wren */
+/* Executable_library_2.wren */
 
-import "/hailstone" for Hailstone
+import "./Executable_library" for Hailstone
 
 var freq = {}
 for (i in 1...100000) {

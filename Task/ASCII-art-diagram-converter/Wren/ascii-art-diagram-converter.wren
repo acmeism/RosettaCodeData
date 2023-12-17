@@ -1,6 +1,6 @@
-import "/dynamic" for Tuple
-import "/fmt" for Fmt
-import "/big" for BigInt
+import "./dynamic" for Tuple
+import "./fmt" for Fmt
+import "./big" for BigInt
 
 var Result = Tuple.create("Result", ["name", "size", "start", "end"])
 

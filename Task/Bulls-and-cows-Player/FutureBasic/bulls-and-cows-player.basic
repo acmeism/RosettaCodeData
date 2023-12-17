@@ -1,0 +1,135 @@
+cgRect wndrect
+str15  guess
+short  count, x, y = 60, stock, state = 1
+
+begin enum 3
+  _bullLabel
+  _cowLabel
+  _horzLine
+  _vertLine
+  _newGameBtn
+  _help
+  _alert = 101
+end enum
+
+void local fn showGuess
+  print %(20, y)chr$(guess[2]);
+  print %(59, y)chr$(guess[3]);
+  print %(98, y)chr$(guess[4]);
+  print %(137,y)chr$(guess[5]);
+  x = 210
+end fn
+
+void local fn growWindow
+  CGRect r = fn WindowContentRect( 1 )
+  r.size.height += 32
+  r.origin.y    -= 32
+  window 1,,r
+end fn
+
+void local fn init  //Create array of possible 4-digit numbers
+  uint8 d1,d2,d3,d4
+  for d1 = 1 to 9
+    for d2 = 1 to 9
+      if d2 == d1 then continue
+      for d3 = 1 to 9
+        if d3 == d2 || d3 == d1 then continue
+        for d4 = 1 to 9
+          if d4 == d1 || d4 == d2 || d4 == d3  then continue
+          mda_add(0) = @(d1*1000 + d2*100 + d3*10 + d4)
+        next
+      next
+    next
+  next
+end fn
+
+void local fn NewGame
+  window 1,, wndrect
+  cls
+  count = mda_count(0)
+  guess = str$( mda_integer( rnd(count) - 1 ) )
+  state = 1 : stock = 0 : y = 60
+  fn growWindow
+  text @"menlo bold",24,fn ColorControlText
+  fn showGuess
+end fn
+
+local fn play( n as byte )
+  short i, r, s = 0
+  uint8 bnc
+  print %(x,y) n;
+  if state
+    if n < 4 then stock = 10*n : state-- : x = 270 : exit fn
+    s = -1
+  else
+    stock += n
+    str15 s2
+    for i = 0 to count - 1
+      bnc = 0
+      s2 = str$( mda_integer(i) )
+      for r = 2 to 5
+        n = instr$(1, s2, chr$(guess[r]) )
+        if n == r then bnc += 10 else if n then bnc++
+      next
+      if bnc == stock then mda_swap(s),(i) : s ++
+    next
+  end if
+  select s
+    case 0 : stop "There is a problem with one of your counts. ¬
+      Choose CONTINUE to start again."
+      fn newGame : exit fn
+    case 1, -1 : y = 20 : text,,fn colorRed
+      if s == 1 then guess = str$( mda_integer(0) )
+    case else   count = s
+      guess = str$( mda_integer(rnd(s)-1) )
+      y += 32 : state ++
+  end select
+  fn showGuess
+  fn growWindow
+end fn
+
+void local fn BuildWindows
+  subclass window 1, @"Bulls and cows solver", (0,0,311,114), NSWindowStyleMaskTitled + NSWindowStyleMaskClosable
+  wndrect = fn WindowContentRect( 1 )
+  textlabel _bullLabel, @"🐂", (198,59,38,40)
+  textlabel _cowLabel, @"🐄", (255,59,38,40)
+  ControlSetFontWithName( _bullLabel, NULL, 30 )
+  ControlSetFontWithName( _cowLabel, NULL, 30 )
+  box _horzLine,, (12,50,287,5), NSBoxSeparator
+  box _vertLine,, (180,12,5,90), NSBoxSeparator
+  ViewSetAutoresizingMask( _vertLine, NSViewHeightSizable )
+  button _newGameBtn,,, @"New Game", (15,15,100,32)
+  ViewSetAutoresizingMask( _newGameBtn, NSViewMaxYMargin )
+  CGRect r = fn WindowContentRect( 1 )
+  r.size.width += 120
+  r.size.height -= 20
+  r.origin.x    -= 60
+  r.origin.y    += 145
+  window 2, @"How to play",r
+  text,16
+  textlabel _help ,@"Choose a number with 4 unique digits, 1-9. ¬
+  I'll try to guess it.¬
+  \nAfter each guess, type the number (0-4) of Bulls, then of Cows.¬
+  \n    A Bull (🐂) is a correct digit in the right position.¬
+  \n    A Cow (🐄) is a correct digit in the wrong position.",(20,20,420,70),2
+end fn
+
+void local fn DoDialog( evt as long, tag as long )
+  select ( evt )
+    case _windowKeyDown  //: stop
+      CFStringRef ch = fn EventCharacters
+      if instr( 0, @"01234", ch ) < 5
+        DialogEventSetBool(YES) : fn play( intval( ch ) )
+      end if
+      //if fn StringIsEqual( ch, @"?" ) then window 2
+    case _btnClick : fn NewGame : window -2
+    case _windowWillClose : if tag == 1 then end //else window -2 : DialogEventSetBool(YES)
+  end select
+end fn
+
+on dialog fn DoDialog
+fn buildWindows
+fn init
+fn newGame
+
+HandleEvents

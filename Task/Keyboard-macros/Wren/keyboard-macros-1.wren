@@ -1,4 +1,4 @@
-/* keyboard_macros.wren */
+/* Keyboard_macros.wren */
 
 var GrabModeAsync = 1
 var Mod1Mask      = 1 << 3

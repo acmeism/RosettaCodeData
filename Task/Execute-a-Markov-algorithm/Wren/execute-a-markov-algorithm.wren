@@ -1,5 +1,5 @@
-import "/ioutil" for FileUtil, File
-import "/pattern" for Pattern
+import "./ioutil" for FileUtil, File
+import "./pattern" for Pattern
 
 var lb = FileUtil.lineBreak
 

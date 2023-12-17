@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var jaro = Fn.new { |s1, s2|
     var le1 = s1.count

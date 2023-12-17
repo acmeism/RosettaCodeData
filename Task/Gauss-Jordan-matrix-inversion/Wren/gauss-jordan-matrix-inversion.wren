@@ -1,5 +1,5 @@
-import "/matrix" for Matrix
-import "/fmt" for Fmt
+import "./matrix" for Matrix
+import "./fmt" for Fmt
 
 var arrays = [
     [ [ 1,  2,  3],

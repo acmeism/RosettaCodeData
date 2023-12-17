@@ -1,8 +1,8 @@
 import "os" for Platform, Process
 import "io" for File
 import "meta" for Meta
-import "/pattern" for Pattern
-import "/math" for Nums
+import "./pattern" for Pattern
+import "./math" for Nums
 
 var a = 4    /* 1st integer variable */
 var b = 0xA  /* 2nd integer variable */
@@ -13,7 +13,7 @@ var bloop = -17.3
 var checkVersion = Fn.new {
     var version = Process.version
     var components = version.split(".")
-    if (Num.fromString(components[1]) < 3) {
+    if (Num.fromString(components[1]) < 4) {
         Fiber.abort("Wren version (%(version)) is too old.")
     }
 }
@@ -43,4 +43,4 @@ Meta.eval("d = bloop.abs") // this won't compile if either 'bloop' or 'abs' not 
 System.print("bloop.abs = %(d)")
 var vars = res[0]
 var vals = res[1]
-System.print("The sum of the %(vars.count) integer variables, %(vars), is %(Nums.sum(vals))"
+System.print("The sum of the %(vars.count) integer variables, %(vars), is %(Nums.sum(vals))")

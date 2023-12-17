@@ -1,5 +1,5 @@
 import "io" for Stdin, Stdout
-import "/sort" for Sort
+import "./sort" for Sort
 
 var n
 

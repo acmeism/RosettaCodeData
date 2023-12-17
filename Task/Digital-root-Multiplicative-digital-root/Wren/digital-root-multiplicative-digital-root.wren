@@ -1,5 +1,5 @@
-import "/big" for BigInt
-import "/fmt" for Fmt
+import "./big" for BigInt
+import "./fmt" for Fmt
 
 // Only valid for n > 0 && base >= 2
 var mult = Fn.new { |n, base|

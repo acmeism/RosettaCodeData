@@ -1,6 +1,6 @@
 import "io" for Directory, File, Stat
-import "/crypto" for Sha1
-import "/sort" for Sort
+import "./crypto" for Sha1
+import "./sort" for Sort
 
 var findDuplicates = Fn.new { |dir, minSize|
     if (!Directory.exists(dir)) Fiber.abort("Directory does not exist.")

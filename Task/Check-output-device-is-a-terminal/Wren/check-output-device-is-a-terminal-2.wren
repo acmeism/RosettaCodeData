@@ -63,7 +63,7 @@ int main() {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "check_output_device_is_terminal.wren";
+    const char* fileName = "Check_output_device_is_a_terminal.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

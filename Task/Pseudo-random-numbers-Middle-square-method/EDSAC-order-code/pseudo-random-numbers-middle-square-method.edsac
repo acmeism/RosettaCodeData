@@ -1,0 +1,151 @@
+[Von Neumann's middle-square pseudo-random number generator, for Rosetta Code.
+ EDSAC program, Initial Orders 2.]
+
+[Arrange the storage]
+          T46K P56F       [N parameter: library subroutine P7 to print integer]
+          T47K P134F      [M parameter: main routine]
+          T51K P92F       [G parameter: generator for pseudo-random numbers]
+
+[This version of von Neumann's PRNG uses values in the range 0..999999.
+ Initialize: Call 0G with seed in 0D.
+ Next term:  Call 1G; term is returned in 0D.
+ 41 storage locations, load at even address. Workspace 4D.]
+          E25K TG GK
+          G10@            [jump to initialize the generator]
+          G15@            [jump to return the next term in 0D]
+        [Instructions to the loader - not executed at runtime]
+          T2#Z PF         [ensure sandwich bit between 2@ and 3@ is zero]
+          T4#Z PF T6#Z PF [same for 4@ and 5@, 6@ and 7@]
+          T2Z             [resume normal loading at 2@]
+[Constants]
+    [2]   M1667D I1208F   [2^29/10^9, near enough (see note at end)]
+    [4]   G1327D I393F    [2^9/10^3, near enough (see note at end)]
+[10^9/2^34 can't be stored using pseudo-orders, so store its negative instead.]
+    [6]   D768F V140D     [-10^9/2^34]
+[Variable]
+    [8]   PF PF           [state of PRNG]
+
+[Initialize the PRNG. Caller passes seed in 0D.]
+   [10]   A3F T14@        [plant return link as usual]
+          AD T8#@         [copy seed to state]
+   [14]   ZF              [(planted) jump back to caller]
+
+[Return the next value in 0D.
+ Outline: Let X = state, 0 <= X <= 999999, fits into 20 bits.
+           Calculate Y = X^2 div 10^9.
+           Deduce Z = X^2 mod 10^9 = X^2 - (10^9)*Y
+           The next state is Z div 10^3.
+ See note at end of program for details of integer division.]
+   [15]   A3F T40@        [plant return link as usual]
+          A8#@            [acc := X/2^34]
+          L32F L32F       [shift 7 + 7 left, acc := X/2^20]
+          T4D             [store X/2^20 in 4D]
+          H4D V4D         [square, acc := (X^2)/2^40]
+        [Here acc holds sign bit plus 40 binary places of (X^2)/2^40.]
+        [On storing acc in a 35-bit location, the low 6 bits are lost.]
+        [This doesn't matter, because 2^6 divides 10^9, so we can evaluate]
+        [X^2 div 10^9 = (X^2 div 2^6) div (10^9/2^6).]
+          TD              [0D now represents X^2 div 2^6]
+          H2#@            [mult reg := 2^29/10^9 nearly]
+          VD
+[Commented out: code for 35-bit operations, following note at end.
+           |R 1024 F| |R 512 F| shift 23 right, as in note
+           |T D| 0D := Y/2^34 where Y = X^2 div 10^9
+           |H neg_10_9 #@| |V D| times -10^9/2^34, acc := -10^9*Y/2^68
+         We need to shift 34 left to restore the scaling after multiplication
+           |L 1024 F| |L 1024 F| |L 4 F| first shift 28 left, acc := 10^9*Y/2^40]
+[More efficient code, possible because Y (= X^2 div 10^9) fits into a 17-bit location.
+ Shifting is 18 less than the 35-bit version.]
+          R8F             [shift 5 right]
+          TF              [0F := Y/2^16]
+          H6#@ VF         [times -10^9/2^34, acc := -10^9*Y/2^50]
+        [We need to shift 16 left to restore the scaling after multiplication]
+          L256F           [first shift 10 left, acc := 10^9*Y/2^40]
+          H4D V4D         [4D = X/2^20 from above, so acc := (X^2 - 10^9*Y)/2^40]
+          L16F TD         [shift 6 more left; 0D := Z/2^34 where Z = X^2 - 10^9*Y]
+          H4#@            [mult reg := 2^9/10^3 nearly]
+          VD
+          R128F           [shift 9 right]
+          U8#@            [save next state u]
+          TD              [also return next state to caller in 0D]
+   [40]   ZF              [(planted) jump back to caller]
+
+[------------------------------------------------------------------------]
+          E25K TM GK      [M parameter, main routine. Load at even address.]
+          T#Z PF          [clear 35-bit value at relative locations
+                           0 & 1, including the middle ("sandwich") bit]
+          TZ              [resume normal loading at relative location 0]
+[We could read the seed and number of terms from a separate tape,
+   but that would require another subroutine.]
+    [0]   G296F V2046D    [-675248 (negative of seed, cf -10^9 above)]
+    [2]   P211F           [number of terms, in the address field]
+    [3]   PF              [index of term]
+    [4]   #F              [teleprinter, set figures mode]
+    [5]   !F              [space]
+    [6]   &F              [line feed]
+    [7]   @F              [carriage return]
+    [8]   K4096F          [null]
+    [9]   PF
+                          [Enter with acc = 0]
+   [10]   O4@             [set teleprinter to figures]
+          S#@ TD          [pass seed in 0D]
+   [13]   A13@ GG         [call subroutine to initilaize PRNG]
+          T3@             [index := 0]
+[Head of loop; here with acc = 0]
+   [16]   TD              [clear parameter for print subroutine]
+          A3@ S2@         [printed enough terms?]
+          E34@            [if so, jump to exit]
+          A2@             [restore acc after test]
+          A2F U3@         [update index]
+          RD TF           [right-justify for printing; pass in 0D]
+   [25]   A25@ GN         [call subroutine to print index]
+   [27]   A27@ G1G        [call PRNG; returns next term in 0D]
+   [29]   A29@ GN         [print term; clears acc.]
+          O7@ O6@         [print CR, LF]
+          E16@            [loop back for next term]
+   [34]   O8@             [print null to flush printer buffer]
+          ZF              [stop]
+[----------------------------------------------------------------------]
+          E25K TN         [N parameter, print subroutine]
+[Library subroutine P7, prints long strictly positive integer in 0D.]
+[10 characters, right justified, padded left with spaces.]
+[Even address; 35 storage locations; working position 4D.]
+          GKA3FT26@H28#@NDYFLDT4DS27@TFH8@S8@T1FV4DAFG31@SFLDUFOFFFSF
+          L4FT4DA1FA27@G11@XFT28#ZPFT27ZP1024FP610D@524D!FO30@SFL8FE22@
+[----------------------------------------------------------------------]
+          E25K TM GK      [M parameter again]
+          E10Z            [start execution at relative address]
+          PF
+[
+Note: Integer division by a constant on EDSAC.
+Some programs require the integer quotient N div D, where N is variable and
+D is constant throughout the program. Since EDSAC had hardware multiplication
+but not hardware division, it makes sense to store 1/D and multiply N by that.
+This note describes one way of doing this, and finds a sufficient condition on N
+for rounding errors not to affect the result. It's assumed that 35-bit integers are used,
+so that an integer N is represented by N*(2^-34); also that N and D are positive.
+
+Let k be the greatest integer such that 2^k < D. We store a multiplier 2^k/D,
+rounded up to an integer multiple of 2^-34. Let the stored multiplier be
+    2^k/D + f*(2^-34), where 0 <= f < 1.
+Let N = q*D + r, where q is an integer and 0 <= r < D. To find the integer quotient q,
+multiply N*(2^-34) by the stored multiplier and shift right by k bits. This gives
+    (2^-34)*(q + r/D + N*f*(2^(-k -34)))
+in the accumulator. If the top 35 bits of the accumulator are stored in memory,
+the value stored will be q*(2^-34), provided
+    r/D + N*f*(2^(-k-34)) < 1.
+Since r <= D - 1, a sufficient condition for this is
+    N*f*(2^(-k-34)) < 1/D
+which is equivalent to
+    N < (2^k/D)*(2^34/f). (*)
+
+Examples from the middle-square program:
+(1) D = 10^9/2^6. Then k = 23 and 2^k/D = 0.536870912. Also
+    2^(k+34)/D = 2^63/10^9 = 9223372036.854775808
+so that the stored multiplier is 9223372037*(2^-34) and f = 0.145224192.
+Since f < 2^k/D, the condition (*) is satisfied for all N < 2^34.
+(2) D = 10^3. Then k = 9 and 2^k/D = 0.512. Also
+    2^(k+34)/D = 2^43/10^3 = 8796093022.208
+so that the stored multiplier is 8796093023*(2^-34) and f = 0.792.
+The condition (*) becomes N < 1.11*(10^10) (approx), which is satisfied
+in this program because N < 10^9. ]

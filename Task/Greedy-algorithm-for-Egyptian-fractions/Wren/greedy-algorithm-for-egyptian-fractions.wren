@@ -1,4 +1,4 @@
-import "/big" for BigInt, BigRat
+import "./big" for BigInt, BigRat
 
 var toEgyptianHelper // recursive
 toEgyptianHelper = Fn.new { |n, d, fracs|

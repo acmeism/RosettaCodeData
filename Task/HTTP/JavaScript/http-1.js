@@ -1,7 +1,3 @@
-var req = new XMLHttpRequest();
-req.onload = function() {
-  console.log(this.responseText);
-};
-
-req.open('get', 'http://rosettacode.org', true);
-req.send()
+const response = await fetch('http://rosettacode.org');
+const text = await response.text();
+console.log(text);

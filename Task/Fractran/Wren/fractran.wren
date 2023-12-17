@@ -1,4 +1,4 @@
-import "/big" for BigInt, BigRat
+import "./big" for BigInt, BigRat
 
 var isPowerOfTwo = Fn.new { |bi| bi & (bi - BigInt.one) == BigInt.zero }
 

@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var forwardDiff = Fn.new { |a, order|
     if (order < 0) Fiber.abort("Order must be a non-negative integer.")

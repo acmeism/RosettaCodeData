@@ -1,6 +1,6 @@
 function caesar (text, shift) {
   return text.toUpperCase().replace(/[^A-Z]/g,'').replace(/./g, function(a) {
-    return String.fromCharCode(65+(a.charCodeAt(0)-65+shift)%26);
+    return String.fromCharCode(((a.charCodeAt(0) - 65 + shift) % 26 + 26) % 26 + 65);
   });
 }
 

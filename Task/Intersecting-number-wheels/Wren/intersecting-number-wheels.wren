@@ -1,6 +1,6 @@
-import "/dynamic" for Struct
-import "/sort" for Sort
-import "/fmt" for Fmt
+import "./dynamic" for Struct
+import "./sort" for Sort
+import "./fmt" for Fmt
 
 var Wheel = Struct.create("Wheel", ["next", "values"])
 

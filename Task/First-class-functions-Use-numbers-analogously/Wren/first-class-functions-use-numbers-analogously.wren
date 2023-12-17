@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var multiplier = Fn.new { |n1, n2| Fn.new { |m| n1 * n2 * m } }
 

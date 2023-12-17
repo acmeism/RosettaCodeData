@@ -1,4 +1,4 @@
-/* hostname.go */
+/* Hostname.go */
 package main
 
 import (
@@ -15,7 +15,7 @@ func hostname(vm *wren.VM, parameters []any) (any, error) {
 
 func main() {
     vm := wren.NewVM()
-    fileName := "hostname.wren"
+    fileName := "Hostname.wren"
     methodMap := wren.MethodMap{"static name()": hostname}
     classMap := wren.ClassMap{"Host": wren.NewClass(nil, nil, methodMap)}
     module := wren.NewModule(classMap)

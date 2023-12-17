@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/str" for Str
+import "./fmt" for Fmt
+import "./str" for Str
 
 var table =
     "add 1  alter 3  backup 2  bottom 1  Cappend 2  change 1  Schange  Cinsert 2  Clast 3 " +

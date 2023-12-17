@@ -1,5 +1,5 @@
-import "/trait" for Cloneable, CloneableSeq
-import "/seq" for Lst
+import "./trait" for Cloneable, CloneableSeq
+import "./seq" for Lst
 
 class MyMap is Cloneable {
     construct new (m) {

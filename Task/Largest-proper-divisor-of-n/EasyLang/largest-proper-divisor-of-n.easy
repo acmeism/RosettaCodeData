@@ -7,10 +7,6 @@ func lpdiv v .
    .
    return r
 .
-numfmt 0 3
 for i = 1 to 100
-   write lpdiv i
-   if i mod 10 = 0
-      print ""
-   .
+   write lpdiv i & " "
 .

@@ -1,7 +1,6 @@
 import rand
 
-const
-(
+const (
 	lo_abc = 'abcdefghijklmnopqrstuvwxyz'
 	up_abc = 'ABCDEFGHIJKLMNIPQRSTUVWXYZ'
 )
@@ -27,9 +26,7 @@ fn caesar_encrypt(str string, key int) string {
 			nchr = chr + u8(offset)
 			if nchr > u8(122) {nchr -= 26}
 		}
-		else {
-			nchr = chr
-		}
+		else {nchr = chr}
 		chr_arr << nchr
 	}
 	return chr_arr.bytestr()

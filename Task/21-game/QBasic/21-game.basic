@@ -1,0 +1,34 @@
+PLAYER = 1
+COMP   = 0
+RANDOMIZE TIMER
+
+sum = 0
+total = 0
+turn = INT(RND + 0.5)
+DIM precomp(0 TO 3)
+precomp(0) = 1 : precomp(1) = 1
+precomp(2) = 3 : precomp(3) = 2
+
+WHILE sum < 21
+    turn = 1 - turn
+    PRINT "The sum is "; sum
+    IF turn = PLAYER THEN
+        PRINT "It is your turn."
+        WHILE total < 1 OR total > 3 OR total + sum > 21
+            INPUT "How many would you like to total? ", total
+        WEND
+    ELSE
+        PRINT "It is the computer's turn."
+        total = precomp(sum MOD 4)
+        PRINT "The computer totals"; total; "."
+    END IF
+    PRINT
+    sum = sum + total
+    total = 0
+WEND
+
+IF turn = PLAYER THEN
+    PRINT "Congratulations. You win."
+ELSE
+    PRINT "Bad luck. The computer wins."
+END IF

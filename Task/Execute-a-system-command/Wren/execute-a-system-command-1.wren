@@ -1,4 +1,4 @@
-/* run_system_command.wren */
+/* Execute_a_system_command.wren */
 class Command {
     foreign static exec(name, param) // the code for this is provided by Go
 }

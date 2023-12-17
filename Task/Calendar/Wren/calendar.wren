@@ -1,6 +1,6 @@
-import "/date" for Date
-import "/fmt" for Fmt
-import "/seq" for Lst
+import "./date" for Date
+import "./fmt" for Fmt
+import "./seq" for Lst
 
 var calendar = Fn.new { |year|
     var snoopy = "🐶"

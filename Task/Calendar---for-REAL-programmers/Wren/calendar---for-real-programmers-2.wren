@@ -1,5 +1,5 @@
 import "io" for File
-import "/str" for Str
+import "./str" for Str
 import "meta" for Meta
 
 var keywords = ["import", "for", "var", "in", "if", "else"]

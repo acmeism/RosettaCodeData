@@ -1,26 +1,29 @@
-#| Recursive, naive parallel, mergesort implementation
-proto mergesort-parallel-naive(| --> Positional) {*}
-multi mergesort-parallel-naive(@unsorted where @unsorted.elems < 2) { @unsorted }
-multi mergesort-parallel-naive(@unsorted where @unsorted.elems == 2) {
-	@unsorted[0] after @unsorted[1]
-		?? (@unsorted[1], @unsorted[0])
-		!! @unsorted
-}
-multi mergesort-parallel-naive(@unsorted) {
-	my $mid = @unsorted.elems div 2;
-	my Promise $left-sorted = start { flat samewith @unsorted[  0 ..^ $mid ] };
-	my @right-sorted = flat samewith @unsorted[ $mid ..^ @unsorted.elems ];
+#| Recursive, naive multi-thread, mergesort implementation
+sub mergesort-parallel-naive ( @a ) {
+	return @a if @a <= 1;
 
-	await $left-sorted andthen my @left-sorted = $left-sorted.result;
+	my $m = @a.elems div 2;
 
-    return flat @left-sorted, @right-sorted if @left-sorted[*-1] !after @right-sorted[0];
-	return flat @right-sorted, @left-sorted if @right-sorted[*-1] !after @left-sorted[0];
+	# recursion step launching new thread
+    my @l = start { samewith @a[ 0  ..^ $m ] };
 	
-    return flat gather {
-		take @left-sorted[0] before @right-sorted[0]
-				?? @left-sorted.shift
-				!! @right-sorted.shift
-		while @left-sorted.elems and @right-sorted.elems;
-		take @left-sorted, @right-sorted;
+    # meanwhile recursively sort right side
+    my @r =         samewith @a[ $m ..^ @a ]  ;
+
+	# as we went parallel on left side, we need to await the result
+	await @l[0] andthen @l = @l[0].result;
+
+	# short cut - in case of no overlapping left and right parts
+	return flat @l, @r if @l[*-1] !after @r[0];
+	return flat @r, @l if @r[*-1] !after @l[0];
+
+	# merge step
+	return flat gather {
+		take @l[0] before @r[0]
+				?? @l.shift
+				!! @r.shift
+		     while @l and @r;
+
+		take @l, @r;
 	}
 }

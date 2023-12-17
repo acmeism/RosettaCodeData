@@ -1,4 +1,4 @@
-import "/fmt" for Conv
+import "./fmt" for Conv
 
 var SIZE  = 32
 var LINES = SIZE / 2

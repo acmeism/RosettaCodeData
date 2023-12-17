@@ -21,8 +21,8 @@ for k in range(n+1):
         print("The reference sequence diverges within %s iterations." % k)
         break
 
-x = np.linspace(0, 2, num=d+1)
-y = np.linspace(0, 2 * h / d, num=h+1)
+x = np.linspace(0, 2, num=d+1, dtype=np.float64)
+y = np.linspace(0, 2 * h / d, num=h+1, dtype=np.float64)
 
 A, B = np.meshgrid(x * np.pi, y * np.pi)
 C = 8.0 * np.exp((A + B * 1j) * 1j)

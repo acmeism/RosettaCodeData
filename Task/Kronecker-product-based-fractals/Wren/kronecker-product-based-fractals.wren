@@ -1,4 +1,4 @@
-import "/matrix" for Matrix
+import "./matrix" for Matrix
 
 var kroneckerPower = Fn.new { |m, n|
     var pow = m.copy()

@@ -1,7 +1,7 @@
 import "random" for Random
 import "scheduler" for Scheduler
 import "timer" for Timer
-import "/ioutil" for Input
+import "./ioutil" for Input
 
 var rgen = Random.new()
 var nWorkers = 0

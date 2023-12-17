@@ -1,4 +1,4 @@
-/* deceptive_numbers.wren */
+/* Deceptive_numbers.wren */
 
 import "./gmp" for Mpz
 import "./math" for Int

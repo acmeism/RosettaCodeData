@@ -1,4 +1,4 @@
-/* call_shared_library_function.wren */
+/* Call_a_function_in_a_shared_library.wren */
 
 var RTLD_LAZY = 1
 

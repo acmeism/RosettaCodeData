@@ -1,4 +1,4 @@
-/* dns_query.wren */
+/* DNS_query.wren */
 
 class Net {
     foreign static lookupHost(host)

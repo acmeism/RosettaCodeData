@@ -1,0 +1,133 @@
+program truth_table;
+    exprstr := "" +/ command_line;
+    if exprstr = "" then
+        print("Enter a Boolean expression on the command line.");
+    else
+        showtable(exprstr);
+    end if;
+
+    proc showtable(exprstr);
+        if (toks := tokenize(exprstr)) = om then return; end if;
+        if (bexp := parse(toks)) = om then return; end if;
+        vars := [v : v in getvars(bexp)]; $ fix the variable order
+
+        $ show table header
+        tabh := "";
+        loop for v in vars do
+            tabh +:= v + " ";
+        end loop;
+        print(tabh +:= "| " + exprstr);
+        print('-' * #tabh);
+
+        $ show table rows
+        loop for inst in instantiations(vars) do
+            loop for v in vars do
+                putchar(rpad(showbool(inst(v)), #v) + " ");
+            end loop;
+            print("| " + showbool(booleval(bexp, inst)));
+        end loop;
+    end proc;
+
+    proc showbool(b); return if b then "1" else "0" end if; end proc;
+
+    proc instantiations(vars);
+        insts := [];
+        loop for i in [0..2**#vars-1] do
+            inst := {};
+            loop for v in vars do
+                inst(v) := i mod 2 /= 0;
+                i div:= 2;
+            end loop;
+            insts with:= inst;
+        end loop;
+        return insts;
+    end proc;
+
+    proc booleval(tokens, inst);
+        stack := [];
+        loop for token in tokens do
+            case token of
+                ("~"): x frome stack; stack with:= not x;
+                ("&"): y frome stack; x frome stack; stack with:= x and y;
+                ("|"): y frome stack; x frome stack; stack with:= x or y;
+                ("^"): y frome stack; x frome stack; stack with:= x /= y;
+                ("=>"): y frome stack; x frome stack; stack with:= x impl y;
+                ("0"): stack with:= false;
+                ("1"): stack with:= true;
+                else stack with:= inst(token);
+            end case;
+        end loop;
+        answer frome stack;
+        return answer;
+    end proc;
+
+    proc getvars(tokens);
+        return {tok : tok in tokens | to_upper(tok(1)) in "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"};
+    end proc;
+
+    proc parse(tokens);
+        ops := {["~", 4], ["&", 3], ["|", 2], ["^", 2], ["=>", 1]};
+        stack := [];
+        queue := [];
+        loop for token in tokens do
+            if token in domain ops then
+                loop while stack /= []
+                       and (top := stack(#stack)) /= "("
+                       and ops(top) > ops(token) do
+                    oper frome stack;
+                    queue with:= oper;
+                end loop;
+                stack with:= token;
+            elseif token = "(" then
+                stack with:= token;
+            elseif token = ")" then
+                loop doing
+                    if stack = [] then
+                        print("Missing (.");
+                        return om;
+                    end if;
+                    oper frome stack;
+                while oper /= "(" do
+                    queue with:= oper;
+                end loop;
+            elseif token(1) in "23456789" then
+                print("Invalid boolean ", token);
+                return om;
+            else
+                queue with:= token;
+            end if;
+        end loop;
+
+        loop while stack /= [] do
+            oper frome stack;
+            if oper = "(" then
+                print("Missing ).");
+                return om;
+            end if;
+            queue with:= oper;
+        end loop;
+        return queue;
+    end proc;
+
+    proc tokenize(s);
+        varchars := "abcdefghijklmnopqrstuvwxyz";
+        varchars +:= to_upper(varchars);
+        varchars +:= "0123456789_";
+
+        tokens := [];
+
+        loop doing span(s, " \t\n"); while s /= "" do
+            if (tok := any(s, "()&|~^")) /= ""      $ brackets/single char operators
+            or (tok := match(s, "=>")) /= ""        $ implies (=>)
+            or (tok := span(s, "0123456789")) /= "" $ numbers
+            or (tok := span(s, varchars)) /= ""     $ variables
+            then
+                tokens with:= tok;
+            else
+                print("Parse error at", s);
+                return om;
+            end if;
+        end loop;
+        return tokens;
+    end proc;
+end program;

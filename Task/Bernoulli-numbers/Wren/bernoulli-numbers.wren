@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/big" for BigRat
+import "./fmt" for Fmt
+import "./big" for BigRat
 
 var bernoulli = Fn.new { |n|
     if (n < 0) Fiber.abort("Argument must be non-negative")

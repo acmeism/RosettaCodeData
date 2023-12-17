@@ -1,3 +1,0 @@
-class Lab extends Dog{
-   //contents go here...
-}

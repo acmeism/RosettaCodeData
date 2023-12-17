@@ -1,5 +1,5 @@
-import "/math" for Int
-import "/big" for BigInt
+import "./math" for Int
+import "./big" for BigInt
 
 var list = (2..20).toList
 list.add(65)

@@ -1,5 +1,5 @@
-import "/dynamic" for Struct
-import "/fmt" for Fmt
+import "./dynamic" for Struct
+import "./fmt" for Fmt
 
 var Result = Struct.create("Result", ["n", "nine"])
 

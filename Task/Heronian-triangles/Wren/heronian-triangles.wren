@@ -1,6 +1,6 @@
-import "/math" for Int, Nums
-import "/sort" for Sort
-import "/fmt" for Fmt
+import "./math" for Int, Nums
+import "./sort" for Sort
+import "./fmt" for Fmt
 
 var isInteger = Fn.new { |n| n is Num && n.isInteger }
 

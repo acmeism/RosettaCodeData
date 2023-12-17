@@ -1,5 +1,5 @@
 import "./math" for Int
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var limit = 1e9
 var gapStarts = {}

@@ -1,7 +1,7 @@
-import "/fmt" for Fmt
-import "/seq" for Lst
-import "/str" for Str
-import "/math" for Int
+import "./fmt" for Fmt
+import "./seq" for Lst
+import "./str" for Str
+import "./math" for Int
 
 /* Gets all permutations of a list of strings. */
 var getPerms = Fn.new { |input|

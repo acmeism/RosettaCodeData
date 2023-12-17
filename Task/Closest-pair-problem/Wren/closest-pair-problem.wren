@@ -1,5 +1,5 @@
-import "/math" for Math
-import "/sort" for Sort
+import "./math" for Math
+import "./sort" for Sort
 
 var distance = Fn.new { |p1, p2| Math.hypot(p1[0] - p2[0], p1[1] - p2[1]) }
 

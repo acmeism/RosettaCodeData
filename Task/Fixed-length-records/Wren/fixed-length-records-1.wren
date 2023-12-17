@@ -1,5 +1,5 @@
 import "io" for File
-import "/str" for Str
+import "./str" for Str
 
 var records = File.read("infile.dat")
 File.create("outfile.dat") { |f|

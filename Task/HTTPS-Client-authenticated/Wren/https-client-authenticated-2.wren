@@ -1,4 +1,4 @@
-/* gcc https_client-authenticated.c -o https_client-authenticated -lcurl -lwren -lm  */
+/* gcc HTTPS_Client-authenticated.c -o HTTPS_Client-authenticated -lcurl -lwren -lm  */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "https_client-authenticated.wren";
+    const char* fileName = "HTTPS_Client-authenticated.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

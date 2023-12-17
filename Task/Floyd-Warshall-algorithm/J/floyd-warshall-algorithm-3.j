@@ -1,33 +1,12 @@
-floydrecon=: verb define
-  n=. ($y)$_(I._=,y)},($$i.@#)y
-  for_j. i.#y do.
-    d=. y <. j ({"1 +/ {) y
-    b=. y~:d
-    y=. d
-    n=. (n*-.b)+b * j{"1 n
-  end.
+graph=: ".;._2]0 :0
+  0  _ _2 _  NB. 1->3 costs _2
+  4  0  3 _  NB. 2->1 costs 4; 2->3 costs 3
+  _  _  0 2  NB. 3->4 costs 2
+  _ _1  _ 0  NB. 4->2 costs _1
 )
 
-task=: verb define
-  dist=. floyd y
-  next=. floydrecon y
-  echo 'pair  dist   path'
-  for_i. i.#y do.
-    for_k. i.#y do.
-      ndx=. <i,k
-      if. (i~:k)*_>ndx{next do.
-        txt=. (":1+i),'->',(":1+k)
-        txt=. txt,_5{.":ndx{dist
-        txt=. txt,'    ',":1+i
-        j=. i
-        while. j~:k do.
-          assert. j~:(<j,k){next
-          j=. (<j,k){next
-          txt=. txt,'->',":1+j
-        end.
-        echo txt
-      end.
-    end.
-  end.
-  i.0 0
-)
+   floyd graph
+0 _1 _2 0
+4  0  2 4
+5  1  0 2
+3 _1  1 0

@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/math" for Int, Nums
+import "./fmt" for Fmt
+import "./math" for Int, Nums
 
 var sumStr = Fn.new { |divs| divs.reduce("") { |acc, div| acc + "%(div) + " }[0...-3] }
 
@@ -14,9 +14,9 @@ var abundantOdd = Fn.new { |searchFrom, countFrom, countTo, printOne|
             if (!printOne || count >= countTo) {
                 var s = sumStr.call(divs)
                 if (!printOne) {
-                    System.print("%(Fmt.d(2, count)). %(Fmt.d(5, n)) < %(s) = %(tot)")
+                    Fmt.print("$2d. $5d < $s = $d", count, n, s, tot)
                 } else {
-                    System.print("%(n) < %(s) = %(tot)")
+                    Fmt.print("$d < $s = $d", n, s, tot)
                 }
             }
         }

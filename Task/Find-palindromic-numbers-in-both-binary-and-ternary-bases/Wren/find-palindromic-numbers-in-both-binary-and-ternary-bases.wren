@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var isPalindrome2 = Fn.new { |n|
     var x = 0

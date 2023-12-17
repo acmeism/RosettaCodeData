@@ -1,0 +1,13 @@
+PRINT "the first 15 terms of the sequence are:"
+FOR n = 1 to 15
+    FOR m = 1 to 4100
+        pnum = 0
+        FOR p = 1 to 4100
+            IF m MOD p = 0 then pnum = pnum + 1
+        NEXT p
+        IF pnum = n then
+           PRINT m;
+           EXIT FOR
+        END IF
+    NEXT m
+NEXT n

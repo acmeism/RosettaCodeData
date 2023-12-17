@@ -1,4 +1,4 @@
-   tobin=: -.&' '@":@#:
+   tobin=: '01'{~#:
    tobin 5
 101
    tobin 50

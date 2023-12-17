@@ -1,0 +1,310 @@
+[Maze generation for Rosetta Code.
+ EDSAC program, Initial Orders 2.
+
+ Cells, horizontal walls, and vertical walls are numbered
+ as shown in this example:
+    +---1---+---2---+---3---+
+    |       |       |       |
+    1   1   2   2   3   3   4          N
+    |       |       |       |          |
+    +---5---+---6---+---7---+      W---+---E
+    |       |       |       |          |
+    5   5   6   6   7   7   8          S
+    |       |       |       |
+    +---9---+--10---+--11---+
+
+Maze data are held in a single 1-based array of 17-bit values
+(equivalent to an array of records in a high-level language).
+In each entry, fields for cells and walls are as shown in "Flags" below.]
+
+  [Arrange the storage]
+          T51K P56F     [G parameter: generator for pseudo-random numbers]
+          T47K P100F    [M parameter: main routine + dependent subroutines]
+          T45K P398F    [H parameter: storage for maze]
+  [The following once-only code can be overwritten by the maze data.]
+          T46K P398F    [N parameter: library subroutine R4 to read data]
+          T50K P420F    [X parameter: code executed at start-up only]
+
+[=========== Executed at start-up, then overwritten ================]
+          E25K TX GK
+ [Enter with acc = 0]
+    [0]   A@ GN         [read 35-bit maze width into 0D]
+          AF TM         [load and store width, assuming high word = 0]
+    [4]   A4@ GN AF T1M [same for height]
+        [Initialize linear congruential generator for pseudo-random numbers]
+    [8]   A8@ GN        [read seed for LCG into 0D]
+          AD T4D        [pass seed to LCG in 4D]
+   [12]   A12@ GG       [initialize LCG]
+        [Choose a random cell in the maze, for use later.]
+        [Also update storage of width and height.]
+          T4D           [clear the whole of 4D, including sandwich bit]
+          AM U4F        [load 17-bit width, pass to LCG as 35-bit value]
+          LD A2F TM     [width to address field, add 1, store]
+   [20]   A20@ G1G      [call LCG, 0D := random in 0..(width - 1)]
+          AF T3M        [save random to temporary store]
+          T4D A1M U4F   [pass height of maze to LCG]
+          LD A2F T1M    [height to address field, add 1, store]
+   [30]   A30@ G1G      [call LCG, 0D := random in 0..(height - 1)]
+          HF VM L64F L32F [acc := random*(width + 1)]
+          A3M LD A2F    [add first random, shift to address, add 1]
+          T3M           [save random index for use below]
+          HM V1M L64F L32F T2M [store (width+1)*(height+1)]
+          E65M          [jump to main routine with acc = 0]
+
+[================ Main routine ====================]
+          E25K TM GK
+[Variables]
+    [0]   PF            [initially maze width; then (width + 1) in address field]
+    [1]   PF            [initially maze height; then (height + 1) in address field]
+[List of up to four E orders to move N, S, W, E.]
+[The first two are also used as temporary store at program start]
+    [2]   PF
+    [3]   PF PF PF
+    [6]   TF            [T order to store E order in list]
+[Constants]
+    [7]   T2@           [initial value of T order]
+    [8]   TH            [order to store into array{0}]
+    [9]   AH            [order to load from array{0}]
+   [10]   C1H           [order to collate with array{1};]
+                        [also teleprinter colon in figures mode]
+   [11]   MF            [add to T order to make A order with same address]
+   [12]   LF            [add to T order to make C order with same address]
+[Flags]
+   [13]   K4096F        [horizontal wall deleted, 10000 hex]
+   [14]   IF            [vertical wall deleted, 8000 hex]
+   [15]   RF            [no north neighbour, 4000 hex]
+   [16]   WF            [no south neighbour, 2000 hex]
+   [17]   QF            [no west neighbour, 1000 hex]
+   [18]   P1024F        [no east neighbour, 0800 hex]
+   [19]   PD            [cell visited, 0001 hex]
+   [20]   V2047F        [mask to clear visited bit]
+   [21]   P1023F        [mask to select EDSAC address field, which contains
+                         index of previous cell for backtracking (0 if none).
+[Teleprinter]
+   [22]   #F            [set figures mode]
+   [23]   !F            [space]
+   [24]   @F            [carriage return]
+   [25]   &F            [line feed]
+
+[Subroutine called to set flag "no north neighbour" in cells along north edge,
+ similarly for east, south and west edges (order must be N, E, S, W).
+ Input: 4F = negative count of cells
+        5F = step in array index
+        6F = flag to be set]
+   [26]   A3F T42@      [plant return link as usual]
+          A36@
+          G34@          [jump into middle of loop (since A < 0)]
+   [30]   T4F           [loop: update megative count]
+          A36@ A5F U36@
+   [34]   S11@ T38@
+[The following order initially refers to the NW corner cell.
+ First call leaves it referring to NE corner; second call to SE corner, etc.
+ Hence the need for calls to be in the order N, E, S, W.]
+   [36]   A1H           [planted; loaded as A1H]
+          A6F
+   [38]   TF
+          A4F A2F       [add 1 to negative count]
+          G30@          [if not yet 0, loop back]
+   [42]   ZF
+
+[Subroutine to test for unvisited neighbour of current cell in a given direction.
+ Input: 4F = E order to be added to list if unvisited neighbour is found
+        5F = step in array index to reach neighbour
+        6F = flag to test for no neighbour in this direction]
+   [43]   A3F T64@      [plant return link as usual]
+          S6F H6F CH    [if no neighbour then acc = 0, else acc < 0]
+          E64@          [exit if no neighbour]
+          TF A118@
+          A5F T55@
+          S19@ H19@
+   [55]   CF E64@
+          TF A6@ U63@
+          A2F T6@
+          A4F           [load jump to execute move]
+   [63]   TF            [store in list of moves]
+   [64]   ZF            [(planted) jump back to caller]
+
+[Jump to here from once-only code, with acc = 0]
+          [Clear maze array]
+   [65]   S2@
+   [66]   TF            [use 0F as loop counter]
+   [67]   TH            [planted, loaded as TH]
+          A67@ A2F T67@
+          AF A2F G66@
+
+          [Set flag "no north neighbour" in cells along northern edge]
+          S@ A2F T4F    [count = width, pass in 4F]
+          A2F T5F           [step in array index = 1, pass in 5F]
+          A15@ T6F      [pass flag in 6F]
+   [81]   A81@ G26@     [call subroutine to set flag]
+
+          [Repeat for east, south, west edges (must be in that order)]
+          S1@ A2F T4F A@ T5F A18@ T6F
+   [90]   A90@ G26@
+          S@ A2F T4F S2F T5F A16@ T6F
+   [99]   A99@ G26@
+          S1@ A2F T4F S@ T5F A17@ T6F
+  [108]   A108@ G26@
+
+          [Start with the random cell chosen at program start (X parameter)]
+          A3@ A8@
+          [Loop: here acc = T order for current cell]
+  [112]   U121@         [plant T order]
+          A12@ T118@    [make and plant C order, same address]
+
+         [Initialize storing in list of moves]
+          A7@ T6@
+          H20@
+  [118]   CF A19@       [mark cell as visited]
+          UH            [store flags of current cell in array{0} for easy access]
+  [121]   TF            [and also in the body of the array]
+
+          [If cell has unvisited North neighbour, add North to list of possible moves]
+          A177@ T4F
+          S@ T5F
+          A15@ T6F
+  [128]   A128@ G43@
+         [Repeat for South, West, East neighbours]
+          A178@ T4F
+          A@ T5F
+          A16@ T6F
+  [136]   A136@ G43@
+          A179@ T4F
+          S2F T5F
+          A17@ T6F
+  [144]   A144@ G43@
+          A180@ T4F
+          A2F T5F
+          A18@ T6F
+  [152]   A152@ G43@
+
+          [List now has 0..4 possible moves. If more than one, choose randomly.]
+          T4D           [clear whole of 4D, including sandwich bit, for randomizer]
+          A6@ S7@       [address field := count of moves]
+          S2F G225@     [jump if none]
+          S2F G169@     [jump if one only]
+          RD A2F T4F    [pass count, right-justified, to randomizer]
+  [164]   A164@ G1G     [0F := random value 0..(count - 1)]
+          AF LD E170@
+  [169]   TF            [only one move, must be at list{0}]
+  [170]   A7@ A11@ T173@
+  [173]   AF T176@
+          A121@         [common to all moves]
+  [176]   EF            [jump to move N,S,E, or W with acc = 0]
+  [177]   E181@
+  [178]   E190@
+  [179]   E199@
+  [180]   E208@
+
+         [Move North and delete horizontal wall]
+  [181]   U186@ A11@ T184@
+  [184]   AF A13@
+  [186]   TF A121@ S@ E216@
+
+         [Move South and delete horizontal wall]
+  [190]   A@ U196@ A11@ T194@
+  [194]   AF A13@
+  [196]   TF A196@ E216@
+
+         [Move West and delete vertical wall]
+  [199]   U204@ A11@ T202@
+  [202]   AF A14@
+  [204]   TF A121@ S2F E216@
+
+         [Move East and delete vertical wall]
+  [208]   A2F U214@ A11@ T212@
+  [212]   AF A14@
+  [214]   TF A214@
+         [fall through]
+
+        [Set index of current cell as previous to the new cell.
+         Here with T order for new cell in acc.]
+  [216]   U222@ A11@ T221@
+          A121@ S8@
+  [221]   AF
+  [222]   TF
+          A222@ E112@
+
+       [No unvisited neighbour, backtrack if possible]
+  [225]   TF            [clear acc, needed]
+          H21@ CH       [get index of previous cell (in address field)]
+          S2F           [is it 0?]
+          G233@         [if so, maze is complete, jump to print]
+          A2F           [restore]
+          A8@           [make T order]
+          E112@
+
+[Print the maze created above]
+  [233]   O22@          [set teleprinter to figures mode]
+          TF            [clear acc]
+          S1@ T5F
+   [Outer 'loop and a half' with 5F as negative counter.
+    h + 1 rows for horizontal walls plus h rows for vertical walls]
+  [237]
+         [Print row for horizontal walls]
+          O296@         [print leading + sign]
+          S@ A2F        [set inner loop counter in 4F]
+          H13@
+  [241]   T4F           [4F := negative count of horizontal walls per row]
+          S13@          [has current horizontal wall been deleted?]
+  [243]   C1H           [planted; loaded as C1H]
+          G247@         [jump if not]
+          A23@ G249@
+  [247]   T1F           [clear acc]
+  [248]   A248@         [load hyphen (since A = minus in figures mode)]
+  [249]   TF OF OF OF   [print 3 spaces or 3 minus]
+          O296@         [print plus sign]
+          A243@ A2F T243@ [inc address in C order]
+          A4F A2F G241@
+         [Here with acc = 0 after printing one row]
+          A243@ A2F T243@ [skip next element in array]
+          O24@ O25@     [print CR, LF]
+          A5F A2F E295@
+          T5F
+         [Print row for vertical walls]
+          S@
+          T4F
+          H14@
+  [272]   S14@
+  [273]   C1H           [planted; loaded as C1H]
+          G277@
+          A23@ G279@
+  [277]   T1F           [clear acc]
+          A10@          [colon in figures mode]
+  [279]   TF OF         [print colon or space]
+          A273@ A2F T273@ [update C order]
+          A4F A2F       [inc negative counter for  inner loop]
+          E292@         [jump out of loop if counter = 0]
+          T4F           [update counter]
+          O23@ O23@ O23@ [print 3 spaces]
+          E272@
+[Exit from inner loop for vertical walls]
+  [292]   O24@ O25@     [print CR, LF]
+          E237@
+[Exit]
+  [295]   O22@          [dummy character to flush print buffer]
+  [296]   ZF            [(1) halt program (2) plus sign in figures mode]
+
+[==================== Generator for pseudo-random numbers ===========]
+[Linear congruential generator, same algorithm as Delphi 7 LCG
+ 38 locations]
+          E25K TG
+ GKG10@G15@T2#ZPFT2ZI514DP257FT4#ZPFT4ZPDPFT6#ZPFT6ZPFRFA6#@S4#@
+ T6#@E25FE8ZPFT8ZPFPFA3FT14@A4DT8#@ZFA3FT37@H2#@V8#@L512FL512F
+ L1024FA4#@T8#@H6#@C8#@T8#@S4DG32@TDA8#@E35@H4DTDV8#@L1FTDZF
+
+[==================== LIBRARY SUBROUTINE ============================]
+          E25K TN
+[R4 Input of one signed integer.
+ 22 storage locations; working positions 4, 5, and 6.]
+ GKA3FT21@T4DH6@E11@P5DJFT6FVDL4FA4DTDI4FA4FS5@G7@S5@G20@SDTDT6FEF
+
+[===================================================================]
+[The following, without the comments and white space, might have
+ been input from a separate tape.]
+          E25K TX GK
+          EZ            [define entry point]
+          PF            [acc = 0 on entry]
+[Integers supplied by user: maze width, maze height, seed for LCG.
+ To be read by library subroutine R4; sign comes after value.]
+ 12+8+987654321+

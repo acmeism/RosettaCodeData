@@ -1,5 +1,4 @@
 import "./math" for Int
-import "./seq" for Lst
 import "./fmt" for Fmt
 
 var primes = Int.primeSieve(1e7-1)
@@ -35,7 +34,7 @@ System.print("First 100 brilliant numbers:")
 var brilliant = getBrilliant.call(2, 10000, false)[0]
 brilliant.sort()
 brilliant = brilliant[0..99]
-for (chunk in Lst.chunks(brilliant, 10)) Fmt.print("$4d", chunk)
+Fmt.tprint("$4d", brilliant, 10)
 System.print()
 for (k in 1..12) {
     var limit = 10.pow(k)

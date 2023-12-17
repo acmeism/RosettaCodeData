@@ -1,4 +1,4 @@
-import "/sort" for Sort
+import "./sort" for Sort
 
 var areEqual = Fn.new { |strings|
     if (strings.count < 2) return true

@@ -1,4 +1,4 @@
-import "/dynamic" for Tuple
+import "./dynamic" for Tuple
 
 var CFData = Tuple.create("Tuple", ["str", "ng", "r", "gen"])
 

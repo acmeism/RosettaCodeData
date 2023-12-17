@@ -22,7 +22,7 @@ def divrem($divisor):
                 .curr[.base + $i] +=  (- $res * $divisor[$i])  )
           | .base += -1
         )
-   | (.result | reverse),  (.curr | canonical)];
+   | [(.result | reverse),  (.curr | canonical)];
 
 def demo($num; $den):
   {$num, $den,

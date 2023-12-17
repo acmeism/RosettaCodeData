@@ -1,4 +1,4 @@
-/* go run distributed_programming_client.go */
+/* go run Distributed_programming_client.go */
 
 package main
 
@@ -46,7 +46,7 @@ func main() {
     cfg := wren.NewConfig()
     cfg.LoadModuleFn = moduleFn
     vm := cfg.NewVM()
-    fileName := "distributed_programming_client.wren"
+    fileName := "Distributed_programming_client.wren"
     clientMethodMap := wren.MethodMap { "call(_,_)": call }
     classMap := wren.ClassMap { "Client": wren.NewClass(dialHTTP, nil, clientMethodMap) }
     module := wren.NewModule(classMap)

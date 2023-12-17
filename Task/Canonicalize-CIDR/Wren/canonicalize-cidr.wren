@@ -1,5 +1,5 @@
-import "/fmt" for Fmt, Conv
-import "/str" for Str
+import "./fmt" for Fmt, Conv
+import "./str" for Str
 
 // canonicalize a CIDR block: make sure none of the host bits are set
 var canonicalize = Fn.new { |cidr|

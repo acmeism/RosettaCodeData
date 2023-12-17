@@ -1,4 +1,4 @@
-sub dr (Int $_ is copy) { $_ = dr(.comb.sum) while .chars > 1; $_ }
+sub dr (Int $_ is copy) { $_ = .comb.sum while .chars > 1; $_ }
 
 my %hex = './unixdict.txt'.IO.slurp.words.grep( *.chars > 3 )\
   .grep({ not / <-[abcdef]> / }).map: { $_ => dr :16($_).comb.sum }

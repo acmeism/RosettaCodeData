@@ -1,5 +1,5 @@
-import "/complex" for Complex
-import "/fmt" for Fmt
+import "./complex" for Complex
+import "./fmt" for Fmt
 
 var fft2 // recursive
 fft2 = Fn.new { |buf, out, n, step, start|

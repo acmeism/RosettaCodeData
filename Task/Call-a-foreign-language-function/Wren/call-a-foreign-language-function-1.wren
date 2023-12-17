@@ -1,4 +1,4 @@
-/* call_foreign_language_function.wren */
+/* Call_a_foreign-language_function.wren */
 
 class C {
     foreign static strdup(s)

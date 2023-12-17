@@ -1,0 +1,23 @@
+class
+    ANIMAL
+end
+class
+    DOG
+inherit
+    ANIMAL
+end
+class
+    CAT
+inherit
+    ANIMAL
+end
+class
+    LAB
+inherit
+    DOG
+end
+class
+    COLLIE
+inherit
+    DOG
+end

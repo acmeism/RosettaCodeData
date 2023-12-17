@@ -1,7 +1,7 @@
 import "random" for Random
-import "/dynamic" for Enum
-import "/ioutil" for Input
-import "/fmt" for Fmt
+import "./dynamic" for Enum
+import "./ioutil" for Input
+import "./fmt" for Fmt
 
 var Move = Enum.create("Move", ["up", "down", "right", "left"])
 

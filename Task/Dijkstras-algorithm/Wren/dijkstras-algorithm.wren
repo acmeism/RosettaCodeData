@@ -1,7 +1,7 @@
-import "/dynamic" for Tuple
-import "/trait" for Comparable
-import "/sort" for Cmp, Sort
-import "/set" for Set
+import "./dynamic" for Tuple
+import "./trait" for Comparable
+import "./sort" for Cmp, Sort
+import "./set" for Set
 
 var Edge = Tuple.create("Edge", ["v1", "v2", "dist"])
 

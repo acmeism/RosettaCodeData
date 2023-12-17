@@ -1,4 +1,4 @@
-import "/sort" for Sort
+import "./sort" for Sort
 
 var stx = "\x02"
 var etx = "\x03"

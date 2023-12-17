@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/iterate" for Stepped
+import "./fmt" for Fmt
+import "./iterate" for Stepped
 
 var euler = Fn.new { |f, y, step, end|
     Fmt.write(" Step $2d: ", step)

@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var averageSquareDiff = Fn.new { |f, preds|
     var av = 0

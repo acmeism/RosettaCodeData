@@ -1,6 +1,6 @@
-import "/dynamic" for Struct
-import "/sort" for Sort
-import "/fmt" for Fmt
+import "./dynamic" for Struct
+import "./sort" for Sort
+import "./fmt" for Fmt
 
 // (n)umber of node and its (v)alence i.e. number of neighbors
 var NodeVal = Struct.create("NodeVal", ["n", "v"])

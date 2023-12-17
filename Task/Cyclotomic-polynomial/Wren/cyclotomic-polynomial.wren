@@ -1,7 +1,7 @@
-import "/iterate" for Stepped
-import "/sort" for Sort
-import "/math" for Int, Nums
-import "/fmt" for Fmt
+import "./iterate" for Stepped
+import "./sort" for Sort
+import "./math" for Int, Nums
+import "./fmt" for Fmt
 
 var algo = 2
 var maxAllFactors = 1e5

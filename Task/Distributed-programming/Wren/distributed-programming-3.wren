@@ -1,4 +1,4 @@
-/* go run distributed_programming_server.go */
+/* go run Distributed_programming_server.go */
 
 package main
 
@@ -16,8 +16,8 @@ type TaxComputer float64
 
 var vm2 *wren.VM
 
-var fileName  = "distributed_programming_server.wren"
-var fileName2 = "distributed_programming_server2.wren"
+var fileName  = "Distributed_programming_server.wren"
+var fileName2 = "Distributed_programming_server_2.wren"
 
 func (taxRate TaxComputer) Tax(x float64, r *float64) error {
     wrenVar, _ := vm2.GetVariable(fileName2, "TaxComputer")

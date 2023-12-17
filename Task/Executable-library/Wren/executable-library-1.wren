@@ -1,4 +1,4 @@
-/* hailstone.wren */
+/* Executable_library.wren */
 
 var Hailstone = Fn.new { |n|
     if (n < 1) Fiber.abort("Parameter must be a positive integer.")
@@ -34,6 +34,6 @@ var libMain_ = Fn.new {
 
 // Check if it's being used as a library or not.
 import "os" for Process
-if (Process.allArguments[1] == "hailstone.wren") {  // if true, not a library
+if (Process.allArguments[1] == "Executable_library.wren") {  // if true, not a library
     libMain_.call()
 }

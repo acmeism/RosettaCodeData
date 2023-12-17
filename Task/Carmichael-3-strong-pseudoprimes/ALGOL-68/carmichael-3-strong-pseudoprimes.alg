@@ -30,7 +30,8 @@ FOR prime1 FROM 2 TO 61 DO
                         INT prime3 = 1 + ( prime1 * prime2 OVER h3 );
                         IF is prime[ prime3 ] THEN
                             IF ( prime2 * prime3 ) MOD ( prime1 - 1 ) = 1 THEN
-                                print( ( whole( prime1, 0 ), " ", whole( prime2, 0 ), " ", whole( prime3, 0 ), newline ) )
+                                print( ( whole( prime1, 0 ), " ", whole( prime2, 0 ), " ", whole( prime3, 0 ) ) );
+                                print( ( newline ) )
                             FI
                         FI
                     FI

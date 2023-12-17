@@ -1,8 +1,8 @@
-import "/dynamic" for Enum, Struct
+import "./dynamic" for Enum, Struct
 import "random" for Random
-import "/ioutil" for Input
-import "/fmt" for Fmt
-import "/str" for Str
+import "./ioutil" for Input
+import "./fmt" for Fmt
+import "./str" for Str
 
 var MoveDirection = Enum.create("MoveDirection", ["up", "down", "left", "right"])
 

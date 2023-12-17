@@ -1,5 +1,5 @@
 import "random" for Random
-import "/sort" for Sort
+import "./sort" for Sort
 
 var colors = ["Red", "White", "Blue"]
 var colorMap = { "Red": 0, "White": 1, "Blue": 2 }

@@ -1,6 +1,6 @@
-import "/ioutil" for FileUtil, Input
-import "/pattern" for Pattern
-import "/str" for Str
+import "./ioutil" for FileUtil, Input
+import "./pattern" for Pattern
+import "./str" for Str
 import "os" for Process
 
 var invIndex = {}

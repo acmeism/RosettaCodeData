@@ -1,4 +1,4 @@
-/* home_primes_gmp.wren */
+/* Home_primes_2.wren */
 
 import "./gmp" for Mpz
 import "./math" for Int

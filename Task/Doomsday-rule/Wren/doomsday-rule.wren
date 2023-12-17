@@ -1,4 +1,4 @@
-import "/date" for Date
+import "./date" for Date
 
 var days = ["Sunday", "Monday", "Tuesday", "Wednesday","Thursday", "Friday", "Saturday"]
 

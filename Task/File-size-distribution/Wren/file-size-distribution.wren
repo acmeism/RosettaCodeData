@@ -1,7 +1,7 @@
 import "io" for Directory, File, Stat
 import "os" for Process
-import "/math" for Math
-import "/fmt" for Fmt
+import "./math" for Math
+import "./fmt" for Fmt
 
 var sizes = List.filled(12, 0)
 var totalSize = 0

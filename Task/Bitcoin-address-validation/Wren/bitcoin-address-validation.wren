@@ -1,6 +1,6 @@
-import "/crypto" for Sha256
-import "/str" for Str
-import "/fmt" for Conv, Fmt
+import "./crypto" for Sha256
+import "./str" for Str
+import "./fmt" for Conv, Fmt
 
 class Bitcoin {
     static alphabet_ { "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz" }

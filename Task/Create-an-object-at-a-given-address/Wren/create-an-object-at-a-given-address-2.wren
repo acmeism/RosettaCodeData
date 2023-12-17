@@ -1,4 +1,4 @@
-/* gcc create_object_at_given_address.c -o create_object_at_given_address -lwren -lm */
+/* gcc Create_an_object_at_a_given_address.c -o Create_an_object_at_a_given_address -lwren -lm */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
     config.loadModuleFn = &loadModule;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "create_object_at_given_address.wren";
+    const char* fileName = "Create_an_object_at_a_given_address.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

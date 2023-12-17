@@ -1,0 +1,407 @@
+import std/os/readline
+
+fun member(x: a, xs: list<a>, compare: (a, a) -> bool) : bool
+  match xs
+    Nil -> False
+    Cons(y, ys) -> x.compare(y) || member(x, ys,compare)
+
+fun member(xs: list<a>, x: a, compare: (a, a) -> bool) : bool
+  x.member(xs, compare)
+
+
+struct coord
+  x: int
+  y: int
+
+fun show(c: coord) : string {
+  "(" ++ c.x.show() ++ ", " ++ c.y.show() ++ ")"
+}
+
+
+fun (==)(c1: coord, c2: coord) : bool
+  c1.x == c2.x && c1.y == c2.y
+
+
+effect ctl eject(): a
+
+
+fun parse(str : string, moves : list<coord>) : <console, exn|_e>coord
+  match str.list()
+    Cons('0', Cons(' ', Cons('0', Nil))) -> Coord(0,0)
+    Cons('0', Cons(' ', Cons('1', Nil))) -> Coord(0,1)
+    Cons('0', Cons(' ', Cons('2', Nil))) -> Coord(0,2)
+    Cons('1', Cons(' ', Cons('0', Nil))) -> Coord(1,0)
+    Cons('1', Cons(' ', Cons('1', Nil))) -> Coord(1,1)
+    Cons('1', Cons(' ', Cons('2', Nil))) -> Coord(1,2)
+    Cons('2', Cons(' ', Cons('0', Nil))) -> Coord(2,0)
+    Cons('2', Cons(' ', Cons('1', Nil))) -> Coord(2,1)
+    Cons('2', Cons(' ', Cons('2', Nil))) -> Coord(2,2)
+    Cons('0', Cons(',', Cons('0', Nil))) -> Coord(0,0)
+    Cons('0', Cons(',', Cons('1', Nil))) -> Coord(0,1)
+    Cons('0', Cons(',', Cons('2', Nil))) -> Coord(0,2)
+    Cons('1', Cons(',', Cons('0', Nil))) -> Coord(1,0)
+    Cons('1', Cons(',', Cons('1', Nil))) -> Coord(1,1)
+    Cons('1', Cons(',', Cons('2', Nil))) -> Coord(1,2)
+    Cons('2', Cons(',', Cons('0', Nil))) -> Coord(2,0)
+    Cons('2', Cons(',', Cons('1', Nil))) -> Coord(2,1)
+    Cons('2', Cons(',', Cons('2', Nil))) -> Coord(2,2)
+    Cons('q', Nil) -> eject()
+    _ ->
+      println("Invalid move, please try again")
+      gen_move(moves)
+
+fun gen_move(moves : list<coord>) : <console, exn|_e> coord
+  val move : coord = parse(readline(), moves)
+
+  if moves.any() fn (c : coord) { c == move } then {
+    println("Invalid move, please try again")
+    gen_move(moves)
+  } else {
+    move
+  }
+
+fun create-board() : list<list<char>> {
+    [['.','.','.'],['.','.','.'],['.','.','.']]
+}
+
+fun show(grid: list<list<char>>) : string
+  var line := 0
+  grid.foldl("  0 1 2\n") fn(acc, row: list<char>)
+
+    val out = row.foldl(acc ++ line.show() ++ " ") fn(acc, col: char)
+      acc ++ col.string() ++ " "
+    ++ "\n"
+    line := line + 1
+    out
+
+
+
+fun get_board_position(board : list<list<char>>, coord : coord) : maybe<char> {
+  match board[coord.y] {
+    Nothing -> Nothing
+    Just(row) -> row[coord.x]
+  }
+}
+
+fun mark_board(board: list<list<char>>,coord: coord, mark: char): maybe<list<list<char>>>
+  val new_row: maybe<list<char>> = match board[coord.y]
+    Nothing -> Nothing
+    Just(row) -> Just(row.take(coord.x) ++ mark.Cons(row.drop(coord.x + 1)))
+
+  match new_row
+    Nothing -> Nothing
+    Just(row) -> Just(board.take(coord.y) ++ row.Cons(board.drop(coord.y + 1)))
+
+
+effect ctl not_full() : ()
+
+fun check_full(board: list<list<char>>) : bool
+  fun helper()
+    var full := True
+    board.foreach() fn(row)
+      if '.'.member(row) fn (a, b) a == b then {
+        not_full()
+      }
+    full
+
+  with ctl not_full() False
+  helper()
+
+fun check_win(board: list<list<char>>, mark: char) : <div, exn|_e>bool
+
+  var win := False
+  var i := 0
+  while {i < 3} {
+    if board.get_board_position(Coord(i,0)).unwrap() == mark && board.get_board_position(Coord(i,1)).unwrap() == mark && board.get_board_position(Coord(i,2)).unwrap() == mark then {
+      win := True
+    }
+    if board.get_board_position(Coord(0,i)).unwrap() == mark && board.get_board_position(Coord(1,i)).unwrap() == mark && board.get_board_position(Coord(2,i)).unwrap() == mark then {
+      win := True
+    }
+    i := i + 1
+  }
+  if board.get_board_position(Coord(0,0)).unwrap() == mark && board.get_board_position(Coord(1,1)).unwrap() == mark && board.get_board_position(Coord(2,2)).unwrap() == mark then {
+    win := True
+  }
+  if board.get_board_position(Coord(0,2)).unwrap() == mark && board.get_board_position(Coord(1,1)).unwrap() == mark && board.get_board_position(Coord(2,0)).unwrap() == mark then {
+    win := True
+  }
+
+  win
+
+
+
+fun human_logic(board: list<list<char>>, moves: list<coord>, mark: char, other_mark: char) : <console,div,exn|_e> coord
+  gen_move(moves)
+
+
+fun ai_logic(board: list<list<char>>, moves: list<coord>, mark: char, other_mark: char)
+  board.gen_ai_move(moves,mark, other_mark)
+
+
+struct move
+    move : coord
+    score: int
+
+fun (==)(m1 : move, m2 : move) : bool {
+    m1.move == m2.move && m1.score == m2.score
+}
+
+fun eval_board(board : list<list<char>>, mark: char, other-mark : char) {
+  if board.check_win(mark) then {
+    10
+  }
+  elif board.check_win(other-mark) then {
+    -10
+  }
+  else {
+    0
+  }
+}
+
+fun maximum-move(a : move, b : move) : move {
+  if a.score > b.score then {
+    a
+  }
+  else {
+    b
+  }
+}
+
+
+fun gen_ai_move(board : list<list<char>>, moves : list<coord>, mark : char, other-mark : char) {
+  val best_move : move = Move(Coord(-1,-1), -1000)
+  [0,1,2].foldl(best_move) fn (bstMove : move, i : int) {
+    [0,1,2].foldl(bstMove) fn (bstMve : move, j : int) {
+      if Coord(i,j).member(moves) fn (a,b) {a == b} then {
+        bstMve
+      }
+      else {
+        val new_board : list<list<char>> = board.mark_board(Coord(i,j), mark).unwrap()
+        val new-max = maximum-move(bstMve, Move(Coord(i,j), new_board.minimax(moves ++ [Coord(i,j)], 0, False, mark, other-mark)))
+        new-max
+      }
+    }
+  }.move
+}
+
+fun unwrap(x: maybe<a>): <exn> a
+  match x
+    Just(a) -> a
+    Nothing -> throw("value was Nothing")
+
+// A basic implementation of Minimax
+// This uses brace style to show that it is possible
+fun minimax(board : list<list<char>>, moves: list<coord>, depth : int, isMaximizingPlayer : bool, mark : char, other-mark : char) : <div,exn|_e> int {
+  val score : int = board.eval_board(mark, other-mark)
+  if score == 10 then {
+    score
+  }
+  elif score == -10 then {
+    score
+  }
+  elif board.check_full() then {
+    0
+  }
+  else {
+    if isMaximizingPlayer then {
+      val bestVal: int = -1000
+      [0,1,2].foldl(bestVal) fn (bstVal : int, i : int) {
+        [0,1,2].foldl(bstVal) fn (bstVl : int, j : int) {
+          if Coord(i,j).member(moves) fn(a, b) {a == b} then {
+            bstVl
+          }
+          else {
+            val new_board : list<list<char>> = board.mark_board(Coord(i,j), mark).unwrap()
+            val value : int = new_board.minimax(moves ++ [Coord(i,j)], depth + 1, !isMaximizingPlayer, mark, other-mark)
+            max(bstVl, value)
+          }
+        }
+      }
+    }
+    else {
+      val bestVal: int = 1000
+      [0,1,2].foldl(bestVal) fn (bstVal : int, i : int) {
+        [0,1,2].foldl(bstVal) fn (bstVl : int, j : int) {
+          if Coord(i,j).member(moves) fn(a,b) {a == b} then {
+            bstVl
+          }
+          else {
+            val new_board : list<list<char>> = board.mark_board(Coord(i,j), other-mark).unwrap()
+            val value : int = new_board.minimax(moves ++ [Coord(i,j)], depth + 1, !isMaximizingPlayer, mark, other-mark)
+            min(bstVl, value)
+          }
+        }
+      }
+    }
+  }
+}
+
+// The main business logic of the entire game
+// This function checks if there is a draw or a win
+fun play_game()
+  val board = get_board()
+
+  if board.check_full() then
+    println("Draw!")
+    println("Final board:")
+    board.show().println
+  else
+    "Next Turn:".println
+    board.show().println
+    val current_mark = get_current_mark()
+    val other_mark = get_other_mark()
+    play_turn(current_mark, other_mark)
+    val new_board = get_board()
+
+    if new_board.check_win(current_mark) then
+      println("Player " ++ current_mark.show() ++ " wins!")
+      println("Final board:")
+      new_board.show().println
+    else
+      flip()
+      play_game()
+
+
+effect human_turn
+  fun play_human_turn(pair: (list<list<char>>, list<coord>), marks: (char, char)) : coord
+effect ai_turn
+  fun play_ai_turn(pair: (list<list<char>>, list<coord>), marks: (char, char)) : coord
+
+effect player1
+  fun player1_turn(pair: (list<list<char>>, list<coord>), marks: (char, char)) : coord
+  fun get_player1_mark() : char
+effect player2
+  fun player2_turn(pair: (list<list<char>>, list<coord>), marks: (char, char)) : coord
+  fun get_player2_mark() : char
+
+
+effect turn
+  // Changes the current player to a different one
+  fun flip() : ()
+  // Calls the appropriate code for the current player
+  fun play_turn(mark: char, other_mark: char) : ()
+  // Gets the symbol of the active player
+  fun get_current_mark(): char
+  // Gets the symbol of the inactive player
+  fun get_other_mark(): char
+  // This allows us to access the board
+  fun get_board() : list<list<char>>
+  // This allows us to access the moves that have been made
+  fun get_moves(): list<coord>
+
+
+
+type player
+  Human
+  AI
+
+type players
+  One
+  Two
+
+// This function encapsulates the state of the entire game
+// Think of it as calling a method on an object but with pure functions
+fun initialize_and_start_game(game_type: int)
+  var current_player := One
+  var current_board := create-board()
+  var all_moves := []
+
+  var player1 := Human
+  var player2 := AI
+
+  match game_type
+    1 -> {
+      player1 := Human
+      player2 := Human
+    }
+    2 -> {
+      player1 := Human
+      player2 := AI
+    }
+    3 -> {
+      player1 := AI
+      player2 := AI
+    }
+    _ -> throw("invalid game type")
+
+
+  with handler
+    ctl eject()
+      println("Have a nice day.")
+  with fun play_human_turn(pair: (list<list<char>>, list<coord>), marks: (char, char))
+    human_logic(pair.fst,pair.snd,marks.fst,marks.snd)
+  with fun play_ai_turn(pair: (list<list<char>>, list<coord>), marks: (char, char))
+    ai_logic(pair.fst,pair.snd,marks.fst,marks.snd)
+  with handler
+    fun player1_turn(pair: (list<list<char>>, list<coord>), marks: (char, char))
+      match player1
+        Human -> play_human_turn(pair, marks)
+        AI -> play_ai_turn(pair, marks)
+    fun get_player1_mark()
+      'X'
+  with handler
+    fun player2_turn(pair: (list<list<char>>, list<coord>), marks: (char, char))
+      match player2
+        Human -> play_human_turn(pair, marks)
+        AI -> play_ai_turn(pair, marks)
+    fun get_player2_mark()
+      'O'
+  with handler
+    return(x) ()
+    fun flip()
+      match current_player
+        One -> current_player := Two
+        Two -> current_player := One
+    fun play_turn(mark: char, other_mark: char)
+      match current_player
+        One -> {
+          val coord = player1_turn((current_board, all_moves), (mark, other_mark))
+          current_board := mark_board(current_board,coord,get_player1_mark()).unwrap
+
+          all_moves := Cons(coord, all_moves)
+          ()
+        }
+        Two -> {
+          val coord = player2_turn((current_board, all_moves), (mark, other_mark))
+
+          current_board := mark_board(current_board,coord,get_player2_mark()).unwrap
+
+          all_moves := Cons(coord, all_moves)
+          ()
+        }
+    fun get_current_mark() match current_player
+      One -> get_player1_mark()
+      Two -> get_player2_mark()
+    fun get_other_mark() match current_player
+      Two -> get_player1_mark()
+      One -> get_player2_mark()
+    fun get_board() current_board
+    fun get_moves() all_moves
+  play_game()
+
+
+
+fun prompt_game_type()
+  match readline().list()
+    Cons('1', Nil) -> 1
+    Cons('2', Nil) -> 2
+    Cons('3', Nil) -> 3
+    _ ->
+      println("Invalid game mode, please try again")
+      prompt_game_type()
+
+
+fun main ()
+  println("Welcome to Tic Tac Toe!")
+  println("Please select a game mode:")
+  println("1. Two player")
+  println("2. One player")
+  println("3. Zero player")
+  println("Enter the number of the game mode you want to play")
+
+  val game_type = prompt_game_type()
+
+  "Enter your input as 'x y' or 'x,y' when selecting a spot".println
+
+  initialize_and_start_game(game_type)

@@ -1,4 +1,4 @@
-import "/math" for Int
+import "./math" for Int
 
 var sameDigits = Fn.new { |n, b|
     var f = n % b

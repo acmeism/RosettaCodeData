@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/matrix" for Matrix
+import "./fmt" for Fmt
+import "./matrix" for Matrix
 
 // matrix-matrix element wise ops
 class MM {

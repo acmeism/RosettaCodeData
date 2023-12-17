@@ -1,5 +1,4 @@
 import "./math" for Int
-import "./seq"  for Lst
 import "./fmt"  for Fmt
 
 var isAscending = Fn.new { |n|
@@ -23,4 +22,4 @@ var ascPrimes = []
 for (p in primes) if (isAscending.call(p)) ascPrimes.add(p)
 ascPrimes.addAll(higherPrimes)
 System.print("There are %(ascPrimes.count) ascending primes, namely:")
-for (chunk in Lst.chunks(ascPrimes, 10)) Fmt.print("$8d", chunk)
+Fmt.tprint("$8d", ascPrimes, 10)

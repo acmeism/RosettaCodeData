@@ -1,6 +1,6 @@
-import "/fmt" for Fmt
-import "/math" for Math
-import "/sort" for Sort
+import "./fmt" for Fmt
+import "./math" for Math
+import "./sort" for Sort
 
 class Item {
     construct new(name, weight, value) {

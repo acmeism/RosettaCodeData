@@ -1,4 +1,4 @@
-/* go run dns_query.go */
+/* go run DNS_query.go */
 
 package main
 
@@ -21,7 +21,7 @@ func lookupHost(vm *wren.VM, parameters []any) (any, error) {
 
 func main() {
     vm := wren.NewVM()
-    fileName := "dns_query.wren"
+    fileName := "DNS_query.wren"
     methodMap := wren.MethodMap{"static lookupHost(_)": lookupHost}
     classMap := wren.ClassMap{"Net": wren.NewClass(nil, nil, methodMap)}
     module := wren.NewModule(classMap)

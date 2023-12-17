@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var fact = Fn.new  { |n|
     if (n < 2) return 1
@@ -17,10 +17,10 @@ var lah = Fn.new { |n, k|
 
 System.print("Unsigned Lah numbers: l(n, k):")
 System.write("n/k")
-for (i in 0..12) System.write("%(Fmt.d(10, i)) ")
+for (i in 0..12) Fmt.write("$10d ", i)
 System.print("\n" + "-" * 145)
 for (n in 0..12) {
-    System.write("%(Fmt.d(2, n)) ")
-    for (k in 0..n) System.write("%(Fmt.d(10, lah.call(n, k))) ")
+    Fmt.write("$2d ", n)
+    for (k in 0..n) Fmt.write("$10d ", lah.call(n, k))
     System.print()
 }

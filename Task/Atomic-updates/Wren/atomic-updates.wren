@@ -1,7 +1,7 @@
 import "random" for Random
 import "scheduler" for Scheduler
 import "timer" for Timer
-import "/math" for Nums
+import "./math" for Nums
 
 var Rnd = Random.new()
 

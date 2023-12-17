@@ -1,0 +1,149 @@
+[Magic squares of doubly even order, for Rosetta Code.
+ EDSAC program, Initial Orders 2.]
+[====================================================================================
+Certain cells in the square are marked, such that if a cell is marked then so is
+its reflection in the centre point of the square. Cells are numbered 1, 2, 3 ...
+from left to right and top to bottom, but if a cell is marked it is swapped with its
+reflection. Two marking methods are used, illustrated below for an 8x8 square.
+  + o o + + o o +        + + o o o o + +
+  o + + o o + + o        + + o o o o + +
+  o + + o o + + o        o o + + + + o o
+  + o o + + o o +        o o + + + + o o        o = unmarked
+  + o o + + o o +        o o + + + + o o        + = marked
+  o + + o o + + o        o o + + + + o o
+  o + + o o + + o        + + o o o o + +
+  + o o + + o o +        + + o o o o + +
+  Diagonal method        Rectangle method
+====================================================================================]
+      [Arrange the storage]
+          T45K P56F       [H parameter: subroutine to print string]
+          T46K P100F      [N parameter: subroutine to print number]
+          T47K P204F      [M parameter: main routine]
+          T54K P200F      [C parameter: constants read by subroutine R2]
+
+[Library subroutine R2: reads integers from tape and can then be overwritten.]
+          GK T20F VD L8F A40D UD TF I40F A40F S39F G@ S2F G23F A5@ T5@ E4@ E13Z
+          T#C             [tell R2 where to store values]
+    13743895347F8589934592#TZ
+[C parameter: masks read in by subroutine R2, not by the regular loader]
+    [0]   PF PF           [diagonal method,  binary 01100110011001100110011001100110011]
+    [2]   PF PF           [rectangle method, binary 01000000000000000000000000000000000]
+
+[M parameter Main routine + high-level subroutine]
+          E25K TM GK
+[35-bit values, must be at even address]
+    [0]   PF PF           [initial value of x mask]
+    [2]   PF              [x-mask, low 17 bits]
+    [3]   PF              [x-mask, high 17 bits]
+    [4]   PF              [y-mask, low 17 bits]
+    [5]   PF              [y-mask, high 17 bits]
+[17-bit values]
+    [6]   PF              [sign bit from y mask]
+    [7]   PF              [m, input by user]
+    [8]   PF              [n = 4*m = order of magic square]
+    [9]   PF              [n^2 + 1]
+   [10]   PF              [negative counter for x-values (columns)]
+   [11]   PF              [negative counter for y-values (rows)]
+   [12]   PF              [current entry 1, 2, 3, ...]
+   [13]   PD              [constant 1]
+   [14]   K4096F          [null]
+   [15]   !F              [space]
+   [16]   @F              [carriage return]
+   [17]   &F              [line feed]
+   [18]   P10F            [to check for user dialling '0']
+[Strings to be printed]
+   [19]   K2048FMFAFGFIFCF!FSFQFUFAFRFEF!FOFFF!FOFRFDFEFRF!F#FRF*FMF@F&FK4096F
+   [49]   K2048FDFIFAFLF!FMF!F#FKFPF!F*FTFOF!FCFAFNFCFEFLF#FLF!FK4096F
+   [75]   K2048FDFIFAFGFOFNFAFLF!FMFEFTFHFOFDF#FCF@F&FK4096F
+   [96]   K2048FRFEFCFTFAFNFGFLFEF!FMFEFTFHFOFDF#FCF@F&FK4096F
+
+[Enter with acc = 0]
+  [118]   A118@ GH A19@   [print 'MAGIC SQUARE OF ORDER 4M']
+  [121]   A121@ GH A49@   [print 'DIAL M (0 TO CANCEL)']
+          ZF              [halt machine; restarts when user dials a number]
+        [Here acc holds number of pulses in address field]
+          S18@ E175@      [exit if dialled '0' (10 pulses)]
+          A18@            [restore acc after test; m is in address field]
+          L512F           [shift 11 left for printing]
+          UF              [temp to 0F]
+          OF O16@ O17@    [print m followed by CR, LF]
+          R1024F          [shift 12 right, m is now right-justified]
+          U7@             [store m]
+          L1F T8@         [shift 2 left and store n = 4*m]
+          H8@ V8@         [acc := n^2]
+          L64F L64F       [shift 16 left to adjust scaling after mult]
+          A13@ T9@        [store n^2 + 1 = sum of a cell and its reflection]
+  [143]   A143@ GH A75@   [print 'DIAGONAL METHOD:']
+          A#C             [acc := diagonal mask]
+          U#@             [store as x-mask at start of each row]
+          T4#@            [also as initial value of y-mask]
+  [149]   A149@ G177@     [call subroutine to print magic square]
+  [151]   A151@ GH A96@   [print 'RECTANGLE METHOD:']
+          A2#C U4D T6D    [copy rectangke mask to 4D and 6D]
+          S7@             [initialize negative counter to -m]
+  [158]   TF              [loop: update negative counter in 0F]
+          A4D RD T4D      [shift 4D 1 right]
+          A6D R2F T6D     [shift 6D 3 right]
+          AF A13@         [inc negative counter]
+          G158@           [loop back till done m times]
+          A4D S6D L1F     [acc := 4D - 6D, then 2 left]
+        [Mask in binary is now 0 (m times) 1 (2*m times) 0...0]
+          U#@             [store as x-mask at start of each row]
+          T4#@            [also as initial value of y-mask]
+  [173]   A173@ G177@     [call subroutine to print magic square]
+  [175]   O14@            [done; print null to flush teleprinter buffer]
+          ZF              [halt machine]
+
+[Subroutine to print magic square after x- and y-mask have been initialized.]
+[It's assumed that strings printed by caller leave teleprinter in figures mode.]
+  [177]   A3F T220@       [plant return link as usual]
+          A15@ T1F        [space replaces leading 0 when printing]
+          T12@            [initialize cell entry to 0]
+          S8@             [initialize negative counter of rows to -n]
+[Start of row]
+  [183]   T11@            [update negative counter of rows]
+          A#@ T2#@        [reset x-mask for start of row]
+          H14@ C5@ T6@    [isolate sign bit of y-mask]
+          S8@             [initialize negative counter of columns to -n]
+[Next cell in this row.
+ Cell is considered marked if sign bits in x- and y-masks are equal.
+ Or could say marked if sign bits are unequal; would also give a magic square.]
+  [190]   T10@            [update negative counter of columns]
+          A12@ A13@ T12@  [inc cell entry]
+          A3@ A6@         [compare signs in x- and y-masks]
+          E200@           [jump if equal (or could replace E by G)]
+          TF              [clear acc]
+          A12@            [acc := entry]
+          E203@           [join common code]
+  [200]   TF              [clear acc]
+          A9@ S12@        [acc := complement of entry]
+  [203]   TF              [to 0F for printing]
+  [204]   A204@ GN        [print number]
+          A2#@ LD T2#@    [shift x-mask 1 left]
+          A10@ A13@       [inc negative counter of cells]
+          G190@           [loop till row is complete]
+[End of row]
+          O16@ O17@       [print CR, LF]
+          A4#@ LD T4#@    [shift y-mask 1 left]
+          A11@ A13@       [inc negative counter of rows]
+          G183@           [loop till magic square is complete]
+  [220]   ZF              [(planted) jump back to caller]
+
+[H parameter: Subroutine to print a string.]
+          E25K TH
+[Input: A order for first character must follow subroutine call (G order)
+ String is terminated with EDSAC null, which is sent to the teleprinter.]
+    GKA18@U17@S19@T4@AFT6@AFUFOFE12@A20@G16@TFA6@A2FG5@TFZFU3FU1FK2048F
+
+[N parameter: Subroutine to print non-negative 17-bit integer.]
+          E25K TN
+[Parameters: 0F = integer to be printed (not preserved)
+             1F = character for leading zero (preserved)
+ Workspace: 4F..7F, 38 locations]
+    GKA3FT34@A1FT7FS35@T6FT4#FAFT4FH36@V4FRDA4#FR1024FH37@E23@O7FA2F
+    T6FT5FV4#FYFL8FT4#FA5FL1024FUFA6FG16@OFTFT7FA6FG17@ZFP4FZ219DTF
+
+[M parameter again]
+          E25K TM GK
+          E118Z           [define entry point]
+          PF              [acc = 0 on entry]

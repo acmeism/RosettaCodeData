@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 class Num2 {
     construct new(n) { _n = n }

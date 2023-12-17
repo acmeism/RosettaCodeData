@@ -1,4 +1,4 @@
-/* http.wren */
+/* HTTP.wren */
 
 var CURLOPT_URL = 10002
 var CURLOPT_FOLLOWLOCATION = 52

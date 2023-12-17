@@ -1,4 +1,4 @@
-/* gcc chat_server.c -o chat_server -lpthread -lwren -lm */
+/* gcc Chat_server.c -o Chat_server -lpthread -lwren -lm */
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -278,7 +278,7 @@ int main(int argc, char **argv) {
     config.errorFn = &errorFn;
     config.bindForeignMethodFn = &bindForeignMethod;
     const char* module = "main";
-    const char* fileName = "chat_server.wren";
+    const char* fileName = "Chat_server.wren";
     script = readFile(fileName);
 
     /* config the VMs and interpret the script */

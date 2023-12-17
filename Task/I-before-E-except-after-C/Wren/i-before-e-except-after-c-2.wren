@@ -1,6 +1,6 @@
 import "io" for File
-import "/pattern" for Pattern
-import "/fmt" for Fmt
+import "./pattern" for Pattern
+import "./fmt" for Fmt
 
 var yesNo = Fn.new { |b| (b) ? "yes" : "no" }
 

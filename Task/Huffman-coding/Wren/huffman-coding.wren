@@ -1,4 +1,4 @@
-import "/queue" for PriorityQueue
+import "./queue" for PriorityQueue
 
 class HuffmanTree {
     construct new(freq) {

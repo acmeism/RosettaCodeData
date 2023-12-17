@@ -1,5 +1,5 @@
-import "/big" for BigRat
-import "/fmt" for Fmt
+import "./big" for BigRat
+import "./fmt" for Fmt
 
 var p = { 1: 0 }
 var lvl = [[1]]

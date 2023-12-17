@@ -1,4 +1,4 @@
-import "/big" for BigInt
+import "./big" for BigInt
 
 var countryCodes =
     "AD24 AE23 AL28 AT20 AZ28 BA20 BE16 BG22 BH22 BR29 " +

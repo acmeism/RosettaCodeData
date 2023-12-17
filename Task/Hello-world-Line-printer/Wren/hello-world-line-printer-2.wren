@@ -1,4 +1,4 @@
-/* gcc hello_world_line_printer.c -o hello_world_line_printer -lwren -lm */
+/* gcc Hello_world_Line_printer.c -o Hello_world_Line_printer -lwren -lm */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "hello_world_line_printer.wren";
+    const char* fileName = "Hello_world_Line_printer.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     wrenFreeVM(vm);

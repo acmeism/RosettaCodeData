@@ -1,15 +1,11 @@
-x = 17
-y = 34
-tot = 0
-while x >= 1
-  write x & "\t"
-  if (x + 1) mod 2 = 0
-    tot += y
-    print y
-  else
-    print ""
-  .
-  x = x div 2
-  y = 2 * y
+func mult x y .
+   while x >= 1
+      if x mod 2 <> 0
+         tot += y
+      .
+      x = x div 2
+      y *= 2
+   .
+   return tot
 .
-print "=\t" & tot
+print mult 17 34

@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/math" for Int
+import "./fmt" for Fmt
+import "./math" for Int
 
 var binomial = Fn.new { |n, k|
     if (n < 0 || k < 0) Fiber.abort("Arguments must be non-negative integers")

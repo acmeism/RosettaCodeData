@@ -1,6 +1,6 @@
-import "/crypto" for Sha256, Ripemd160
-import "/str" for Str
-import "/fmt" for Conv
+import "./crypto" for Sha256, Ripemd160
+import "./str" for Str
+import "./fmt" for Conv
 
 // converts an hexadecimal string to a byte list.
 var HexToBytes = Fn.new { |s| Str.chunks(s, 2).map { |c| Conv.atoi(c, 16) }.toList }

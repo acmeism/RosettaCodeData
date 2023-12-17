@@ -1,5 +1,5 @@
-import "/math" for Int
-import "/fmt" for Conv, Fmt
+import "./math" for Int
+import "./fmt" for Conv, Fmt
 
 var trialFactor = Fn.new { |base, exp, mod|
     var square = 1

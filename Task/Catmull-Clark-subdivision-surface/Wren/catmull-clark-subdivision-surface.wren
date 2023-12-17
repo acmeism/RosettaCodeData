@@ -1,7 +1,7 @@
-import "/dynamic" for Tuple, Struct
-import "/sort" for Sort
-import "/math" for Int
-import "/fmt" for Fmt
+import "./dynamic" for Tuple, Struct
+import "./sort" for Sort
+import "./math" for Int
+import "./fmt" for Fmt
 
 var Point = Tuple.create("Point", ["x", "y", "z"])
 var fields = [

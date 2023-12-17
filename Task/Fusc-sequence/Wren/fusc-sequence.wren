@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 System.print("The first 61 numbers in the fusc sequence are:")
 var fusc = [0, 1]

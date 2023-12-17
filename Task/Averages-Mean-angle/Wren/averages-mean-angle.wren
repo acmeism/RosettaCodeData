@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var meanAngle = Fn.new { |angles|
     var n = angles.count

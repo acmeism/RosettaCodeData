@@ -1,5 +1,5 @@
-import "/big" for BigInt
-import "/fmt" for Fmt
+import "./big" for BigInt
+import "./fmt" for Fmt
 
 var bellTriangle = Fn.new { |n|
     var tri = List.filled(n, null)

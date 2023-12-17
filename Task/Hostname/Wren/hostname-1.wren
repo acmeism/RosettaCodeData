@@ -1,4 +1,4 @@
-/* hostname.wren */
+/* Hostname.wren */
 class Host {
     foreign static name() // the code for this is provided by Go
 }

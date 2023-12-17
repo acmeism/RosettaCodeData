@@ -1,5 +1,5 @@
-import "/math" for Int
-import "/rat" for Rat
+import "./math" for Int
+import "./rat" for Rat
 
 var bernoulli = Fn.new { |n|
     if (n < 0) Fiber.abort("Argument must be non-negative")

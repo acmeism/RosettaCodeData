@@ -1,6 +1,6 @@
-import "/big" for BigInt
-import "/fmt" for Fmt
-import "/iterate" for Stepped
+import "./big" for BigInt
+import "./fmt" for Fmt
+import "./iterate" for Stepped
 
 var perm = Fn.new { |n, k|
     if (n <= 0 || k < 0) Fiber.abort("Invalid argument(s).")

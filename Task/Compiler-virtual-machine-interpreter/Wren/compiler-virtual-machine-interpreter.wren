@@ -1,7 +1,7 @@
-import "/dynamic" for Enum
-import "/crypto" for Bytes
-import "/fmt" for Conv
-import "/ioutil" for FileUtil
+import "./dynamic" for Enum
+import "./crypto" for Bytes
+import "./fmt" for Conv
+import "./ioutil" for FileUtil
 
 var codes = [
     "fetch",

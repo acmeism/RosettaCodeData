@@ -1,4 +1,4 @@
-import "/fmt" for Conv
+import "./fmt" for Conv
 
 class CRC32 {
     static init() {

@@ -1,4 +1,4 @@
-/* gcc echo_server.c -o echo_server -lwren -lm  */
+/* gcc Echo_server.c -o Echo_server -lwren -lm  */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -281,7 +281,7 @@ int main(int argc, char **argv) {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "echo_server.wren";
+    const char* fileName = "Echo_server.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

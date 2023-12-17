@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var entropy = Fn.new { |s|
     var m = {}

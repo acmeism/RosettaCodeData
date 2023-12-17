@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 class Sandpile {
     // 'a' is a list of integers in row order

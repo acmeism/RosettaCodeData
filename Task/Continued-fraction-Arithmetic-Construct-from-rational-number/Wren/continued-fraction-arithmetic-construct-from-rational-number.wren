@@ -1,5 +1,5 @@
-import "/rat" for Rat
-import "/fmt" for Fmt
+import "./rat" for Rat
+import "./fmt" for Fmt
 
 var toContFrac = Fn.new { |r|
     var a = r.num

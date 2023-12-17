@@ -1,5 +1,5 @@
-import "/llist" for DLinkedList
-import "/fmt" for Fmt
+import "./llist" for DLinkedList
+import "./fmt" for Fmt
 
 // create a new doubly-linked list and add the first 50 positive integers to it
 var dll = DLinkedList.new(1..50)

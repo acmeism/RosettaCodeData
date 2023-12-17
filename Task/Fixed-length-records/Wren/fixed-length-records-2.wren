@@ -1,5 +1,5 @@
-import "/ioutil" for File, FileUtil
-import "/str" for Str
+import "./ioutil" for File, FileUtil
+import "./str" for Str
 
 var blockToText = Fn.new { |blockFileName, textFileName|
     var block = File.read(blockFileName)

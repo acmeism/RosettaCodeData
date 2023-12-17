@@ -1,5 +1,5 @@
-import "/big" for BigInt
-import "/trait" for Comparable
+import "./big" for BigInt
+import "./trait" for Comparable
 
 class BTernary is Comparable {
     toBT_(v) {

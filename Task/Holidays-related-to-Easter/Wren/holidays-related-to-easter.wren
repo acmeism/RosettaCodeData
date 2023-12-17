@@ -1,6 +1,6 @@
-import "/date" for Date
-import "/fmt" for Fmt
-import "/iterate" for Stepped
+import "./date" for Date
+import "./fmt" for Fmt
+import "./iterate" for Stepped
 
 var holidayOffsets = [
     ["Easter", 0],

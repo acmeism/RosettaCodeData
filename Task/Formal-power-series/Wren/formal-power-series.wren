@@ -1,4 +1,4 @@
-import "/rat" for Rat
+import "./rat" for Rat
 
 class Gene {
     coef(n) {}

@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var feigenbaum = Fn.new {
     var maxIt = 13

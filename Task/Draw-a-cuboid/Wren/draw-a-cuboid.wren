@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var cubLine = Fn.new { |n, dx, dy, cde|
     Fmt.write("$*s", n + 1, cde[0])

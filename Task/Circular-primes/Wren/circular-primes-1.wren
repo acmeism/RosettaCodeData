@@ -1,6 +1,6 @@
-import "/math" for Int
-import "/big" for BigInt
-import "/str" for Str
+import "./math" for Int
+import "./big" for BigInt
+import "./str" for Str
 
 var circs = []
 

@@ -1,4 +1,4 @@
-import "/dynamic" for Enum
+import "./dynamic" for Enum
 
 var Fruit = Enum.create("Fruit", ["apple", "orange", "pear", "cherry", "banana", "grape"], 1)
 System.print(Fruit.orange)

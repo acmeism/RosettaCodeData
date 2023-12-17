@@ -1,6 +1,6 @@
-import "/math" for Int
-import "/seq" for Lst
-import "/fmt" for Fmt
+import "./math" for Int
+import "./seq" for Lst
+import "./fmt" for Fmt
 
 var count = 0
 var k = 11 * 11

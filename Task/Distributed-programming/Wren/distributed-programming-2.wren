@@ -1,4 +1,4 @@
-/* distributed_programming_server2.wren */
+/* Distributed_programming_server_2.wren */
 
 class TaxComputer {
     static tax(amount, rate) {

@@ -1,4 +1,4 @@
-import "/matrix" for Matrix
+import "./matrix" for Matrix
 
 var cramer = Fn.new { |a, d|
     var n = a.numRows

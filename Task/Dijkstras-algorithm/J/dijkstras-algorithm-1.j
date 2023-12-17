@@ -1,6 +1,6 @@
 NB. verbs and adverb
 parse_table=: ;:@:(LF&= [;._2 -.&CR)
-mp=: $:~ :(+/ .*)                       NB. matrix product
+mp=: +/ .*~~                            NB. matrix product
 min=: <./                               NB. minimum
 Index=: (i.`)(`:6)                      NB. Index adverb
 

@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/big" for BigInt
+import "./fmt" for Fmt
+import "./big" for BigInt
 
 var p = BigInt.three.pow(BigInt.two)
 p = BigInt.four.pow(p)

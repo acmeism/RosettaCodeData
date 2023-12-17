@@ -1,6 +1,6 @@
-import "/big" for BigInt
-import "/math" for Nums
-import "/fmt" for Conv, Fmt
+import "./big" for BigInt
+import "./math" for Nums
+import "./fmt" for Conv, Fmt
 
 var maxBase  = 21
 var minSq36  = "1023456789abcdefghijklmnopqrstuvwxyz"

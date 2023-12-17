@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/str" for Str
+import "./fmt" for Fmt
+import "./str" for Str
 
 var deBruijn = ""
 for (n in 0..99) {

@@ -1,21 +1,21 @@
-def quickSort(arr):
-    less = []
-    pivotList = []
-    more = []
-    if len(arr) <= 1:
-        return arr
-    else:
-        pivot = arr[0]
-        for i in arr:
-            if i < pivot:
-                less.append(i)
-            elif i > pivot:
-                more.append(i)
-            else:
-                pivotList.append(i)
-        less = quickSort(less)
-        more = quickSort(more)
-        return less + pivotList + more
+def quick_sort(sequence):
+    lesser = []
+    equal = []
+    greater = []
+    if len(sequence) <= 1:
+        return sequence
+    pivot = sequence[0]
+    for element in sequence:
+        if element < pivot:
+            lesser.append(element)
+        elif element > pivot:
+            greater.append(element)
+        else:
+            equal.append(element)
+    lesser = quick_sort(lesser)
+    greater = quick_sort(greater)
+    return lesser + equal + greater
+
 
 a = [4, 65, 2, -31, 0, 99, 83, 782, 1]
-a = quickSort(a)
+a = quick_sort(a)

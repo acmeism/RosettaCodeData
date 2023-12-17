@@ -1,4 +1,4 @@
-import "/big" for BigInt
+import "./big" for BigInt
 
 // Separates each integer in the list with an 'a' then encodes in base 11.
 // Empty list mapped to '-1'.

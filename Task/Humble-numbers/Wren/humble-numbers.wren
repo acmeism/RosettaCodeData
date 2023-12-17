@@ -1,6 +1,6 @@
-import "/fmt" for Fmt
-import "/math" for Int, Nums
-import "/sort" for Find
+import "./fmt" for Fmt
+import "./math" for Nums
+import "./sort" for Find
 
 var humble = Fn.new { |n|
     var h = List.filled(n, 0)
@@ -40,9 +40,9 @@ var h = humble.call(n)
 System.print("The first 50 humble numbers are:")
 System.print(h[0..49])
 
-var f = Find.all(h, Int.maxSafe) // binary search
+var f = Find.all(h, Num.maxSafeInteger) // binary search
 var maxUsed = f[0] ? f[2].min + 1 : f[2].min
-var maxDigits = 16 // Int.maxSafe (2^53 -1) has 16 digits
+var maxDigits = 16 // Num.maxSafeInteger (2^53 -1) has 16 digits
 var counts = List.filled(maxDigits + 1, 0)
 var digits = 1
 var pow10 = 10

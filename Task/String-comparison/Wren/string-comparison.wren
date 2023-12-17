@@ -1,4 +1,4 @@
-import "/str" for Str
+import "./str" for Str
 
 var compareStrings = Fn.new { |a, b, sens|
     System.write("Comparing '%(a)' and '%(b)', ")

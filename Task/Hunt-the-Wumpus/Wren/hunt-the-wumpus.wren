@@ -1,7 +1,7 @@
 import "random" for Random
-import "/fmt" for Fmt
-import "/ioutil" for Input
-import "/str" for Str
+import "./fmt" for Fmt
+import "./ioutil" for Input
+import "./str" for Str
 
 var cave = {
      1: [ 2,  3,  4],  2: [ 1,  5,  6],  3: [ 1,  7,  8],  4: [ 1,  9, 10],

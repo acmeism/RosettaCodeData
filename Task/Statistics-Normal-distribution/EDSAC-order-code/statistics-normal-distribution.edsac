@@ -1,0 +1,219 @@
+[Normal distribution for Rosetta Code
+ EDSAC program, Initial Orders 2]
+
+[==================================================================================
+ Uses an accept-reject method, which requires only logarithms (no trig functions).
+ Let u, v be independent uniform variates in (0, 1). Let x = -ln(u), y = -ln(v).
+ Accept x iff (x - 1)^2 <= 2y. If x is accepted, negate it with probability 1/2.
+ Then x is normally distributed with mean 0 and standard deviation 1.
+ The algorithm is modified for this EDSAC version:
+ (1) Uses EDSAC library subroutine L1 to calculate (1/32)log_2() rather than ln()
+ (2) Since real numbers on EDSAC are restricted to the interval [-1, 1), scales so
+     that the standard deviation is 1/4, and reject values >= 4 s.d. from the mean.
+ In the histogram, counts are divided by 16, with rounding.
+ On the EDSAC PC simulator, takes 2.75 EDSAC hours to find 4096 normal variates.
+[=================================================================================]
+
+  [Arrange the storage]
+          T46K P70F       [N parameter: library subroutine P1 to print +ve fraction]
+          T47K P200F      [M parameter: main routine and dependent subroutines]
+          T49K P92F       [L parameter: library subroutine L1 to calculate log_2]
+          T51K P130F      [G parameter: generator for pseudo-random numbers]
+          T52K P168F      [A parameter: library subroutine S2 for square root]
+          T54K P190F      [C parameter: constants read in by library subroutine R9]
+
+[Library subroutine R9, reads non-negative integers at load time.
+ Fractions can be read by converting to integers (multiply by 2^34).
+ 15 locations, must be loaded at location 56.]
+          T56KGKT20FVDL8FA40DUDTFI40FA40FS39FG@S2FG23FA5@T5@E4@
+
+[Library subroutine M3, prints header at load time.
+ M3 and header are then overwritten.]
+          PFGKIFAFRDLFUFOFE@A6FG@E8FEZPF
+          *MEAN#!K0BL!!*SD#!K0M25BL@&#..PZ
+
+[========================== C parameter ==========================]
+   [Tell R9 where to store integers read from tape]
+          E69K T#C        ['T m D' in WWG, but this also works]
+   [List of integers; separated by F; end list with #TZ]
+123456789F5F1549082005F11908177887F858993#TZ
+    [0] [seed for random number generator]
+    [2] [minimum argument for library subroutine L1]
+    [4] [1/(16*ln(2)) for accept-reject]
+    [6] [ln(2) for scaling standard deviation]
+    [8] [0.00005 for rounding in print routine]
+
+[========================== M parameter ==========================]
+          E25K TM GK
+    [0]   P4096F          [number of data, in address field; code below assumes 4096]
+    [1]   PF              [negative count of data]
+    [2]   PF              [worlspace, low word]
+    [3]   PF              [workspace, high word]
+    [4]   PF PF           [auxiliary for accept-reject algorithm]
+    [6]   PF PF           [sum of value/count, for mean]
+    [8]   PF PF           [sum of value^2/count, for variance]
+   [10]   PFPFPFPFPFPFPFPFPFPFPFPFPFPFPFPF [16 bins for histogram]
+   [26]   CF              [11110...0 binary, to isolate bin index; also prints colon]
+   [27]   A10@            [A order for bin{0}]
+   [28]   AF              [A order for bin{16}]
+   [29]   P8F             [8 in address field]
+   [30]   MF              [subtract from A order to make T order; also prints dot]
+   [31]   WF              [1/8]
+   [32]   FF              [-15/16, mid value of histogram bin{0}]
+   [33]   PF              [mid value of current bin]
+[Teleprinter]
+   [34]   #F              [set figures mode]
+   [35]   PF
+   [36]   AF              [minus (in figures mode)]
+   [37]   !F              [space]
+   [38]   @F              [carriage return]
+   [39]   &F              [line feed]
+ [Enter with acc = 0]
+   [40]
+          S@ T1@          [store negated data count in address field]
+          A#C T4D         [copy seed to 4D for PRNG]
+   [44]   A44@ GG         [initialize PRNG]
+          T6#@ T8#@       [clear sum and sum of squares]
+          O34@            [set teleprinter to figures]
+        [Start of loop to generate normal variates]
+   [49]   TF              [clear acc]
+        [Calculate and store logarithms of uniform variates]
+   [50]   A50@ G176@ SD T2#@ [corresponds to x = -ln(u)]
+   [54]   A54@ G176@ SD T4#@ [corresponds to y = -ln(v)]
+        [Accept or reject]
+          A4#C RD         [acc := (1/32*ln(2))]
+          S2#@            [subtract x]
+          TD HD ND        [acc := negated square]
+          H4#C V4#@       [add 2*(auxiliary value)]
+          G49@            [reject if result < 0]
+        [First log is accepted; multiply by 8*ln(2) so that s.d. becomes 0.25]
+        [Reject values outside (-1,1) (that is >= 4 s.d. from mean, unlikely)]
+          T6F             [clear acc]
+          H6#C V2#@       [times ln(2)]
+          S31@ E49@       [if product >= 1/8 (unlikely) reject and try again]
+          A31@            [restore acc after test]
+          L2F             [shift 3 left to complete scaling]
+          YF T2#@         [round and store back]
+        [Finally change sign with probability 1/2]
+          T6F T4D A2F T4F [pass range = 2 to PRNG]
+   [80]   A80@ G1G        [call PRNG, 0 or 1 returned in 0D]
+          SD E87@         [don't change sign if 0D = 0]
+          T6F S2#@ T2#@   [change sign, so value < 0]
+   [87]   [Here with acc = 0.]
+        [To print the values, replace the following jump with a no-op (X F)]
+          E94@
+          A2#@ TD         [pass abs(value) to print routine]
+   [90]   A90@ G191@
+          O38@ O39@       [print CR, LF]
+   [94]   A2#@ R1024F YF  [load value, divide by count, round]
+          A6#@ T6#@       [update sum]
+          H2#@ V2#@ R1024F YF
+          A8#@ T8#@       [update sum of squares]
+        [Inc count in appropriate bin]
+          H26@            [mult reg := mask to isolate bin index]
+          C3@             [acc := top 4 bits of value]
+          R1024F          [12 right, get bin -8..7 in address field]
+          A29@            [add 8 to address, bin index now 0..15]
+          A27@            [make A order for bin]
+          U113@           [plant in code]
+          S30@            [convert to T order]
+          T115@           [plant in code]
+  [113]   AF              [(planted) acc := count in bin]
+          A2F             [inc by 1 in address field]
+  [115]   TF              [(planted) store updated bin count]
+          A1@ A2F U1@     [inc negative count of variates]
+          G49@            [loop till got required number]
+        [Print mean and standard deviation]
+          A6#@ TD         [pass mean to print subroutine]
+  [122]   A122@ G191@
+          O37@ O37@ O37@  [print spaces]
+          A8#@ H6#@
+          N6#@ T4D        [calc variance, pass to square root s/r]
+  [131]   A131@ GA        [4D := standard deviation]
+          A4D U8#@ TD     [pass to print subroutine]
+  [136]   A136@ G191@     [print s.d.]
+          O38@ O39@ O38@ O39@ [print CR, LF twice]
+        [Print histogram]
+          A29@ LD A27@    [make A order for exclusive end bin]
+          T28@            [store as test for end]
+          A32@ T33@       [initialize mid-value of bin]
+          A27@            [A order for bin{0}]
+  [149]   T158@           [loop: plant A order for current bin]
+          TD A33@ U1F     [0D = mid-value of bin, extended to 35 bits]
+          A31@ T33@       [update mid-value for next time]
+  [155]   A155@ G191@     [print mid-value]
+          O26@            [print colon]
+  [158]   AF              [(planted) load number of hits in address field]
+          A29@            [add 8 for rounding]
+          R4F             [divide by 16]
+          E163@           [jump to middle of loop]
+  [162]   O175@           [print plus sign]
+  [163]   S2F E162@       [loop till printed enough plus signs]
+          O38@ O39@       [print CR, LF]
+          TF              [clear acc]
+          A158@ A2F       [make A order for next bin]
+          S28@            [compare with end order]
+          E174@           [exit if no more bins]
+          A28@            [restore acc after test]
+          G149@           [loop back (A order is negative)]
+  [174]   O34@            [dummy character to flush print buffer]
+  [175]   ZF              [halt program; also serves as plus sign]
+
+[Subroutine of main routine. Sets 0D := (1/32)log_2 of uniform variate]
+  [176]   A3F T188@       [plant return link as usual]
+  [178]   T4D             [pass range = 0 to PRNG]
+  [179]   A179@ G1G       [0D := uniform variate]
+          AD S2#C         [test for too small (unlikely)]
+          G189@           [jump to try again if so]
+          A2#C T6D        [OK, pass uniform variate to logarithm subroutine]
+  [186]   A186@ GL        [0D := logarithm]
+  [188]   ZF              [(planted) return to caller]
+  [189]   TF E178@        [if failed, clear acc and try again]
+
+[Subroutine of main routine; prints signed fraction in 0D to 4 decimals.]
+[Wrapper for library subroutine P1; adds sign, rounding, layout.]
+  [191]   A3F T207@       [plant return link as usual]
+          AD G197@        [acc := value, jump if < 0]
+          O37@ E200@      [print space, jump to common code]
+  [197]   O36@            [value < 0, print minus]
+          TD SD           [acc := abs(valus)]
+  [200]   A8#C TD         [add 0.00005 for rounding, pass to P1 in 0D]
+          O35@ O30@       [print '0.']
+  [204]   A204@ GN P4F    [call P1 to print 5 decimals]
+  [207]   ZF              [(planted) jump back to caller]
+
+[========================== G parameter ==========================]
+[Linear congruential generator, same algorithm as Delphi 7 LCG.]
+[38 storage locations.]
+[Initialize: Call 0G with 35-bit seed in 4D.]
+[Input:  Call 1G with 35-bit range in 4D.]
+[Output: if range > 0, 0D := random 35-bit integer in 0..(range - 1).]
+        [if range = 0, 0D := random 35-bit real in [0, 1)]
+          E25K TG
+          GKG10@G15@T2#ZPFT2ZI514DP257FT4#ZPFT4ZPDPFT6#ZPFT6ZPFRFA6#@S4#@
+          T6#@E25FE8ZPFT8ZPFPFA3FT14@A4DT8#@ZFA3FT37@H2#@V8#@L512FL512FL1024F
+          A4#@T8#@H6#@C8#@T8#@S4DG32@TDA8#@E35@H4DTDV8#@L1FTDZF
+
+[==================== Library subroutines ============================]
+          E25K TL
+[L1: Logarithm to base 2.]
+[0D := (1/32)*log_2(6D), provided 6D > 2^(-32)]
+[38 storage locations; working positions 4D and 8F.]
+          GKA3FT33@E11@IFP1024FP512FA3@LDT6DADS4@TDS3@A6DG6@T8FS5@T4D
+          H6DV6DS3@E34@A3@LDYFT6DA4DADTDA4DRDYFG17@EFA3@YFT6DE29@
+
+          E25K TN
+[P1: Print non-negative fraction in 0D, without layout or rounding]
+[21 storage locations.]
+          GKA18@U17@S20@T5@H19@PFT5@VDUFOFFFSFL4FTDA5@A2FG6@EFU3FJFM1F
+
+          E25K TA
+[S2: square root.]
+[Closed: 22 storage locations, working position 0D.]
+[Forms sqrt( C(4D)) where C(4D) > 0, and places result in 4D.]
+          GKA3FT20@A4DS9@A6@UDHDR1FS21@TDN4DRDA4DYFT4DVDTDVDYFG5@EFSF
+
+[======================= M parameter again ======================]
+          E25K TM GK
+          E40Z            [define entry point]
+          PF              [acc = 0 on entry]

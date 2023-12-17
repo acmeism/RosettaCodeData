@@ -1,4 +1,4 @@
-import "/fmt" for Conv, Fmt
+import "./fmt" for Conv, Fmt
 
 var analyze = Fn.new { |s|
     var chars = s.codePoints.toList

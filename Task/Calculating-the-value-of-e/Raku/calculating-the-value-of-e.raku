@@ -3,7 +3,7 @@
 # terms could be ∞. Practically, calculating an infinite
 # series takes an awfully long time so limit to 500.
 
-constant 𝑒 = [\+] 1.FatRat X/ 1, |[\*] 1..*;
+constant 𝑒 = [\+] flat 1, [\/] 1.FatRat..*;
 
 .say for 𝑒[500].comb(80);
 

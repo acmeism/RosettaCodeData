@@ -1,5 +1,5 @@
 import "./str" for Char
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var toCamel = Fn.new { |snake|
     snake = snake.trim()

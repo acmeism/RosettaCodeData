@@ -1,0 +1,174 @@
+[Magic squares of singly even order, for Rosetta Code.
+ EDSAC program, Initial Orders 2.]
+[=============================================================================]
+[Uses Strachey's method, but with the square rotated 90 degrees clockwise.
+ Let the side be 2q. The square is divided into 4 quadrants each of side q.
+ In each quadrant, a 0-based magic square is created by De la Loubere's rule.
+ The final square is got by adding k*q^2 + 1 to each entry, where 0 <= k <= 3.]
+[=============================================================================]
+      [Arrange the storage]
+          T45K P56F       [H parameter: subroutine to print string]
+          T46K P100F      [N parameter: subroutine to print number]
+          T47K P200F      [M parameter: main routine]
+[Main routine]
+          E25K TM GK
+[Variables]
+    [0]   PF              [m, where side of square = 4*m + 2]
+    [1]   PF              [q = side of a quadrant = 2*m + 1]
+    [2]   PF              [q^2]
+    [3]   PF              [negative counter for columns]
+    [4]   PF              [negative counter for rows]
+    [5]   PF              [q*u for De la Loubere's method]
+    [6]   PF              [v for De la Loubere's method]
+    [7]   PF              [value of q*u at start of row]
+    [8]   PF              [ditto v]
+    [9]   PF              [add-on k*q^2 + 1 for left half of row]
+   [10]   PF              [add-on k*q^2 + 1 for right half of row]
+        [In the top two quadrants, the left and right add-ons are swapped for
+         "special" cells: (1) centre cell of top row (2) centre cell of quadrant.]
+   [11]   PF              [EDSAC null if left & right add-ons are to be swapped; else 0]
+   [12]   PF              [value of current special cell]
+[Constants]
+   [13]   K4096F          [EDSAC null, i.e. 10000000000000000 binary]
+   [14]   !F              [space]
+   [15]   @F              [carriage return]
+   [16]   &F              [line feed]
+   [17]   PD              [17-bit constant 1]
+   [18]   P10F            [10 in address field (test for '0' on phone dial)]
+[Strings, terminated by EDSAC null]
+   [19]   K2048FMFAFGFIFCF!FSFQFUFAFRFEF!FOFFF!FOFRFDFEFRF!F#FRF*FMF#FZFWF@F&FK4096F
+   [52]   K2048FDFIFAFLF!FMF!F#FKFPF!F*FTFOF!FCFAFNFCFEFLF#FLF!FK4096F
+   [78]   K2048FSFTFRFAFCFHFEFYF!F#FKF*FRFOFTFAFTFEFDF#FLFCF@F&FK4096F
+[Enter with acc = 0]
+  [104]   A104@ GH A19@   [print header: says side of square = 4*m + 2]
+  [107]   A107@ GH A52@   [prompt user to enter m on phone dial]
+          ZF              [halt machine, restarts when user dials]
+        [Here acc holds number of pulses in address field]
+          S18@            [test wheter user dialled '0' (10 pulses)]
+          E183@           [jump to exit if so]
+          A18@            [restore acc after test]
+          L512F UF        [shift 11 left, to 0F for printing]
+          OF O15@ O16@    [print m followed by CR, LF]
+          R512F           [shift back 11 right; acc = 2m right-justified]
+          A17@ U1@        [store q = 2m + 1 = n/2, right justified]
+          RD T@           [shift 1 right, store m right-justified]
+          H1@ V1@         [acc := q^2]
+          L64F L64F       [16 left to adjust scaling after mult.]
+          T2@             [store q^2]
+  [129]   A129@ GH A78@   [print 'STRACHEY (ROTATED):']
+          A14@ T1F        [use space for leading zeros when printing]
+[In each quadrant, use De la Loubere's method. 0-based entry is q*u + v
+ where u, v are digits in base q. Example for m = 2, q = 2*m + 1 = 5:
+   u = 2 1 0 4 3    v = 0 4 3 2 1    At top left, u = m, v = 0
+       3 2 1 0 4        2 1 0 4 3    Moving right, u and v decrease by 1 mod q
+       4 3 2 1 0        4 5 2 1 0    Moving down, u increases by 1 mod q
+       0 4 3 2 1        1 0 4 3 2                 v increases by 2 mod q
+       1 0 4 3 2        3 2 1 0 4]
+          H1@ V@          [acc := q*m]
+          L64F L64F       [16 left to adjust integer scaling scaling after mult.]
+          T7@             [store q*u at start of top row]
+          T8@             [v at start of top row := 0]
+[At the start of each stage, set counter to m - (number of rows in that stage)]
+[Stage 1, m rows]
+          T4@             [counter := 0]
+          A17@ T9@        [add-on for left half of row = 1]
+          A2@ LD A2@      [acc := 3*q^2]
+          A17@ T10@       [add-on for right half of row = 3q^2 + 1]
+        [Special cell is centre of top row; value is m + 1]
+          A@ A17@ T12@    [special pass m + 1 to subroutine]
+  [151]   A151@ G185@     [call subroutine to do stage 1]
+[Stage 2, m + 1 rows]
+          S17@ T4@        [counter := -1]
+          A10@ T9@        [add-on for left half of row = 3q^2 + 1]
+          A17@ T10@       [add-on for right half of row = 1]
+        [Special cell is at centre of quadrant; value id (q^2 - 1)/2]
+          A2@ RD T12@     [shift q^2 1 right to get value (since q is pdd)]
+  [162]   A162@ G185@     [call subroutine to do stage 2]
+[Stage 3, m + 2 rows. Here acc = 0.]
+          S2F T4@         [counter := -2]
+          A9@ S2@ U10@    [add-on for right half of row = 2q^2 + 1]
+          S2@ T9@         [add-on for left half of row = q^2 + 1]
+          S17@ T12@       [no special cell (value < 0) in stages 3 & 4]
+  [173]   A173@ G185@     [call subroutine to do stage 3]
+[Stage 4, m - 1 rows]
+          A17@ T4@        [counter := 1]
+          A10@ U9@        [add-on for left half of row = 2q^2 + 1]
+          S2@ T10@        [add-on for right half of row = q^2 + 1]
+  [181]   A181@ G185@     [call subroutine to do stage 4]
+  [183]   O13@            [done; print null]
+          ZF              [halt the machine]
+[Subroutine to write the rows in one of the 4 stages.
+ Shares storage with the main routine.]
+  [185]   A3F T256@       [plant return link as usual]
+          S@              [negative row counter := -m]
+          A4@             [plus adjustment set by caller]
+          E256@           [exit if nothing to do (happens for 6x6, stage 4)]
+  [190]   T4@             [outer loop: update row counter]
+        [Start of a row. Goes across 2 quadrants.
+         Recall that 0-based entry is q*u + v where u, v are digits in base q]
+          S1@ LD T3@      [negative column counter := -2*q]
+          A7@ T5@         [reset q*u for start of row]
+          A8@ U6@         [same for v]
+        [Next column. Here acc contains v (the second digit)]
+  [198]   A5@             [inner loop: add q*u where u = first digit]
+          T4F             [park 0-based entry in 4F]
+        [Add on an amount depending on whether it's left or right quadrant.
+         In stages 1 and 2, the left and right add-ons are swapped for certain cells.]
+          T11@            [say not swapped]
+          A12@            [load special cell if any]
+          G210@           [jump if none (value < 0)]
+          S4F             [compare with cell entry]
+          G210@ S17@ E210@ [jump if different]
+          TF A13@ T11@    [set flag in sign bit to reverse comparison]
+  [210]   TF              [clear acc]
+          A3@ A1@         [test for left or right quadrant]
+          A11@            [reverse test if flag was set above]
+          E218@           [jump if right quadrant]
+          TF              [clear acc]
+          A9@             [load add-on for left quadrant]
+          E220@           [join common code]
+  [218]   TF              [clear acc]
+          A10@            [load add-on for right quadrant]
+  [220]   A4F TF          [common: final value of entry to 0F for printing]
+  [222]   A222@ GN        [print]
+          A3@ A17@        [inc negative column count]
+          E239@           [jump if row is complete]
+          T3@             [update column count]
+        [Next cell in row]
+          A5@ S1@ E232@   [dec q*u by q, skip if result >= 0]
+          A2@             [else wrap round by adding q^2]
+  [232]   T5@             [update q*u]
+          A6@ S17@ E237@  [dec v by 1, skip if result >= 0]
+          A1@             [else wrap round by adding q]
+  [237]   U6@             [update v, keep new v in acc]
+          E198@           [loop back]
+        [Here when row finished]
+  [239]   O15@ O16@       [print CR, LF]
+          A7@ A1@         [update value of u at start of row]
+          S2@ E246@       [if >= q^2 then subtract q^2]
+          A2@             [else restore acc after test]
+  [246]   T7@             [update value mod q^2]
+          A8@ A2F         [similarly inc v mod q]
+          S1@ E252@ A1@
+  [252]   T8@
+          A4@ A17@ G190@  [inc negative row count, loop till done]
+  [256]   ZF              [(planted) jump back to caller]
+
+[Subroutine to print a string.
+ Input: A order for first character must follow subroutine call.
+ String is terminated with EDSAC null, which is sent to the teleprinter.]
+          E25K TH
+    GKA18@U17@S19@T4@AFT6@AFUFOFE12@A20@G16@TFA6@A2FG5@TFZFU3FU1FK2048F
+
+[Subroutine to print non-negative 17-bit integer.
+ Parameters: 0F = integer to be printed (not preserved)
+             1F = character for leading zero (preserved)
+ Workspace: 4F..7F, 38 locations]
+          E25K TN
+    GKA3FT34@A1FT7FS35@T6FT4#FAFT4FH36@V4FRDA4#FR1024FH37@E23@O7FA2F
+    T6FT5FV4#FYFL8FT4#FA5FL1024FUFA6FG16@OFTFT7FA6FG17@ZFP4FZ219DTF
+
+[================ M parameter again ================]
+          E25K TM GK
+          E104Z           [define entry point]
+          PF              [acc = 0 on entry]

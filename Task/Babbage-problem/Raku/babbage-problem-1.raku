@@ -1,4 +1,4 @@
-# For all positives integers from 1 to Infinity
+# For all positive integers from 1 to Infinity
 for 1 .. Inf -> $integer {
 
     # calculate the square of the integer

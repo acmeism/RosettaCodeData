@@ -1,38 +1,62 @@
-// Warning: modifies the buffer in-place (returns pointer to in)
-fn rot13(in: [] u8) []u8 {
-    for (in) |*c| {
-        var d : u8 = c.*;
-        var x : u8 = d;
-        x = if (@subWithOverflow(u8, d | 32, 97, &x) ) x else x;
-        if (x < 26) {
-            x = (x + 13) % 26 + 65 + (d & 32);
-            c.* = x;
+const std = @import("std");
+
+pub const Rot13 = struct {
+    pub fn char(ch: u8) u8 {
+        return switch (ch) {
+            'a'...'m', 'A'...'M' => |c| c + 13,
+            'n'...'z', 'N'...'Z' => |c| c - 13,
+            else => |c| c,
+        };
+    }
+
+    /// Caller owns returned memory.
+    pub fn slice(allocator: std.mem.Allocator, input: []const u8) error{OutOfMemory}![]u8 {
+        const output = try allocator.alloc(u8, input.len);
+        errdefer allocator.free(output);
+
+        for (input, output) |input_ch, *output_ch| {
+            output_ch.* = char(input_ch);
         }
+
+        return output;
     }
-    return in;
-}
+};
 
-const msg: [:0] const u8 =
-    \\Lbh xabj vg vf tbvat gb or n onq qnl
-    \\ jura gur yrggref va lbhe nycunorg fbhc
-    \\ fcryy Q-V-F-N-F-G-R-E.
-;
+pub fn main() error{OutOfMemory}!void {
+    var gpa: std.heap.GeneralPurposeAllocator(.{}) = .{};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
 
-// need to copy the const string to a buffer
-// before we can modify it in-place
-//https://zig.news/kristoff/what-s-a-string-literal-in-zig-31e9
+    const message_input =
+        \\@@@111@@@ Lbh xabj vg vf tbvat gb or n onq qnl
+        \\ jura gur yrggref va lbhe nycunorg fbhc
+        \\ fcryy Q-V-F-N-F-G-R-E.
+    ;
+    const message_decoded = try Rot13.slice(allocator, message_input);
+    defer allocator.free(message_decoded);
 
-var buf: [500]u8 = undefined;
-fn assignStr(out: []u8, str: [:0]const u8) void {
-    for (str) |c, i| {
-        out[i] = c;
-    }
-    out[str.len] = 0;
-}
+    std.debug.print(
+        \\{s}
+        \\=== Decoded to ===
+        \\{s}
+        \\
+    , .{
+        message_input,
+        message_decoded,
+    });
 
-const print = @import("std").debug.print;
+    std.debug.print("\n", .{});
 
-pub fn main() void {
-    assignStr(&buf, msg);
-    print("rot13={s}\n",.{rot13(&buf)});
+    const message_encoded = try Rot13.slice(allocator, message_decoded);
+    defer allocator.free(message_encoded);
+
+    std.debug.print(
+        \\{s}
+        \\=== Encoded to ===
+        \\{s}
+        \\
+    , .{
+        message_decoded,
+        message_encoded,
+    });
 }

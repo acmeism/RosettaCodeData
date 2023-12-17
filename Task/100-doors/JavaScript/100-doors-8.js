@@ -4,6 +4,6 @@
   var sqrt = Math.sqrt(door);
 
   if (sqrt === (sqrt | 0)) {
-    console.log("Door %d is open", door);
+    console.log("Door " + door + " is open");
   }
 });

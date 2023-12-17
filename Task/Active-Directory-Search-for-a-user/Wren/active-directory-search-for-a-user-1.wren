@@ -1,4 +1,4 @@
-/* active_directory_search_for_user.wren */
+/* Active_Directory_Search_for_a_user.wren */
 
 var LDAP_SCOPE_SUBTREE = 0x0002
 

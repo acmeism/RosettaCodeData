@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var r // recursive
 r = Fn.new { |word, bl|
@@ -25,5 +25,5 @@ var newSpeller = Fn.new { |blocks|
 
 var sp = newSpeller.call("BO XK DQ CP NA GT RE TG QD FS JW HU VI AN OB ER FS LY PC ZM")
 for (word in ["A", "BARK", "BOOK", "TREAT", "COMMON", "SQUAD", "CONFUSE"]) {
-    System.print("%(Fmt.s(-7, word)) %(sp.call(word))")
+    Fmt.print("$-7s $s", word, sp.call(word))
 }

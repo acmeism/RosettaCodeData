@@ -1,7 +1,7 @@
-import "/dynamic" for Enum, Struct, Tuple
-import "/str" for Char
-import "/fmt" for Fmt
-import "/ioutil" for FileUtil
+import "./dynamic" for Enum, Struct, Tuple
+import "./str" for Char
+import "./fmt" for Fmt
+import "./ioutil" for FileUtil
 import "os" for Process
 
 var tokens = [

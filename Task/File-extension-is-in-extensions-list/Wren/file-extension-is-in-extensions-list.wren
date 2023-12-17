@@ -1,5 +1,5 @@
-import "/str" for Str
-import "/fmt" for Fmt
+import "./str" for Str
+import "./fmt" for Fmt
 
 var exts = ["zip", "rar", "7z", "gz", "archive", "A##", "tar.bz2"]
 

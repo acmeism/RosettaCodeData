@@ -1,5 +1,5 @@
 import "io" for Stdin, Stdout
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var getNum = Fn.new { |prompt|
     while (true) {

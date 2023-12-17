@@ -1,5 +1,5 @@
 import "random" for Random
-import "/dynamic" for Tuple, Enum, Struct
+import "./dynamic" for Tuple, Enum, Struct
 
 var N_CARDS = 4
 var SOLVE_GOAL = 24

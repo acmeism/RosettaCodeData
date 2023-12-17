@@ -1,4 +1,4 @@
-/* create_object_at_given_address.wren */
+/* Create_an_object_at_a_given_address.wren */
 
 import "./fmt" for Fmt
 

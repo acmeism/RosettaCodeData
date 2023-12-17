@@ -1,4 +1,7 @@
 const std = @import("std");
-pub fn main() !void {
-    try std.io.getStdOut().writer().writeAll("Hello world!\n");
+
+pub fn main() std.fs.File.WriteError!void {
+    const stdout = std.io.getStdOut();
+
+    try stdout.writeAll("Hello world!\n");
 }

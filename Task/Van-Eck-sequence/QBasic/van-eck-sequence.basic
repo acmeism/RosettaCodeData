@@ -1,0 +1,22 @@
+CONST limite = 1000
+DIM a(limite)
+
+FOR n = 0 TO limite - 1
+    FOR m = n - 1 TO 0 STEP -1
+        IF a(m) = a(n) THEN
+            a(n + 1) = n - m
+            EXIT FOR
+        END IF
+    NEXT m
+NEXT n
+
+PRINT "Secuencia de Van Eck:"; CHR$(10)
+PRINT "Primeros 10 terminos: ";
+FOR i = 0 TO 9
+    PRINT a(i);
+NEXT i
+PRINT CHR$(10); "Terminos 991 al 1000: ";
+FOR i = 990 TO 999
+    PRINT a(i);
+NEXT i
+END

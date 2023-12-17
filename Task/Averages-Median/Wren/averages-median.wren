@@ -1,6 +1,6 @@
-import "/sort" for Sort, Find
-import "/math" for Nums
-import "/queue" for PriorityQueue
+import "./sort" for Sort, Find
+import "./math" for Nums
+import "./queue" for PriorityQueue
 
 var lists = [
     [5, 3, 4],

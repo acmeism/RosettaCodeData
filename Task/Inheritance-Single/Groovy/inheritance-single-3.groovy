@@ -1,3 +1,0 @@
-class Cat extends Animal{
-   //contents go here...
-}

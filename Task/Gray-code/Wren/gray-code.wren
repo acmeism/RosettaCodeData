@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var toGray = Fn.new { |n| n ^ (n>>1) }
 

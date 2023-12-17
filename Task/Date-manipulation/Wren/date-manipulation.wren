@@ -1,4 +1,4 @@
-import "/date" for Date
+import "./date" for Date
 
 var fmt = "mmmm| |d| |yyyy| |H|:|MM|am| |zz|"
 var d = Date.parse("March 7 2009 7:30pm EST", fmt)

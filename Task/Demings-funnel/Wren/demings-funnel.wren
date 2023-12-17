@@ -1,5 +1,5 @@
-import "/math" for Nums
-import "/fmt" for Fmt
+import "./math" for Nums
+import "./fmt" for Fmt
 
 var dxs = [
     -0.533,  0.270,  0.859, -0.043, -0.205, -0.127, -0.071,  0.275,
@@ -48,9 +48,9 @@ var experiment = Fn.new { |label, r|
     var rxs = funnel.call(dxs, r)
     var rys = funnel.call(dys, r)
     System.print("%(label)  :      x         y")
-    System.print("Mean    :  %(Fmt.f(7, Nums.mean(rxs), 4)),  %(Fmt.f(7, Nums.mean(rys), 4))")
-    System.print("Std Dev :  %(Fmt.f(7, Nums.popStdDev(rxs), 4)),  %(Fmt.f(7, Nums.popStdDev(rys), 4))")
-    System.print()
+    Fmt.print("Mean    :  $7.4f,  $7.4f", Nums.mean(rxs), Nums.mean(rys))
+    Fmt.print("Std Dev :  $7.4f,  $7.4f", Nums.popStdDev(rxs), Nums.popStdDev(rys))
+    Fmt.print()
 }
 
 experiment.call("Rule 1") { |z, dz| 0 }

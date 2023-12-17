@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var isEven1 = Fn.new { |i| i & 1 == 0 }
 

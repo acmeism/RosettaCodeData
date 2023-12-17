@@ -1,6 +1,6 @@
 import "random" for Random
-import "/ioutil" for Input
-import "/seq" for Stack
+import "./ioutil" for Input
+import "./seq" for Stack
 
 var R = Random.new()
 

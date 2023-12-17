@@ -1,7 +1,7 @@
 import "io" for File
-import "/pattern" for Pattern
-import "/seq" for Lst
-import "/fmt" for Fmt
+import "./pattern" for Pattern
+import "./seq" for Lst
+import "./fmt" for Fmt
 
 var p = Pattern.new("+1/s")
 var lines = File.read("days_of_week.txt").split("\n").map { |l| l.trim() }

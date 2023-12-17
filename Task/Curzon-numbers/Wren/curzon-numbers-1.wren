@@ -1,4 +1,4 @@
-/* curzon_numbers.wren */
+/* Curzon_numbers.wren */
 
 import "./gmp" for Mpz
 import "./fmt" for Fmt

@@ -1,0 +1,89 @@
+// 15 Puzzle // 26 september 2023 //
+
+begin globals
+CFMutableStringRef board : board = fn MutableStringNew
+end globals
+
+
+void local fn buildUI
+  Long i, j, k = 1 // k is button number
+  window 1, @"15 Puzzle", ( 0, 0, 200, 200 ), 3
+  for j = 3 to 0 step -1 : for i = 0 to 3 // Top to bottom, left to right
+    button k, Yes, 1, @"",  ( 20 + 40 * i, 20 + 40 * j , 40, 40 ), , NSBezelStyleShadowlessSquare
+    ControlSetFont(k, fn FontSystemFontOfSize( 21 ) )
+    ControlSetAlignment( k, NSTextAlignmentCenter )
+    k ++
+  next : next
+  menu 1, , 1, @"File": menu 1, 1, , @"Close", @"w" : MenuItemSetAction( 1, 1, @"performClose:" )
+  editmenu 2 : menu 2, 0, No : menu 3, , , @"Level"
+  for i = 1 to 8 : menu 3, i, , str( i ) : next
+  MenuSetOneItemOnState( 3, 3 )
+end fn
+
+
+void local fn newGame
+  CFStringRef s
+  Long i, m, n = 16, p = 0 // n is empty starting tile, p holds previous move
+  Bool ok
+  MutableStringSetString (board, @" 123456789ABCDEF " )
+  for i = 1 to fn MenuSelectedItem( 3 )^2 // Number of shuffles is square of level
+    do : ok = Yes
+      m = n + int( 2.6 * rnd( 4 ) - 6.5 )       // Choose a random move, but
+      if m < 1 or m > 16 or m == p then ok = No // not of bounds or previous,
+      if n mod 4 = 0 and m = n + 1 then ok = No // and don't exchange eg tile 4 and 5
+      if n mod 4 = 1 and m = n - 1 then ok = No // or 9 and 8
+    until ok = Yes // Found a move, swap in board string
+    s = mid( board, m, 1 ) : mid( board, m, 1 ) = @" " : mid( board, n, 1 ) = s
+    p = n : n = m
+  next
+  for i = 1 to 16 // Stamp the buttons, p is unicode of board char, s is button title
+    p = (Long) fn StringCharacterAtIndex( board, i )
+    if p > 64 then s = fn StringWithFormat ( @"%d", p - 55 ) else s = mid( board, i, 1 )
+    button i, Yes, 1, s
+    if fn StringIsEqual( s, @" ") == Yes then button i, No
+  next
+end fn
+
+
+void local fn move ( n as Long )
+  CFStringRef s
+  Long i, m, x = -1 // x is empty plot
+  Bool ok
+  for i = 1 to 4 // see if clicked button is next to empty plot
+    m = n + int( 2.6 * i - 6.5 ) // -4. -1, +1, +4
+    ok = Yes
+    if m < 1 or m > 16 then ok = No // Not out of bounds etc
+    if n mod 4 = 0 and m = n + 1 then ok = No
+    if n mod 4 = 1 and m = n - 1 then ok = No
+    if ok == Yes
+      if fn StringIsEqual( mid( board, m, 1 ), @" " ) then x = m
+    end if
+  next
+  if x > -1 // Swap places in board string and button titles
+    s = mid( board, n, 1 ) : mid( board, n, 1 ) = @" " : mid( board, x, 1 ) = s
+    button x, Yes, 1 , fn ButtonTitle( n ) : button n, No, 1, @" "
+  end if
+  if fn StringIsEqual( board, @" 123456789ABCDEF " )
+    alert 112, , @"Well done.", @"Another game?", @"Yes;No", Yes
+  end if
+end fn
+
+
+void local fn doMenu( mnu as Long, itm as Long )
+  if mnu == 3 then MenuSetOneItemOnState( 3, itm ) : fn newGame
+end fn
+
+
+void local fn DoDialog( evt as Long, tag as Long )
+  select evt
+    case _btnClick : fn move( tag )
+    case _alertDidEnd : if tag == NSAlertFirstButtonReturn then fn newGame else end
+  end select
+end fn
+
+fn buildUI
+fn newGame
+
+on dialog fn doDialog
+on menu fn doMenu
+handleevents

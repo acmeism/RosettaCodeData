@@ -1,4 +1,4 @@
-/* hello_world_line_printer.wren */
+/* Hello_world_Line_printer.wren */
 
 class C {
     foreign static lprint(s)

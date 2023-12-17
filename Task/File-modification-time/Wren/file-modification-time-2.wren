@@ -1,4 +1,4 @@
-/* gcc file_mod_time.c -o file_mod_time -lwren -lm */
+/* gcc File_modification_time.c -o File_modification_time -lwren -lm */
 
 #include <sys/stat.h>
 #include <stdio.h>
@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
     config.loadModuleFn = &loadModule;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "file_mod_time.wren";
+    const char* fileName = "File_modification_time.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

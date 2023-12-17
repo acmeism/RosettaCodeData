@@ -1,0 +1,23 @@
+FUNCTION divisors (n)
+    'find the number of divisors of an integer
+    r = 2
+    FOR i = 2 TO n \ 2
+        IF n MOD i = 0 THEN r = r + 1
+    NEXT i
+    divisors = r
+END FUNCTION
+
+UPTO = 15
+i = 2
+nfound = 1
+
+PRINT 1;    'special case
+
+WHILE nfound < UPTO
+    n = divisors(i)
+    IF n = nfound + 1 THEN
+        nfound = nfound + 1
+        PRINT i;
+    END IF
+    i = i + 1
+WEND

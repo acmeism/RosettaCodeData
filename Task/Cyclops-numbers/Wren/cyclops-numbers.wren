@@ -1,7 +1,6 @@
-import "/math" for Int
-import "/seq" for Lst
-import "/fmt" for Fmt
-import "/str" for Str
+import "./math" for Int
+import "./fmt" for Fmt
+import "./str" for Str
 
 var findFirst = Fn.new { |list|
     var i = 0
@@ -25,14 +24,14 @@ for (r in ranges) {
 System.print("The first 50 cyclops numbers are:")
 var candidates = cyclops[0...50]
 var ni = findFirst.call(cyclops)
-for (chunk in Lst.chunks(candidates, 10)) Fmt.print("$,6d", chunk)
+Fmt.tprint("$,6d", candidates, 10)
 Fmt.print("\nFirst such number > 10 million is $,d at zero-based index $,d", ni[0], ni[1])
 
 System.print("\n\nThe first 50 prime cyclops numbers are:")
 var primes = cyclops.where { |n| Int.isPrime(n) }
 candidates = primes.take(50).toList
 ni = findFirst.call(primes)
-for (chunk in Lst.chunks(candidates, 10)) Fmt.print("$,6d", chunk)
+Fmt.tprint("$,6d", candidates, 10)
 Fmt.print("\nFirst such number > 10 million is $,d at zero-based index $,d", ni[0], ni[1])
 
 System.print("\n\nThe first 50 blind prime cyclops numbers are:")
@@ -48,11 +47,11 @@ for (p in primes) {
 }
 candidates = bpcyclops[0...50]
 ni = findFirst.call(bpcyclops)
-for (chunk in Lst.chunks(candidates, 10)) Fmt.print("$,6d", chunk)
+Fmt.tprint("$,6d", candidates, 10)
 Fmt.print("\nFirst such number > 10 million is $,d at zero-based index $,d", ni[0], ni[1])
 
 System.print("\n\nThe first 50 palindromic prime cyclops numbers are:")
 candidates = ppcyclops[0...50]
 ni = findFirst.call(ppcyclops)
-for (chunk in Lst.chunks(candidates, 8)) Fmt.print("$,9d", chunk)
+Fmt.tprint("$,9d", candidates, 8)
 Fmt.print("\nFirst such number > 10 million is $,d at zero-based index $,d", ni[0], ni[1])

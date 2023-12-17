@@ -1,4 +1,4 @@
-/* run_system_command.go*/
+/* Execute_a_system_command.go*/
 package main
 
 import (
@@ -29,7 +29,7 @@ func execCommand(vm *wren.VM, parameters []any) (any, error) {
 
 func main() {
     vm := wren.NewVM()
-    fileName := "run_system_command.wren"
+    fileName := "Execute_a_system_command.wren"
     methodMap := wren.MethodMap{"static exec(_,_)": execCommand}
     classMap := wren.ClassMap{"Command": wren.NewClass(nil, nil, methodMap)}
     module := wren.NewModule(classMap)

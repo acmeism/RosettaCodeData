@@ -1,9 +1,6 @@
-tp=: 3 : '+/ (*. _2&(|.!.0)) 1 p: i. y'
+tp=: (_2 +/@:= 2 -/\ i.&.(p:inv))"0
 
-NB. 3 : ''     explicitly define a "monad" (a one-argument function)
-NB. i. y       list integers up to the provided argument
-NB. 1 p:       create list of 0s, 1s where those ints are prime
-NB. _2&(|.!.0) "shift" that list to the right by two, filling left side with 0
-NB. (*. g) y   create a "hook". "and" together the original and shifted lists
-NB.            the result will have a 1 only if that i, and i-2, are both prime
-NB. +/         sum the and-ed list (get the number of twin pairs)
+NB. i.&.(p:inv) generate a list of primes below the given limit
+NB. 2 -/\       pairwise subtract adjacent primes (create a list of differences)
+NB. _2 +/@:=    compare these differences to -2, and
+NB.             sum up the resulting boolean list (get the number of twin pairs)

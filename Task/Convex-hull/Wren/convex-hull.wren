@@ -1,6 +1,6 @@
-import "/sort" for Sort
-import "/trait" for Comparable
-import "/iterate" for Stepped
+import "./sort" for Sort
+import "./trait" for Comparable
+import "./iterate" for Stepped
 
 class Point is Comparable {
     construct new(x, y) {

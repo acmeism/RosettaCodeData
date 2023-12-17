@@ -1,3 +1,0 @@
-public class Lab extends Dog{
-   //functions go here...
-}

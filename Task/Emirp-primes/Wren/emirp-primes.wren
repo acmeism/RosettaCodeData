@@ -1,4 +1,4 @@
-import "/math" for Int
+import "./math" for Int
 
 var isEmirp = Fn.new{ |n|
     if (!Int.isPrime(n)) return false

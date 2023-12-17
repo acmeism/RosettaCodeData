@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/matrix" for Matrix
+import "./fmt" for Fmt
+import "./matrix" for Matrix
 
 var a1 = [
     [1, 2],

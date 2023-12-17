@@ -88,7 +88,7 @@ class HoughTransform {
     }
 
     readInputFromImage(filename) {
-        var inputImage = ImageData.loadFromFile(filename)
+        var inputImage = ImageData.load(filename)
         var width  = inputImage.width
         var height = inputImage.height
         var rgbData = []

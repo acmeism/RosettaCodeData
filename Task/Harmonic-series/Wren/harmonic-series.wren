@@ -1,5 +1,5 @@
-import "/big" for BigRat
-import "/fmt" for Fmt
+import "./big" for BigRat
+import "./fmt" for Fmt
 
 var harmonic = Fn.new { |n| (1..n).reduce(BigRat.zero) { |sum, i| sum + BigRat.one/i } }
 

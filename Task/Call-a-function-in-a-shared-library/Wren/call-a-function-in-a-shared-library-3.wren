@@ -1,4 +1,4 @@
-/* gcc call_shared_library_function.c -o call_shared_library_function -ldl -lwren -lm */
+/* gcc Call_a_function_in_a_shared_library.c -o Call_a_function_in_a_shared_library -ldl -lwren -lm */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "call_shared_library_function.wren";
+    const char* fileName = "Call_a_function_in_a_shared_library.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

@@ -1,6 +1,6 @@
 import "./math" for Int
 import "./sort" for Find
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var limit = 4 * 1e8
 var c = Int.primeSieve(limit - 1, false)

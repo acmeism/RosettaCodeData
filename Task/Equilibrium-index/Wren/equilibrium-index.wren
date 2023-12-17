@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var equilibrium = Fn.new { |a|
     var len = a.count
@@ -25,5 +25,5 @@ var tests = [
 
 System.print("The equilibrium indices for the following sequences are:\n")
 for (test in tests) {
-    System.print("%(Fmt.s(24, test)) -> %(equilibrium.call(test))")
+    Fmt.print("$24n -> $n", test, equilibrium.call(test))
 }

@@ -1,5 +1,5 @@
-import "/dynamic" for Struct
-import "/fmt" for Fmt
+import "./dynamic" for Struct
+import "./fmt" for Fmt
 
 var NNode = Struct.create("NNode", ["name", "children"])
 var INode = Struct.create("INode", ["level", "name"])

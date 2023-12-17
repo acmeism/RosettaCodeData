@@ -1,9 +1,9 @@
 import "io" for File
 import "os" for Process
-import "/pattern" for Pattern
-import "/set" for Bag
-import "/sort" for Sort
-import "/fmt" for Fmt
+import "./pattern" for Pattern
+import "./set" for Bag
+import "./sort" for Sort
+import "./fmt" for Fmt
 
 var args = Process.arguments
 if (args.count != 1) {

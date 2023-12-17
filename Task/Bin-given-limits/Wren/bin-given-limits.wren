@@ -1,5 +1,5 @@
-import "/sort" for Find
-import "/fmt" for Fmt
+import "./sort" for Find
+import "./fmt" for Fmt
 
 var getBins = Fn.new { |limits, data|
     var n = limits.count

@@ -1,6 +1,6 @@
 import "io" for File
 import "os" for Process
-import "/pattern" for Pattern
+import "./pattern" for Pattern
 
 var args = Process.arguments
 if (args.count != 1) Fiber.abort("Please pass just the name of the date file.")

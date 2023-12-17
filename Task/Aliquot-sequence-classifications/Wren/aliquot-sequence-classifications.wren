@@ -1,6 +1,6 @@
-import "/fmt" for Conv, Fmt
-import "/math" for Int, Nums
-import "/seq" for Lst
+import "./fmt" for Conv, Fmt
+import "./math" for Int, Nums
+import "./seq" for Lst
 
 class Classification {
     construct new(seq, aliquot) {
@@ -36,18 +36,18 @@ var classifySequence = Fn.new { |k|
 System.print("Aliquot classifications - periods for Sociable/Cyclic in square brackets:\n")
 for (k in 1..10) {
     var c = classifySequence.call(k)
-    System.print("%(Fmt.d(2, k)): %(Fmt.s(-15, c.aliquot)) %(c.seq)")
+    Fmt.print("$2d: $-15s $n", k, c.aliquot, c.seq)
 }
 
 System.print()
 var a = [11, 12, 28, 496, 220, 1184, 12496, 1264460, 790, 909, 562, 1064, 1488]
 for (k in a) {
     var c = classifySequence.call(k)
-    System.print("%(Fmt.d(7, k)): %(Fmt.s(-15, c.aliquot)) %(c.seq)")
+    Fmt.print("$7d: $-15s $n", k, c.aliquot, c.seq)
 }
 
 System.print()
 var k = 15355717786080
 var c = classifySequence.call(k)
 var seq = c.seq.map { |i| Conv.dec(i) }.toList // ensure 15 digit integer is printed in full
-System.print("%(k): %(Fmt.s(-15, c.aliquot)) %(seq)")
+Fmt.print("$d: $-15s $n", k, c.aliquot, seq)

@@ -1,4 +1,4 @@
-import "/iterate" for Indexed
+import "./iterate" for Indexed
 
 var glyphs  = "♜♞♝♛♚♖♘♗♕♔".toList
 var letters = "RNBQKRNBQK"

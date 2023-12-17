@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 class FloydWarshall {
     static doCalcs(weights, nVertices) {

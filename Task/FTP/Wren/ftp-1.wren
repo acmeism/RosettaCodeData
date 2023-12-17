@@ -1,4 +1,4 @@
-/* ftp.wren */
+/* FTP.wren */
 
 var FTPLIB_CONNMODE = 1
 var FTPLIB_PASSIVE  = 1

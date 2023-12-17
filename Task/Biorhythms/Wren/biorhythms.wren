@@ -1,5 +1,5 @@
-import "/date" for Date
-import "/fmt" for Fmt
+import "./date" for Date
+import "./fmt" for Fmt
 
 var cycles = ["Physical day ", "Emotional day", "Mental day   "]
 var lengths = [23, 28, 33]

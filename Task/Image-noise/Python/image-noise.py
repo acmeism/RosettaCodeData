@@ -1,53 +1,58 @@
 import time
 import random
-import Tkinter
-import Image, ImageTk # PIL libray
+import tkinter
+from PIL import Image
+from PIL import ImageTk
 
-class App(object):
+
+class App:
     def __init__(self, size, root):
         self.root = root
         self.root.title("Image Noise Test")
 
-        self.img = Image.new("RGB", size)
-        self.label = Tkinter.Label(root)
+        self.img = Image.new("1", size)
+        self.label = tkinter.Label(root)
         self.label.pack()
 
         self.time = 0.0
         self.frames = 0
         self.size = size
+        self.n_pixels = self.size[0] * self.size[1]
+
         self.loop()
 
     def loop(self):
-        self.ta = time.time()
-        # 13 FPS boost. half integer idea from C#.
-        rnd = random.random
-        white = (255, 255, 255)
-        black = (0, 0, 0)
-        npixels = self.size[0] * self.size[1]
-        data = [white if rnd() > 0.5 else black for i in xrange(npixels)]
-        self.img.putdata(data)
-        self.pimg = ImageTk.PhotoImage(self.img)
-        self.label["image"] = self.pimg
-        self.tb = time.time()
+        start_time = time.time()
 
-        self.time += (self.tb - self.ta)
+        self.img.putdata(
+            [255 if b > 127 else 0 for b in random.randbytes(self.n_pixels)]
+        )
+
+        self.bitmap_image = ImageTk.BitmapImage(self.img)
+        self.label["image"] = self.bitmap_image
+
+        end_time = time.time()
+        self.time += end_time - start_time
         self.frames += 1
 
         if self.frames == 30:
             try:
-                self.fps = self.frames / self.time
-            except:
-                self.fps = "INSTANT"
-            print ("%d frames in %3.2f seconds (%s FPS)" %
-                  (self.frames, self.time, self.fps))
+                fps = self.frames / self.time
+            except ZeroDivisionError:
+                fps = "INSTANT"
+
+            print(f"{self.frames} frames in {self.time:3.2f} seconds ({fps} FPS)")
             self.time = 0
             self.frames = 0
 
         self.root.after(1, self.loop)
 
+
 def main():
-    root = Tkinter.Tk()
+    root = tkinter.Tk()
     app = App((320, 240), root)
     root.mainloop()
 
-main()
+
+if __name__ == "__main__":
+    main()

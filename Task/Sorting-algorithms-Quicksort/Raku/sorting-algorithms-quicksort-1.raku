@@ -1,7 +1,6 @@
-#| Recursive, single-thread, single-pass, quicksort implementation
-multi quicksort(@unsorted where @unsorted.elems < 2) { @unsorted }
-multi quicksort(@unsorted) {
-	my $pivot = @unsorted.pick;
-	my %class{Order} is default([]) = @unsorted.classify: * cmp $pivot;
-	|samewith(%class{Less}), |%class{Same}, |samewith(%class{More})
+#| Recursive, single-thread, random pivot, single-pass, quicksort implementation
+multi quicksort(\a where a.elems < 2) { a }
+multi quicksort(\a, \pivot = a.pick) {
+	my %prt{Order} is default([]) = a.classify: * cmp pivot;
+	|samewith(%prt{Less}), |%prt{Same}, |samewith(%prt{More})
 }

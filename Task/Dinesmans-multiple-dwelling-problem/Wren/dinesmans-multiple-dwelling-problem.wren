@@ -1,4 +1,4 @@
-import "/seq" for Lst
+import "./seq" for Lst
 
 var permute // recursive
 permute = Fn.new { |input|

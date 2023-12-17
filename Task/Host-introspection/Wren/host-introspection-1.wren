@@ -1,4 +1,4 @@
-/* host_introspection.wren */
+/* Host_introspection.wren */
 
 class C {
     foreign static wordSize

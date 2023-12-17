@@ -10,8 +10,8 @@ public final class TwosComplement {
             String.format("%6s%12s%24s%32s", "-----------", "--------", "----------", "----------------"));
 		
 		for ( int example : examples ) {
-			System.out.println(
-                String.format("%5d%18s%36s%13d", example, toHex(example), toBinary(example), twosComplement(example)));
+			System.out.println(String.format("%5d%18s%36s%13d",
+                example, toHex(example), toBinary(example), twosComplement(example)));
 		}
 	}
 	

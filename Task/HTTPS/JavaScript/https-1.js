@@ -1,5 +1,3 @@
-fetch("https://sourceforge.net").then(function (response) {
-    return response.text();
-}).then(function (body) {
-    return body;
-});
+const response = await fetch('https://rosettacode.org');
+const text = await response.text();
+console.log(text);

@@ -2,7 +2,7 @@ BEGIN
     # find some cuban primes (using the definition: a prime p is a cuban prime if   #
     #                                                   p = n^3 - ( n - 1 )^3       #
     #                                                   for some n > 0)             #
-
+    PR read "primes.incl.a68" PR                          # include prime utilities #
     # returns a string representation of n with commas                              #
     PROC commatise = ( LONG INT n )STRING:
          BEGIN
@@ -18,32 +18,15 @@ BEGIN
             result
          END # commatise # ;
 
-    # sieve the primes                                                              #
     INT sieve max = 2 000 000;
-    [ sieve max ]BOOL sieve; FOR i TO UPB sieve DO sieve[ i ] := TRUE OD;
-    sieve[ 1 ] := FALSE;
-    FOR s FROM 2 TO ENTIER sqrt( sieve max ) DO
-        IF sieve[ s ] THEN
-            FOR p FROM s * s BY s TO sieve max DO sieve[ p ] := FALSE OD
-        FI
-    OD;
-    # count the primes, we can ignore 2, as we know it isn't a cuban prime          #
-    sieve[ 2 ] := FALSE;
-    INT prime count := 0;
-    FOR s TO UPB sieve DO IF sieve[ s ] THEN prime count +:= 1 FI OD;
-    # construct a list of the primes                                                #
-    [ 1 : prime count ]INT primes;
-    INT prime pos := LWB primes;
-    FOR s FROM LWB sieve TO UPB sieve DO
-        IF sieve[ s ] THEN primes[ prime pos ] := s; prime pos +:= 1 FI
-    OD;
+    []BOOL sieve = PRIMESIEVE sieve max;            # sieve the primes to max sieve #
 
     # find the cuban primes                                                         #
     INT       cuban count   := 0;
     LONG INT  final cuban   := 0;
     INT       max cuban      = 100 000; # mximum number of cubans to find           #
     INT       print limit    =     200; # show all cubans up to this one            #
-    print( ( "First ", commatise( print limit ), " cuban primes: ", newline ) );
+    print( ( "First ", commatise( print limit ), " cuban primes:", newline ) );
     LONG INT prev cube      := 1;
     FOR n FROM 2 WHILE
         LONG INT this cube   = ( LENG n * n ) * n;
@@ -51,15 +34,10 @@ BEGIN
         prev cube           := this cube;
         IF ODD p THEN
             # 2 is not a cuban prime so we only test odd numbers                    #
-            BOOL is prime   := TRUE;
-            INT max factor   = SHORTEN ENTIER long sqrt( p );
-            FOR f FROM LWB primes WHILE is prime AND primes[ f ] <= max factor DO
-                is prime    := p MOD primes[ f ] /= 0
-            OD;
-            IF is prime THEN
+            IF IF p <= UPB sieve THEN sieve[ SHORTEN p ] ELSE is probably prime( p ) FI
+            THEN
                 # have a cuban prime                                                #
-                cuban count +:= 1;
-                IF cuban count <= print limit THEN
+                IF ( cuban count +:= 1 ) <= print limit THEN
                     # must show this cuban                                          #
                     STRING p formatted = commatise( p );
                     print( ( "          "[ UPB p formatted : ], p formatted ) );

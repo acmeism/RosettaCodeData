@@ -1,7 +1,7 @@
-import "/math" for Int
-import "/iterate" for Stepped
-import "/fmt" for Fmt
-import "/rat" for Rat
+import "./math" for Int
+import "./iterate" for Stepped
+import "./fmt" for Fmt
+import "./rat" for Rat
 
 var f //recursive
 f = Fn.new { |l, r, n|

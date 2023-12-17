@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 // Returns squeezed string, original and new lengths in
 // unicode code points (not normalized).

@@ -1,5 +1,4 @@
 import "./math" for Int
-import "./seq" for Lst
 import "./fmt" for Fmt
 
 var limit = 200000  // say

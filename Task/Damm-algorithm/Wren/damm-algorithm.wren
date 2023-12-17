@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var table = [
     [0, 3, 1, 7, 5, 9, 8, 6, 4, 2],
@@ -20,5 +20,5 @@ var damm = Fn.new { |input|
 }
 
 for (s in ["5724", "5727", "112946", "112949"]) {
-    System.print("%(Fmt.s(6, s))  %(damm.call(s))")
+    Fmt.print("$6s  $s", s, damm.call(s))
 }

@@ -1,4 +1,4 @@
-/* echo_server.wren */
+/* Echo_server.wren */
 
 var MAX_ENQUEUED = 20
 var BUF_LEN = 256

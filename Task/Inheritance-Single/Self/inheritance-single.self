@@ -1,0 +1,5 @@
+animal = ()
+dog = (| parent* = animal |)
+cat = (| parent* = animal |)
+lab = (| parent* = dog |)
+collie = (| parent* = dog |)

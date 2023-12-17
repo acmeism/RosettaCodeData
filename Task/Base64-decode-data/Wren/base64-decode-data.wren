@@ -1,6 +1,6 @@
 import "io" for Stdout
-import "/fmt" for Conv, Fmt
-import "/str" for Str
+import "./fmt" for Conv, Fmt
+import "./str" for Str
 
 var alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 

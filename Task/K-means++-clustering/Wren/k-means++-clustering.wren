@@ -1,6 +1,6 @@
 import "random" for Random
-import "/dynamic" for Struct
-import "/fmt" for Fmt
+import "./dynamic" for Struct
+import "./fmt" for Fmt
 
 var Point = Struct.create("Point", ["x", "y", "group"])
 

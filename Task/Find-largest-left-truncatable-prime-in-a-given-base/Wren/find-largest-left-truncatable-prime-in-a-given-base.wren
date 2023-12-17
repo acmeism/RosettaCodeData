@@ -1,7 +1,7 @@
-import "/big" for BigInt
-import "/fmt" for Conv, Fmt
-import "/sort" for Sort
-import "/ioutil" for Input
+import "./big" for BigInt
+import "./fmt" for Conv, Fmt
+import "./sort" for Sort
+import "./ioutil" for Input
 
 var nextLeftTruncatablePrimes = Fn.new { |n, radix, certainty|
     var probablePrimes = []

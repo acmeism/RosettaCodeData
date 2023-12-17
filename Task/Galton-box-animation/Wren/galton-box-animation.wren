@@ -1,5 +1,5 @@
 import "random" for Random
-import "/iterate" for Reversed
+import "./iterate" for Reversed
 
 var boxW = 41       // Galton box width.
 var boxH = 37       // Galton box height.

@@ -3,7 +3,7 @@ import "graphics" for Canvas, Color, ImageData
 
 class ImageHistogram {
     construct new(filename, filename2) {
-        _image  = ImageData.loadFromFile(filename)
+        _image  = ImageData.load(filename)
         Window.resize(_image.width, _image.height)
         Canvas.resize(_image.width, _image.height)
         Window.title = filename2

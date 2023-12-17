@@ -1,1 +1,0 @@
-collie = (| parent* = dog |)

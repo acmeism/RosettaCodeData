@@ -1,7 +1,7 @@
-import "/dynamic" for Struct
-import "/big" for BigInt
-import "/fmt" for Fmt
-import "/math" for Boolean
+import "./dynamic" for Struct
+import "./big" for BigInt
+import "./fmt" for Fmt
+import "./math" for Boolean
 import "random" for Random
 
 var rand = Random.new()

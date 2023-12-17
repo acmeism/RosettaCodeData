@@ -1,4 +1,4 @@
-import "/big" for BigInt
+import "./big" for BigInt
 
 var fermat = Fn.new { |n| BigInt.two.pow(2.pow(n)) + 1 }
 

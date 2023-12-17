@@ -1,4 +1,4 @@
-/* active_directory_connect.wren */
+/* Active_Directory_Connect.wren */
 
 foreign class LDAP {
     construct init(host, port) {}

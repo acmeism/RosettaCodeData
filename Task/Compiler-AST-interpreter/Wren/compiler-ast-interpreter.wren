@@ -1,6 +1,6 @@
-import "/dynamic" for Enum, Struct, Tuple
-import "/fmt" for Conv
-import "/ioutil" for FileUtil
+import "./dynamic" for Enum, Struct, Tuple
+import "./fmt" for Conv
+import "./ioutil" for FileUtil
 
 var nodes = [
     "Ident",

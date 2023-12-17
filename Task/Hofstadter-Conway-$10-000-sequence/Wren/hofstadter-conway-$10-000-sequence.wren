@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var limit = 1<<20 + 1
 var a = List.filled(limit, 0)

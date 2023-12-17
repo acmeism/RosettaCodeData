@@ -1,0 +1,152 @@
+[Gnome sort - Rosetta Code
+ EDSAC program (Initial Orders 2) to read and sort an array
+   of 17-bit integers, using gnome sort.
+ Values are read from tape, preceded by an integer count.]
+
+      [Arrange the storage]
+          T45K P100F      [H parameter: library subroutine R4 to read integer]
+          T46K P200F      [N parameter: modified library s/r P7 to print integer]
+          T47K P300F      [M parameter: main routine]
+          T51K P500F      [G parameter: subroutine for gnome sort]
+          T55K P700F      [V parameter: storage for values]
+
+[Library subroutine M3, runs at load time and is then overwritten.
+ Prints header; here, last character sets teleprinter to figures.]
+          PF GK IF AF RD LF UF OF E@ A6F G@ E8F EZ PF
+      *BEFORE!AND!AFTER@&#..PZ
+
+[======== G parameter: Subroutine to sort an array by gnome sort ========]
+[Input:  0F = A order for array{0}
+         1F = length of array, in address field
+ Output: Array is sorted]
+
+[This code conforms to the original description of gnome sort, in which it's
+   assumed that the gnome can't remember anything and has to move one step
+   at a time (cf. the alternative name "stupid sort").
+ The gnome's position is defined by an A order which refers to that position,
+   and which is indicated below by an arrow.
+ The code could easily be modified to use 35-bit integers.]
+          E25K TG GK
+          A3F T41@        [plant return link as usual]
+          AF U21@         [initialize gnome's position to start of array]
+          A1F T44@        [store A order for exclusive end of array]
+       [Here the gnome moves one step forward]
+    [6]   T45@            [clear acc]
+          A21@ A2F T21@   [inc address in the defining A order]
+       [Loop. Assume here with acc = 0.]
+       [The gnome considers his position]
+   [10]   A21@            [acc := A order for position]
+          S44@            [is he at the end?]
+          E41@            [if so, jump to exit with acc = 0]
+          T45@            [clear acc]
+          AF              [load A order for start]
+          S21@            [is he at the start?]
+          E6@             [if so, jump to move 1 step forward]
+       [Gnome isn't at start or end, so he has to compare values]
+          T45@            [clear acc]
+          A21@            [load A order for gnome's psotion]
+          A42@            [convert to S order for previous position]
+          T22@            [plant S order]
+   [21]   AF              [<============ this planted A order defines the gnome's position]
+   [22]   SF              [(planted) acc := (current value) - (previous value)]
+          E6@             [if current >= previous then jump to move 1 step forward]
+       [Here the gnome must swap the values and move 1 step backward]
+          T45@            [clear acc]
+          A21@ U34@       [plant copy of defining A order]
+          S2F U36@        [plant A order for gnome's new position]
+          U21@            [also update defining A order]
+          A43@ U39@       [plant T order for new position]
+          A2F T37@        [plant T order for old position]
+   [34]   AF              [(planted) acc := array{i}]
+          T45@            [copy array{i} to temp store]
+   [36]   AF              [(planted) acc := array{i-1}]
+   [37]   TF              [(planted) copy to array{i}]
+          A45@            [acc := old array{i}]
+   [39]   TF              [(planted) copy to array{i-1}]
+          E10@            [loop back (always, since acc = 0)]
+   [41]   ZF              [(planted) jump back to caller]
+   [42]   K4095F          [add to A order to make S order with adderss 1 less]
+   [43]   OF              [add to A order to make T order with same address]
+   [44]   AV              [A order for exclusive end of array]
+   [45]   PF              [(1) dump to clear accumulator (2) temporary for swapping]
+
+[====================== M parameter: Main routine ======================]
+          E25K TM GK
+    [0]   PF              [data count]
+    [1]   PF              [negative loop counter]
+    [2]   TV              [order to store acc in array{0}]
+    [3]   AV              [order to load acc from array{0}]
+    [4]   AV              [A order for end of array
+    [5]   !F              [space]
+    [6]   @F              [carriage return]
+    [7]   &F              [linefeed]
+[Entry]
+    [8]   A2@ T21@        [initialize order to store value]
+          A10@ GH         [call library subroutine R4, sets 0D := data count N]
+       [One way of looping a given number of times: use a negative counter]
+       [(Wilkes, Wheeler & Gill, 1951 edition, pp.164-5)]
+          AF              [acc := data count, assumed to fit into 17 bits]
+          LD T@           [shift count into address field, and store it]
+          S@              [acc := negative count]
+          E38@            [exit if count = 0]
+   [17]   T1@             [update negative loop counter]
+          A18@ GH         [call library subroutine R4, 0D := next value]
+          AF              [acc := value. assumed to fit into 17 bits]
+   [21]   TF              [store value in array]
+          A21@ A2F T21@   [increment address in store order]
+          A1@ A2F         [increment negative loop counter]
+          G17@            [loop back if still < 0]
+          A28@ G39@       [print values]
+          A3@ TF          [pass A order for array{0} to gnome sort]
+          A@ T1F          [pass count to gnome sort]
+          A34@ GG         [call gnome sort]
+          A36@ G39@       [print values again]
+   [38]   ZF              [halt the machine]
+
+[------ Subroutine of main routine, to print the array -------]
+   [39]   A3F T60@
+          A3@ U49@        [initialize load order]
+       [Another way of looping a given number of times: use a variable order]
+       [as a counter (Wilkes, Wheeler & Gill, 1951 edition, p.166)]
+          A@ T4@          [make and plant A order for end of array]
+          E48@            [don't print a space the first time]
+   [46]   O5@ TF          [print space, clear acc]
+   [48]   TD              [clear whole of 0D including sandwich bit]
+   [49]   AV              [(planted) load value from array <------ order used as counter]
+          TF              [to 0F, so 0D = value extended to 35 bits]
+          A51@ GN         [print value]
+          A49@ A2F U49@   [update load order]
+          S4@ G46@        [test for done, loop back if not]
+          O6@ O7@         [print CR, LF]
+   [60]   EF              [(planted) jump back to caller woth acc = 0]
+[The next 3 lines put the entry address into location 50,
+ so that it can be accessed via the X parameter (see end of program).]
+          T50K
+          P8@
+          T8Z
+
+[================== H parameter: Library subroutine R4 ==================]
+[Input of one signed integer, returned in 0D.
+ 22 locations.]
+          E25K TH GK
+          GKA3FT21@T4DH6@E11@P5DJFT6FVDL4FA4DTDI4FA4FS5@G7@S5@G20@SDTDT6FEF
+
+[================== N parameter: Library subroutine P7 ==================]
+[Library subroutine P7: print strictly positive integer in 0D.
+ Patched to print left-justified (no-op instead of order to print space)
+ 35 locations, even address]
+          E25K TN GK
+          GKA3FT26@H28#@NDYFLDT4DS27@TFH8@S8@T1FV4DAFG31@SFLDUFOFFFSF
+          L4FT4DA1FA27@G11@T28#ZPFT27ZP1024FP610D@524D!FXFSFL8FE22@
+
+[==========================================================================]
+[On the original EDSAC, the following (without the whitespace and comments)
+ might have been input on a separate tape.]
+
+          E25K TX GK
+          EZ              [define entry point]
+          PF              [acc = 0 on entry]
+
+[Counts and data values to be read by library subroutine R4.
+ Note that sign comes *after* value.]
+16+ 98+36+2+78+5+81+32+90+73+21+94+28+53+25+10+99+

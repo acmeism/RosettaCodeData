@@ -1,0 +1,8 @@
+CLS
+bs = 10: c1 = 0: c2 = 0
+FOR k = 1 TO (bs ^ 2) - 1
+  c1 = c1 + 1
+  IF k MOD (bs - 1) = (k * k) MOD (bs - 1) THEN c2 = c2 + 1: PRINT k;
+NEXT k
+PRINT
+PRINT USING "Trying ## numbers instead of ### numbers saves ##.##%"; c2; c1; 100 - (100 * c2 / c1)

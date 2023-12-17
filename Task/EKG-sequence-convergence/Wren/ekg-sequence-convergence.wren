@@ -1,6 +1,6 @@
-import "/sort" for Sort
-import "/math" for Int
-import "/fmt" for Fmt
+import "./sort" for Sort
+import "./math" for Int
+import "./fmt" for Fmt
 
 var areSame = Fn.new { |s, t|
     var le = s.count

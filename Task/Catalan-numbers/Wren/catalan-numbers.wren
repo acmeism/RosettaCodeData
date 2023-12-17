@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/math" for Int
+import "./fmt" for Fmt
+import "./math" for Int
 
 var catalan = Fn.new { |n|
     if (n < 0) Fiber.abort("Argument must be a non-negative integer")

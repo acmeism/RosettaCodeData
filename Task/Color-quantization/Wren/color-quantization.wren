@@ -10,7 +10,7 @@ var ColorsUsed = []
 class ColorQuantization {
     construct new(filename, filename2) {
         Window.title = "Color quantization"
-        _image = ImageData.loadFromFile(filename)
+        _image = ImageData.load(filename)
         _w = _image.width
         _h = _image.height
         Window.resize(_w * 2 + 20, _h + 30)

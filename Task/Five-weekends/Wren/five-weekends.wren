@@ -1,5 +1,5 @@
-import "/date" for Date
-import "/seq" for Lst
+import "./date" for Date
+import "./seq" for Lst
 
 var dates = []
 var years = []

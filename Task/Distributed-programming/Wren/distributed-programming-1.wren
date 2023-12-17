@@ -1,4 +1,4 @@
-/* distributed_programming_server.wren */
+/* Distributed_programming_server.wren */
 
 class Rpc {
     foreign static register()

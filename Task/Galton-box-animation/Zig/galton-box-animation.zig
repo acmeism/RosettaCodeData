@@ -17,7 +17,7 @@ fn boardSize(comptime peg_lines: u16) u16 {
 const BOARD_SIZE = boardSize(PEG_LINES);
 
 fn stepBoard(board: *[BOARD_SIZE]u1, count: *[PEG_LINES + 1]u8) void {
-    var prng = rand.DefaultPrng.init(@bitCast(u64, time.timestamp()));
+    var prng = rand.DefaultPrng.init(@bitCast(time.timestamp()));
 
     var p: u8 = 0;
     var sum: u16 = 0;

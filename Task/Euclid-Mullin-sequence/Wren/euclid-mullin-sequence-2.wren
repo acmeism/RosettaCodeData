@@ -1,4 +1,4 @@
-/* euclid_mullin_gmp.wren */
+/* Euclid_mullin_sequence_2.wren */
 
 import "./gmp" for Mpz
 

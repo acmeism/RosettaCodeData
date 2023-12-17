@@ -1,6 +1,5 @@
 import "./math" for Int, Nums
 import "./set" for Set
-import "./seq" for Lst
 import "./fmt" for Fmt
 
 var isColorful = Fn.new { |n|
@@ -57,7 +56,7 @@ countColorful = Fn.new { |taken, n|
 
 var cn = (0..99).where { |i| isColorful.call(i) }.toList
 System.print("The %(cn.count) colorful numbers less than 100 are:")
-for (chunk in Lst.chunks(cn, 10)) Fmt.print("$2d", chunk)
+Fmt.tprint("$2d", cn, 10)
 
 countColorful.call(0, "")
 System.print("\nThe largest possible colorful number is:")

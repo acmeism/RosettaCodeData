@@ -1,5 +1,5 @@
-import "/complex" for Complex
-import "/fmt" for Fmt
+import "./complex" for Complex
+import "./fmt" for Fmt
 
 var ditfft2 // recursive
 ditfft2 = Fn.new {|x, y, n, s|

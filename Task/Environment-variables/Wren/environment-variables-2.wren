@@ -1,4 +1,4 @@
-/* environment_variables.go */
+/* Environment_variables.go */
 package main
 
 import (
@@ -15,7 +15,7 @@ func getEnvironVariable(vm *wren.VM, parameters []any) (any, error) {
 
 func main() {
     vm := wren.NewVM()
-    fileName := "environment_variables.wren"
+    fileName := "Environment_variables.wren"
     methodMap := wren.MethodMap{"static variable(_)": getEnvironVariable}
     classMap := wren.ClassMap{"Environ": wren.NewClass(nil, nil, methodMap)}
     module := wren.NewModule(classMap)

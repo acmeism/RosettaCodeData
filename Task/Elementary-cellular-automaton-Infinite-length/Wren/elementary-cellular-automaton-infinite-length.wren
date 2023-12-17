@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var addNoCells = Fn.new { |s|
     var l = (s[0] == "*") ? "." : "*"

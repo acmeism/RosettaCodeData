@@ -1,4 +1,4 @@
-import "/sort" for Sort
+import "./sort" for Sort
 
 var jortSort = Fn.new { |a|
     var b = Sort.merge(a)

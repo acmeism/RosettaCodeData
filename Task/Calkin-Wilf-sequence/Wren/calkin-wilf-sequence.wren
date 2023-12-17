@@ -1,5 +1,5 @@
-import "/rat" for Rat
-import "/fmt" for Fmt, Conv
+import "./rat" for Rat
+import "./fmt" for Fmt, Conv
 
 var calkinWilf = Fn.new { |n|
     var cw = List.filled(n, null)

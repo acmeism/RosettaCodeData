@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var primeSieve = Fn.new { |limit|
     if (limit < 2) return []

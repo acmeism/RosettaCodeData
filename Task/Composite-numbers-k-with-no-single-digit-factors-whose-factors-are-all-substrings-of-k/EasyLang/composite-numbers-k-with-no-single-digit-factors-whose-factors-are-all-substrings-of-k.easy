@@ -1,0 +1,57 @@
+fastfunc isin n k .
+   h = k
+   while n > 0
+      if h mod 10 = n mod 10
+         h = h div 10
+         if match = 0
+            match = n
+         .
+      else
+         h = k
+         if match <> 0
+            n = match
+         .
+         match = 0
+      .
+      if h = 0
+         return 1
+      .
+      n = n div 10
+   .
+   return 0
+.
+
+fastfunc test n .
+   if n mod 2 = 0 or n mod 3 = 0 or n mod 5 = 0 or n mod 7 = 0
+      return 0
+   .
+   rest = n
+   fact = 11
+   while fact <= rest
+      if rest mod fact = 0
+         while rest mod fact = 0
+            rest /= fact
+         .
+         if isin  n fact = 0
+            return 0
+         .
+         nfacts += 1
+      .
+      fact += 2
+      if fact > sqrt n and nfacts = 0
+         return 0
+      .
+   .
+   if nfacts > 1
+      return 1
+   .
+   return 0
+.
+n = 11
+while count < 10
+   if test n = 1
+      print n
+      count += 1
+   .
+   n += 2
+.

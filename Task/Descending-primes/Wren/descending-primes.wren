@@ -9,4 +9,4 @@ var descPrimes = ps.skip(1).map { |s| Num.fromString(s.join()) }
                            .toList
                            .sort()
 System.print("There are %(descPrimes.count) descending primes, namely:")
-for (chunk in Lst.chunks(descPrimes, 10)) Fmt.print("$8s", chunk)
+Fmt.tprint("$8s", descPrimes, 10)

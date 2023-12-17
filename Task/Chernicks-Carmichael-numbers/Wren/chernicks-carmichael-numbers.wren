@@ -1,5 +1,5 @@
-import "/big" for BigInt, BigInts
-import "/fmt" for Fmt
+import "./big" for BigInt, BigInts
+import "./fmt" for Fmt
 
 var min = 3
 var max = 9

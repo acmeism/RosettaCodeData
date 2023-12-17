@@ -1,4 +1,4 @@
-/* circular_primes_embedded.wren */
+/* Circular_primes_embedded.wren */
 
 import "./gmp" for Mpz
 import "./math" for Int

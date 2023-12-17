@@ -11,11 +11,11 @@ public final class QuotingConstructs {
 		String multiLineString = """
                 This is an example of multi-line string.
                     Text formatting is preserved.
-                Text blocks can be used for multi-line string.
+                Text blocks can be used for a multi-line string.
                 """;
 		System.out.println(multiLineString);
 		
-		// Java's primitive data types: boolean, byte, char double, float, int, long, short,
+		// Java's primitive data types: boolean, byte, char, double, float, int, long, short,
 		// can be used to to store data, for example,
 		final int blockLength = 64;
 		

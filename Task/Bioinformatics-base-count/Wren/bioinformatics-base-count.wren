@@ -1,6 +1,6 @@
-import "/fmt" for Fmt
-import "/sort" for Sort
-import "/iterate" for Stepped
+import "./fmt" for Fmt
+import "./sort" for Sort
+import "./iterate" for Stepped
 
 var dna = "CGTAAAAAATTACAACGTCCTTTGGCTATCTCTTAAACTCCTGCTAAATG" +
           "CTCGTGCTTTCCAATTATGTAAGCGTTCCGAGACGGGGTGGTCGATTCTG" +

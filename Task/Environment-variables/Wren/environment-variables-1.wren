@@ -1,4 +1,4 @@
-/* environment_variables.wren */
+/* Environment_variables.wren */
 class Environ {
     foreign static variable(name)
 }

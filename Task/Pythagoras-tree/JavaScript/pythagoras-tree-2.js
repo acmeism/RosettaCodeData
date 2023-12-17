@@ -1,21 +1,14 @@
-let base = [[[-200, 0], [200, 0]]];
+let base = [[{ x: -200, y: 0 }, { x: 200, y: 0 }]];
 const doc = [...Array(12)].reduce((doc_a, _, lvl) => {
     const rg = step => `0${(80 + (lvl - 2) * step).toString(16)}`.slice(-2);
     return doc_a + base.splice(0).reduce((ga, [a, b]) => {
-        const v = [b[0] - a[0], b[1] - a[1]];
-        const [c, d, w] = [a, b, v].map(p => [p[0] + v[1], p[1] - v[0]]);
-        const e = [c[0] + w[0] / 2, c[1] + w[1] / 2];
+        const w = (kx, ky) => (kx * (b.x - a.x) + ky * (b.y - a.y)) / 2;
+        const [c, e, d] = [2, 3, 2].map((j, i) => ({ x: a.x + w(i, j), y: a.y + w(-j, i) }));
         base.push([c, e], [e, d]);
-        return ga + '\n' + `<polygon points="${[a, c, e, d, c, d, b]}"/>`;
-    }, `<g fill="#${rg(20)}${rg(30)}18">`) + '\n</g>\n';
+        return ga + `<polygon points="${[a, c, e, d, c, d, b].map(p => [p.x, p.y])}"/>\n`;
+    }, `<g fill="#${rg(20)}${rg(30)}18">\n`) + '</g>\n';
 }, '<svg xmlns="http://www.w3.org/2000/svg" width="1200" stroke="white">\n') + '</svg>';
 
-const [x, y] = base.flat().reduce((a, p) => a.map((xy, i) => Math.min(xy, p[i])));
+const { x, y } = base.flat().reduce((a, p) => ({ x: Math.min(a.x, p.x), y: Math.min(a.y, p.y) }));
 const svg = doc.replace('<svg ', `<svg viewBox="${[x, y, -x - x, -y]}" `);
-
-if (globalThis.global) { // if the script is run from node.js - save the svg to a file
-    require('node:fs').writeFileSync('Pythagor_tree.svg', svg);
-} else { // if is run from the browser console or from the <script> tag of an html document
-         // - display svg in the browser window
-    document.documentElement.innerHTML = svg, '';
-}
+document.documentElement.innerHTML = svg, ''; // display svg in the browser window

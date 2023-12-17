@@ -1,0 +1,120 @@
+class Array {
+    method radix_sort(base=10) {
+        var rounds = ([self.minmax].map{.abs}.max.ilog(base) + 1)
+        for i in (0..rounds) {
+            var buckets = (2*base -> of {[]})
+            var base_i = base**i
+            for n in self {
+                var digit = idiv(n, base_i)%base
+                digit += base if (0 <= n)
+                buckets[digit].append(n)
+            }
+            self = buckets.flat
+        }
+        return self
+    }
+
+    func merge(left, right) {
+        var result = []
+        while (left && right) {
+            result << [right,left].min_by{.first}.shift
+        }
+        result + left + right
+    }
+
+    method merge_sort {
+        var len = self.len
+        len < 2 && return self
+
+        var (left, right) = self.part(len>>1)
+
+        left  = left.merge_sort
+        right = right.merge_sort
+
+        merge(left, right)
+    }
+
+    method quick_sort {
+        self.len < 2 && return self
+        var p = self.rand          # to avoid the worst cases
+        var g = self.group_by {|x| x <=> p }
+        (g{-1} \\ []).quick_sort + (g{0} \\ []) + (g{1} \\ []).quick_sort
+    }
+
+    method shell_sort {
+        var h = self.len
+        while (h >>= 1) {
+            range(h, self.end).each { |i|
+                var k = self[i]
+                var j
+                for (j = i; (j >= h) && (k < self[j - h]); j -= h) {
+                    self[j] = self[j - h]
+                }
+                self[j] = k
+            }
+        }
+        return self
+    }
+
+    method insertion_sort {
+        { |i|
+            var j = i
+            var k = self[i+1]
+            while ((j >= 0) && (k < self[j])) {
+                self[j+1] = self[j]
+                j--
+            }
+            self[j+1] = k
+        } * self.end
+        return self
+    }
+
+    method bubble_sort {
+        loop {
+            var swapped = false
+            { |i|
+                if (self[i] > self[i+1]) {
+                    self[i, i+1] = self[i+1, i]
+                    swapped = true
+                }
+            } << ^self.end
+            swapped || break
+        }
+        return self
+    }
+}
+
+var data_size = [1e2, 1e3, 1e4, 1e5]
+var data = []
+data_size.each {|size|
+    var ary = @(1..size)
+    data << [size.of(1), ary, ary.shuffle, ary.reverse]
+}
+
+data = data.transpose
+
+var  data_type = ["set to all ones", "ascending sequence",
+                  "randomly shuffled", "descending sequence"]
+print("Array size:          ")
+say data_size.map{|size| "%9d" % size}.join
+
+data.each_kv {|i, arys|
+    say "\nData #{data_type[i]}:"
+    [:sort, :radix_sort, :quick_sort, :merge_sort,
+     :shell_sort, :insertion_sort, :bubble_sort].each {|m|
+        printf("%20s ", m)
+        var timeout = false
+        arys.each {|ary|
+            if (!timeout) {
+                var t0 = Time.micro
+                ary.clone.(m)
+                printf("  %7.3f", (var t1 = (Time.micro - t0)))
+                timeout = true if (t1 > 1.5)
+            }
+            else {
+                print("   --.---")
+            }
+        }
+        say ''
+    }
+}

@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "fork.wren";
+    const char* fileName = "Fork.wren";
     char *script = readFile(fileName);
     wrenInterpret(vm, module, script);
     wrenFreeVM(vm);

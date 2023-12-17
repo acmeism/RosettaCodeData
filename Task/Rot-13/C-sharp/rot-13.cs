@@ -14,8 +14,7 @@ class Program {
 		};
     }
 
-    static string Rot13(string s)
-    	=> new string(message.Select(c => shift(c)).ToArray());
+    static string Rot13(string s) => new string(s.Select(c => shift(c)).ToArray());
 
 
     static void Main(string[] args) {

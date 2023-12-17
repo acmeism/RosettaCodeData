@@ -31,6 +31,7 @@ class Bitmap {
 
     loadPPMFile(fileName) {
         var ppm = FileSystem.load(fileName)
+        var count = ppm.count //ensure file is fully loaded before proceeding
         if (ppm[0..1] != "P6") {
             System.print("The loaded file is not a P6 file.")
             Process.exit()

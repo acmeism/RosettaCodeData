@@ -1,5 +1,5 @@
-import "/big" for BigRat
-import "/fmt" for Fmt
+import "./big" for BigRat
+import "./fmt" for Fmt
 
 /** represents a term of the form: c * atan(n / d) */
 class Term {

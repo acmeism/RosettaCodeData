@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var rfs = [1]  // reverse factorial(1) in base 1000
 

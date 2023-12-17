@@ -1,5 +1,5 @@
 import "random" for Random
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var r = Random.new()
 var sb = ""

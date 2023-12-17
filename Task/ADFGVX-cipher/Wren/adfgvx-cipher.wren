@@ -1,7 +1,7 @@
 import "random" for Random
-import "/ioutil" for FileUtil
-import "/seq" for Lst
-import "/str" for Char, Str
+import "./ioutil" for FileUtil
+import "./seq" for Lst
+import "./str" for Char, Str
 
 var rand = Random.new()
 var adfgvx = "ADFGVX"

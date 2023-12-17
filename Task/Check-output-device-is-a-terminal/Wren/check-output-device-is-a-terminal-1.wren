@@ -1,4 +1,4 @@
-/* check_output_device_is_terminal.wren */
+/* Check_output_device_is_a_terminal.wren */
 
 class C {
     foreign static isOutputDeviceTerminal

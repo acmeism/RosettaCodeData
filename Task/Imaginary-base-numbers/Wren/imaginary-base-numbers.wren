@@ -1,5 +1,5 @@
-import "/complex" for Complex
-import "/fmt" for Fmt
+import "./complex" for Complex
+import "./fmt" for Fmt
 
 class QuaterImaginary {
     construct new(b2i) {

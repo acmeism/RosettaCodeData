@@ -1,4 +1,4 @@
-import "/math" for Int, Nums
+import "./math" for Int, Nums
 
 var d = 0
 var a = 0

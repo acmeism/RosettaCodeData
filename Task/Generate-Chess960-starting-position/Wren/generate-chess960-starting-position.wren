@@ -1,6 +1,6 @@
 import "random" for Random
-import "/dynamic" for Tuple
-import "/fmt" for Fmt
+import "./dynamic" for Tuple
+import "./fmt" for Fmt
 
 var Symbols = Tuple.create("Symbols", ["k", "q", "r", "b", "n"])
 

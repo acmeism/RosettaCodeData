@@ -1,4 +1,4 @@
-/* gcc http.c -o http -lcurl -lwren -lm  */
+/* gcc HTTP.c -o HTTP -lcurl -lwren -lm  */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "http.wren";
+    const char* fileName = "HTTP.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

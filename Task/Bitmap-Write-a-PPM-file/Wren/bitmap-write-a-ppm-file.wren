@@ -1,6 +1,7 @@
 import "graphics" for Canvas, ImageData, Color
 import "dome" for Window, Process
 import "io" for FileSystem
+import "./str" for Strs
 
 class Bitmap {
     construct new(name, width, height) {
@@ -21,16 +22,16 @@ class Bitmap {
 
     init() {
         // write bitmap to a PPM file
-        var ppm = "P6\n%(_w) %(_h)\n255\n"
+        var ppm = ["P6\n%(_w) %(_h)\n255\n"]
         for (y in 0..._h) {
             for (x in 0..._w) {
                 var c = pget(x, y)
-                ppm = ppm + String.fromByte(c.r)
-                ppm = ppm + String.fromByte(c.g)
-                ppm = ppm + String.fromByte(c.b)
+                ppm.add(String.fromByte(c.r))
+                ppm.add(String.fromByte(c.g))
+                ppm.add(String.fromByte(c.b))
             }
         }
-        FileSystem.save("output.ppm", ppm)
+        FileSystem.save("output.ppm", Strs.concat(ppm))
         Process.exit(0)
     }
 

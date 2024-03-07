@@ -1,6 +1,6 @@
-import "/long" for ULong
-import "/big" for BigInt
-import "/fmt" for Fmt
+import "./long" for ULong
+import "./big" for BigInt
+import "./fmt" for Fmt
 
 var multipliers = [
     1, 3, 5, 7, 11, 3*5, 3*7, 3*11, 5*7, 5*11, 7*11, 3*5*7, 3*5*11, 3*7*11, 5*7*11, 3*5*7*11

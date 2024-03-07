@@ -27,7 +27,7 @@ bool check_isbn13(std::string isbn) {
 }
 
 int main() {
-    auto isbns = { "978-1734314502", "978-1734314509", "978-1788399081", "978-1788399083" };
+    auto isbns = { "978-0596528126", "978-0596528120", "978-1788399081", "978-1788399083" };
     for (auto isbn : isbns) {
         std::cout << isbn << ": " << (check_isbn13(isbn) ? "good" : "bad") << '\n';
     }

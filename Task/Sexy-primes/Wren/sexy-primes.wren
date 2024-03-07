@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/math" for Int
+import "./fmt" for Fmt
+import "./math" for Int
 
 var printHelper = Fn.new { |cat, le, lim, max|
     var cle = Fmt.commatize(le)

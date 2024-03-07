@@ -1,4 +1,4 @@
-import "/seq" for Stack
+import "./seq" for Stack
 
 var s = Stack.new()
 s.push(1)

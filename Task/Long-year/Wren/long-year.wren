@@ -1,4 +1,4 @@
-import "/date" for Date
+import "./date" for Date
 
 var centuries = ["20th", "21st", "22nd"]
 var starts = [1900, 2000, 2100]

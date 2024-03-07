@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var tempConv = Fn.new { |k|
     var c = k - 273.15

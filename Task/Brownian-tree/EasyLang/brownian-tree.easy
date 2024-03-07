@@ -6,15 +6,15 @@ f[100 * 200 + 100] = 1
 n = 9000
 while i < n
   repeat
-    x = random 200 - 1
-    y = random 200 - 1
+    x = randint 200 - 1
+    y = randint 200 - 1
     until f[y * 200 + x + 1] <> 1
   .
   while 1 = 1
     xo = x
     yo = y
-    x += random 3 - 2
-    y += random 3 - 2
+    x += randint 3 - 2
+    y += randint 3 - 2
     if x < 0 or y < 0 or x >= 200 or y >= 200
       break 1
     .

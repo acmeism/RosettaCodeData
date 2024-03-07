@@ -1,5 +1,5 @@
 import "random" for Random
-import "/sort" for Sort
+import "./sort" for Sort
 
 var bogoSort = Fn.new { |a|
     var rand = Random.new()

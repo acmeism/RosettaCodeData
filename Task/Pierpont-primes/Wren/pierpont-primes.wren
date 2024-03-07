@@ -1,5 +1,5 @@
-import "/big" for BigInt
-import "/fmt" for Fmt
+import "./big" for BigInt
+import "./fmt" for Fmt
 
 var pierpont = Fn.new { |n, first|
     var p = [ List.filled(n, null), List.filled(n, null) ]

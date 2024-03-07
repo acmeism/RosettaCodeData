@@ -1,6 +1,6 @@
 import "os" for Platform, Process
 import "io" for File
-import "/pattern" for Pattern
+import "/.pattern" for Pattern
 
 var getSourceLines = Fn.new {
     var fileName = Process.allArguments[1]

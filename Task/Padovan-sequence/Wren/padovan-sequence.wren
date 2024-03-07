@@ -1,5 +1,5 @@
-import "/big" for BigRat
-import "/dynamic" for Struct
+import "./big" for BigRat
+import "./dynamic" for Struct
 
 var padovanRecur = Fn.new { |n|
     var p = List.filled(n, 1)

@@ -1,6 +1,6 @@
-import "/big" for BigInt
-import "/math" for Int
-import "/fmt" for Fmt
+import "./big" for BigInt
+import "./math" for Int
+import "./fmt" for Fmt
 
 var vecprod = Fn.new { |primes|
     var le = primes.count

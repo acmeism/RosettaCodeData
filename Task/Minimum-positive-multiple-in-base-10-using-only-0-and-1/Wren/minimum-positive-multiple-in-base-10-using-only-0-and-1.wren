@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/big" for BigInt
+import "./fmt" for Fmt
+import "./big" for BigInt
 
 var b10 = Fn.new { |n|
     if (n == 1) {

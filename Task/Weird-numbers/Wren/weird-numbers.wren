@@ -1,5 +1,5 @@
-import "/math" for Int, Nums
-import "/iterate" for Stepped
+import "./math" for Int, Nums
+import "./iterate" for Stepped
 
 var semiperfect // recursive
 semiperfect = Fn.new { |n, divs|

@@ -13,7 +13,6 @@ var munchausen = Fn.new {|n|
     return nn == sum
 }
 
-System.print(powers)
 System.print("The Munchausen numbers <= 5000 are:")
 for (i in 1..5000) {
     if (munchausen.call(i)) System.print(i)

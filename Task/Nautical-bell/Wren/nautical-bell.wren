@@ -1,7 +1,7 @@
 import "os" for Process
 import "timer" for Timer
-import "/date" for Date
-import "/fmt" for Fmt
+import "./date" for Date
+import "./fmt" for Fmt
 
 var watches = ["First", "Middle", "Morning", "Forenoon", "Afternoon", "Dog", "First"]
 

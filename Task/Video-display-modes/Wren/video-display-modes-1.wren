@@ -1,4 +1,4 @@
-/* video_display_modes.wren */
+/* Video_display_modes.wren */
 
 class C {
     foreign static xrandr(args)

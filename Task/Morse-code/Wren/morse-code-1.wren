@@ -1,5 +1,5 @@
-import "/str" for Str
-import "/sound" for Wav
+import "./str" for Str
+import "./sound" for Wav
 
 var charToMorse = {
     "!": "---.",   "\"": ".-..-.",  "$": "...-..-",  "'": ".----.",

@@ -1,6 +1,5 @@
-import "/math" for Int
-import "/fmt" for Fmt
-import "/seq" for Lst
+import "./math" for Int
+import "./fmt" for Fmt
 
 var sumDigits = Fn.new { |n|
     var sum = 0
@@ -21,4 +20,4 @@ for (i in 2...10000) {
         if (thisSum == factSum) smiths.add(i)
     }
 }
-for (chunk in Lst.chunks(smiths, 16)) Fmt.print("$4d", chunk)
+Fmt.tprint("$4d", smiths, 16)

@@ -1,5 +1,5 @@
-import "/math" for Int, Nums
-import "/fmt" for Fmt
+import "./math" for Int, Nums
+import "./fmt" for Fmt
 import "io" for Stdout
 
 var isPartSum // recursive

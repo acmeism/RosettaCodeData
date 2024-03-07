@@ -1,4 +1,4 @@
-/* safe_addition.wren */
+/* Safe_addition.wren */
 class Interval {
     construct new(lower, upper) {
         if (lower.type != Num || upper.type != Num) {

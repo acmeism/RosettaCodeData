@@ -1,5 +1,5 @@
 import "random" for Random
-import "/ioutil" for Input
+import "./ioutil" for Input
 
 var r = Random.new()
 var b = List.filled(3, null)

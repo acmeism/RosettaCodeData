@@ -1,2 +1,1 @@
-def iota: ., (. + 1 | iota);
-0 | iota
+0 | recurse(. + 1)

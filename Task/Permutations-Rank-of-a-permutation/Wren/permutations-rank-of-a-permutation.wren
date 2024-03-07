@@ -1,5 +1,5 @@
 import "random" for Random
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var swap = Fn.new { |a, i, j|
     var t = a[i]

@@ -1,5 +1,5 @@
 import "io" for File
-import "/sort" for Find
+import "./sort" for Find
 
 var words = File.read("unixdict.txt").trim().split("\n")
 

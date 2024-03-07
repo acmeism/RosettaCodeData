@@ -1,8 +1,8 @@
 import "io" for File
-import "/crypto" for Sha256, Bytes
-import "/seq" for Lst
-import "/str" for Str
-import "/fmt" for Conv
+import "./crypto" for Sha256, Bytes
+import "./seq" for Lst
+import "./str" for Str
+import "./fmt" for Conv
 
 var bytes = File.read("title.png").bytes.toList
 var chunks = Lst.chunks(bytes, 1024)

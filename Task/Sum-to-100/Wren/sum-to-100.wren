@@ -1,8 +1,8 @@
-import "/dynamic" for Enum
-import "/fmt" for Fmt
-import "/set" for Set
-import "/math" for Nums
-import "/sort" for Sort
+import "./dynamic" for Enum
+import "./fmt" for Fmt
+import "./set" for Set
+import "./math" for Nums
+import "./sort" for Sort
 
 var Op = Enum.create("Op", ["ADD", "SUB", "JOIN"])
 

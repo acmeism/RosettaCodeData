@@ -20,7 +20,7 @@ BEGIN # Check some IsBN13 check digits                                         #
             digits = 13 AND sum MOD 10 = 0
          END; # check isbn13 #
     # task test cases #
-    []STRING tests    = ( "978-1734314502", "978-1734314509", "978-1788399081", "978-1788399083" );
+    []STRING tests    = ( "978-0596528126", "978-0596528120", "978-1788399081", "978-1788399083" );
     []BOOL   expected = (             TRUE,            FALSE,             TRUE,            FALSE );
     FOR pos FROM LWB tests TO UPB tests DO
         BOOL result = check isbn13( tests[ pos ] );

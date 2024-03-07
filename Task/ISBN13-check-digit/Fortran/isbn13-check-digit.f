@@ -1,7 +1,7 @@
 program isbn13
     implicit none
 
-    character(len=14), dimension(4), parameter  :: isbns=["978-1734314502", "978-1734314509", "978-1788399081", "978-1788399083"]
+    character(len=14), dimension(4), parameter  :: isbns=["978-0596528126", "978-0596528120", "978-1788399081", "978-1788399083"]
     integer                                     :: i
 
     do i = 1, ubound(isbns, 1)

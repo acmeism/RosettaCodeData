@@ -30,8 +30,8 @@ mergeSort = Fn.new { |m|
     return merge.call(left, right)
 }
 
-var as = [ [4, 65, 2, -31, 0, 99, 2, 83, 782, 1], [7, 5, 2, 6, 1, 4, 2, 6, 3] ]
-for (a in as) {
+var array = [ [4, 65, 2, -31, 0, 99, 2, 83, 782, 1], [7, 5, 2, 6, 1, 4, 2, 6, 3] ]
+for (a in array) {
     System.print("Before: %(a)")
     a = mergeSort.call(a)
     System.print("After : %(a)")

@@ -1,4 +1,4 @@
-/* rc_rank_languages_by_number_of_users.wren */
+/* Rosetta_Code_Rank_languages_by_number_of_users.wren */
 
 import "./pattern" for Pattern
 import "./fmt" for Fmt
@@ -49,7 +49,7 @@ for (m in matches) {
     }
 }
 over100s.sort { |a, b| a[1] > b[1] }
-System.print("Languages with at least 100 users as at 4 January, 2022:")
+System.print("Languages with at least 100 users as at 3 February, 2024:")
 var rank = 0
 var lastScore = 0
 var lastRank = 0

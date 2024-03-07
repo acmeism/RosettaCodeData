@@ -1,7 +1,7 @@
-import "/dynamic" for Tuple
-import "/sort" for Sort
-import "/str" for Str
-import "/seq" for Lst
+import "./dynamic" for Tuple
+import "./sort" for Sort
+import "./str" for Str
+import "./seq" for Lst
 
 var Card = Tuple.create("Card", ["face", "suit"])
 

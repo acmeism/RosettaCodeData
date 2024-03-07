@@ -1,4 +1,4 @@
-import "/big" for BigInt, BigRat
+import "./big" for BigInt, BigRat
 
 var sylvester = [BigInt.two]
 var prod = BigInt.two

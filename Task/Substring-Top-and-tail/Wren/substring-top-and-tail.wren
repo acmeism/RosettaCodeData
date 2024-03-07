@@ -1,4 +1,4 @@
-import "/str" for Str
+import "./str" for Str
 
 var a = "Beyoncé"
 var b = Str.delete(a, 0)

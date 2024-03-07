@@ -1,4 +1,4 @@
-import "/dynamic" for Struct
+import "./dynamic" for Struct
 
 // constants
 var EMX  = 64       // exponent maximum (if indexing starts at -EMX)

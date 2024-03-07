@@ -8,4 +8,4 @@ for (n in 1..70) {
     while (Int.digitSum(m * n) != n) m = m + 1
     res.add(m)
 }
-for (chunk in Lst.chunks(res, 10)) Fmt.print("$,10d", chunk)
+Fmt.tprint("$,10d", res, 10)

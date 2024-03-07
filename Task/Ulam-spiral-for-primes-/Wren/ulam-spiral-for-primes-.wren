@@ -1,7 +1,7 @@
-import "/dynamic" for Enum
-import "/math" for Int
-import "/str" for Char
-import "/fmt" for Fmt
+import "./dynamic" for Enum
+import "./math" for Int
+import "./str" for Char
+import "./fmt" for Fmt
 
 var Direction = Enum.create("Direction", ["right", "up", "left", "down"])
 

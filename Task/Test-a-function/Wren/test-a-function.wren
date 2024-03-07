@@ -1,4 +1,4 @@
-import "/module" for Expect, Suite, ConsoleReporter
+import "./module" for Expect, Suite, ConsoleReporter
 
 var isPal = Fn.new { |word| word == ((word.count > 0) ? word[-1..0] : "") }
 

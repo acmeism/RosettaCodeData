@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/ioutil" for FileUtil, Stdin
+import "./fmt" for Fmt
+import "./ioutil" for FileUtil, Stdin
 
 var rows = 0     // extent of input configuration
 var cols = 0     // """

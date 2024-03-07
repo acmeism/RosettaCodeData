@@ -1,6 +1,5 @@
-import "/math" for Int, Nums
-import "/seq" for Lst
-import "/fmt" for Fmt
+import "./math" for Int, Nums
+import "./fmt" for Fmt
 
 var limit = 1e6
 var m = 63
@@ -26,9 +25,7 @@ while (n <= limit) {
     n = n + 2
 }
 System.print("List of untouchable numbers <= 2,000:")
-for (chunk in Lst.chunks(untouchable.where { |n| n <= 2000 }.toList, 10)) {
-    Fmt.print("$,6d", chunk)
-}
+Fmt.tprint("$,6d", untouchable.where { |n| n <= 2000 }, 10)
 System.print()
 Fmt.print("$,7d untouchable numbers were found  <=     2,000", untouchable.count { |n| n <= 2000 })
 var p = 10

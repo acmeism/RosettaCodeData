@@ -1,4 +1,4 @@
-/* gcc rc_count_examples.c -o rc_count_examples -lcurl -lwren -lm  */
+/* gcc Rosetta_Code_Count_examples.c -o Rosetta_Code_Count_examples -lcurl -lwren -lm  */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
     config.loadModuleFn = &loadModule;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "rc_count_examples.wren";
+    const char* fileName = "Rosetta_Code_Count_examples.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

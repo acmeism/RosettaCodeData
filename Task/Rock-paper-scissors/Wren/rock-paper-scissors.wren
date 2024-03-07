@@ -1,6 +1,6 @@
 import "random" for Random
-import "/str" for Str
-import "/ioutil" for Input
+import "./str" for Str
+import "./ioutil" for Input
 
 var choices = "rpsq"
 var rand = Random.new()

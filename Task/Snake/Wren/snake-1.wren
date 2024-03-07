@@ -1,4 +1,4 @@
-/* snake.wren */
+/* Snake.wren */
 
 import "random" for Random
 import "./dynamic" for Enum, Lower

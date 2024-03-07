@@ -1,4 +1,4 @@
-/* gcc web_scraping.c -o web_scraping -lcurl -lwren -lm  */
+/* gcc Web_scraping.c -o Web_scraping -lcurl -lwren -lm  */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
     config.loadModuleFn = &loadModule;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "web_scraping.wren";
+    const char* fileName = "Web_scraping.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

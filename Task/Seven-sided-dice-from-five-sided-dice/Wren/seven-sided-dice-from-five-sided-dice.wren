@@ -1,6 +1,6 @@
 import "random" for Random
-import "/sort" for Sort
-import "/fmt" for Fmt
+import "./sort" for Sort
+import "./fmt" for Fmt
 
 var r = Random.new()
 

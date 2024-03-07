@@ -1,5 +1,5 @@
-import "/big" for BigInt
-import "/set" for Set
+import "./big" for BigInt
+import "./set" for Set
 
 var iterations = 500
 var limit = 10000

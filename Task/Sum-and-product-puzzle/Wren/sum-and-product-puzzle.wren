@@ -1,5 +1,5 @@
-import "/dynamic" for Tuple
-import "/seq" for Lst
+import "./dynamic" for Tuple
+import "./seq" for Lst
 
 var P = Tuple.create("P", ["x", "y", "sum", "prod"])
 

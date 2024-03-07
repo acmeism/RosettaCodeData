@@ -1,0 +1,3 @@
+jewels: +/~^?
+
+jewels["aA";"aAAbbbb"]

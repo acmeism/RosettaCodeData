@@ -4,8 +4,8 @@ using System.Linq;
 public class Program
 {
     public static void Main() {
-        Console.WriteLine(CheckISBN13("978-1734314502"));
-        Console.WriteLine(CheckISBN13("978-1734314509"));
+        Console.WriteLine(CheckISBN13("978-0596528126"));
+        Console.WriteLine(CheckISBN13("978-0596528120"));
         Console.WriteLine(CheckISBN13("978-1788399081"));
         Console.WriteLine(CheckISBN13("978-1788399083"));
 

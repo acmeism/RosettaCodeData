@@ -1,5 +1,5 @@
-import "/seq" for Stack
-import "/pattern" for Pattern
+import "./seq" for Stack
+import "./pattern" for Pattern
 
 class Expression {
     static ops { "-+/*^" }

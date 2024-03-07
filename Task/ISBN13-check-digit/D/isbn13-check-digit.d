@@ -18,8 +18,8 @@ bool isValidISBN13(string text) {
 }
 
 unittest {
-    assert(isValidISBN13("978-1734314502"));
-    assert(!isValidISBN13("978-1734314509"));
+    assert(isValidISBN13("978-0596528126"));
+    assert(!isValidISBN13("978-0596528120"));
     assert(isValidISBN13("978-1788399081"));
     assert(!isValidISBN13("978-1788399083"));
 }

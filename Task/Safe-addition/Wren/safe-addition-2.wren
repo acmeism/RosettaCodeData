@@ -1,3 +1,5 @@
+/* gcc Safe_addition.c -o Safe_addition -lwren -lm */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -64,7 +66,7 @@ int main() {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "safe_addition.wren";
+    const char* fileName = "Safe_addition.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

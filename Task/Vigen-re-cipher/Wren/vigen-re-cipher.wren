@@ -1,4 +1,4 @@
-import "/str" for Char, Str
+import "./str" for Char, Str
 
 var vigenere = Fn.new { |text, key, encrypt|
     var t = encrypt ? Str.upper(text) : text

@@ -1,5 +1,5 @@
-import "/str" for Char
-import "/fmt" for Conv
+import "./str" for Char
+import "./fmt" for Conv
 
 var sedol = Fn.new { |s|
     if (!(s is String && s.count == 6)) return false

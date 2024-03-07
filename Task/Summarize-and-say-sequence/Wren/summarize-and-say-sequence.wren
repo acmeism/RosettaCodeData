@@ -1,5 +1,5 @@
-import "/seq" for Lst
-import "/math" for Nums
+import "./seq" for Lst
+import "./math" for Nums
 
 var limit = 1e6
 

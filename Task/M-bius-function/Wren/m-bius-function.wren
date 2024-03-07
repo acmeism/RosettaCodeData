@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/math" for Int
+import "./fmt" for Fmt
+import "./math" for Int
 
 var isSquareFree = Fn.new { |n|
     var i = 2
@@ -26,7 +26,7 @@ for (i in 0..9) {
         if (i == 0 && j == 0) {
             System.write("    ")
         } else {
-            System.write("%(Fmt.dm(3, mu.call(i*20 + j))) ")
+            Fmt.write("$ 3d ", mu.call(i*20 + j))
         }
     }
     System.print()

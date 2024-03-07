@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 // Converts a string of the form "[1, 2]" into a list: [1, 2]
 var asList = Fn.new { |s|

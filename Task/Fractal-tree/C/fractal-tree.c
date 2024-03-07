@@ -9,8 +9,8 @@
 #include <time.h>
 #include <math.h>
 
-#ifdef WITH_CAIRO
-#define PI 3.1415926535
+#ifndef M_PI
+#define M_PI           3.14159265358979323846
 #endif
 
 #define SIZE           800   // determines size of window
@@ -74,7 +74,7 @@ void render(SDL_Surface * surface){
       surface->h - 10.0,
       0.0, -1.0,
       INITIAL_LENGTH,
-      PI / 8,
+      M_PI / 8,
       BRANCHES);
   SDL_UpdateRect(surface, 0, 0, 0, 0);
 }

@@ -1,4 +1,4 @@
-import "/sort" for Sort
+import "./sort" for Sort
 
 var a = [170, 45, 75, -90, -802, 24, 2, 66]
 

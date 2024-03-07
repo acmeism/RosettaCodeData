@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/math" for Int
+import "./fmt" for Fmt
+import "./math" for Int
 
 // finds the period of the reciprocal of n
 var findPeriod = Fn.new { |n|
@@ -39,6 +39,6 @@ System.print(longPrimes[0...totals[0]].join(" "))
 System.print("\nThe number of long primes up to: ")
 var i = 0
 for (total in totals) {
-    System.print("  %(Fmt.d(5, numbers[i])) is %(total)")
+    Fmt.print("  $5d is $d", numbers[i], total)
     i = i + 1
 }

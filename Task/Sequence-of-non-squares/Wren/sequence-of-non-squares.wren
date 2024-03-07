@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 System.print("The first 22 numbers in the sequence are:")
 System.print("  n  term")

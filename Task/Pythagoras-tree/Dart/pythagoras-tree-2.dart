@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
 
-void main() => runApp(const MainApp());
-
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
-
-  @override
-  Widget build(BuildContext context) => FittedBox(
-      child: CustomPaint(painter: TreePainter(), size: const Size(2400, 1600)));
-}
+void main() => runApp(FittedBox(
+    child: CustomPaint(painter: TreePainter(), size: const Size(2400, 1600))));
 
 class TreePainter extends CustomPainter {
   @override

@@ -1,4 +1,4 @@
-import "/sound" for Wav
+import "./sound" for Wav
 
 var sampleRate = 44100
 var duration = 8

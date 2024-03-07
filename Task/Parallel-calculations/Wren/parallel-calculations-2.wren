@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
     config.errorFn = &errorFn;
     config.loadModuleFn = &loadModule;
     const char* module = "main";
-    const char* fileName = "parallel_calculations.wren";
+    const char* fileName = "Parallel_calculations.wren";
     char *script = readFile(fileName);
 
     // config the VMs and interpret the script

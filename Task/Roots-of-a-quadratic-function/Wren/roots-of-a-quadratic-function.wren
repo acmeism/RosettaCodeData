@@ -1,4 +1,4 @@
-import "/complex" for Complex
+import "./complex" for Complex
 
 var quadratic = Fn.new { |a, b, c|
     var d = b*b - 4*a*c

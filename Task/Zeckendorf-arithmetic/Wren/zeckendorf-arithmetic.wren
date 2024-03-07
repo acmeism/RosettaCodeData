@@ -1,4 +1,4 @@
-import "/trait" for Comparable
+import "./trait" for Comparable
 
 class Zeckendorf is Comparable {
     static dig  { ["00", "01", "10"] }

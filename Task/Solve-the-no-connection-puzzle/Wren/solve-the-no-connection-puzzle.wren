@@ -1,4 +1,4 @@
-import "/dynamic" for Tuple
+import "./dynamic" for Tuple
 
 var Solution = Tuple.create("Solution", ["p", "tests", "swaps"])
 

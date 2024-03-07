@@ -1,4 +1,4 @@
-import "/math" for Nums
+import "./math" for Nums
 
 var genSequence // recursive
 genSequence = Fn.new { |ones, numZeros|

@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var isPrime = Fn.new { |n|
     if (n < 2 || !n.isInteger) return false

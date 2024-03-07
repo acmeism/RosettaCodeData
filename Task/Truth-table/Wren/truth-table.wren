@@ -1,7 +1,7 @@
-import "/dynamic" for Struct
-import "/ioutil" for Input
-import "/seq" for Stack
-import "/str" for Str
+import "./dynamic" for Struct
+import "./ioutil" for Input
+import "./seq" for Stack
+import "./str" for Str
 
 var Variable = Struct.create("Variable", ["name", "value"])
 

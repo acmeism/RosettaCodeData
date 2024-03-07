@@ -1,6 +1,6 @@
 import "random" for Random
-import "/fmt" for Fmt
-import "/math" for Nums
+import "./fmt" for Fmt
+import "./math" for Nums
 
 var rgen = Random.new()
 

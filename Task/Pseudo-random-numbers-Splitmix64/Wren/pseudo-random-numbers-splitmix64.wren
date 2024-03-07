@@ -1,4 +1,4 @@
-import "/big" for BigInt
+import "./big" for BigInt
 
 var Const1 = BigInt.fromBaseString("9e3779b97f4a7c15", 16)
 var Const2 = BigInt.fromBaseString("bf58476d1ce4e5b9", 16)

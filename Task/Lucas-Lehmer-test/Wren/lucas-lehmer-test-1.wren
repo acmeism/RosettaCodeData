@@ -1,5 +1,5 @@
-import "/big" for BigInt
-import "/math" for Int
+import "./big" for BigInt
+import "./math" for Int
 import "io" for Stdout
 
 var start = System.clock

@@ -1,4 +1,4 @@
-import "/dynamic" for Tuple
+import "./dynamic" for Tuple
 
 var Circle = Tuple.create("Circle", ["x", "y", "r"])
 

@@ -1,5 +1,5 @@
-import "/matrix" for Matrix
-import "/fmt" for Fmt
+import "./matrix" for Matrix
+import "./fmt" for Fmt
 
 var minor = Fn.new { |x, d|
     var nr = x.numRows

@@ -1,7 +1,7 @@
-import "/dynamic" for Enum
-import "/str" for Str, Char
-import "/iterate" for Stepped
-import "/ioutil" for Input
+import "./dynamic" for Enum
+import "./str" for Str, Char
+import "./iterate" for Stepped
+import "./ioutil" for Input
 
 var PlayfairOption = Enum.create("PlayfairOption", ["NO_Q", "I_EQUALS_J"])
 

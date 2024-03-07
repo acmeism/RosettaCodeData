@@ -1,4 +1,4 @@
-import "/sort" for Find
+import "./sort" for Find
 
 class Pancake {
     construct new(a) {

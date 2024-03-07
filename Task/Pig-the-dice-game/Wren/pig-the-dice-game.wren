@@ -1,5 +1,5 @@
-import "/ioutil" for Input
-import "/str" for Str
+import "./ioutil" for Input
+import "./str" for Str
 import "random" for Random
 
 var name1 = Input.text("Player 1 - Enter your name : ").trim()

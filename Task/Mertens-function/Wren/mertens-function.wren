@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/math" for Int
+import "./fmt" for Fmt
+import "./math" for Int
 
 var isSquareFree = Fn.new { |n|
     var i = 2

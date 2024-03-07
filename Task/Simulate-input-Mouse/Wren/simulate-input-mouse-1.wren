@@ -1,4 +1,4 @@
-/* simulate_input_mouse.wren */
+/* Simulate_input_Mouse.wren */
 
 var KeyPressMask    = 1 << 0
 var ButtonPressMask = 1 << 2

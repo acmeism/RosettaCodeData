@@ -1,4 +1,4 @@
-/* terminal_control_positional_read.wren */
+/* Terminal_control_Positional_read.wren */
 
 import "random" for Random
 

@@ -1,4 +1,4 @@
-import "/math" for Int, Nums
+import "./math" for Int, Nums
 
 var maxDepth = 5
 var maxBase = 36

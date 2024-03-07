@@ -1,5 +1,5 @@
-import "/math" for Int
-import "/big" for BigInt
+import "./math" for Int
+import "./big" for BigInt
 
 var primes = Int.primeSieve(5000)
 System.print("Wieferich primes < 5000:")

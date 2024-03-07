@@ -1,6 +1,6 @@
-import "/dynamic" for Tuple
-import "/llist" for DLinkedList
-import "/set" for Set
+import "./dynamic" for Tuple
+import "./llist" for DLinkedList
+import "./set" for Set
 
 var Board = Tuple.create("Board", ["cur", "sol", "x", "y"])
 

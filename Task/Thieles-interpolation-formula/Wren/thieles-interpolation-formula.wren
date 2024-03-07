@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var N = 32
 var N2 = N * (N - 1) / 2

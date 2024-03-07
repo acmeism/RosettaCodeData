@@ -1,4 +1,4 @@
-import "/str" for Str
+import "./str" for Str
 
 var board  = "ET AON RISBCDFGHJKLMPQ/UVWXYZ."
 var digits = "0123456789"

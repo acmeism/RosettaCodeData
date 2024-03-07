@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var toBytes = Fn.new { |val|
     var bytes = List.filled(4, 0)

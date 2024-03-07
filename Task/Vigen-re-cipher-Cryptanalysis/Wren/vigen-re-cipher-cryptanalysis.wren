@@ -1,7 +1,7 @@
-import "/math" for Nums
-import "/iterate" for Stepped
-import "/str" for Char, Str
-import "/fmt" for Fmt
+import "./math" for Nums
+import "./iterate" for Stepped
+import "./str" for Char, Str
+import "./fmt" for Fmt
 
 var encoded =
     "MOMUD EKAPV TQEFM OEVHP AJMII CDCTI FGYAG JSPXY ALUYM NSMYH" +

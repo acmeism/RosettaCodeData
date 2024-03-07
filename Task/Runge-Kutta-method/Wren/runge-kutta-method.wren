@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var rungeKutta4 = Fn.new { |t0, tz, dt, y, yd|
     var tn = t0

@@ -1,5 +1,5 @@
-import "/pattern" for Pattern
-import "/fmt" for Fmt
+import "./pattern" for Pattern
+import "./fmt" for Fmt
 
 var input = "a!===b=!=c"
 var p = Pattern.new("[/=/=|!/=|/=]")

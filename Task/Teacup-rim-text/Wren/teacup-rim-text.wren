@@ -1,6 +1,6 @@
 import "io" for File
-import "/str" for Str
-import "/sort" for Find
+import "./str" for Str
+import "./sort" for Find
 
 var readWords = Fn.new { |fileName|
     var dict = File.read(fileName).split("\n")

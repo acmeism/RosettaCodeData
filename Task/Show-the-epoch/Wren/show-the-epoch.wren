@@ -1,4 +1,4 @@
-import "/date" for Date
+import "./date" for Date
 
 Date.default = Date.isoFull
 var dt = Date.fromNumber(0)

@@ -1,5 +1,5 @@
 import "io" for File
-import "/ioutil" for FileUtil
+import "./ioutil" for FileUtil
 
 class Configuration {
     construct new(map) {

@@ -1,4 +1,4 @@
-import "/math" for Int
+import "./math" for Int
 
 var isPerfect = Fn.new { |n|
     if (n <= 2) return false

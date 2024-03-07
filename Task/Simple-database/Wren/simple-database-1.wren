@@ -1,14 +1,14 @@
-/* simdb.wren */
+/* Simple_database.wren */
 
 import "os" for Process
-import "/ioutil" for File, FileFlags, FileUtil
-import "/trait" for Comparable
-import "/iterate" for Reversed
-import "/date" for Date
-import "/sort" for Sort
-import "/str" for Str
+import "./ioutil" for File, FileFlags, FileUtil
+import "./trait" for Comparable
+import "./iterate" for Reversed
+import "./date" for Date
+import "./sort" for Sort
+import "./str" for Str
 
-var fileName = "simdb.csv"
+var fileName = "Simple_database.csv"
 
 Date.default = Date.isoDate
 
@@ -31,7 +31,7 @@ class Item is Comparable {
 var printUsage = Fn.new {
     System.print("""
 Usage:
-  wren simdb.wren cmd [categoryName]
+  wren Simple_database.wren cmd [categoryName]
   add     add item name and date, followed by optional category
   latest  print item with latest date, followed by optional category
   all     print all

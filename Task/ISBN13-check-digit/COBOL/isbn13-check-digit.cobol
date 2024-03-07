@@ -25,8 +25,8 @@
 
        01  IX                          PIC S9(4) COMP.
        01  TEST-ISBNS.
-           02  FILLER                  PIC X(14) VALUE '978-1734314502'.
-           02  FILLER                  PIC X(14) VALUE '978-1734314509'.
+           02  FILLER                  PIC X(14) VALUE '978-0596528126'.
+           02  FILLER                  PIC X(14) VALUE '978-0596528120'.
            02  FILLER                  PIC X(14) VALUE '978-1788399081'.
            02  FILLER                  PIC X(14) VALUE '978-1788399083'.
        01  TEST-ISBN                   REDEFINES TEST-ISBNS

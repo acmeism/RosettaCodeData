@@ -1,5 +1,5 @@
-import "/date" for Date
-import "/fmt" for Fmt
+import "./date" for Date
+import "./fmt" for Fmt
 
 var sacred = "Imix’ Ik’ Ak’bal K’an Chikchan Kimi Manik’ Lamat Muluk Ok Chuwen Eb Ben Hix Men K’ib’ Kaban Etz’nab’ Kawak Ajaw".split(" ")
 

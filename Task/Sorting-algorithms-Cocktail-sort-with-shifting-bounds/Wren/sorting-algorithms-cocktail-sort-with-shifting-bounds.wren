@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 import "random" for Random
 
 // translation of pseudo-code

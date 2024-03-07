@@ -1,5 +1,5 @@
-import "/str" for Str
-import "/upc" for Graphemes
+import "./str" for Str
+import "./upc" for Graphemes
 
 for (word in ["asdf", "josé", "møøse", "was it a car or a cat I saw", "😀🚂🦊"]) {
     System.print(Str.reverse(word))

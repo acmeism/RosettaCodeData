@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var loop = Fn.new { |start, stop, inc|
     System.write("%(Fmt.v("dm", 3, [start, stop, inc], 0, " ", "[]")) -> ")

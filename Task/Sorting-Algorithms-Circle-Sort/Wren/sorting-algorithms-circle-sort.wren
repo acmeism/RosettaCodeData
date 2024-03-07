@@ -27,8 +27,8 @@ circleSort = Fn.new { |a, lo, hi, swaps|
     return swaps
 }
 
-var as = [ [6, 7, 8, 9, 2, 5, 3, 4, 1], [2, 14, 4, 6, 8, 1, 3, 5, 7, 11, 0, 13, 12, -1] ]
-for (a in as) {
+var array = [ [6, 7, 8, 9, 2, 5, 3, 4, 1], [2, 14, 4, 6, 8, 1, 3, 5, 7, 11, 0, 13, 12, -1] ]
+for (a in array) {
     System.print("Before: %(a)")
     while (circleSort.call(a, 0, a.count-1, 0) != 0) {}
     System.print("After : %(a)")

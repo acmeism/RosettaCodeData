@@ -1,1 +1,1 @@
-0 | recurse(. + 1)
+0 | while(true; . + 1)

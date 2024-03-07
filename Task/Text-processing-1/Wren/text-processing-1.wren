@@ -1,6 +1,6 @@
 import "io" for File
-import "/pattern" for Pattern
-import "/fmt" for Fmt
+import "./pattern" for Pattern
+import "./fmt" for Fmt
 
 var p = Pattern.new("+1/s")
 var fileName = "readings.txt"

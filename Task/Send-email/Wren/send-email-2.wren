@@ -1,4 +1,4 @@
-/* go run send_email.go */
+/* go run Send_email.go */
 
 package main
 
@@ -58,7 +58,7 @@ func readString(vm *wren.VM, parameters []any) (any, error) {
 
 func main() {
     vm := wren.NewVM()
-    fileName := "send_email.wren"
+    fileName := "Send_email.wren"
 
     smtpMethodMap   := wren.MethodMap { "static sendMail(_,_,_,_,_)": sendMail }
     readerMethodMap := wren.MethodMap { "readString(_)": readString }

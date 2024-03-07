@@ -1,8 +1,8 @@
 import "io" for File, Directory
-import "/srandom" for SRandom
-import "/ioutil" for FileUtil, Input
-import "/dynamic" for Enum
-import "/str" for Char, Str
+import "./srandom" for SRandom
+import "./ioutil" for FileUtil, Input
+import "./dynamic" for Enum
+import "./str" for Char, Str
 
 var CHARS_PER_LINE = 48
 var CHUNK_SIZE = 6

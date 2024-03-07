@@ -1,8 +1,8 @@
-import "/dynamic" for Enum
-import "/fmt" for Fmt
-import "/seq" for Lst
-import "/math" for Nums
-import "/sort" for Sort
+import "./dynamic" for Enum
+import "./fmt" for Fmt
+import "./seq" for Lst
+import "./math" for Nums
+import "./sort" for Sort
 
 var Direction = Enum.create("Direction", ["UP", "DOWN"])
 

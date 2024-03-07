@@ -1,7 +1,7 @@
 import "io" for File
-import "/str" for Char, Str
-import "/sort" for Sort
-import "/fmt" for Fmt
+import "./str" for Char, Str
+import "./sort" for Sort
+import "./fmt" for Fmt
 
 var wordList = "unixdict.txt"
 var DIGITS = "22233344455566677778889999"

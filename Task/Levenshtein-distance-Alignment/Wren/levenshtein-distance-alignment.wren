@@ -1,4 +1,4 @@
-import "/str" for Str
+import "./str" for Str
 
 var levenshteinAlign = Fn.new { |a, b|
     a = Str.lower(a)

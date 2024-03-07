@@ -32,7 +32,7 @@ do -- find the radicals of some integers - the radical of n is the product
     local dpfc = {}
     for i = 1, maxNumber do
         local count = dpfc[ upfc[ i ] ]
-        dpfc[ upfc[ i ] ] = ( count == null and 1 or count + 1 )
+        dpfc[ upfc[ i ] ] = ( count == nil and 1 or count + 1 )
     end
     io.write( "Distribution of radicals:\n" )
     for i = 0, #dpfc do

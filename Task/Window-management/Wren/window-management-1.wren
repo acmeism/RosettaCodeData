@@ -1,4 +1,4 @@
-/* window_management.wren */
+/* Window_management.wren */
 
 var GTK_WINDOW_TOPLEVEL = 0
 var GTK_ORIENTATION_VERTICAL = 1

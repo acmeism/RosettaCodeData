@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var areSame = Fn.new { |a, b|
     for (i in 0...a.count) if (a[i] != b[i]) return false

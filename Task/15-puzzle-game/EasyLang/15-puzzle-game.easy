@@ -44,7 +44,7 @@ proc init . .
    .
    # shuffle
    for i = 15 downto 2
-      r = random i
+      r = randint i
       swap f[r] f[i]
    .
    # make it solvable

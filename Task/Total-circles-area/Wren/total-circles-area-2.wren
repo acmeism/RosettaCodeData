@@ -1,6 +1,6 @@
-import "/dynamic" for Tuple
-import "/math" for Nums
-import "/sort" for Sort
+import "./dynamic" for Tuple
+import "./math" for Nums
+import "./sort" for Sort
 
 var Point  = Tuple.create("Point", ["x", "y"])
 var Circle = Tuple.create("Circle", ["x", "y", "r"])

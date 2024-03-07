@@ -1,4 +1,4 @@
-import "/pattern" for Pattern
+import "./pattern" for Pattern
 
 var s = "This is a story about R2D2 and C3P0 who are best friends."
 var p = Pattern.new("/u/d/u/d")

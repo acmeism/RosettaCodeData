@@ -7,7 +7,6 @@ import re
 import secrets
 import sys
 
-
 # One-time pad file signature.
 MAGIC = "#one-time pad"
 
@@ -15,7 +14,7 @@ MAGIC = "#one-time pad"
 def make_keys(n, size):
     """Generate ``n`` secure, random keys of ``size`` bytes."""
     # We're generating and storing keys in their hexadecimal form to make
-    # one-time pad files a little more human readable and to ensure a key
+    # one-time pad files a little more human-readable and to ensure a key
     # can not start with a hyphen.
     return (secrets.token_hex(size) for _ in range(n))
 
@@ -88,7 +87,8 @@ def write_pad(path, pad_size, key_size):
 
     Args:
         path (pathlib.Path): Path to write one-time pad to.
-        length (int): Number of keys in the pad.
+        pad_size (int): The number of keys (or pages) in the pad.
+        key_size (int): The number of bytes per key.
     """
     if path.exists():
         error(f"pad '{path}' already exists")

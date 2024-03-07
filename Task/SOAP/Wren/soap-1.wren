@@ -1,4 +1,4 @@
-/* soap.wren */
+/* SOAP.wren */
 
 var CURLOPT_URL = 10002
 var CURLOPT_POST = 47

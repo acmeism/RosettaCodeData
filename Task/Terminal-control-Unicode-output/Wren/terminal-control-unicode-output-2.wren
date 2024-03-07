@@ -1,3 +1,5 @@
+/* gcc Terminal_control_Unicode_output.c -o Terminal_control_Unicode_output -lwren -lm */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -71,7 +73,7 @@ int main() {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "terminal_control_unicode_output.wren";
+    const char* fileName = "Terminal_control_Unicode_output.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

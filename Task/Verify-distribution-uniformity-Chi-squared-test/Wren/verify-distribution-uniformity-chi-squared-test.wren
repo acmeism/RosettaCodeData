@@ -1,5 +1,5 @@
-import "/math" for Math, Nums
-import "/fmt" for Fmt
+import "./math" for Math, Nums
+import "./fmt" for Fmt
 
 var integrate = Fn.new { |a, b, n, f|
     var h = (b - a) / n

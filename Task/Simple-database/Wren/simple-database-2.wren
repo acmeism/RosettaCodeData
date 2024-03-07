@@ -5,7 +5,7 @@ import "./str" for Str
 var printUsage = Fn.new {
     System.print("""
 Usage:
-  wren simdb.wren cmd [categoryName]
+  wren Simple_database.wren cmd [categoryName]
   add     add item name and date, followed by optional category
   latest  print item with latest date, followed by optional category
   all     print all
@@ -41,7 +41,7 @@ if (!(1..4).contains(args.count)) {
 }
 
 // create a new Table object
-var tableName = "simdb"
+var tableName = "Simple_database"
 var table
 if (Table.fileExists(tableName)) {
     table = Table.load(tableName)

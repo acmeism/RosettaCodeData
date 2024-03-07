@@ -1,5 +1,5 @@
-import "/sort" for Sort
-import "/fmt" for Fmt
+import "./sort" for Sort
+import "./fmt" for Fmt
 
 var sort3 = Fn.new { |x, y, z|
     var a = [x, y, z]

@@ -1,5 +1,5 @@
-import "/math" for Int, Nums
-import "/fmt" for Fmt
+import "./math" for Nums
+import "./fmt" for Fmt
 
 var supply = [50, 60, 50, 50]
 var demand = [30, 20, 70, 30, 60]
@@ -20,7 +20,7 @@ var results = List.filled(nRows, null)
 for (i in 0...nRows) results[i] = List.filled(nCols, 0)
 
 var diff = Fn.new { |j, len, isRow|
-    var min1 = Int.maxSafe
+    var min1 = Num.maxSafeInteger
     var min2 = min1
     var minP = -1
     for (i in 0...len) {
@@ -38,7 +38,7 @@ var diff = Fn.new { |j, len, isRow|
 }
 
 var maxPenalty = Fn.new { |len1, len2, isRow|
-    var md = -Int.maxSafe
+    var md = Num.minSafeInteger
     var pc = -1
     var pm = -1
     var mc = -1

@@ -1,5 +1,5 @@
 import "io" for File
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var x = [1, 2, 3, 1e11]
 var y = [1, 1.4142135623730951, 1.7320508075688772, 316227.76601683791]

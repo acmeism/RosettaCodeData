@@ -1,3 +1,5 @@
+/* gcc Simulate_input_Mouse.c -o Simulate_input_Mouse -lX11 -lwren -lm */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -356,7 +358,7 @@ int main(int argc, char **argv) {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "simulate_input_mouse.wren";
+    const char* fileName = "Simulate_input_Mouse.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

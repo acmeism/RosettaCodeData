@@ -1,4 +1,2 @@
-sub infix:<×>(@A, @B) {
-  cross(@A, ([Z] @B), with => { [+] @^a Z* @^b })
-  .rotor(@B);
-}
+sub infix:<·> { [+] @^a Z* @^b }
+sub infix:<×>(@A, @B) { (@A X· [Z] @B).rotor(@B) }

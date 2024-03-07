@@ -1,1 +1,1 @@
-my $gcd = $a gcd $b;
+my &gcd = { ($^a.abs, $^b.abs, * % * ... 0)[*-2] }

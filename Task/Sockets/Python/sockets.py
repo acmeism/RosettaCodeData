@@ -1,5 +1,6 @@
+"""Connect to a socket. Requires Python >= 3.2."""
 import socket
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect(("localhost", 256))
-sock.sendall("hello socket world")
-sock.close()
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+    sock.connect(("localhost", 256))
+    sock.sendall(b"hello socket world")

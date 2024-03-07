@@ -1,5 +1,5 @@
-import "/dynamic" for Tuple
-import "/big" for BigInt
+import "./dynamic" for Tuple
+import "./big" for BigInt
 
 var Solution = Tuple.create("Solution", ["root1", "root2", "exists"])
 

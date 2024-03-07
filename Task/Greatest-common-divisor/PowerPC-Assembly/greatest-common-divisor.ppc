@@ -1,0 +1,123 @@
+#include <syscall.h>
+_gcd_string:
+    .ascii "gcd("
+    _gcd_string_len = . - _gcd_string
+_gcd_close_string:
+    .ascii ") = "
+    _gcd_close_string_len = . - _gcd_close_string
+
+    .equiv STDIN, 0
+    .equiv STDOUT, 1
+
+    .align 4
+    .section ".text"
+    .global _start
+    .section        ".opd","aw"
+    .align 3
+_start:
+    .quad   ._start,.TOC.@tocbase,0
+    .previous
+    .global  ._start
+._start:
+    li r30, 1071
+    li r31, 1029
+    # move the loaded values into the argument registers
+    mr r3, r30
+    mr r4, r31
+    bl gcd
+    # save the result for printing later
+    mr r29, r3
+    addis r4, r2, _gcd_string@toc@ha
+    addi r4, r4, _gcd_string@toc@l
+    li r5, _gcd_string_len
+    bl print_string
+    mr r3, r30
+    bl print_integer
+    li r3, ','
+    bl print_char
+    mr r3, r31
+    bl print_integer
+    addis r4, r2, _gcd_close_string@toc@ha
+    addi r4, r4, _gcd_close_string@toc@l
+    li r5, _gcd_close_string_len
+    bl print_string
+    mr r3, r29
+    bl print_integer
+    li r3, '\n'
+    bl print_char
+    li  r0,SYS_exit # syscall number (sys_exit)
+    li  r3,0        # first argument: exit code
+    sc              # call kernel
+
+gcd:
+    cmpd r3, r4
+    bge _gcd
+    mr r5, r3
+    mr r3, r4
+    mr r4, r5
+_gcd:
+    cmpdi r4, 0
+    beqlr
+    mr r5, r3
+    mr r3, r4
+    modud r4, r5, r4
+    b _gcd
+
+# r4 is the address of the string
+# r5 is the length of the string
+print_string:
+    li r0, SYS_write
+    li r3, STDOUT
+    sc
+    blr
+
+print_char:
+    mr r4, r3
+    li r0, SYS_write
+    li r3, STDOUT
+    stb r4, -1(sp)
+    addi r4, sp, -1
+    li r5, 1
+    sc
+    blr
+
+print_integer:
+    # r3 is the integer to print
+    # r4 is the working register
+    # r5 holds the current address to write to the string
+    # r6 is 10 for division operations
+    # r7 is working storage
+    mr r5, sp
+    li r6, 10
+    neg r4, r3
+    cmpdi r3, 0
+    bne 1f
+    li r7, '0'
+    stbu r7, -1(r5)
+    b 3f
+1:
+    isellt r4, r4, r3  # r4 = abs(r3)
+1:
+    modsd r7, r4, r6
+    divd r4, r4, r6
+    addi r7, r7, '0'
+    stbu r7, -1(r5)
+    cmpdi r4, 0
+    beq 1f
+    b 1b
+
+1:
+    cmpdi r3, 0
+    blt 2f
+3:
+    mr r4, r5
+    subf r5, r5, sp
+    mflr r14
+    bl print_string
+    mtlr r14
+    blr
+
+2:
+    li r7, '-'
+    stbu r7, -1(r5)
+    b 3b

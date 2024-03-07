@@ -1,8 +1,7 @@
 func gcd a b .
    while b <> 0
-      h = b
-      b = a mod b
-      a = h
+      swap a b
+      b = b mod a
    .
    return a
 .

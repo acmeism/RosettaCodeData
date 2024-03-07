@@ -1,0 +1,58 @@
+ClearAll["Global`*"];
+
+(*Constants*)
+mask32 = BitAnd[2^32 - 1];
+CONST = 6364136223846793005;
+
+(*Convert Hex String to Expression*)
+Hex[x_?StringQ] := ToExpression["16^^" <> StringDrop[x, 2]];
+
+(*Definition of PCG32 Structure*)
+PCG32[state_: Hex["0x853c49e6748fea9b"],
+   inc_: Hex["0xda3e39cb94b95bdb"]] := <|"state" -> state,
+   "inc" -> inc|>;
+
+(*Function to generate next integer*)
+nextInt[pcg_Association] :=
+  Module[{old, xorshifted, rot, newState}, old = pcg["state"];
+   newState = BitAnd[(old*CONST + pcg["inc"]), 2^64 - 1];
+   xorshifted =
+    BitAnd[BitShiftRight[BitXor[BitShiftRight[old, 18], old], 27],
+     mask32];
+   rot = BitAnd[BitShiftRight[old, 59], mask32];
+   <|"state" -> newState, "inc" -> pcg["inc"],
+    "nextInt" ->
+     BitAnd[BitOr[BitShiftRight[xorshifted, rot],
+       BitShiftLeft[xorshifted, BitAnd[-rot, 31]]], mask32]|>];
+
+(*Function to generate next float*)
+nextFloat[pcg_Association] := nextInt[pcg]["nextInt"]/2^32;
+
+(*Function to seed the generator*)
+seed[pcg_Association, st_, seq_] :=
+  Module[{newPcg},
+   newPcg = <|"state" -> 0,
+     "inc" -> BitOr[BitShiftLeft[seq, 1], 1]|>;
+   newPcg = nextInt[newPcg];
+   <|"state" -> newPcg["state"] + st, "inc" -> newPcg["inc"]|>];
+
+(*Test function*)
+testPCG32[] :=
+  Module[{randomGen, hist, n, nextGen}, randomGen = PCG32[];
+   randomGen = seed[randomGen, 42, 54];
+   Do[
+    nextGen = nextInt[randomGen];
+    randNumber = nextGen["nextInt"];
+              If[randNumber != 0, Print[randNumber]];
+               randomGen = nextGen
+    , {6}];
+   randomGen = seed[randomGen, 987654321, 1];
+   hist = ConstantArray[0, 5];
+   Do[nextGen = nextInt[randomGen];
+    hist[[Floor[nextFloat[nextGen]*5] + 1]] += 1;
+    randomGen = nextGen, {100000}];
+   Print[hist];
+   Do[Print[n - 1, ": ", hist[[n]], "  "], {n, 1, 5}];];
+
+(*Run the test*)
+testPCG32[];

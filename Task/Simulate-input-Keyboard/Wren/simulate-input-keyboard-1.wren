@@ -1,4 +1,4 @@
-/* simulate_input_keyboard.wren */
+/* Simulate_input_Keyboard.wren */
 
 import "random" for Random
 

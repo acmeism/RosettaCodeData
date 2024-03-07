@@ -5,7 +5,6 @@ import functools
 import math
 import os
 
-from typing import Any
 from typing import Callable
 from typing import Generic
 from typing import List
@@ -14,6 +13,7 @@ from typing import Union
 
 
 T = TypeVar("T")
+U = TypeVar("U")
 
 
 class Writer(Generic[T]):
@@ -25,11 +25,11 @@ class Writer(Generic[T]):
             self.value = value
             self.msgs = list(f"{msg}: {self.value}" for msg in msgs)
 
-    def bind(self, func: Callable[[T], Writer[Any]]) -> Writer[Any]:
+    def bind(self, func: Callable[[T], Writer[U]]) -> Writer[U]:
         writer = func(self.value)
         return Writer(writer, *self.msgs)
 
-    def __rshift__(self, func: Callable[[T], Writer[Any]]) -> Writer[Any]:
+    def __rshift__(self, func: Callable[[T], Writer[U]]) -> Writer[U]:
         return self.bind(func)
 
     def __str__(self):
@@ -39,11 +39,11 @@ class Writer(Generic[T]):
         return f"Writer({self.value}, \"{', '.join(reversed(self.msgs))}\")"
 
 
-def lift(func: Callable, msg: str) -> Callable[[Any], Writer[Any]]:
+def lift(func: Callable[[T], U], msg: str) -> Callable[[T], Writer[U]]:
     """Return a writer monad version of the simple function `func`."""
 
     @functools.wraps(func)
-    def wrapped(value):
+    def wrapped(value: T) -> Writer[U]:
         return Writer(func(value), msg)
 
     return wrapped
@@ -51,7 +51,13 @@ def lift(func: Callable, msg: str) -> Callable[[Any], Writer[Any]]:
 
 if __name__ == "__main__":
     square_root = lift(math.sqrt, "square root")
-    add_one = lift(lambda x: x + 1, "add one")
-    half = lift(lambda x: x / 2, "div two")
+
+    add_one: Callable[[Union[int, float]], Writer[Union[int, float]]] = lift(
+        lambda x: x + 1, "add one"
+    )
+
+    half: Callable[[Union[int, float]], Writer[float]] = lift(
+        lambda x: x / 2, "div two"
+    )
 
     print(Writer(5, "initial") >> square_root >> add_one >> half)

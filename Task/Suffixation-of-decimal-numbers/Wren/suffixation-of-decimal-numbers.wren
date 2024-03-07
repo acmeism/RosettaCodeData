@@ -1,5 +1,5 @@
-import "/big" for BigRat
-import "/fmt" for Fmt
+import "./big" for BigRat
+import "./fmt" for Fmt
 
 var suffixes = " KMGTPEZYXWVU"
 var googol = BigRat.fromDecimal("1e100")

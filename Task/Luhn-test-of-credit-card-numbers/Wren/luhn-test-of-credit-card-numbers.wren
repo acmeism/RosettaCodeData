@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/iterate" for Stepped
+import "./fmt" for Fmt
+import "./iterate" for Stepped
 
 var luhn = Fn.new { |s|
     // reverse digits
@@ -18,5 +18,5 @@ var luhn = Fn.new { |s|
 var tests = [ "49927398716", "49927398717", "1234567812345678", "1234567812345670"]
 for (test in tests) {
     var ans = (luhn.call(test)) ? "pass" : "fail"
-    System.print("%(Fmt.s(-16, test)) -> %(ans)")
+    Fmt.print("$-16s -> $s", test, ans)
 }

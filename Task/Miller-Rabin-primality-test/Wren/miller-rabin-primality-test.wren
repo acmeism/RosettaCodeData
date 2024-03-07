@@ -1,4 +1,4 @@
-import "/big" for BigInt
+import "./big" for BigInt
 
 var iters = 10
 // find all primes < 100

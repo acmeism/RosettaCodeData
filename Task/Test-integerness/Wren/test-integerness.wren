@@ -1,7 +1,7 @@
-import "/big" for BigRat
-import "/complex" for Complex
-import "/rat" for Rat
-import "/fmt" for Fmt
+import "./big" for BigRat
+import "./complex" for Complex
+import "./rat" for Rat
+import "./fmt" for Fmt
 
 var tests1 = [25.000000, 24.999999, 25.000100]
 var tests2 = ["-2.1e120"]

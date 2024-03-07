@@ -1,6 +1,6 @@
-import "/sort" for Sort, Find
-import "/fmt" for Fmt
-import "/str" for Str
+import "./sort" for Sort, Find
+import "./fmt" for Fmt
+import "./str" for Str
 
 var permute = Fn.new { |s|
     var res = []

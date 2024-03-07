@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var ludic = Fn.new { |n, max|
     var maxInt32 = 2.pow(31) - 1

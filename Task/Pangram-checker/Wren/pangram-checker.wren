@@ -1,4 +1,4 @@
-import "/str" for Str
+import "./str" for Str
 
 var isPangram = Fn.new { |s|
     s = Str.lower(s)

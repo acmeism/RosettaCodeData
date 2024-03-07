@@ -1,5 +1,5 @@
-import "/seq" for Stack
-import "/pattern" for Pattern
+import "./seq" for Stack
+import "./pattern" for Pattern
 
 /* To find out the precedence, we take the index of the
    token in the OPS string and divide by 2 (rounding down).

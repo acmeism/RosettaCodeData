@@ -1,6 +1,6 @@
-import "/sort" for Sort
-import "/fmt" for Fmt
-import "/date" for Date
+import "./sort" for Sort
+import "./fmt" for Fmt
+import "./date" for Date
 
 class Z2 {
     construct new(value, hasValue) {

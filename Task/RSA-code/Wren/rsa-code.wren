@@ -1,4 +1,4 @@
-import "/big" for BigInt
+import "./big" for BigInt
 
 var pt = "Rosetta Code"
 System.print("Plain text:            : %(pt)")

@@ -1,4 +1,4 @@
-import "/fmt" for Conv, Fmt
+import "./fmt" for Conv, Fmt
 
 var predicates = [
     Fn.new { |s| s.count == 13 },  // indexing starts at 0 but first bit ignored

@@ -1,5 +1,5 @@
-import "/math" for Int
-import "/fmt" for Fmt
+import "./math" for Int
+import "./fmt" for Fmt
 
 // Calculates the Pisano period of 'm' from first principles.
 var pisanoPeriod = Fn.new { |m|

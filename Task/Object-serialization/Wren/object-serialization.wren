@@ -1,4 +1,4 @@
-import "/json" for JSON
+import "./json" for JSON
 import "io" for File, FileFlags
 
 class Entity {

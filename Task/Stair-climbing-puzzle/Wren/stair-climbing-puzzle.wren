@@ -1,5 +1,5 @@
 import "random" for Random
-import "/fmt" for Conv
+import "./fmt" for Conv
 
 var rand = Random.new(1268) // generates short repeatable sequence
 var position = 0

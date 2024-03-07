@@ -1,4 +1,4 @@
-/* parallel_calculations.wren */
+/* Parallel_calculations.wren */
 
 import "./math" for Int
 

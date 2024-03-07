@@ -1,6 +1,6 @@
 import "io" for File
 import "random" for Random
-import "/seq" for Lst
+import "./seq" for Lst
 
 // puctuation to keep (also keep hyphen and apostrophe but don't count as words)
 var ending  = ".!?"

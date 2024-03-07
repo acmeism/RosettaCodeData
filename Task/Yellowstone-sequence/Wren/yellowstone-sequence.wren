@@ -1,4 +1,4 @@
-import "/math" for Int
+import "./math" for Int
 
 var yellowstone = Fn.new { |n|
     var m = {}

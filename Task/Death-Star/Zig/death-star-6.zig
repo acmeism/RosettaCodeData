@@ -18,8 +18,8 @@ fn DeathStar(comptime T: type) type {
             const k: T = 1.5;
             const amb: T = 0.2;
 
-            var w: usize = @intFromFloat(pos.r * 4);
-            var h: usize = @intFromFloat(pos.r * 3);
+            const w: usize = @intFromFloat(pos.r * 4);
+            const h: usize = @intFromFloat(pos.r * 3);
             var img = try ImageData().init(allocator, "deathStar", w, h);
 
             var vec = Vector(T).zero();

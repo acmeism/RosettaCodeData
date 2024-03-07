@@ -12,8 +12,8 @@ proc validISBN13 code {
    return false
 }
 foreach test {
-   978-1734314502
-   978-1734314509
+   978-0596528126
+   978-0596528120
    978-1788399081
    978-1788399083
 } {puts $test:[validISBN13 $test]}

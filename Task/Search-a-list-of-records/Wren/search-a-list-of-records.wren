@@ -1,4 +1,4 @@
-import "/dynamic" for Tuple
+import "./dynamic" for Tuple
 
 var Element = Tuple.create("Element", ["record", "index"])
 

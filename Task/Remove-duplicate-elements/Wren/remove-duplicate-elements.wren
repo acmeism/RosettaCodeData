@@ -1,4 +1,4 @@
-import "/sort" for Sort
+import "./sort" for Sort
 
 // Using a map - order of distinct items is undefined.
 var removeDuplicates1 = Fn.new { |a|

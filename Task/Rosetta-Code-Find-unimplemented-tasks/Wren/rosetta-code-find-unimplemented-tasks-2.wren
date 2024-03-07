@@ -1,4 +1,4 @@
-/* gcc rc_find_unimplemented_tasks.c -o rc_find_unimplemented_tasks -lcurl -lwren -lm  */
+/* gcc Rosetta_Code_Find_unimplemented_tasks.c -o Rosetta_Code_Find_unimplemented_tasks -lcurl -lwren -lm */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
     config.loadModuleFn = &loadModule;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "rc_find_unimplemented_tasks.wren";
+    const char* fileName = "Rosetta_Code_Find_unimplemented_tasks.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

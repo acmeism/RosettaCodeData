@@ -1,4 +1,4 @@
-import "/sort" for Cmp, Sort, Comparable
+import "./sort" for Cmp, Sort, Comparable
 
 class Pair is Comparable {
     construct new (name, value) {

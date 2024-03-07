@@ -78,8 +78,8 @@ end;
 
 { === MAIN ============================================================= }
 begin
-	writeLn(isValidISBNString('978-1734314502'));
-	writeLn(isValidISBNString('978-1734314509'));
+	writeLn(isValidISBNString('978-0596528126'));
+	writeLn(isValidISBNString('978-0596528120'));
 	writeLn(isValidISBNString('978-1788399081'));
 	writeLn(isValidISBNString('978-1788399083'))
 end.

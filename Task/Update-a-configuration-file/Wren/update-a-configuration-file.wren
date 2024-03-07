@@ -1,7 +1,7 @@
 import "io" for File
-import "/ioutil" for FileUtil
-import "/dynamic" for Tuple
-import "/str" for Str
+import "./ioutil" for FileUtil
+import "./dynamic" for Tuple
+import "./str" for Str
 
 var fields = ["favouriteFruit", "needsPeeling", "seedsRemoved", "numberOfBananas", "numberOfStrawberries"]
 var ConfigData = Tuple.create("ConfigData", fields)

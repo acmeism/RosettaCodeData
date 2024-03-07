@@ -1,4 +1,4 @@
-import "/fmt" for Conv, Fmt
+import "./fmt" for Conv, Fmt
 
 var zigzag = Fn.new { |n|
     var r = List.filled(n*n, 0)

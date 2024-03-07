@@ -1,5 +1,5 @@
 import "os" for Process
-import "/ioutil" for File, FileUtil
+import "./ioutil" for File, FileUtil
 
 /*
     * Makes the maze half as wide (i. e. "+---+" becomes "+-+"), so that

@@ -26,7 +26,7 @@ end validateISBN13
 -- Test:
 set output to {}
 set verdicts to {"bad", "good"}
-repeat with thisISBN13 in {"978-1734314502", "978-1734314509", "978-1788399081", "978-1788399083"}
+repeat with thisISBN13 in {"978-0596528126", "978-0596528120", "978-1788399081", "978-1788399083"}
     set isValid to validateISBN13(thisISBN13)
     set end of output to thisISBN13 & ": " & item ((isValid as integer) + 1) of verdicts
 end repeat

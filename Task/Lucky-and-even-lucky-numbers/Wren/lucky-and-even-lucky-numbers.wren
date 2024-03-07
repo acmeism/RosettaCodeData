@@ -1,6 +1,6 @@
 import "os" for Process
-import "/iterate" for Stepped
-import "/str" for Str
+import "./iterate" for Stepped
+import "./str" for Str
 
 var luckyOdd  = List.filled(1e5, 0)
 var luckyEven = List.filled(1e5, 0)

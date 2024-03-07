@@ -1,4 +1,4 @@
-import "/sort" for Cmp, Sort
+import "./sort" for Cmp, Sort
 
 var data = [ ["UK", "London"], ["US", "New York"], ["US", "Birmingham"], ["UK", "Birmingham"] ]
 

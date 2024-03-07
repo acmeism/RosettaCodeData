@@ -1,3 +1,5 @@
+/* gcc Window_creation_X11.c -o Window_creation_X11 -lX11 -lwren -lm */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -199,7 +201,7 @@ int main(int argc, char **argv) {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "window_creation_x11.wren";
+    const char* fileName = "Window_creation_X11.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

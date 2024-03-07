@@ -70,7 +70,7 @@ VAR
 
     S1: string =  'thisisatest'       		;
 
-    S2: string =  'testing123isatesting'	;
+    S2: string =  'testing123testing'	;
 
 
 BEGIN

@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var prod = 1
 var sum = 0
@@ -58,5 +58,5 @@ while (j <= p + one) {
     j = j + 1
 }
 
-System.print("sum  =  %(Fmt.dc(sum))")
-System.print("prod = %(Fmt.dc(prod))")
+Fmt.print("sum  =  $,d", sum)
+Fmt.print("prod = $,d", prod)

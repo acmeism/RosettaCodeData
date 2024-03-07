@@ -1,6 +1,6 @@
-import "/fmt" for Fmt
-import "/math" for Int
-import "/matrix" for Matrix
+import "./fmt" for Fmt
+import "./math" for Int
+import "./matrix" for Matrix
 
 var binomial = Fn.new { |n, k|
     if (n == k) return 1

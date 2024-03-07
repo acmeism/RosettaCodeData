@@ -1,7 +1,6 @@
-"""A Maybe Monad. Requires Python >= 3.7 for type hints."""
+"""A Maybe monad. Requires Python >= 3.7 for type hints."""
 from __future__ import annotations
 
-from typing import Any
 from typing import Callable
 from typing import Generic
 from typing import Optional
@@ -10,6 +9,7 @@ from typing import Union
 
 
 T = TypeVar("T")
+U = TypeVar("U")
 
 
 class Maybe(Generic[T]):
@@ -19,10 +19,10 @@ class Maybe(Generic[T]):
         else:
             self.value = value
 
-    def __rshift__(self, func: Callable[[Optional[T]], Maybe[Any]]):
+    def __rshift__(self, func: Callable[[Optional[T]], Maybe[U]]) -> Maybe[U]:
         return self.bind(func)
 
-    def bind(self, func: Callable[[Optional[T]], Maybe[Any]]) -> Maybe[Any]:
+    def bind(self, func: Callable[[Optional[T]], Maybe[U]]) -> Maybe[U]:
         return func(self.value)
 
     def __str__(self):
@@ -31,22 +31,23 @@ class Maybe(Generic[T]):
 
 def plus_one(value: Optional[int]) -> Maybe[int]:
     if value is not None:
-        return Maybe[int](value + 1)
-    return Maybe[int](None)
+        return Maybe(value + 1)
+    return Maybe(None)
 
 
 def currency(value: Optional[int]) -> Maybe[str]:
     if value is not None:
-        return Maybe[str](f"${value}.00")
-    return Maybe[str](None)
+        return Maybe(f"${value}.00")
+    return Maybe(None)
 
 
 if __name__ == "__main__":
     test_cases = [1, 99, None, 4]
 
     for case in test_cases:
-        m_int = Maybe[int](case)
-        result = m_int >> plus_one >> currency
+        result = Maybe(case) >> plus_one >> currency
+
         # or..
-        # result = m_int.bind(plus_one).bind(currency)
+        # result = Maybe(case).bind(plus_one).bind(currency)
+
         print(f"{str(case):<4} -> {result}")

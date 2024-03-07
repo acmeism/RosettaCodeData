@@ -1,6 +1,6 @@
-import "/big" for BigRat
-import "/str" for Str
-import "/fmt" for Fmt
+import "./big" for BigRat
+import "./str" for Str
+import "./fmt" for Fmt
 
 var abbrevs = {
     "PAIRs": [4, 2], "SCOres": [3, 20], "DOZens": [3, 12],

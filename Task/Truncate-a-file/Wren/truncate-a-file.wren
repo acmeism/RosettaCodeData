@@ -1,4 +1,4 @@
-import "/ioutil" for FileUtil
+import "./ioutil" for FileUtil
 
 var fileName = "temp.txt"
 

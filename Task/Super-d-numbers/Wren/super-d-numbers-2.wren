@@ -1,4 +1,4 @@
-/* super-d_numbers_gmp.wren */
+/* Super-d_numbers_2.wren */
 
 import "./gmp" for Mpz
 import "./fmt" for Fmt

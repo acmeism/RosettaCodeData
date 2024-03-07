@@ -1,4 +1,4 @@
-import "/big" for BigInt
+import "./big" for BigInt
 
 var p = []
 var pd = []

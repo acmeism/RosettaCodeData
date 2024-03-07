@@ -1,4 +1,4 @@
-import "/llist" for Node
+import "./llist" for Node
 
 var n1 = Node.new(1)
 var n2 = Node.new(2)

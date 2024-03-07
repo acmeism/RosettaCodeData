@@ -1,5 +1,5 @@
-import "/math" for Nums
-import "/fmt" for Fmt
+import "./math" for Nums
+import "./fmt" for Fmt
 
 /* all ranking functions assume the array of Pairs is non-empty and already sorted
    by decreasing order of scores and then, if the scores are equal, by reverse

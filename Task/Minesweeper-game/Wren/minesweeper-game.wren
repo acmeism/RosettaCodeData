@@ -1,8 +1,8 @@
-import "/dynamic" for Struct
-import "/fmt" for Fmt
+import "./dynamic" for Struct
+import "./fmt" for Fmt
 import "random" for Random
-import "/ioutil" for Input
-import "/str" for Str
+import "./ioutil" for Input
+import "./str" for Str
 
 var Cell = Struct.create("Cell", ["isMine", "display"])
 

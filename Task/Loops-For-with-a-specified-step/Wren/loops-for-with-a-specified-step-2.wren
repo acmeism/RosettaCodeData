@@ -1,4 +1,4 @@
-import "/iterate" for Stepped
+import "./iterate" for Stepped
 
 // Print odd numbers under 20.
 for (i in Stepped.new(1..20, 2)) System.write("%(i) ")

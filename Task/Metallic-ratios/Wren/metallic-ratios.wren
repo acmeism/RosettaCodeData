@@ -1,5 +1,5 @@
-import "/big" for BigInt, BigRat
-import "/fmt" for Fmt
+import "./big" for BigInt, BigRat
+import "./fmt" for Fmt
 
 var names = ["Platinum", "Golden", "Silver", "Bronze", "Copper","Nickel", "Aluminium", "Iron", "Tin", "Lead"]
 

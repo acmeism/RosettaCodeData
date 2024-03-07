@@ -1,4 +1,4 @@
-import "/pattern" for Pattern
+import "./pattern" for Pattern
 
 var doc = """
 <inventory title="OmniCorp Store #45x10^3">

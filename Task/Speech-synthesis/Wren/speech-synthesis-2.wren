@@ -1,3 +1,5 @@
+/* gcc Speech_synthesis.c -o Speech_synthesis -lwren -lm */
+
 #include <stdio.h>
 #include <stdio_ext.h>
 #include <stdlib.h>
@@ -60,7 +62,7 @@ int main(int argc, char **argv) {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "speech_synthesis.wren";
+    const char* fileName = "Speech_synthesis.wren";
     char *script = readFile(fileName);
     wrenInterpret(vm, module, script);
     wrenFreeVM(vm);

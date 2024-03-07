@@ -1,4 +1,4 @@
-/* gcc snake.c -o snake -lncurses -lwren -lm */
+/* gcc Snake.c -o Snake -lncurses -lwren -lm */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -144,7 +144,7 @@ int main(int argc, char **argv) {
     config.loadModuleFn = &loadModule;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "snake.wren";
+    const char* fileName = "Snake.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

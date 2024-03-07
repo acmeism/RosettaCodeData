@@ -1,4 +1,4 @@
-/* gcc rc_rank_languages_by_number_of_users.c -o rc_rank_languages_by_number_of_users -lcurl -lwren -lm  */
+/* gcc Rosetta_Code_Rank_languages_by_number_of_users.c -o Rosetta_Code_Rank_languages_by_number_of_users -lcurl -lwren -lm  */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
     config.loadModuleFn = &loadModule;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "rc_rank_languages_by_number_of_users.wren";
+    const char* fileName = "Rosetta_Code_Rank_languages_by_number_of_users.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

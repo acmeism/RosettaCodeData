@@ -1,5 +1,6 @@
 #include <array>
 #include <iostream>
+#include <math.h>
 
 class PCG32 {
 private:

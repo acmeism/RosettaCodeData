@@ -1,13 +1,3 @@
-func isEven(n:Int) -> Bool {
+// Swift has Int.isMultiple(of:Int) -> Bool
 
-    // Bitwise check
-    if (n & 1 != 0) {
-        return false
-    }
-
-    // Mod check
-    if (n % 2 != 0) {
-        return false
-    }
-    return true
-}
+var isEven: (_:Int) -> Bool = {$0.isMultiple(of: 2)}

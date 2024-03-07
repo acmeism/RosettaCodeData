@@ -9,7 +9,6 @@ BEGIN
             # this would handle a string of unique characters       #
             [ 3 * ( ( UPB s - LWB s ) + 1 ) ]CHAR result;
             INT  r pos  := LWB result;
-            INT  s pos  := LWB s;
             CHAR s char := s[ LWB s ];
             FOR s pos FROM LWB s TO UPB s DO
                 IF s char /= s[ s pos ] THEN

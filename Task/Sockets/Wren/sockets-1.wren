@@ -1,4 +1,4 @@
-/* sockets.wren */
+/* Sockets.wren */
 
 var AF_UNSPEC = 0
 var SOCK_STREAM = 1
@@ -63,6 +63,8 @@ if (AddrInfo.getAddrInfo("localhost", "256", hints, addrInfoPtr) == 0){
                 if (slen < 0 || slen >= len) break
                 pm = pm[slen..-1]
             }
+        } else if (stat == -1) {
+            System.print("Connection refused.")
         }
         var status = Socket.close(sock)
         if (status != 0) System.print("Failed to close socket.")

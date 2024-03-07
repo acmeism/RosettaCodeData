@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/sort" for Sort
+import "./fmt" for Fmt
+import "./sort" for Sort
 
 var oids = [
     "1.3.6.1.4.1.11.2.17.19.3.4.0.10",

@@ -1,5 +1,5 @@
 import "random" for Random
-import "/queue" for Deque
+import "./queue" for Deque
 
 var rand  = Random.new()
 var suits = ["♣", "♦", "♥", "♠"]

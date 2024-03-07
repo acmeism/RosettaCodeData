@@ -1,5 +1,5 @@
-import "/crypto" for Md5
-import "/fmt" for Fmt
+import "./crypto" for Md5
+import "./fmt" for Fmt
 
 var strings = [
     "The quick brown fox jumps over the lazy dog",

@@ -1,4 +1,4 @@
-/* record_sound.wren */
+/* Record_sound.wren */
 
 class C {
     foreign static getInput(maxSize)

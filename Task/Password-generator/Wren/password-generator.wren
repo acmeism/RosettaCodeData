@@ -1,6 +1,6 @@
 import "random" for Random
-import "/ioutil" for FileUtil, File, Input
-import "/fmt" for Fmt
+import "./ioutil" for FileUtil, File, Input
+import "./fmt" for Fmt
 import "os" for Process
 
 var r  = Random.new()

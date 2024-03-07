@@ -1,4 +1,4 @@
-import "/math" for Int
+import "./math" for Int
 
 var limit = 1000
 var spds = List.filled(limit, 0)

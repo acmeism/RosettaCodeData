@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var LIMIT = 46  // to stay within range of signed 32 bit integer
 

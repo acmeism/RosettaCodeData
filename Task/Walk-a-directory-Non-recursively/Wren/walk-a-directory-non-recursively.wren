@@ -1,5 +1,5 @@
 import "io" for Directory
-import "/pattern" for Pattern
+import "./pattern" for Pattern
 
 var walk = Fn.new { |dir, pattern|
     if (!Directory.exists(dir)) Fiber.abort("Directory does not exist.")

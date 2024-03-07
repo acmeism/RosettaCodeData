@@ -1,12 +1,12 @@
 max = 1000000
 for i = 1 to max
-   car_door = random 3
-   chosen_door = random 3
+   car_door = randint 3
+   chosen_door = randint 3
    if car_door <> chosen_door
       montys_door = 6 - car_door - chosen_door
    else
       repeat
-         montys_door = random 3
+         montys_door = randint 3
          until montys_door <> car_door
       .
    .

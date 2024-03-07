@@ -1,4 +1,4 @@
-/* gcc yahoo_search_interface.c -o yahoo_search_interface -lcurl -lwren -lm  */
+/* gcc Yahoo_search_interface.c -o Yahoo_search_interface -lcurl -lwren -lm  */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
     config.loadModuleFn = &loadModule;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "yahoo_search_interface.wren";
+    const char* fileName = "Yahoo_search_interface.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

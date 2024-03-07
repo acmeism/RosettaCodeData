@@ -1,5 +1,5 @@
-import "/crypto" for Ripemd160
-import "/fmt" for Fmt
+import "./crypto" for Ripemd160
+import "./fmt" for Fmt
 
 var strings = [
     "",

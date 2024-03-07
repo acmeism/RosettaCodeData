@@ -1,4 +1,4 @@
-/* terminal_control_dimensions.wren */
+/* Terminal_control_Dimensions.wren */
 
 class C {
     foreign static terminalWidth

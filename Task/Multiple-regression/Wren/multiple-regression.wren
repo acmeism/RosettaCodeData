@@ -1,4 +1,4 @@
-import "/matrix" for Matrix
+import "./matrix" for Matrix
 
 var multipleRegression = Fn.new { |y, x|
     var cy = y.transpose

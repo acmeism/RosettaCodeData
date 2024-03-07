@@ -1,4 +1,4 @@
-/* regular_expressions.wren */
+/* Regular_expressions_2.wren */
 import "./regex" for Regex
 
 var s = "This is a story about R2D2 and C3P0 who are best friends."

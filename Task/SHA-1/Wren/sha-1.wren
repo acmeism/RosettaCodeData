@@ -1,5 +1,5 @@
-import "/crypto" for Sha1
-import "/fmt" for Fmt
+import "./crypto" for Sha1
+import "./fmt" for Fmt
 
 var strings = [
     "",

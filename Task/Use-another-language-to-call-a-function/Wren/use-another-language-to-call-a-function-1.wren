@@ -1,4 +1,4 @@
-/* query.wren */
+/* Use_another_language_to_call_a_function.wren */
 
 class RCQuery {
     // Both arguments are lists as we need pass by reference here

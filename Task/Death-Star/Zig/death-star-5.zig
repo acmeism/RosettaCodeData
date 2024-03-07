@@ -14,9 +14,9 @@ fn Sphere(comptime T: type) type {
         pub fn hit(self: *const Self, xx: T, yy: T) ?SphereHit(T) {
             const x = xx - self.cx;
             const y = yy - self.cy;
-            var zsq = self.r * self.r - x * x - y * y;
+            const zsq = self.r * self.r - x * x - y * y;
             if (zsq >= 0) {
-                var zsqrt = std.math.sqrt(zsq);
+                const zsqrt = std.math.sqrt(zsq);
                 return .{ .z1 = self.cz - zsqrt, .z2 = self.cz + zsqrt };
             }
             return null;

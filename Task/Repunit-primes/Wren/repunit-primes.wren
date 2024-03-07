@@ -1,4 +1,4 @@
-/* repunit_primes.wren */
+/* Repunit_primes.wren */
 
 import "./gmp" for Mpz
 import "./math" for Int

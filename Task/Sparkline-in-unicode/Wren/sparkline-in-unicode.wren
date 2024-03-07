@@ -1,5 +1,5 @@
 import "io" for Stdin, Stdout
-import "/pattern" for Pattern
+import "./pattern" for Pattern
 
 var p = Pattern.new("[,+1/s|+1/s,|+1/s|,]")
 

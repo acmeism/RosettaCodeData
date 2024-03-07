@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var risesEqualsFalls = Fn.new { |n|
     if (n < 10) return true

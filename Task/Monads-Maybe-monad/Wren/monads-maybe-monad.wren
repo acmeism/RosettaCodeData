@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 class Maybe {
     construct new(value) {
@@ -27,5 +27,5 @@ for (i in [3, 4, null, 5]) {
     var m2 = m1.bind(decrement).bind(triple)
     var s1 = (m1.value) ? "%(m1.value)" : "none"
     var s2 = (m2.value) ? "%(m2.value)" : "none"
-    System.print("%(Fmt.s(4, s1)) -> %(s2)")
+    Fmt.print("$4s -> $s", s1, s2)
 }

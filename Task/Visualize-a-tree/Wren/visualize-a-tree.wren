@@ -1,4 +1,4 @@
-import "/dynamic" for Struct
+import "./dynamic" for Struct
 import "random" for Random
 
 var Stem = Struct.create("Stem", ["str", "next"])

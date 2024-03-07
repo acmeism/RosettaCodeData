@@ -1,5 +1,5 @@
-import "/fmt" for Fmt, Conv
-import "/str" for Str
+import "./fmt" for Fmt, Conv
+import "./str" for Str
 
 var toOctets = Fn.new { |n|
     var s = Conv.itoa(n, 2)

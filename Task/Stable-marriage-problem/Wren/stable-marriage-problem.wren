@@ -1,4 +1,4 @@
-import "/dynamic" for Struct
+import "./dynamic" for Struct
 
 var mPref = {
     "abe": [

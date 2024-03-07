@@ -1,4 +1,4 @@
-/* gcc retrieve_and_search_chat_history.c -o retrieve_and_search_chat_history -lcurl -lwren -lm  */
+/* gcc Retrieve_and_search_chat_history.c -o Retrieve_and_search_chat_history -lcurl -lwren -lm  */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -195,7 +195,7 @@ int main(int argc, char **argv) {
     config.loadModuleFn = &loadModule;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "retrieve_and_search_chat_history.wren";
+    const char* fileName = "Retrieve_and_search_chat_history.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

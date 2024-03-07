@@ -1,6 +1,6 @@
-import "/sort" for Sort
-import "/math" for Int
-import "/fmt" for Fmt
+import "./sort" for Sort
+import "./math" for Int
+import "./fmt" for Fmt
 
 // generate derangements of first n numbers, with 'start' in first place.
 var dList = Fn.new { |n, start|

@@ -1,9 +1,9 @@
-import "/dynamic" for Enum
-import "/trait" for Comparable
-import "/fmt" for Fmt
-import "/str" for Str
-import "/math" for Nums
-import "/sort" for Sort
+import "./dynamic" for Enum
+import "./trait" for Comparable
+import "./fmt" for Fmt
+import "./str" for Str
+import "./math" for Nums
+import "./sort" for Sort
 import "random" for Random
 
 var Color   = Enum.create("Color",   ["RED", "GREEN", "PURPLE"])

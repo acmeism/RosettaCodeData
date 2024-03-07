@@ -1,6 +1,6 @@
-import "/math" for Int
-import "/big" for BigInt
-import "/fmt" for Fmt
+import "./math" for Int
+import "./big" for BigInt
+import "./fmt" for Fmt
 
 var limit = 11000
 var primes = Int.primeSieve(limit)

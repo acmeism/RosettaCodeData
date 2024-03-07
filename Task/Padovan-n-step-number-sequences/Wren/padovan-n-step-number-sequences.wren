@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var padovanN // recursive
 padovanN = Fn.new { |n, t|

@@ -1,4 +1,4 @@
-/* mac_vendor_lookup.wren */
+/* MAC_vendor_lookup.wren */
 class MAC {
     foreign static lookup(address)
 }

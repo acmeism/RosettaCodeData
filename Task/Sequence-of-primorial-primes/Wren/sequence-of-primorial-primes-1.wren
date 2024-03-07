@@ -1,5 +1,5 @@
-import "/big" for BigInt
-import "/math" for Int
+import "./big" for BigInt
+import "./math" for Int
 import "io" for Stdout
 
 var primes = Int.primeSieve(4000) // more than enough for this task

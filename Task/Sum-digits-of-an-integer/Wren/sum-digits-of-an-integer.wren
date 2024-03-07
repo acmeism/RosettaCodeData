@@ -1,4 +1,4 @@
-import "/fmt" for Fmt, Conv
+import "./fmt" for Fmt, Conv
 
 var sumDigits = Fn.new { |n, b|
     var sum = 0
@@ -15,5 +15,5 @@ for (test in tests) {
     var n = test[0]
     var b = test[1]
     var sum = sumDigits.call(n, b)
-    System.print("%(Fmt.s(-5, Conv.itoa(n, b))) in base %(Fmt.d(2, b)) = %(Fmt.d(2, sum))")
+    Fmt.print("$-5s in base $2d = $2d", Conv.itoa(n, b), b, sum)
 }

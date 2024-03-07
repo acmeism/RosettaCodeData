@@ -3,7 +3,8 @@ sub md4($str) {
     my $buf-length = $buf.elems;
     $buf.push: 0x80;
     $buf.push: 0 until ($buf - (448 div 8)) %% (512 div 8);
-    $buf.write-uint64: $buf.elems, $buf-length*8, LittleEndian;
+    # raku serializes in little endian by default
+    $buf.write-uint64: $buf.elems, $buf-length*8;
 
     my (&f, &g, &h, &r) =
       { $^x +& $^y +| +^$x +& $^z },
@@ -14,37 +15,34 @@ sub md4($str) {
 
     my uint32 ($a, $b, $c, $d) = 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476;
 
-    for @$buf.rotor(64) {
-        my uint32 @x = .rotor(4).map: {:256[.reverse]}
-
+    loop (my $pos = 0; $pos < $buf.elems; $pos+=64) {
         my ($aa, $bb, $cc, $dd) = $a, $b, $c, $d;
         for 0, 4, 8, 12 -> $i {
-            $a = r($a + f($b, $c, $d) + @x[ $i+0 ],  3);
-            $d = r($d + f($a, $b, $c) + @x[ $i+1 ],  7);
-            $c = r($c + f($d, $a, $b) + @x[ $i+2 ], 11);
-            $b = r($b + f($c, $d, $a) + @x[ $i+3 ], 19);
+            $a = r($a + f($b, $c, $d) + $buf.read-uint32($pos+($i+0)*4),  3);
+            $d = r($d + f($a, $b, $c) + $buf.read-uint32($pos+($i+1)*4),  7);
+            $c = r($c + f($d, $a, $b) + $buf.read-uint32($pos+($i+2)*4), 11);
+            $b = r($b + f($c, $d, $a) + $buf.read-uint32($pos+($i+3)*4), 19);
         }
         for 0, 1, 2, 3 -> $i {
-            $a = r($a + g($b, $c, $d) + @x[ $i+0 ] + 0x5a827999,  3);
-            $d = r($d + g($a, $b, $c) + @x[ $i+4 ] + 0x5a827999,  5);
-            $c = r($c + g($d, $a, $b) + @x[ $i+8 ] + 0x5a827999,  9);
-            $b = r($b + g($c, $d, $a) + @x[ $i+12] + 0x5a827999, 13);
+            $a = r($a + g($b, $c, $d) + $buf.read-uint32($pos+($i+0 )*4) + 0x5a827999,  3);
+            $d = r($d + g($a, $b, $c) + $buf.read-uint32($pos+($i+4 )*4) + 0x5a827999,  5);
+            $c = r($c + g($d, $a, $b) + $buf.read-uint32($pos+($i+8 )*4) + 0x5a827999,  9);
+            $b = r($b + g($c, $d, $a) + $buf.read-uint32($pos+($i+12)*4) + 0x5a827999, 13);
         }
         for 0, 2, 1, 3 -> $i {
-            $a = r($a + h($b, $c, $d) + @x[ $i+0 ] + 0x6ed9eba1,  3);
-            $d = r($d + h($a, $b, $c) + @x[ $i+8 ] + 0x6ed9eba1,  9);
-            $c = r($c + h($d, $a, $b) + @x[ $i+4 ] + 0x6ed9eba1, 11);
-            $b = r($b + h($c, $d, $a) + @x[ $i+12] + 0x6ed9eba1, 15);
+            $a = r($a + h($b, $c, $d) + $buf.read-uint32($pos+($i+0 )*4) + 0x6ed9eba1,  3);
+            $d = r($d + h($a, $b, $c) + $buf.read-uint32($pos+($i+4 )*4) + 0x6ed9eba1,  9);
+            $c = r($c + h($d, $a, $b) + $buf.read-uint32($pos+($i+8 )*4) + 0x6ed9eba1, 11);
+            $b = r($b + h($c, $d, $a) + $buf.read-uint32($pos+($i+12)*4) + 0x6ed9eba1, 15);
         }
         ($a,$b,$c,$d) Z[+=] ($aa,$bb,$cc,$dd);
     }
 
-    my buf8 $abcd .= new;
-    for $a, $b, $c, $d { $abcd.write-uint32: 4*$++, $_, LittleEndian }
-    blob8.new: $abcd;
+    reduce { $^buf.write-uint32: $buf.elems, $^x; $buf }, buf8.new, $a, $b, $c, $d;
 }
 
-sub MAIN {
-    my $str = 'Rosetta Code';
-    say md4($str);
+CHECK {
+  use Test;
+  plan 1;
+  is md4('Rosetta Code').list.fmt('%02X'), 'A5 2B CF C6 A0 D0 D3 00 CD C5 DD BF BE FE 47 8B';
 }

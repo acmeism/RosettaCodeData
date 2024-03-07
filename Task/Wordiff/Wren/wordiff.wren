@@ -1,7 +1,7 @@
 import "random" for Random
-import "/ioutil" for File, Input
-import "/str" for Str
-import "/sort" for Find
+import "./ioutil" for File, Input
+import "./str" for Str
+import "./sort" for Find
 
 var rand = Random.new()
 var words = File.read("unixdict.txt").trim().split("\n")

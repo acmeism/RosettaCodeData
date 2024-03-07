@@ -1,5 +1,5 @@
-import "/pattern" for Pattern
-import "/fmt" for Conv
+import "./pattern" for Pattern
+import "./fmt" for Conv
 
 var xml =
 "<Students>

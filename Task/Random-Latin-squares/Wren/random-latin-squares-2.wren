@@ -1,7 +1,7 @@
 import "random" for Random
-import "/sort" for Sort
-import "/fmt" for Fmt
-import "/math" for Int
+import "./sort" for Sort
+import "./fmt" for Fmt
+import "./math" for Int
 
 var rand = Random.new()
 var counts = List.filled(4, 0)

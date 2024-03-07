@@ -1,4 +1,4 @@
-/* machine_code.wren */
+/* Machine_code.wren */
 
 class C {
     // pass the machine code in string form to the host

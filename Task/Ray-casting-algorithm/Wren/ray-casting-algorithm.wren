@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 class RayCasting {
     static intersects(a, b, p) {

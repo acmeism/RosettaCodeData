@@ -1,8 +1,8 @@
 import "random" for Random
-import "/ioutil" for FileUtil
-import "/pattern" for Pattern
-import "/str" for Str
-import "/fmt" for Fmt
+import "./ioutil" for FileUtil
+import "./pattern" for Pattern
+import "./str" for Str
+import "./fmt" for Fmt
 
 var dirs = [ [1, 0], [0, 1], [1, 1], [1, -1], [-1, 0], [0, -1], [-1, -1], [-1,  1] ]
 var Rows = 10

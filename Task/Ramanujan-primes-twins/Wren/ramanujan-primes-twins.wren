@@ -1,6 +1,6 @@
-import "/iterate" for Stepped, Indexed
-import "/math" for Int, Math
-import "/fmt" for Fmt
+import "./iterate" for Stepped, Indexed
+import "./math" for Int, Math
+import "./fmt" for Fmt
 
 var count
 
@@ -65,5 +65,5 @@ for (limit in [1e5, 1e6]) {
         if (ir[i].value + 2 == ir[i+1].value) twins = twins + 1
     }
     Fmt.print("There are $,d twins in the first $,d Ramanujan primes.", twins, limit)
-    System.print("Took %(Math.toPlaces(System.clock -start, 2, 0)) seconds.\n")
+    System.print("Took %(Math.toPlaces(System.clock - start, 2, 0)) seconds.\n")
 }

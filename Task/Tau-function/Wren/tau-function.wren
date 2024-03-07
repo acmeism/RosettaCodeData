@@ -1,5 +1,5 @@
-import "/math" for Int
-import "/fmt" for Fmt
+import "./math" for Int
+import "./fmt" for Fmt
 
 System.print("The tau functions for the first 100 positive integers are:")
 for (i in 1..100) {

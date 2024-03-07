@@ -1,8 +1,8 @@
 import "io" for File
-import "/str" for Str
-import "/sort" for Sort
-import "/fmt" for Fmt
-import "/pattern" for Pattern
+import "./str" for Str
+import "./sort" for Sort
+import "./fmt" for Fmt
+import "./pattern" for Pattern
 
 var fileName = "135-0.txt"
 var text = File.read(fileName).trimEnd()

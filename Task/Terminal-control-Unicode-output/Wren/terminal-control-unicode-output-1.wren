@@ -1,4 +1,4 @@
-/* terminal_control_unicode_output.wren */
+/* Terminal_control_Unicode_output.wren */
 
 class C {
     foreign static isUnicodeSupported

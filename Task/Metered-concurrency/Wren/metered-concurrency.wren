@@ -1,6 +1,6 @@
 import "scheduler" for Scheduler
 import "timer" for Timer
-import "/queue" for Queue
+import "./queue" for Queue
 
 class CountingSemaphore {
     construct new(numRes) {

@@ -1,4 +1,4 @@
-import "/str" for Str, Utf8
+import "./str" for Str, Utf8
 
 var strs = ["alphaBETA", "ação", "o'hare O'HARE o’hare don't"]
 System.print("Using 'Str' class methods:")

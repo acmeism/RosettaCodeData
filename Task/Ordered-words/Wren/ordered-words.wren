@@ -1,5 +1,5 @@
 import "io" for File
-import "/sort" for Sort
+import "./sort" for Sort
 
 var words = File.read("unixdict.txt").split("\n")
 var longestLen = 0

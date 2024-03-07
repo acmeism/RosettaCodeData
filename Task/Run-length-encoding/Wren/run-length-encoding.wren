@@ -1,4 +1,4 @@
-import "/pattern" for Pattern
+import "./pattern" for Pattern
 
 var p = Pattern.new("/u") // match any upper case letter
 

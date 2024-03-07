@@ -8,7 +8,7 @@ check_isbn13 () {
     (( 0 == t % 10 ))
 }
 
-for isbn in 978-1734314502 978-1734314509 978-1788399081 978-1788399083; do
+for isbn in 978-0596528126 978-0596528120 978-1788399081 978-1788399083; do
   printf '%s: ' "$isbn"
   if check_isbn13 "$isbn"; then
     printf '%s\n' OK

@@ -1,5 +1,5 @@
-import "/math" for Math, Nums
-import "/fmt" for Fmt
+import "./math" for Math, Nums
+import "./fmt" for Fmt
 
 var waterCollected = Fn.new { |tower|
     var n = tower.count

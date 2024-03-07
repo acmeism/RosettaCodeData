@@ -1,5 +1,5 @@
-import "/sort" for Sort
-import "/fmt" for Fmt
+import "./sort" for Sort
+import "./fmt" for Fmt
 
 var sortedOutline = Fn.new { |originalOutline, ascending|
     var outline = originalOutline.toList // make copy in case we mutate it

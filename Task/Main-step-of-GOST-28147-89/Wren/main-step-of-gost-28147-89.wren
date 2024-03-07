@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 class GOST {
     // assumes 's' is an 8 x 16 integer array
@@ -56,5 +56,5 @@ var input = [0x21, 0x04, 0x3b, 0x04, 0x30, 0x04, 0x32, 0x04]
 var key = [0xf9, 0x04, 0xc1, 0xe2]
 var g = GOST.new(cbrf)
 g.mainStep(input, key)
-for (b in g.enc) System.write("[%(Fmt.xz(2, b))]")
+for (b in g.enc) Fmt.write("[$02x]", b)
 System.print()

@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/math" for Int
+import "./fmt" for Fmt
+import "./math" for Int
 
 var limit = 999999
 var c = Int.primeSieve(limit, false)

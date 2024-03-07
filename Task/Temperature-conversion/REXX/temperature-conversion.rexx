@@ -21,7 +21,7 @@ parse arg tList                                  /*get the specified temperature
   if \datatype(n, 'N')  then call serr 'illegal number:'    n
   if \all  then do                               /*is there is a     TO  ααα     scale? */
                 call name !                      /*process the   TO   abbreviation.     */
-                != s n                           /*assign the full name to     !        */
+                != sn                           /*assign the full name to     !        */
                 end                              /*!: now contains temperature full name*/
   call name u                                    /*allow alternate scale (miss)spellings*/
 

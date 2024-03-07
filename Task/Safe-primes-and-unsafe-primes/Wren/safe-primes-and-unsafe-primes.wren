@@ -1,5 +1,5 @@
-import "/math" for Int
-import "/fmt" for Fmt
+import "./math" for Int
+import "./fmt" for Fmt
 
 var c = Int.primeSieve(1e7, false) // need primes up to 10 million here
 var safe = List.filled(35, 0)

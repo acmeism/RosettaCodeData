@@ -14,7 +14,7 @@ func$ lcs a$ b$ .
             .
          .
       .
-      b$ = substr b$ 2 -1
+      b$ = substr b$ 2 9999
    .
    return max$
 .

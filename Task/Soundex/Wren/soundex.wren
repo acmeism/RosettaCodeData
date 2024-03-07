@@ -1,5 +1,5 @@
-import "/str" for Char
-import "/fmt" for Fmt
+import "./str" for Char
+import "./fmt" for Fmt
 
 var getCode = Fn.new { |c|
     return "BFPV".contains(c)     ? "1" :

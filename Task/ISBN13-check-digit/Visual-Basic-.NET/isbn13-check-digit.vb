@@ -19,8 +19,8 @@ Module Module1
     End Function
 
     Sub Main()
-        Console.WriteLine(CheckISBN13("978-1734314502"))
-        Console.WriteLine(CheckISBN13("978-1734314509"))
+        Console.WriteLine(CheckISBN13("978-0596528126"))
+        Console.WriteLine(CheckISBN13("978-0596528120"))
         Console.WriteLine(CheckISBN13("978-1788399081"))
         Console.WriteLine(CheckISBN13("978-1788399083"))
     End Sub

@@ -1,4 +1,4 @@
-import "/set" for Set
+import "./set" for Set
 
 var fruits = Set.new(["apple", "pear", "orange", "banana"])
 System.print("fruits  : %(fruits)")

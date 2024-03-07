@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var utf8_encode = Fn.new { |cp| String.fromCodePoint(cp).bytes.toList }
 

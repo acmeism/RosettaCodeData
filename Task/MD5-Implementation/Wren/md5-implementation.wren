@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var k = [
     0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee ,

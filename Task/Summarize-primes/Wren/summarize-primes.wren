@@ -1,5 +1,5 @@
-import "/math" for Int
-import "/fmt" for Fmt
+import "./math" for Int
+import "./fmt" for Fmt
 
 var primes = Int.primeSieve(999)
 var sum = 0

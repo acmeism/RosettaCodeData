@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/math" for Int
+import "./fmt" for Fmt
+import "./math" for Int
 
 for (i in 1..10) System.print("%(Fmt.d(2, i)) -> %(Int.properDivisors(i))")
 

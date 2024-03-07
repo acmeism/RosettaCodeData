@@ -1,5 +1,5 @@
-import "/big" for BigInt
-import "/fmt" for Fmt
+import "./big" for BigInt
+import "./fmt" for Fmt
 
 var popCount = Fn.new { |n|
     var count = 0

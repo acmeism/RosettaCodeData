@@ -1,4 +1,4 @@
-import "/sort" for Sort
+import "./sort" for Sort
 import "random" for Random
 import "io" for Stdin, Stdout
 

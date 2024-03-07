@@ -1,5 +1,5 @@
-import "/matrix" for Matrix
-import "/fmt" for Fmt
+import "./matrix" for Matrix
+import "./fmt" for Fmt
 
 var m = Matrix.new([[0, 1], [1, 1]])
 System.print("Original:\n")

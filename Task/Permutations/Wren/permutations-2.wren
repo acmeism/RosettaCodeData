@@ -1,4 +1,4 @@
-import "/math" for Int
+import "./math" for Int
 
 var input = [1, 2, 3]
 var perms = [input]

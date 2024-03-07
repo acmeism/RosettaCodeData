@@ -19,11 +19,11 @@ var gnomeSort = Fn.new { |a, asc|
     }
 }
 
-var as = [ [4, 65, 2, -31, 0, 99, 2, 83, 782, 1], [7, 5, 2, 6, 1, 4, 2, 6, 3] ]
+var array = [ [4, 65, 2, -31, 0, 99, 2, 83, 782, 1], [7, 5, 2, 6, 1, 4, 2, 6, 3] ]
 
 for (asc in [true, false]) {
     System.print("Sorting in %(asc ? "ascending" : "descending") order:\n")
-    for (a in as) {
+    for (a in array) {
         var b = (asc) ? a : a.toList
         System.print("Before: %(b)")
         gnomeSort.call(b, asc)

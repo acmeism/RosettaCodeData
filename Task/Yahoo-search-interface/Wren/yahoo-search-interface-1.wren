@@ -1,4 +1,4 @@
-/* yahoo_search_interface.wren */
+/* Yahoo_search_interface.wren */
 
 import "./pattern" for Pattern
 

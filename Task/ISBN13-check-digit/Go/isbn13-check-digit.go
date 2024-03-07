@@ -30,7 +30,7 @@ func checkIsbn13(isbn string) bool {
 }
 
 func main() {
-    isbns := []string{"978-1734314502", "978-1734314509", "978-1788399081", "978-1788399083"}
+    isbns := []string{"978-0596528126", "978-0596528120", "978-1788399081", "978-1788399083"}
     for _, isbn := range isbns {
         res := "bad"
         if checkIsbn13(isbn) {

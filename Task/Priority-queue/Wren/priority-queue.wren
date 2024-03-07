@@ -1,4 +1,4 @@
-import "/queue" for PriorityQueue
+import "./queue" for PriorityQueue
 
 var tasks = PriorityQueue.new()
 tasks.push("Clear drains", 3)

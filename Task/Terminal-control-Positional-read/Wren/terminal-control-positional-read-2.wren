@@ -1,3 +1,5 @@
+/* gcc Terminal_control_Positional_read.c -o Terminal_control_Positional_read -lncurses -lwren -lm */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -125,7 +127,7 @@ int main(int argc, char **argv) {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "terminal_control_positional_read.wren";
+    const char* fileName = "Terminal_control_Positional_read.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

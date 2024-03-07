@@ -1,29 +1,60 @@
-/*REXX pgm shows a table of what last digit follows the previous last digit for N primes*/
-parse arg N .                                    /*N:  the number of primes to be genned*/
-if N=='' | N==","  then N= 1000000               /*Not specified?  Then use the default.*/
-Np= N+1;                w= length(N-1)           /*W:  width used for formatting output.*/
-H= N* (2**max(4, (w%2+1) ) )                     /*used as a rough limit for the sieve. */
-@.= .                                            /*assume all numbers are prime (so far)*/
-#= 1                                             /*primes found so far {assume prime 2}.*/
-     do j=3  by 2;     if @.j==''  then iterate  /*Is composite?  Then skip this number.*/
-     #= #+1                                      /*bump the prime number counter.       */
-             do m=j*j  to H  by j+j;    @.m=     /*strike odd multiples as composite.   */
-             end   /*m*/
-     if #==Np  then leave                        /*Enough primes?   Then done with gen. */
-     end   /*j*/                                 /* [↑]  gen using Eratosthenes' sieve. */
-!.= 0                                            /*initialize all the frequency counters*/
-say 'For '   N   " primes used in this study:"   /*show hdr information about this run. */
-r= 2                                             /*the last digit of the very 1st prime.*/
-#= 1                                             /*the number of primes looked at so far*/
-     do i=3  by 2;     if @.i==''  then iterate  /*This number composite? Then ignore it*/
-     #= # + 1;         parse var  i   ''  -1  x  /*bump prime counter; get its last dig.*/
-     !.r.x= !.r.x +1;  r= x                      /*bump the last digit counter for prev.*/
-     if #==Np  then leave                        /*Done?   Then leave this  DO  loop.   */
-     end   /*i*/                                 /* [↑]  examine almost all odd numbers.*/
-say                                              /* [↓]  display the results to the term*/
-     do    d=1  for 9; if d//2 | d==2  then say  /*display a blank line (if appropriate)*/
-        do f=1  for 9; if !.d.f==0  then iterate /*don't show if the count is zero.     */
-        say 'digit '      d      "──►"       f        ' has a count of: ',
-             right(!.d.f, w)",  frequency of:"   right(format(!.d.f / N*100, , 4)'%.', 10)
-        end   /*f*/
-     end      /*d*/                              /*stick a fork in it,  we're all done. */
+/*REXX pgm shows a table of which last digit follows the previous last digit   */
+/* for N primes                                                                */
+Call time 'R'
+Numeric Digits 12
+Parse Arg n .                      /* N:  the number of primes to be looked at */
+If n==''|n=="," Then               /* Not specified?                           */
+  n=1000000                        /* Use the default                          */
+w=length(n-1)                      /* W:  width used for formatting o*/
+
+h=n*(2**max(4,(w%2+1)))            /* used as a rough limit for the sieve      */
+h=h*1.2                            /* make sure it is large enough             */
+prime.=1                           /* assume all numbers are prime             */
+nn=1                               /* primes found so far {2 is the firt prime)*/
+Do j=3 By 2 while nn<n
+  If prime.j Then Do
+    nn=nn+1                        /* bump the prime number counter.           */
+    Do m=j*j To h By j+j
+      prime.m=0                    /* strike odd multiples as composite        */
+      End
+    End
+  End
+Say 'Sieve of Eratosthenes finished' time('E') 'seconds'
+Call time 'R'
+frequency.=0                       /* initialize all the frequency counts      */
+Say 'For' n 'primes used in this study:'
+/*show hdr information about this run. */
+r=2                                /* the last digit of the very 1st prime (2) */
+nn=1                               /* the number of primes looked at           */
+cnt.=0
+cnt.2=1
+Do i=3 By 2 While nn<n+1           /* Inspect all odd numbers                  */
+  If prime.i Then Do               /* it is a prime number                     */
+    nn=nn+1
+    Parse Var i ''-1 x             /* get last digit of current prime          */
+    cnt.x+=1                       /* bump last digit counter                  */
+    frequency.r.x=frequency.r.x+1  /* bump the frequency counter               */
+    r=x                            /* current becomes previous                 */
+    End
+  End
+Say 'i='i 'largest prime'
+Say 'h='h
+Say                                /* display the results                      */
+Do d=1 For 9
+  If d//2|d==2 Then
+    Say ''                         /* display a blank line (if appropriate)    */
+  Do f=1 For 9
+    If frequency.d.f>0 Then
+      Say 'digit ' d '-->' f ' has a count of: ' right(frequency.d.f,w)||,
+           ',  frequency of:' right(format(frequency.d.f/n*100,,4)'%.',10)
+    End
+  End
+Say 'Frequency analysis:' time('E') 'seconds'
+sum=0
+Say 'last digit Number of occurrences'
+Do i=1 To 9
+  If cnt.i>0 Then
+  Say '         'i format(cnt.i,8)
+  sum+=cnt.i
+  End
+Say '         'format(sum,10)

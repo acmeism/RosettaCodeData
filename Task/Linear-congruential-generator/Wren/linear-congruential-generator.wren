@@ -1,5 +1,5 @@
-import "/big" for BigInt
-import "/fmt" for Fmt
+import "./big" for BigInt
+import "./fmt" for Fmt
 
 // basic linear congruential generator
 var lcg = Fn.new { |a, c, m, seed|

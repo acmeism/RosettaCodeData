@@ -12,6 +12,7 @@ int main(){
   number = lower_limit + rand() % (upper_limit - lower_limit + 1);
 
   printf( "Guess the number between %d and %d: ", lower_limit, upper_limit );
+  fflush(stdout);  // Flush the output buffer
 
   while( scanf( "%d", &guess ) == 1 ){
     if( number == guess ){

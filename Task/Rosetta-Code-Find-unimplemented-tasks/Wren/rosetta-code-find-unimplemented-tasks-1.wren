@@ -1,4 +1,4 @@
-/* rc_find_unimplemented_tasks.wren */
+/* Rosetta_Code_Find_unimplemented_tasks.wren */
 
 import "./pattern" for Pattern
 
@@ -39,7 +39,7 @@ var p1 = Pattern.new("title/=\"[+1^\"]\"")
 var p2 = Pattern.new("cmcontinue/=\"[+1^\"]\"")
 
 var findTasks = Fn.new { |category|
-    var url = "https://www.rosettacode.org/m/api.php?action=query&list=categorymembers&cmtitle=Category:%(category)&cmlimit=500&format=xml"
+    var url = "https://www.rosettacode.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:%(category)&cmlimit=500&format=xml"
     var cmcontinue = ""
     var tasks = []
     while (true) {

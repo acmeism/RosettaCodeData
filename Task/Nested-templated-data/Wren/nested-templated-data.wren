@@ -1,5 +1,5 @@
-import "/set" for Set
-import "/sort" for Sort
+import "./set" for Set
+import "./sort" for Sort
 
 var withPayload // recursive function
 withPayload = Fn.new { |template, payload, used|

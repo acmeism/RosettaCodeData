@@ -32,6 +32,10 @@ INT dim = 5;
 ELSE#
   [,]INT result = zig zag(dim);
   FOR i TO dim DO
-    print((result[i,], new line))
+    print((IF i = 1 THEN "((" ELSE " (" FI));
+    FOR j TO dim DO
+      print(( whole( result[i,j], -3 ), IF j /= dim THEN "," ELSE "" FI ))
+    OD;
+    print((IF i = dim THEN "))" ELSE ")," FI, new line))
   OD
 #FI#

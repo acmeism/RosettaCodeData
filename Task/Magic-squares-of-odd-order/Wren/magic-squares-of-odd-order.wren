@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var ms = Fn.new { |n|
     var M = Fn.new { |x| (x + n - 1) % n }
@@ -25,7 +25,7 @@ var res = ms.call(5)
 var n = res[0]
 var m = res[1]
 for (i in 0...n) {
-    for (j in 0...n) System.write(Fmt.d(4, m[i*n+j]))
+    for (j in 0...n) Fmt.write("$4d", m[i*n+j])
     System.print()
 }
 System.print("\nMagic number : %(((n*n + 1)/2).floor * n)")

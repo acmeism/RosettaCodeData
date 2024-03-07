@@ -6,10 +6,10 @@ MODULE RosettaMergeSort;
 
 	(* Return TRUE if `front` comes before `rear` in the sorted order, FALSE otherwise *)
 	(* For the sort to be stable `front` comes before `rear` if they are equal *)
-	PROCEDURE (IN t: Template) Before- (front, rear: ANYPTR): BOOLEAN, NEW, ABSTRACT;
+	PROCEDURE (IN t: Template) Pre- (front, rear: ANYPTR): BOOLEAN, NEW, ABSTRACT;
 
 	(* Return the next element in the list after `s` *)
-	PROCEDURE (IN t: Template) Next- (s: ANYPTR): ANYPTR, NEW, ABSTRACT;
+	PROCEDURE (IN t: Template) Suc- (s: ANYPTR): ANYPTR, NEW, ABSTRACT;
 
 	(* Update the next pointer of `s` to the value of `next` -  Return the modified `s` *)
 	PROCEDURE (IN t: Template) Set- (s, next: ANYPTR): ANYPTR, NEW, ABSTRACT;
@@ -18,12 +18,12 @@ MODULE RosettaMergeSort;
 	PROCEDURE (IN t: Template) Length* (s: ANYPTR): INTEGER, NEW;
 		VAR n: INTEGER;
 	BEGIN
-		n := 0; (* Initialize the count of elements to 0 *)
-		WHILE s # NIL DO (* While not at the end of the list *)
-			INC(n); (* Increment the count of elements *)
-			s := t.Next(s) (* Move to the next element in the linked list *)
+		n := 0;
+		WHILE s # NIL DO
+			INC(n);
+			s := t.Suc(s)
 		END;
-		RETURN n (* Return the total number of elements in the linked list *)
+		RETURN n
 	END Length;
 
 	(* Merge sorted lists `front` and `rear` -  Return the merged sorted list *)
@@ -31,10 +31,10 @@ MODULE RosettaMergeSort;
 	BEGIN
 		IF front = NIL THEN RETURN rear END;
 		IF rear = NIL THEN RETURN front END;
-		IF t.Before(front, rear) THEN
-			RETURN t.Set(front, t.Merge(t.Next(front), rear))
+		IF t.Pre(front, rear) THEN
+			RETURN t.Set(front, t.Merge(t.Suc(front), rear))
 		ELSE
-			RETURN t.Set(rear, t.Merge(front, t.Next(rear)))
+			RETURN t.Set(rear, t.Merge(front, t.Suc(rear)))
 		END
 	END Merge;
 
@@ -48,17 +48,17 @@ MODULE RosettaMergeSort;
 			VAR k: INTEGER; h, front, rear: ANYPTR;
 		BEGIN
 			IF n = 1 THEN (* base case: if n = 1, return the head of `s` *)
-				h := s; s := t.Next(s); RETURN t.Set(h, NIL)
+				h := s; s := t.Suc(s); RETURN t.Set(h, NIL)
 			END;
 			(* Divide the first n elements of the list into two sorted halves *)
 			k := n DIV 2;
-			front := TakeSort(k, 		s);
+			front := TakeSort(k, s);
 			rear := TakeSort(n - k, s);
 			RETURN t.Merge(front, rear) (* Merge and return the halves *)
 		END TakeSort;
 
 	BEGIN
-		IF s = NIL THEN RETURN s END; (* If `s` in empty, return `s` *)
+		IF s = NIL THEN RETURN NIL END; (* If `s` in empty, return `s` *)
 		(* Calculate the length of the list and call TakeSort *)
 		RETURN TakeSort(t.Length(s), s) (* Return the sorted list *)
 	END Sort;

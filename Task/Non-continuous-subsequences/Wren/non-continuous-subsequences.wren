@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var ncs = Fn.new { |a|
     var f = "$d "

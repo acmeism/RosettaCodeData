@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var rescale = Fn.new { |v|
     return (v < 0.06) ? 0.10 :

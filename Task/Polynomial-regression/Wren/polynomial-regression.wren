@@ -1,6 +1,6 @@
-import "/math" for Nums
-import "/seq" for Lst
-import "/fmt" for Fmt
+import "./math" for Nums
+import "./seq" for Lst
+import "./fmt" for Fmt
 
 var polynomialRegression = Fn.new { |x, y|
     var xm   = Nums.mean(x)

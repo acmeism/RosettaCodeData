@@ -1,0 +1,32 @@
+: WEEKDAY ( D M Y -- U )
+   OVER 3 < IF SWAP 12 + SWAP 1- THEN
+   DUP 4 / OVER 100 / - OVER 400 / + + SWAP 1+ 13 * 5 / + + 2 - 7 MOD ;
+
+: MDAYS ( M Y -- MSIZE MDAY )
+   OVER 12 = IF 31 1 2SWAP WEEKDAY NEGATE EXIT THEN
+   2>R 1 2R@ WEEKDAY 1 2R> SWAP 1+ SWAP WEEKDAY OVER -
+   7 + 7 MOD 28 + SWAP NEGATE ;
+
+: .WEEK ( MSIZE MDAY -- MSIZE MDAY' )
+   7 0 DO DUP 0< IF 1+ 3 SPACES ELSE
+   2DUP > IF 1+ DUP 2 .R SPACE ELSE 3 SPACES THEN THEN LOOP ;
+
+: .3MONTHS ( Y M -- )
+   3 0 DO ." MO TU WE TH FR SA SU   " LOOP CR
+   3 OVER + SWAP DO I OVER MDAYS ROT LOOP DROP
+   6 0 DO 2ROT .WEEK 2 SPACES 2ROT .WEEK 2 SPACES 2ROT .WEEK CR LOOP
+   2DROP 2DROP 2DROP ;
+
+: CAL ( Y -- )
+   30 SPACES ." [SNOOPY]" CR
+   32 SPACES DUP . CR
+   ."       JANUARY                FEBRUARY                MARCH" CR
+   DUP 1 .3MONTHS
+   ."        APRIL                   MAY                    JUNE" CR
+   DUP 4 .3MONTHS
+   ."         JULY                  AUGUST                SEPTEMBER" CR
+   DUP 7 .3MONTHS
+   ."         OCTOBER               NOVEMBER               DECEMBER" CR
+   10 .3MONTHS ;
+
+1969 CAL

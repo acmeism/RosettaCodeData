@@ -1,4 +1,4 @@
-import "/big" for BigInt
+import "./big" for BigInt
 
 var Const  = BigInt.fromBaseString("2545F4914F6CDD1D", 16)
 var Mask64 = (BigInt.one << 64) - BigInt.one

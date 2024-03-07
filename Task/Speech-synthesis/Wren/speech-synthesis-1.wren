@@ -1,4 +1,4 @@
-/* speech_synthesis.wren */
+/* Speech_synthesis.wren */
 
 class C {
     foreign static getInput(maxSize)

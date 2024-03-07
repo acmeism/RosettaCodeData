@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var mf = Fn.new { |n, d|
     var prod = 1

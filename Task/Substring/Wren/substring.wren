@@ -1,4 +1,4 @@
-import "/str" for Str
+import "./str" for Str
 
 var s  = "αβγδεζηθ"
 var n = 2

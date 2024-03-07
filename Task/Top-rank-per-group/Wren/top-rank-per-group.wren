@@ -1,7 +1,7 @@
-import "/dynamic" for Tuple
-import "/sort" for Sort, Cmp
-import "/seq" for Lst
-import "/fmt" for Fmt
+import "./dynamic" for Tuple
+import "./sort" for Sort, Cmp
+import "./seq" for Lst
+import "./fmt" for Fmt
 
 var Employee = Tuple.create("Employee", ["name", "id", "salary", "dept"])
 

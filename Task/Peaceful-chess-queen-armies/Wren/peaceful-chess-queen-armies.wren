@@ -1,4 +1,4 @@
-import "/dynamic" for Enum, Tuple
+import "./dynamic" for Enum, Tuple
 
 var Piece = Enum.create("Piece", ["empty", "black", "white"])
 

@@ -1,5 +1,5 @@
 import "random" for Random
-import "/math" for Nums
+import "./math" for Nums
 
 var r = Random.new()
 for (i in [100, 1000, 10000]) {

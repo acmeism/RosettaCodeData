@@ -1,4 +1,4 @@
-import "/math" for Int
+import "./math" for Int
 
 var limit = 24
 var res = List.filled(limit, 0)

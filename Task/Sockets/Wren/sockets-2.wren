@@ -1,3 +1,5 @@
+/* gcc Sockets.c -o Sockets -lwren -lm  */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -198,7 +200,7 @@ int main(int argc, char **argv) {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "sockets2.wren";
+    const char* fileName = "Sockets.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

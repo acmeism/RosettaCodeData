@@ -1,6 +1,6 @@
-import "/dynamic" for Enum, Tuple
-import "/fmt" for Fmt
-import "/sort" for Cmp, Sort
+import "./dynamic" for Enum, Tuple
+import "./fmt" for Fmt
+import "./sort" for Cmp, Sort
 
 var FieldType = Enum.create("FieldType", ["text", "num", "int", "bool"])
 

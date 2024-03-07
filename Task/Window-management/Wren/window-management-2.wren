@@ -1,4 +1,4 @@
-/* gcc `pkg-config --cflags gtk+-3.0` -DGDK_VERSION_MIN_REQIRED=GDK_VERSION_3_2 window_management.c -o window_management `pkg-config --libs gtk+-3.0` -lwren -lm */
+/* gcc `pkg-config --cflags gtk+-3.0` -DGDK_VERSION_MIN_REQIRED=GDK_VERSION_3_2 Window_management.c -o Window_management `pkg-config --libs gtk+-3.0` -lwren -lm */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -230,7 +230,7 @@ int main(int argc, char **argv) {
     config.bindForeignMethodFn = &bindForeignMethod;
     vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "window_management.wren";
+    const char* fileName = "Window_management.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

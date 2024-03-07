@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/sort" for Sort
+import "./fmt" for Fmt
+import "./sort" for Sort
 
 class Patient {
     construct new(id, lastName) {

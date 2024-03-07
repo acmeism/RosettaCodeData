@@ -1,6 +1,6 @@
-import "/math" for Int
-import "/big" for BigInt
-import "/fmt" for Fmt
+import "./math" for Int
+import "./big" for BigInt
+import "./fmt" for Fmt
 
 var MAX = 33
 var primes = Int.primeSieve(MAX * 5)

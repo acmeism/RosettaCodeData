@@ -1,6 +1,6 @@
 /*REXX pgm validates the check digit of an ISBN─13 code  (it may have embedded minuses).*/
 parse arg $                                      /*obtain optional arguments from the CL*/
-if $='' | if $=","  then $= '978-1734314502 978-1734314509 978-1788399081 978-1788399083'
+if $='' | if $=","  then $= '978-0596528126 978-0596528120 978-1788399081 978-1788399083'
 @ISBN= "ISBN─13 code isn't"                      /*a literal used when displaying msgs. */
                                                  /* [↓]  remove all minuses from X code.*/
   do j=1  for words($);  y= word($,j)            /*obtain an ISBN─13 code from  $  list.*/

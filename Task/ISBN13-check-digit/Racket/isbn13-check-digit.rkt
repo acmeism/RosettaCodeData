@@ -9,7 +9,7 @@
 
 (module+ test
   (require rackunit)
-  (check-true (isbn13-check-digit-valid? "978-1734314502"))
-  (check-false (isbn13-check-digit-valid? "978-1734314509"))
+  (check-true (isbn13-check-digit-valid? "978-0596528126"))
+  (check-false (isbn13-check-digit-valid? "978-0596528120"))
   (check-true (isbn13-check-digit-valid? "978-1788399081"))
   (check-false (isbn13-check-digit-valid? "978-1788399083")))

@@ -1,5 +1,5 @@
-import "/long" for ULong
-import "/fmt" for Fmt
+import "./long" for ULong
+import "./fmt" for Fmt
 
 var motzkin = Fn.new { |n|
     var m = List.filled(n+1, 0)

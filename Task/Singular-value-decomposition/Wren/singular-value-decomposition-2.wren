@@ -1,4 +1,4 @@
-/* gcc svd_embedded.c -o svd_embedded -lgsl -lgslcblas -lwren -lm */
+/* gcc Singular_value_decomposition.c -o Singular_value_decomposition -lgsl -lgslcblas -lwren -lm */
 
 #include <stdio.h>
 #include <string.h>
@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
     config.loadModuleFn = &loadModule;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "svd_embedded.wren";
+    const char* fileName = "Singular_value_decomposition.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

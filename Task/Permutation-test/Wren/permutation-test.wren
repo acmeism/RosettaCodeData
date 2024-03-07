@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var data = [85, 88, 75, 66, 25, 29, 83, 39, 97, 68, 41, 10, 49, 16, 65, 32, 92, 28, 98]
 

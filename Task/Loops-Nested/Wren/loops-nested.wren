@@ -1,5 +1,5 @@
 import "random" for Random
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var rand = Random.new()
 
@@ -12,7 +12,7 @@ for (i in 0..19) {
 var found = false
 for (i in 0..19) {
     for (j in 0..19) {
-        System.write(Fmt.d(4, a[i][j]))
+        Fmt.write("$4d", a[i][j])
         if (a[i][j] == 20) {
             found = true
             break

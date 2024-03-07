@@ -1,4 +1,4 @@
-import "/big" for BigInt
+import "./big" for BigInt
 import "io" for Stdout
 
 var calcPi = Fn.new {

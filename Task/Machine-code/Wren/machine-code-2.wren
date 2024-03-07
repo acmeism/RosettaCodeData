@@ -1,3 +1,5 @@
+/* gcc Machine_code.c -o Machine_code -lwren -lm */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -24,13 +26,13 @@ unsigned char rmc_helper(const char *code, unsigned char a, unsigned char b, int
 
 void C_runMachineCode(WrenVM* vm) {
     /* unpack arguments passed from Wren */
-    int *len;
-    const char *code = wrenGetSlotBytes(vm, 1, len);
+    int len;
+    const char *code = wrenGetSlotBytes(vm, 1, &len);
     unsigned char a = (unsigned char)wrenGetSlotDouble(vm, 2);
     unsigned char b = (unsigned char)wrenGetSlotDouble(vm, 3);
 
     /* obtain result */
-    unsigned char c = rmc_helper(code, a, b, *len);
+    unsigned char c = rmc_helper(code, a, b, len);
 
     /* return result to Wren */
     wrenSetSlotDouble(vm, 0, (double)c);
@@ -90,7 +92,7 @@ int main() {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "machine_code.wren";
+    const char* fileName = "Machine_code.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

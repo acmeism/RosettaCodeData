@@ -1,6 +1,5 @@
-import "/pattern" for Pattern
-import "/math" for Nums, Boolean
-import "/fmt" for Conv
+import "./pattern" for Pattern
+import "./math" for Nums, Boolean
 
 var p = Pattern.new("/s")
 

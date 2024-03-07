@@ -1,4 +1,4 @@
-/* mac_vendor_lookup.go */
+/* MAC_vendor_lookup.go */
 package main
 
 import (
@@ -28,7 +28,7 @@ func macLookup(vm *wren.VM, parameters []any) (any, error) {
 
 func main() {
     vm := wren.NewVM()
-    fileName := "mac_vendor_lookup.wren"
+    fileName := "MAC_vendor_lookup.wren"
     methodMap := wren.MethodMap{"static lookup(_)": macLookup}
     classMap := wren.ClassMap{"MAC": wren.NewClass(nil, nil, methodMap)}
     module := wren.NewModule(classMap)

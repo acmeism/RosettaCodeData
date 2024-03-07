@@ -1,5 +1,5 @@
-import "/math" for Int
-import "/fmt" for Fmt
+import "./math" for Int
+import "./fmt" for Fmt
 
 var primes = Int.primeSieve(1e7 + 19) // next prime above 10 million
 var strong = []

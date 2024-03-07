@@ -1,5 +1,5 @@
 import "io" for File
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var text = File.read("mit10000.txt")
 var freqs = List.filled(26, 0)

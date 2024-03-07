@@ -1,5 +1,5 @@
-import "/dynamic" for Enum, Tuple, Struct
-import "/fmt" for Fmt
+import "./dynamic" for Enum, Tuple, Struct
+import "./fmt" for Fmt
 
 var Dir = Enum.create("Dir", ["LEFT", "RIGHT", "STAY"])
 

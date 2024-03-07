@@ -1,5 +1,5 @@
-import "/sort" for Sort
-import "/fmt" for Fmt
+import "./sort" for Sort
+import "./fmt" for Fmt
 
 var example1 = [
     "00,00,00,00,00,00,00,00,00",

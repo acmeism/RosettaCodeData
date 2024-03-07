@@ -1,5 +1,5 @@
 import "random" for Random
-import "/iterate" for Stepped
+import "./iterate" for Stepped
 
 var F = [
     [1, -1, 1,  0, 1, 1, 2,  1], [0,  1, 1, -1, 1,  0, 2, 0],

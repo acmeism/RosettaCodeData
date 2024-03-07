@@ -1,4 +1,4 @@
-/* opengl.wren */
+/* OpenGL.wren */
 
 var GL_COLOR_BUFFER_BIT = 0x4000
 var GL_DEPTH_BUFFER_BIT = 0x0100

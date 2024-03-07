@@ -1,5 +1,5 @@
-import "/math" for Int, Nums
-import "/fmt" for Fmt
+import "./math" for Int, Nums
+import "./fmt" for Fmt
 
 var primes = Int.primeSieve(1e5)
 var foundCombo = false

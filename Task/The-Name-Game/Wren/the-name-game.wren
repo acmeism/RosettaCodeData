@@ -1,4 +1,4 @@
-import "/str" for Str
+import "./str" for Str
 
 var printVerse = Fn.new { |name|
     var x = Str.capitalize(Str.lower(name))

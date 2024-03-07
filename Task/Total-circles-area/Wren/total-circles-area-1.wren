@@ -1,5 +1,5 @@
-import "/dynamic" for Tuple
-import "/math" for Nums
+import "./dynamic" for Tuple
+import "./math" for Nums
 
 var Circle = Tuple.create("Circle", ["x", "y", "r"])
 

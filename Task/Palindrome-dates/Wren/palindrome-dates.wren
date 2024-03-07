@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/date" for Date
+import "./fmt" for Fmt
+import "./date" for Date
 
 var isPalDate = Fn.new { |date|
     date = date.format(Date.rawDate)

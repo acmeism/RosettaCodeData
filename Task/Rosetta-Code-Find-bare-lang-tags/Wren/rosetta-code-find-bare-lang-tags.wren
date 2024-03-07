@@ -1,8 +1,8 @@
-import "/ioutil" for FileUtil
-import "/pattern" for Pattern
-import "/set" for Set
-import "/sort" for Sort
-import "/fmt" for Fmt
+import "./ioutil" for FileUtil
+import "./pattern" for Pattern
+import "./set" for Set
+import "./sort" for Sort
+import "./fmt" for Fmt
 
 var p = Pattern.new("/=/={{header/|[+0/y]}}/=/=", Pattern.start)
 var bareCount = 0

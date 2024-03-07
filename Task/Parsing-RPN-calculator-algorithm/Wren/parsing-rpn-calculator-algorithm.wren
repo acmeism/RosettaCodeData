@@ -1,4 +1,4 @@
-import "/seq" for Stack
+import "./seq" for Stack
 
 var rpnCalculate = Fn.new { |expr|
     if (expr == "") Fiber.abort("Expression cannot be empty.")

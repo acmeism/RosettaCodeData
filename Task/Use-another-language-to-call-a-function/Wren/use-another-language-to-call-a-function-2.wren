@@ -1,3 +1,5 @@
+/* gcc Use_another_language_to_call_a_function.c -o Use_another_language_to_call_a_function -lwren -lm */
+
 #include <stdio.h>
 #include "wren.h"
 
@@ -51,7 +53,7 @@ int configWrenVM() {
     config.bindForeignMethodFn = &bindForeignMethod;
     vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "query.wren";
+    const char* fileName = "Use_another_language_to_call_a_function.wren";
     script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

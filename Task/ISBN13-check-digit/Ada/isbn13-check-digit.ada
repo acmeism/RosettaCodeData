@@ -30,8 +30,8 @@ procedure ISBN_Check is
       New_Line;
    end Show;
 begin
-   Show ("978-1734314502");
-   Show ("978-1734314509");
+   Show ("978-0596528126");
+   Show ("978-0596528120");
    Show ("978-1788399081");
    Show ("978-1788399083");
 end ISBN_Check;

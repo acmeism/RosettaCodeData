@@ -1,4 +1,4 @@
-import "/queue" for Queue
+import "./queue" for Queue
 
 var q = Queue.new()
 var item = q.pop()

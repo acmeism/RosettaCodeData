@@ -1,4 +1,4 @@
-import "/sort" for Sort
+import "./sort" for Sort
 
 var fourFaceCombs = Fn.new {
     var res = []

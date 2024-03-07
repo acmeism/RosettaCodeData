@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var colors  = ["Red", "Green", "White", "Yellow", "Blue"]
 var nations = ["English", "Swede", "Danish", "Norwegian", "German"]

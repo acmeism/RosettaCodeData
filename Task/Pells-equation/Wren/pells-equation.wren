@@ -1,5 +1,5 @@
-import "/big" for BigInt
-import "/fmt" for Fmt
+import "./big" for BigInt
+import "./fmt" for Fmt
 
 var solvePell = Fn.new { |n|
     n = BigInt.new(n)

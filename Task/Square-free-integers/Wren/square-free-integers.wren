@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var isSquareFree = Fn.new { |n|
     var i = 2

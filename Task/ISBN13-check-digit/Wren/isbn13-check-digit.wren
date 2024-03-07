@@ -15,7 +15,7 @@ var isbn13 = Fn.new { |s|
     return sum % 10 == 0
 }
 
-var tests = ["978-1734314502", "978-1734314509", "978-1788399081", "978-1788399083"]
+var tests = ["978-0596528126", "978-0596528120", "978-1788399081", "978-1788399083"]
 for (test in tests) {
     System.print("%(test) -> %(isbn13.call(test) ? "good" : "bad")")
 }

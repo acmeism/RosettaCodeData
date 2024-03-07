@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var secant = Fn.new { |f, x0, x1|
     var f0 = 0

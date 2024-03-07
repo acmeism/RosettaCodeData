@@ -1,4 +1,4 @@
-import "/math" for Int
+import "./math" for Int
 
 var successivePrimes = Fn.new { |primes, diffs|
     var results = []

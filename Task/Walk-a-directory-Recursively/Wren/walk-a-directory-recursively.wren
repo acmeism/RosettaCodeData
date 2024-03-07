@@ -1,6 +1,6 @@
 import "io" for Directory, File
-import "/pattern" for Pattern
-import "/sort" for Sort
+import "./pattern" for Pattern
+import "./sort" for Sort
 
 var walk // recursive function
 walk = Fn.new { |dir, pattern, found|

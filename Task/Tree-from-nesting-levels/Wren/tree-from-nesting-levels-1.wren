@@ -1,5 +1,5 @@
-import "/seq" for Stack
-import "/fmt" for Fmt
+import "./seq" for Stack
+import "./fmt" for Fmt
 
 var toTree = Fn.new { |list|
     var nested = []

@@ -1,7 +1,7 @@
-import "/pattern" for Pattern
-import "/str" for Str
-import "/fmt" for Fmt
-import "/sort" for Cmp, Sort
+import "./pattern" for Pattern
+import "./str" for Str
+import "./fmt" for Fmt
+import "./sort" for Cmp, Sort
 
 var p2 = Pattern.new("+2 ")
 var p3 = Pattern.new("/s") // any whitespace character

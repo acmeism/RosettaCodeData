@@ -1,4 +1,4 @@
-import "/big" for BigInt
+import "./big" for BigInt
 
 class PExp {
     construct new(prime, exp) {

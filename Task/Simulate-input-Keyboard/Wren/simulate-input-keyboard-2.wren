@@ -1,3 +1,5 @@
+/* gcc Simulate_input_Keyboard.c -o Simulate_input_Keyboard -lX11 -lwren -lm */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -315,7 +317,7 @@ int main(int argc, char **argv) {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "simulate_input_keyboard.wren";
+    const char* fileName = "Simulate_input_Keyboard.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

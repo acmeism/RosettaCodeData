@@ -1,6 +1,6 @@
-import "/str" for Char
-import "/iterate" for Stepped
-import "/fmt" for Conv, Fmt
+import "./str" for Char
+import "./iterate" for Stepped
+import "./fmt" for Conv, Fmt
 
 var luhn = Fn.new { |s|
     s = s[-1..0]

@@ -1,6 +1,6 @@
 public static void main(){
-        System.out.println(isISBN13("978-1734314502"));
-        System.out.println(isISBN13("978-1734314509"));
+        System.out.println(isISBN13("978-0596528126"));
+        System.out.println(isISBN13("978-0596528120"));
         System.out.println(isISBN13("978-1788399081"));
         System.out.println(isISBN13("978-1788399083"));
     }

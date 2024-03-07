@@ -1,3 +1,5 @@
+/* gcc Terminal_control_Dimensions.c -o Terminal_control_Dimensions -lwren -lm */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -73,7 +75,7 @@ int main() {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "terminal_control_dimensions.wren";
+    const char* fileName = "Terminal_control_Dimensions.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

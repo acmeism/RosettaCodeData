@@ -1,5 +1,5 @@
-import "/seq" for Stack
-import "/dynamic" for Tuple
+import "./seq" for Stack
+import "./dynamic" for Tuple
 
 class Node {
     construct new(n) {

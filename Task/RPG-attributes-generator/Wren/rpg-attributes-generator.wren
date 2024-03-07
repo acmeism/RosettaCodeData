@@ -1,5 +1,5 @@
 import "random" for Random
-import "/sort" for Sort
+import "./sort" for Sort
 
 var rand = Random.new()
 var vals = List.filled(6, 0)

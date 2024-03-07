@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/math" for Int
+import "./fmt" for Fmt
+import "./math" for Int
 
 System.print("The first 35 unprimeable numbers are:")
 var count = 0                     // counts all unprimeable numbers

@@ -1,6 +1,6 @@
-import "/big" for BigRat
-import "/dynamic" for Struct
-import "/trait" for ByRef
+import "./big" for BigRat
+import "./dynamic" for Struct
+import "./trait" for ByRef
 import "io" for File
 
 var maxChar = 128

@@ -1,3 +1,6 @@
-Y <- function(f) {
-  (function(x) { (x)(x) })( function(y) { f( (function(a) {y(y)})(a) ) } )
-}
+#' Y = λf.(λs.ss)(λx.f(xx))
+#' Z = λf.(λs.ss)(λx.f(λz.(xx)z))
+#'
+
+fixp.Y <- \ (f) (\ (x) (x) (x)) (\ (y) (f) ((y) (y))) # y-combinator
+fixp.Z <- \ (f) (\ (x) (x) (x)) (\ (y) (f) (\ (...) (y) (y) (...))) # z-combinator

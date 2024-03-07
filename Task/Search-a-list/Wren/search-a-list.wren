@@ -1,4 +1,4 @@
-import "/seq" for Lst
+import "./seq" for Lst
 
 var find = Fn.new { |haystack, needle|
     var res = Lst.indicesOf(haystack, needle)

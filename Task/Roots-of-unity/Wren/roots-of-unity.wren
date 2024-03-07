@@ -1,5 +1,5 @@
-import "/complex" for Complex
-import "/fmt" for Fmt
+import "./complex" for Complex
+import "./fmt" for Fmt
 
 var roots = Fn.new { |n|
     var r = List.filled(n, null)

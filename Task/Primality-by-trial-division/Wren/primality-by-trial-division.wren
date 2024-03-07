@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var isPrime = Fn.new { |n|
     if (n < 2) return false
@@ -14,5 +14,5 @@ var isPrime = Fn.new { |n|
 var tests = [2, 5, 12, 19, 57, 61, 97]
 System.print("Are the following prime?")
 for (test in tests) {
-    System.print("%(Fmt.d(2, test)) -> %(isPrime.call(test) ? "yes" : "no")")
+    Fmt.print("$2d -> $y", test, isPrime.call(test))
 }

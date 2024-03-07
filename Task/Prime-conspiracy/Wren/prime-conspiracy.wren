@@ -1,6 +1,6 @@
-import "/fmt" for Fmt
-import "/math" for Int
-import "/sort" for Sort
+import "./fmt" for Fmt
+import "./math" for Int
+import "./sort" for Sort
 
 var reportTransitions = Fn.new { |transMap, num|
     var keys = transMap.keys.toList

@@ -1,4 +1,4 @@
-import "/fmt" for Conv, Fmt
+import "./fmt" for Conv, Fmt
 
 var reverse = Fn.new { |s|
     var e = 0

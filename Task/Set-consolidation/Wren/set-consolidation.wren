@@ -1,4 +1,4 @@
-import "/set" for Set
+import "./set" for Set
 
 var consolidateSets = Fn.new { |sets|
     var size = sets.count

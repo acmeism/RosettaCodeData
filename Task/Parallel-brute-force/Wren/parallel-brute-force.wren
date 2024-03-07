@@ -1,4 +1,4 @@
-import "/crypto" for Sha256
+import "./crypto" for Sha256
 
 var hashes = [
     "1115dd800feaacefdf481f1f9070374a2a81e27880f187396db67958b207cbad",

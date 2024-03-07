@@ -1,7 +1,7 @@
-import "/dynamic" for Enum, Tuple
-import "/big" for BigInt
-import "/str" for Str
-import "/fmt" for Conv, Fmt
+import "./dynamic" for Enum, Tuple
+import "./big" for BigInt
+import "./str" for Str
+import "./fmt" for Conv, Fmt
 
 var AddressSpace = Enum.create("AddressSpace", ["IPv4", "IPv6", "Invalid"])
 

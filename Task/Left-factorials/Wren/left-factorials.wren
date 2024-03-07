@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/big" for BigInt
+import "./fmt" for Fmt
+import "./big" for BigInt
 
 var lfacts = List.filled(12, BigInt.zero)
 var lfact = BigInt.one

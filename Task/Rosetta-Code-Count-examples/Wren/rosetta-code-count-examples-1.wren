@@ -1,4 +1,4 @@
-/* rc_count_examples.wren */
+/* Rosetta_Code_Count_examples.wren */
 
 import "./pattern" for Pattern
 
@@ -41,7 +41,7 @@ var p = Pattern.new("title/=\"[+1^\"]\"")
 var matches = p.findAll(content)
 for (m in matches) {
     var title = m.capsText[0].replace("&#039;", "'").replace("&quot;", "\"")
-    var title2 = title.replace(" ", "_").replace("+", "\%2B")
+    var title2 = title.replace(" ", "_").replace("+", "\%252B")
     var taskUrl = "https://www.rosettacode.org/w/index.php?title=%(title2)&action=raw"
     var taskContent = getContent.call(taskUrl)
     var lines = taskContent.split("\n")

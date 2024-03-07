@@ -1,4 +1,4 @@
-/* man_or_boy_test_gmp.wren */
+/* Man_or_boy_test_2.wren */
 
 import "./gmp" for Mpz
 import "./fmt" for Fmt

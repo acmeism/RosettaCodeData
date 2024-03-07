@@ -1,5 +1,5 @@
-import "/fmt" for Conv, Fmt
-import "/math" for Int
+import "./fmt" for Conv, Fmt
+import "./math" for Int
 
 var isMagnanimous = Fn.new { |n|
     if (n < 10) return true

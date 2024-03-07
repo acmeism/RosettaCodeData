@@ -1,12 +1,11 @@
-import "/math" for Math
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var i = 1
 var sqnc = []  // squares not cubes
 var sqcb = []  // squares and cubes
 while (sqnc.count < 30 || sqcb.count < 3) {
     var sq = i * i
-    var cb = Math.cbrt(sq).round
+    var cb = sq.cbrt.round
     if (cb*cb*cb != sq) {
         sqnc.add(sq)
     } else {

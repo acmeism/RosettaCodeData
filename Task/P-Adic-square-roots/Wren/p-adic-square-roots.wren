@@ -1,5 +1,5 @@
-import "/dynamic" for Struct
-import "/big" for BigInt
+import "./dynamic" for Struct
+import "./big" for BigInt
 
 // constants
 var EMX  = 64       // exponent maximum (if indexing starts at -EMX)

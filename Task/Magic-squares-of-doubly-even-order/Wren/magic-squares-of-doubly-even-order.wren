@@ -1,4 +1,4 @@
-import "/fmt" for Conv, Fmt
+import "./fmt" for Conv, Fmt
 
 var magicSquareDoublyEven = Fn.new { |n|
     if (n < 4 || n%4 != 0) Fiber.abort("Base must be a positive multiple of 4")

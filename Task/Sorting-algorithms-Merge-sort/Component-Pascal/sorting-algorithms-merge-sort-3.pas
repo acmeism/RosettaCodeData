@@ -1,7 +1,9 @@
 MODULE RosettaMergeSortUse;
 
 	(* Import Modules: *)
-	IMPORT Sort := RosettaMergeSort, Log := StdLog;
+	
+
+	IMPORT Sort := RosettaMergeSort, Out;
 
 	(* Type Definitions: *)
 	TYPE
@@ -52,10 +54,10 @@ MODULE RosettaMergeSortUse;
 		count := 0;
 		WHILE s # NIL DO
 			IF count = 10 THEN
-					Log.Ln; (* Insert a newline after displaying 10 numbers *)
+					Out.Ln; (* Insert a newline after displaying 10 numbers *)
 					count := 0
 			END;
-			Log.IntForm(s.value, Log.decimal, 4, ' ', Log.hideBase);
+			Out.Int(s.value, 4);
 			s := s.next;
 			INC(count)
 		END
@@ -75,11 +77,11 @@ MODULE RosettaMergeSortUse;
 		b(130); b(866); b(937); b(226); b(298); b(029); b(149); b(381);
 		b(590); b(255); b(101); b(485); b(801); b(223); b(645); b(458);
 		b(068);  b(683);
-		Log.String("Before:"); Log.Ln;
-		Show(s); Log.Ln;
+		Out.String("Before:"); Out.Ln;
+		Show(s); Out.Ln;
 		s := t.Sort(s)(List);
-		Log.String("After:"); Log.Ln;
-		Show(s); Log.Ln
+		Out.String("After:"); Out.Ln;
+		Show(s); Out.Ln
 	END Use;
 
-END RosettaMergeSortUse.
+END RosettaMergeSortUse.Use

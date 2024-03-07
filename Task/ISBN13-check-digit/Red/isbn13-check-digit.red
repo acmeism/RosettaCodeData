@@ -16,7 +16,7 @@ check_valid_isbn13: function [str] [
 ]
 
 ; check given examples
-foreach [str] ["978-1734314502" "978-1734314509" "978-1788399081" "978-1788399083"] [
+foreach [str] ["978-0596528126" "978-0596528120" "978-1788399081" "978-1788399083"] [
   prin str
   prin " - "
   print check_valid_isbn13 str

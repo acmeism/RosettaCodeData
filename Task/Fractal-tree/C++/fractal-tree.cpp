@@ -6,7 +6,9 @@
 using namespace std;
 
 //--------------------------------------------------------------------------------------------------
-const float PI = 3.1415926536f;
+#ifndef M_PI
+#define M_PI           3.14159265358979323846
+#endif
 
 //--------------------------------------------------------------------------------------------------
 class myBitmap
@@ -128,7 +130,7 @@ class fractalTree
 {
 public:
     fractalTree()		      { _ang = DegToRadian( 24.0f ); }
-    float DegToRadian( float degree ) { return degree * ( PI / 180.0f ); }
+    float DegToRadian( float degree ) { return degree * ( M_PI / 180.0f ); }
 
     void create( myBitmap* bmp )
     {

@@ -24,7 +24,7 @@ int check_isbn13(const char *isbn) {
 
 int main() {
     int i;
-    const char* isbns[] = {"978-1734314502", "978-1734314509", "978-1788399081", "978-1788399083"};
+    const char* isbns[] = {"978-0596528126", "978-0596528120", "978-1788399081", "978-1788399083"};
     for (i = 0; i < 4; ++i) {
         printf("%s: %s\n", isbns[i], check_isbn13(isbns[i]) ? "good" : "bad");
     }

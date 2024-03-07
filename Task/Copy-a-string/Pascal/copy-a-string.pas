@@ -1,28 +1,16 @@
-program in,out;
-
-type
-
-   pString = ^string;
-
-var
-
-   s1,s2 : string ;
-   pStr  : pString ;
-
-begin
-
-   /* direct copy */
-   s1 := 'Now is the time for all good men to come to the aid of their party.'
-   s2 := s1 ;
-
-   writeln(s1);
-   writeln(s2);
-
-   /* By Reference */
-   pStr := @s1 ;
-   writeln(pStr^);
-
-   pStr := @s2 ;
-   writeln(pStr^);
-
-end;
+program copyAString;
+	var
+		{ The Extended Pascal `string` schema data type
+		  is essentially a `packed array[1..capacity] of char`. }
+		source, destination: string(80);
+	begin
+		source := 'Hello world!';
+		{ In Pascal _whole_ array data type values can be copied by assignment. }
+		destination := source;
+		{ Provided `source` is a _non-empty_ string value
+		  you can copy in Extended Pascal sub-ranges _of_ _string_ types, too.
+		  Note, the sub-range notation is not permitted for a `bindable` data type. }
+		destination := source[1..length(source)];
+		{ You can also employ Extended Pascal’s `writeStr` routine: }
+		writeStr(destination, source);
+	end.

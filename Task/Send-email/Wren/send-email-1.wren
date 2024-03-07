@@ -1,4 +1,4 @@
-/* send_email.wren */
+/* Send_email.wren */
 
 foreign class Authority {
     construct plainAuth(identity, username, password, host) {}

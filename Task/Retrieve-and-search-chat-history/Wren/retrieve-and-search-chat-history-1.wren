@@ -1,4 +1,4 @@
-/* retrieve_and_search_chat_history.wren */
+/* Retrieve_and_search_chat_history.wren */
 
 import "./date" for Date
 

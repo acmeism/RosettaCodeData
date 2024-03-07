@@ -1,4 +1,4 @@
-import "/sort" for Sort
+import "./sort" for Sort
 
 // sorts values in place, leaves indices unsorted
 var sortDisjoint = Fn.new { |values, indices|

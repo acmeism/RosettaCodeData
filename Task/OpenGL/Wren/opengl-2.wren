@@ -207,7 +207,7 @@ int main(int argc, char **argv) {
     config.bindForeignMethodFn = &bindForeignMethod;
     vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "opengl.wren";
+    const char* fileName = "OpenGL.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

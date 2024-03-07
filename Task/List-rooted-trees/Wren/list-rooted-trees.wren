@@ -1,4 +1,4 @@
-import "/long" for ULong
+import "./long" for ULong
 import "os" for Process
 
 var treeList = []

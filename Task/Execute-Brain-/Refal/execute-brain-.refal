@@ -1,0 +1,115 @@
+$ENTRY Go {
+    , <Arg 1>: e.File
+    , <ReadFile 1 e.File>: e.Source
+    , <ParseBF e.Source>: {
+        F e.Error = <Prout e.Error>;
+        T e.Prog = <RunProgram e.Prog>;
+    };
+};
+
+ReadFile {
+    s.Chan e.File = <Open 'r' s.Chan e.File>
+                    <ReadFile (s.Chan)>;
+    (s.Chan), <Get s.Chan>: {
+        0 = <Close s.Chan>;
+        e.Line = <SanitizeBF e.Line> <ReadFile (s.Chan)>
+    };
+}
+
+SanitizeBF {
+    = ;
+    s.C e.X, '+-<>.,[]': e.L s.C e.R = s.C <SanitizeBF e.X>;
+    s.C e.X = <SanitizeBF e.X>;
+};
+
+ParseBF {
+    e.X, <CheckLoops e.X>: {
+        T = T <ParseLoops () () e.X>;
+        e.Err = e.Err;
+    };
+};
+
+CheckLoops {
+    (0) = T;
+    (s.N) = F 'Mismatched [';
+    (0) ']' e.X = F 'Mismatched ]';
+    (s.N) '[' e.X = <CheckLoops (<+ s.N 1>) e.X>;
+    (s.N) ']' e.X = <CheckLoops (<- s.N 1>) e.X>;
+    (s.N) s.I e.X = <CheckLoops (s.N) e.X>;
+    e.X = <CheckLoops (0) e.X>;
+};
+
+ParseLoops {
+    (e.X) (e.C) = e.X e.C;
+    (e.R) (e.Cur) '[' e.Prog = <ParseLoops (e.R (e.Cur)) () e.Prog>;
+    (e.R (e.Last)) (e.Cur) ']' e.Prog = <ParseLoops (e.R) (e.Last (e.Cur)) e.Prog>;
+    (e.R) (e.Cur) s.Instr e.Prog = <ParseLoops (e.R) (e.Cur s.Instr) e.Prog>;
+}
+
+RunProgram {
+    e.Prog, (() 0 ()): t.Tape,
+            (() ()): t.IObuf,
+            (t.Tape t.IObuf): t.State,
+            <RunBF t.State e.Prog>: (t.TapeOut t.IObufOut),
+            t.IObufOut: ((e.In) (e.Out)),
+            e.Out: {
+                = ;
+                e.X = <Prout e.X>;
+    };
+};
+
+RunBF {
+    t.State = t.State;
+    t.State t.Step e.Prog = <RunBF <StepBF t.State t.Step> e.Prog>;
+};
+
+StepBF {
+    (t.Tape t.IObuf) '+' = (<TapeF Inc t.Tape> t.IObuf);
+    (t.Tape t.IObuf) '-' = (<TapeF Dec t.Tape> t.IObuf);
+    (t.Tape t.IObuf) '<' = (<TapeLeft t.Tape> t.IObuf);
+    (t.Tape t.IObuf) '>' = (<TapeRight t.Tape> t.IObuf);
+    t.State          ',' = <BFIn t.State>;
+    t.State          '.' = <BFOut t.State>;
+    t.State (e.Loop), t.State: ((t.L 0 t.R) t.IObuf) = t.State;
+    t.State (e.Loop), <RunBF t.State e.Loop>: t.Newstate = <StepBF t.Newstate (e.Loop)>;
+};
+
+TapeLeft {
+    ((e.L s.N) s.C (e.R)) = ((e.L) s.N (s.C e.R));
+    (() s.C (e.R)) = (() 0 (s.C e.R));
+};
+
+TapeRight {
+    ((e.L) s.C (s.N e.R)) = ((e.L s.C) s.N (e.R));
+    ((e.L) s.C ()) = ((e.L s.C) 0 ());
+};
+
+TapeF {
+    s.F ((e.L) s.C (e.R)) = ((e.L) <Mu s.F s.C> (e.R));
+};
+
+BFIn {
+    (t.Tape t.IObuf), t.Tape: (t.L s.C t.R),
+                      t.IObuf: (t.In t.Out),
+                      t.In: {
+        (s.Char e.Rest), (t.L s.Char t.R): t.Newtape,
+                         ((e.Rest) t.Out): t.NewIO
+                       = (t.Newtape t.NewIO);
+        (), <Card>: {
+            0 = ((t.L 0 t.R) t.IObuf);
+            e.Line = <BFIn (t.Tape ((<Ord e.Line> 10) t.Out))>;
+        };
+    };
+};
+
+BFOut {
+    (t.Tape t.IObuf), t.Tape: (t.L s.C t.R),
+                      t.IObuf: (t.In t.Out),
+                      s.C: {
+        10, t.Out: (e.Line) = <Prout <Chr e.Line>> (t.Tape (t.In ()));
+        s.C, t.Out: (e.Line) = (t.Tape (t.In (e.Line s.C)));
+    };
+};
+
+Inc { s.X = <Mod <+ 1 s.X> 256>; };
+Dec { s.X = <Mod <+ 255 s.X > 256>; };

@@ -1,5 +1,5 @@
-import "/ioutil" for Input
-import "/fmt" for Fmt
+import "./ioutil" for Input
+import "./fmt" for Fmt
 
 // Inserts item x in list a, and keeps it sorted assuming a is already sorted.
 // If x is already in a, inserts it to the right of the rightmost x.

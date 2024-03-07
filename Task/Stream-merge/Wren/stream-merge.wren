@@ -1,7 +1,7 @@
 import "io" for File
-import "/ioutil" for FileUtil
-import "/str" for Str
-import "/seq" for Lst
+import "./ioutil" for FileUtil
+import "./str" for Str
+import "./seq" for Lst
 
 var merge2 = Fn.new { |inputFile1, inputFile2, outputFile|
     // Note that the FileUtil.readEachLine method checks the file exists and closes it

@@ -1,6 +1,6 @@
 import "os" for Process
-import "/ioutil" for File, FileUtil
-import "/date" for Date
+import "./ioutil" for File, FileUtil
+import "./date" for Date
 
 var dateFormatIn  = "yyyy|-|mm|-|dd|+|hh|:|MM"
 var dateFormatOut = "yyyy|-|mm|-|dd| |hh|:|MM"

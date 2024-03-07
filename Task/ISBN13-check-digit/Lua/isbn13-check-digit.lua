@@ -32,8 +32,8 @@ function test(isbn)
 end
 
 function main()
-    test("978-1734314502")
-    test("978-1734314509")
+    test("978-0596528126")
+    test("978-0596528120")
     test("978-1788399081")
     test("978-1788399083")
 end

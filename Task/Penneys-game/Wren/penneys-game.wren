@@ -1,7 +1,7 @@
 import "random" for Random
 import "io" for Stdin, Stdout
 import "timer" for Timer
-import "/str" for Str
+import "./str" for Str
 
 var rand = Random.new()
 

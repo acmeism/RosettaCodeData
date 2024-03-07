@@ -1,5 +1,5 @@
 import "os" for Process
-import "/date" for Date
+import "./date" for Date
 
 var args = Process.arguments
 if (args.count != 1) Fiber.abort("Please pass the current time in hh:mm:ss format.")

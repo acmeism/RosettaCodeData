@@ -1,3 +1,5 @@
+/* gcc Video_display_modes.c -o Video_display_modes -lwren -lm */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -55,7 +57,7 @@ int main(int argc, char **argv) {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "video_display_modes.wren";
+    const char* fileName = "Video_display_modes.wren";
     char *script = readFile(fileName);
     wrenInterpret(vm, module, script);
     wrenFreeVM(vm);

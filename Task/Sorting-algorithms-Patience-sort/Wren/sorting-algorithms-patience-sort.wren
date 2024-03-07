@@ -1,4 +1,4 @@
-import "/sort" for Cmp
+import "./sort" for Cmp
 
 var patienceSort = Fn.new { |a|
     var size = a.count

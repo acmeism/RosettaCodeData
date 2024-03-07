@@ -15,8 +15,8 @@ pub fn main() !void {
     const size = c.Vector3{ .x = cube_side, .y = cube_side, .z = cube_side };
     const position = c.Vector3{ .x = 0, .y = 0, .z = 0 };
     const x_rot = 45;
-    const y_center = std.math.sqrt(@as(f32, 3)) * cube_side / 2;
-    const z_rot = std.math.atan(@as(f32, std.math.sqrt1_2)) * 180 / std.math.pi;
+    const y_center: f32 = std.math.sqrt(3.0) * cube_side / 2.0;
+    const z_rot = std.math.radiansToDegrees(f32, std.math.atan(@as(f32, std.math.sqrt1_2)));
 
     c.SetConfigFlags(c.FLAG_WINDOW_RESIZABLE | c.FLAG_VSYNC_HINT);
     c.InitWindow(screen_width, screen_height, "Draw a Rotating Cube");

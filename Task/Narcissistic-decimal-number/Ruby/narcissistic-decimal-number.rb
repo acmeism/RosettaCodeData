@@ -3,7 +3,7 @@ class Integer
     return false if negative?
     digs = self.digits
     m    = digs.size
-    digs.map{|d| d**m}.sum == self
+    digs.sum{|d| d**m} == self
   end
 end
 

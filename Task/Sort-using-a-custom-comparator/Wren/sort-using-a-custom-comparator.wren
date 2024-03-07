@@ -1,4 +1,4 @@
-import "/sort" for Cmp, Sort
+import "./sort" for Cmp, Sort
 
 var cmp = Fn.new { |s, t|
     if (s.count < t.count) return 1

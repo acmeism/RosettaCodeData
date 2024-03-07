@@ -1,4 +1,4 @@
-import "/set" for Set
+import "./set" for Set
 
 var symmetricDifference = Fn.new { |a, b| a.except(b).union(b.except(a)) }
 

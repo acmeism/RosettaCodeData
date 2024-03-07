@@ -1,4 +1,4 @@
-import "/dynamic" for Enum
+import "./dynamic" for Enum
 
 var RangeType = Enum.create("RangeType", ["CLOSED", "BOTH_OPEN", "LEFT_OPEN", "RIGHT_OPEN"])
 

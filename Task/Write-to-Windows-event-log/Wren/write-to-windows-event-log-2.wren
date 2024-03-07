@@ -1,3 +1,5 @@
+/* gcc Write_to_Windows_event_log.c -o Write_to_Windows_event_log -lwren -lm */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,7 +67,7 @@ int main(int argc, char **argv) {
     config.bindForeignMethodFn = &bindForeignMethod;
     WrenVM* vm = wrenNewVM(&config);
     const char* module = "main";
-    const char* fileName = "write_to_windows_event_log.wren";
+    const char* fileName = "Write_to_Windows_event_log.wren";
     char *script = readFile(fileName);
     WrenInterpretResult result = wrenInterpret(vm, module, script);
     switch (result) {

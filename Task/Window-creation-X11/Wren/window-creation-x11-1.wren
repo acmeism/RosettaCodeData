@@ -1,4 +1,4 @@
-/* window_creation_x11.wren */
+/* Window_creation_X11.wren */
 
 var KeyPressMask = 1 << 0
 var ExposureMask = 1 << 15

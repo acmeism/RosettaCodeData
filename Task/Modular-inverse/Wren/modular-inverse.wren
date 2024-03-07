@@ -1,4 +1,4 @@
-import "/big" for BigInt
+import "./big" for BigInt
 
 var a = BigInt.new(42)
 var b = BigInt.new(2017)

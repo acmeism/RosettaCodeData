@@ -1,6 +1,6 @@
-import "/str" for Str
-import "/sort" for Sort
-import "/fmt" for Fmt
+import "./str" for Str
+import "./sort" for Sort
+import "./fmt" for Fmt
 
 var solve = Fn.new { |states|
     var dict = {}

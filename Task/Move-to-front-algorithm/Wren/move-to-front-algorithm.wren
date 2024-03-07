@@ -1,5 +1,5 @@
-import "/fmt" for Fmt
-import "/seq" for Lst
+import "./fmt" for Fmt
+import "./seq" for Lst
 
 var encode = Fn.new { |s|
     if (s.isEmpty) return []

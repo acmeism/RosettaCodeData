@@ -1,4 +1,4 @@
-/* web_scraping.wren */
+/* Web_scraping.wren */
 
 import "./pattern" for Pattern
 
@@ -7,7 +7,7 @@ var CURLOPT_FOLLOWLOCATION = 52
 var CURLOPT_WRITEFUNCTION = 20011
 var CURLOPT_WRITEDATA = 10001
 
-var BUFSIZE = 16384
+var BUFSIZE = 16384 * 4
 
 foreign class Buffer {
     construct new(size) {}
@@ -38,6 +38,7 @@ curl.easyCleanup()
 
 var html = buffer.value
 var ix = html.indexOf("(UTC)")
+ix = html.indexOf("(UTC)", ix + 1) // skip the site notice
 if (ix == -1) {
     System.print("UTC time not found.")
     return

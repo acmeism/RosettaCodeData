@@ -18,7 +18,7 @@ on animate
    col[] = [ 000 999 ]
    for x = 0 to 319
       for y = 0 to 199
-         pset x y col[random 2]
+         pset x y col[randint 2]
       .
    .
 .

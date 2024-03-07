@@ -1,4 +1,4 @@
-import 'dart:math';
+import 'dart:math' show pi;
 import 'package:flutter/material.dart';
 
 Path yinYang(double r, double x, double y, [double th = 1.0]) {
@@ -13,13 +13,7 @@ Path yinYang(double r, double x, double y, [double th = 1.0]) {
     ..addArc(cR(-r / 2, r / 2), pi / 2, -pi);
 }
 
-void main() => runApp(const MainApp());
-
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
-  @override
-  Widget build(BuildContext context) => CustomPaint(painter: YinYangPainter());
-}
+void main() => runApp(CustomPaint(painter: YinYangPainter()));
 
 class YinYangPainter extends CustomPainter {
   @override

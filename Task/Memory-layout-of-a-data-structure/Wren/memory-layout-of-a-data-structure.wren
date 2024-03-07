@@ -1,5 +1,5 @@
-import "/seq" for Lst
-import "/fmt" for Fmt
+import "./seq" for Lst
+import "./fmt" for Fmt
 
 var ON  = true
 var OFF = false

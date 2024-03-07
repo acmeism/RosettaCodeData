@@ -1,4 +1,4 @@
-/* svd_emdedded.wren */
+/* Singular_value_decomposition.wren */
 
 import "./fmt" for Fmt
 

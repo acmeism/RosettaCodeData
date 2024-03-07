@@ -1,4 +1,4 @@
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var toTree // recursive
 toTree = Fn.new { |list, index, depth|

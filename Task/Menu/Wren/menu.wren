@@ -1,4 +1,4 @@
-import "/ioutil" for Input
+import "./ioutil" for Input
 
 var menu = Fn.new { |list|
     var n = list.count

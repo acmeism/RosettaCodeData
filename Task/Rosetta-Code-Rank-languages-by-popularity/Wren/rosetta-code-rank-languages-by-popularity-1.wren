@@ -1,4 +1,4 @@
-/* rc_rank_languages_by_popularity.wren */
+/* Rosetta_Code_Rank_languages_by_popularity.wren */
 
 import "./pattern" for Pattern
 import "./fmt" for Fmt
@@ -59,7 +59,7 @@ var findLangs = Fn.new {
 
 var langs = findLangs.call()
 langs.sort { |a, b| a[1] > b[1] }
-System.print("Languages with most examples as at 11 September, 2022:")
+System.print("Languages with most examples as at 3 February, 2024:")
 var rank = 0
 var lastScore = 0
 var lastRank = 0

@@ -1,0 +1,43 @@
+SUB setRightBits (bits(), e, n)
+    IF e = 0 OR n <= 0 THEN EXIT SUB
+    DIM bits2(1 TO e)
+    FOR i = 1 TO e: bits2(i) = bits(i): NEXT
+    FOR i = 1 TO e - 1
+        IF bits(i) = 1 THEN
+            j = i + 1
+            WHILE j <= i + n AND j <= e
+                bits2(j) = 1
+                j = j + 1
+            WEND
+        END IF
+    NEXT i
+    FOR i = 1 TO e: bits(i) = bits2(i): NEXT
+END SUB
+
+b$ = "010000000000100000000010000000010000000100000010000010000100010010"
+DIM tests$(8, 2)
+tests$(1, 1) = "1000": tests$(1, 2) = "2"
+tests$(2, 1) = "0100": tests$(2, 2) = "2"
+tests$(3, 1) = "0010": tests$(3, 2) = "2"
+tests$(4, 1) = "0000": tests$(4, 2) = "2"
+tests$(5, 1) = b$: tests$(5, 2) = "0"
+tests$(6, 1) = b$: tests$(6, 2) = "1"
+tests$(7, 1) = b$: tests$(7, 2) = "2"
+tests$(8, 1) = b$: tests$(8, 2) = "3"
+FOR k = 1 TO 8
+    REDIM bits(1 TO LEN(tests$(k, 1)))
+    FOR i = 1 TO LEN(tests$(k, 1))
+        bits(i) = VAL(MID$(tests$(k, 1), i, 1))
+    NEXT i
+    ub = UBOUND(bits)
+    n = VAL(tests$(k, 2))
+    PRINT USING "n = #; Width e = ##:"; n; ub
+    PRINT "    Input b: "; tests$(k, 1)
+    CALL setRightBits(bits(), ub, n)
+    PRINT "     Result:";
+    FOR i = 1 TO ub
+        PRINT bits(i);
+    NEXT i
+    PRINT CHR$(10)
+NEXT k
+END

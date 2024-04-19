@@ -1,186 +1,204 @@
-#include <algorithm>
-#include <vector>
 #include <iostream>
-#include <string>
+#define HEIGHT 4
+#define WIDTH 4
 
-typedef unsigned char byte;
-
-class world {
+struct Shape {
 public:
-    world( int x, int y ) : _wid( x ), _hei( y ) {
-        int s = _wid * _hei * sizeof( byte );
-        _cells = new byte[s];
-        memset( _cells, 0, s );
-    }
-    ~world() {
-        delete [] _cells;
-    }
-    int wid() const {
-        return _wid;
-    }
-    int hei() const {
-        return _hei;
-    }
-    byte at( int x, int y ) const {
-        return _cells[x + y * _wid];
-    }
-    void set( int x, int y, byte c ) {
-        _cells[x + y * _wid] = c;
-    }
-    void swap( world* w ) {
-        memcpy( _cells, w->_cells, _wid * _hei * sizeof( byte ) );
-    }
-private:
-    int _wid, _hei;
-    byte* _cells;
+    char xCoord;
+    char yCoord;
+    char height;
+    char width;
+    char **figure;
 };
-class rule {
+
+struct Glider : public Shape {
+    static const char GLIDER_SIZE = 3;
+    Glider( char x , char y );
+    ~Glider();
+};
+
+struct Blinker : public Shape {
+    static const char BLINKER_HEIGHT = 3;
+    static const char BLINKER_WIDTH = 1;
+    Blinker( char x , char y );
+    ~Blinker();
+};
+
+class GameOfLife {
 public:
-    rule( world* w ) : wrd( w ) {
-        wid = wrd->wid();
-        hei = wrd->hei();
-        wrdT = new world( wid, hei );
+    GameOfLife( Shape sh );
+    void print();
+    void update();
+    char getState( char state , char xCoord , char yCoord , bool toggle);
+    void iterate(unsigned int iterations);
+private:
+    char world[HEIGHT][WIDTH];
+    char otherWorld[HEIGHT][WIDTH];
+    bool toggle;
+    Shape shape;
+};
+
+GameOfLife::GameOfLife( Shape sh ) :
+    shape(sh) ,
+    toggle(true)
+{
+    for ( char i = 0; i < HEIGHT; i++ ) {
+        for ( char j = 0; j < WIDTH; j++ ) {
+            world[i][j] = '.';
+        }
     }
-    ~rule() {
-        if( wrdT ) delete wrdT;
+    for ( char i = shape.yCoord; i - shape.yCoord < shape.height; i++ ) {
+        for ( char j = shape.xCoord; j - shape.xCoord < shape.width; j++ ) {
+            if ( i < HEIGHT && j < WIDTH ) {
+                world[i][j] =
+                    shape.figure[ i - shape.yCoord ][j - shape.xCoord ];
+            }
+        }
     }
-    bool hasLivingCells() {
-        for( int y = 0; y < hei; y++ )
-            for( int x = 0; x < wid; x++ )
-                if( wrd->at( x, y ) ) return true;
-        std::cout << "*** All cells are dead!!! ***\n\n";
-        return false;
+}
+
+void GameOfLife::print() {
+    if ( toggle ) {
+        for ( char i = 0; i < HEIGHT; i++ ) {
+            for ( char j = 0; j < WIDTH; j++ ) {
+                std::cout << world[i][j];
+            }
+            std::cout << std::endl;
+        }
+    } else {
+        for ( char i = 0; i < HEIGHT; i++ ) {
+            for ( char j = 0; j < WIDTH; j++ ) {
+                std::cout << otherWorld[i][j];
+            }
+            std::cout << std::endl;
+        }
     }
-    void swapWrds() {
-        wrd->swap( wrdT );
+    for ( char i = 0; i < WIDTH; i++ ) {
+        std::cout << '=';
     }
-    void setRuleB( std::vector<int>& birth ) {
-        _birth = birth;
+    std::cout << std::endl;
+}
+
+void GameOfLife::update() {
+    if (toggle) {
+        for ( char i = 0; i < HEIGHT; i++ ) {
+            for ( char j = 0; j < WIDTH; j++ ) {
+                otherWorld[i][j] =
+                    GameOfLife::getState(world[i][j] , i , j , toggle);
+            }
+        }
+        toggle = !toggle;
+    } else {
+        for ( char i = 0; i < HEIGHT; i++ ) {
+            for ( char j = 0; j < WIDTH; j++ ) {
+                world[i][j] =
+                    GameOfLife::getState(otherWorld[i][j] , i , j , toggle);
+            }
+        }
+        toggle = !toggle;
     }
-    void setRuleS( std::vector<int>& stay ) {
-        _stay = stay;
-    }
-    void applyRules() {
-        int n;
-        for( int y = 0; y < hei; y++ ) {
-            for( int x = 0; x < wid; x++ ) {
-                n = neighbours( x, y );
-                if( wrd->at( x, y ) ) {
-                    wrdT->set( x, y, inStay( n ) ? 1 : 0 );
-                } else {
-                    wrdT->set( x, y, inBirth( n ) ? 1 : 0 );
+}
+
+char GameOfLife::getState( char state, char yCoord, char xCoord, bool toggle ) {
+    char neighbors = 0;
+    if ( toggle ) {
+        for ( char i = yCoord - 1; i <= yCoord + 1; i++ ) {
+            for ( char j = xCoord - 1; j <= xCoord + 1; j++ ) {
+                if ( i == yCoord && j == xCoord ) {
+                    continue;
+                }
+                if ( i > -1 && i < HEIGHT && j > -1 && j < WIDTH ) {
+                    if ( world[i][j] == 'X' ) {
+                        neighbors++;
+                    }
+                }
+            }
+        }
+    } else {
+        for ( char i = yCoord - 1; i <= yCoord + 1; i++ ) {
+            for ( char j = xCoord - 1; j <= xCoord + 1; j++ ) {
+                if ( i == yCoord && j == xCoord ) {
+                    continue;
+                }
+                if ( i > -1 && i < HEIGHT && j > -1 && j < WIDTH ) {
+                    if ( otherWorld[i][j] == 'X' ) {
+                        neighbors++;
+                    }
                 }
             }
         }
     }
-private:
-    int neighbours( int xx, int yy ) {
-        int n = 0, nx, ny;
-        for( int y = -1; y < 2; y++ ) {
-            for( int x = -1; x < 2; x++ ) {
-                if( !x && !y ) continue;
-                nx = ( wid + xx + x ) % wid;
-                ny = ( hei + yy + y ) % hei;
-                n += wrd->at( nx, ny ) > 0 ? 1 : 0;
-            }
-        }
-        return n;
+    if (state == 'X') {
+        return ( neighbors > 1 && neighbors < 4 ) ? 'X' : '.';
     }
-    bool inStay( int n ) {
-        return( _stay.end() != find( _stay.begin(), _stay.end(), n ) );
+    else {
+        return ( neighbors == 3 ) ? 'X' : '.';
     }
-    bool inBirth( int n ) {
-        return( _birth.end() != find( _birth.begin(), _birth.end(), n ) );
-    }
-    int wid, hei;
-    world *wrd, *wrdT;
-    std::vector<int> _stay, _birth;
-};
-class cellular {
-public:
-    cellular( int w, int h ) : rl( 0 ) {
-        wrd = new world( w, h );
-    }
-    ~cellular() {
-        if( rl ) delete rl;
-        delete wrd;
-    }
-    void start( int r ) {
-        rl = new rule( wrd );
-        gen = 1;
-        std::vector<int> t;
-        switch( r ) {
-            case 1: // conway
-                t.push_back( 2 ); t.push_back( 3 ); rl->setRuleS( t );
-                t.clear(); t.push_back( 3 ); rl->setRuleB( t );
-                break;
-            case 2: // amoeba
-                t.push_back( 1 ); t.push_back( 3 ); t.push_back( 5 ); t.push_back( 8 ); rl->setRuleS( t );
-                t.clear(); t.push_back( 3 ); t.push_back( 5 ); t.push_back( 7 ); rl->setRuleB( t );
-                break;
-            case 3: // life34
-                t.push_back( 3 ); t.push_back( 4 ); rl->setRuleS( t );
-                rl->setRuleB( t );
-                break;
-            case 4: // maze
-                t.push_back( 1 ); t.push_back( 2 ); t.push_back( 3 ); t.push_back( 4 ); t.push_back( 5 ); rl->setRuleS( t );
-                t.clear(); t.push_back( 3 ); rl->setRuleB( t );
-                break;
-        }
+}
 
-        /* just for test - shoud read from a file */
-        /* GLIDER */
-        wrd->set( 6, 1, 1 ); wrd->set( 7, 2, 1 );
-        wrd->set( 5, 3, 1 ); wrd->set( 6, 3, 1 );
-        wrd->set( 7, 3, 1 );
-        /* BLINKER */
-        wrd->set( 1, 3, 1 ); wrd->set( 2, 3, 1 );
-        wrd->set( 3, 3, 1 );
-        /******************************************/
-        generation();
+void GameOfLife::iterate( unsigned int iterations ) {
+    for ( int i = 0; i < iterations; i++ ) {
+        print();
+        update();
     }
-private:
-    void display() {
-        system( "cls" );
-        int wid = wrd->wid(),
-            hei = wrd->hei();
-        std::cout << "+" << std::string( wid, '-' ) << "+\n";
-        for( int y = 0; y < hei; y++ ) {
-            std::cout << "|";
-            for( int x = 0; x < wid; x++ ) {
-                if( wrd->at( x, y ) ) std::cout << "#";
-                else std::cout << ".";
-            }
-            std::cout << "|\n";
-        }
-        std::cout << "+" << std::string( wid, '-' ) << "+\n";
-        std::cout << "Generation: " << gen << "\n\nPress [RETURN] for the next generation...";
-        std::cin.get();
-    }
-    void generation() {
-        do {
-            display();
-            rl->applyRules();
-            rl->swapWrds();
-            gen++;
-        }
-        while ( rl->hasLivingCells() );
-    }
-    rule* rl;
-    world* wrd;
-    int gen;
-};
+}
 
-int main( int argc, char* argv[] ) {
-    cellular c( 20, 12 );
-    std::cout << "\n\t*** CELLULAR AUTOMATA ***" << "\n\n Which one you want to run?\n\n\n";
-    std::cout << " [1]\tConway's Life\n [2]\tAmoeba\n [3]\tLife 34\n [4]\tMaze\n\n > ";
-    int o;
-    do {
-        std::cin >> o;
+Glider::Glider( char x , char y ) {
+    xCoord = x;
+    yCoord = y;
+    height = GLIDER_SIZE;
+    width = GLIDER_SIZE;
+    figure = new char*[GLIDER_SIZE];
+    for ( char i = 0; i < GLIDER_SIZE; i++ ) {
+        figure[i] = new char[GLIDER_SIZE];
     }
-    while( o < 1 || o > 4 );
-    std::cin.ignore();
-    c.start( o );
-    return system( "pause" );
+    for ( char i = 0; i < GLIDER_SIZE; i++ ) {
+        for ( char j = 0; j < GLIDER_SIZE; j++ ) {
+            figure[i][j] = '.';
+        }
+    }
+    figure[0][1] = 'X';
+    figure[1][2] = 'X';
+    figure[2][0] = 'X';
+    figure[2][1] = 'X';
+    figure[2][2] = 'X';
+}
+
+Glider::~Glider() {
+    for ( char i = 0; i < GLIDER_SIZE; i++ ) {
+        delete[] figure[i];
+    }
+    delete[] figure;
+}
+
+Blinker::Blinker( char x , char y ) {
+    xCoord = x;
+    yCoord = y;
+    height = BLINKER_HEIGHT;
+    width = BLINKER_WIDTH;
+    figure = new char*[BLINKER_HEIGHT];
+    for ( char i = 0; i < BLINKER_HEIGHT; i++ ) {
+        figure[i] = new char[BLINKER_WIDTH];
+    }
+    for ( char i = 0; i < BLINKER_HEIGHT; i++ ) {
+        for ( char j = 0; j < BLINKER_WIDTH; j++ ) {
+            figure[i][j] = 'X';
+        }
+    }
+}
+
+Blinker::~Blinker() {
+    for ( char i = 0; i < BLINKER_HEIGHT; i++ ) {
+        delete[] figure[i];
+    }
+    delete[] figure;
+}
+
+int main() {
+    Glider glider(0,0);
+    GameOfLife gol(glider);
+    gol.iterate(5);
+    Blinker blinker(1,0);
+    GameOfLife gol2(blinker);
+    gol2.iterate(4);
 }

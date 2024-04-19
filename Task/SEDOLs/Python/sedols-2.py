@@ -22,7 +22,7 @@ def sedolCheckSumDigitLR(s):
             zip(s, [1, 3, 1, 7, 3, 9]),
             Right(0)
         )
-    )(lambda d: Right(str((10 - (d % 10)) % 10)))
+    )(lambda d: Right(str((-d) % 10)))
 
 
 # sedolValLR :: Char -> Either String Char

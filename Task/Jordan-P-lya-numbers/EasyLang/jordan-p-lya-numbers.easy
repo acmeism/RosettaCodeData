@@ -37,7 +37,7 @@ repeat
       c += 1
       if c <= 50
          write n
-         if c mod 10 = 0
+         if c mod 8 = 0
             print ""
          .
       .

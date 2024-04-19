@@ -51,13 +51,14 @@ proc getprims n . prims[] .
       m = n mod i
       if m = 0
          prims[] &= i
-         prims[] &= 0
+         cnt = 0
          while m = 0
-            prims[-1] += 1
+            cnt += 1
             n = d
             d = n div i
             m = n mod i
          .
+         prims[] &= cnt
       .
    .
 .

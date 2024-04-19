@@ -16,11 +16,11 @@ begin % show some Stirling numbers of the second kind                         %
         % print the Stirling numbers                                          %
         write( "Stirling numbers of the second kind:" );
         write( " k" );
-        for k := 0 until MAX_STIRLING do writeon( i_w := 10, s_w := 0, k );
+        for k := 0 until MAX_STIRLING do writeon( i_w := 8, s_w := 0, k );
         write( " n" );
         for n := 0 until MAX_STIRLING do begin
             write( i_w := 2, s_w := 0, n );
-            for k := 0 until n do writeon( i_w := 10, s_w := 0, s2( n, k ) );
+            for k := 0 until n do writeon( i_w := 8, s_w := 0, s2( n, k ) );
         end for_n
     end
 end.

@@ -1,0 +1,112 @@
+Type BitFilter
+    nombre As String
+    accu As Integer
+    bits As Integer
+    bw As Integer
+    br As Integer
+    offset As Integer
+End Type
+
+Sub openWriter(bf As BitFilter)
+    bf.bw = Freefile
+    Open bf.nombre For Binary Access Write As #bf.bw
+End Sub
+
+Sub openReader(bf As BitFilter)
+    bf.br = Freefile
+    Open bf.nombre For Binary Access Read As #bf.br
+    bf.offset = 0
+End Sub
+
+Sub escribe(bf As BitFilter, buf() As Byte, start As Integer, nBits As Integer, shift As Integer)
+    Dim As Integer index = start + (shift \ 8)
+    shift Mod= 8
+    While nBits <> 0 Or bf.bits >= 8
+        While bf.bits >= 8
+            bf.bits -= 8
+            Dim As Byte outByte = ((bf.accu Shr bf.bits) And &hFF)
+            Put #bf.bw, , outByte
+        Wend
+        While bf.bits < 8 And nBits <> 0
+            Dim As Byte b = buf(index)
+            bf.accu = (bf.accu Shl 1) Or (((128 Shr shift) And b) Shr (7 - shift))
+            nBits -= 1
+            bf.bits += 1
+            shift += 1
+            If shift = 8 Then
+                shift = 0
+                index += 1
+            End If
+        Wend
+    Wend
+End Sub
+
+Sub lee(bf As BitFilter, buf() As Byte, start As Integer, nBits As Integer, shift As Integer)
+    Dim As Integer index = start + (shift \ 8)
+    shift Mod= 8
+    While nBits <> 0
+        While bf.bits <> 0 And nBits <> 0
+            Dim As Byte mask = 128 Shr shift
+            buf(index) = Iif((bf.accu And (1 Shl (bf.bits - 1))) <> 0, (buf(index) Or mask) And &hFF, (buf(index) And Not mask) And &hFF)
+            nBits -= 1
+            bf.bits -= 1
+            shift += 1
+            If shift >= 8 Then
+                shift = 0
+                index += 1
+            End If
+        Wend
+        If nBits = 0 Then Exit Sub
+        Dim As Byte inByte
+        Get #bf.br, bf.offset + 1, inByte
+        bf.accu = (bf.accu Shl 8) Or inByte
+        bf.bits += 8
+        bf.offset += 1
+    Wend
+End Sub
+
+Sub closeWriter(bf As BitFilter)
+    If bf.bits <> 0 Then
+        bf.accu Shl= (8 - bf.bits)
+        Dim As Byte outByte = (bf.accu And &hFF)
+        Put #bf.bw, , outByte
+    End If
+    Close #bf.bw
+    bf.accu = 0
+    bf.bits = 0
+End Sub
+
+Sub closeReader(bf As BitFilter)
+    Close #bf.br
+    bf.accu = 0
+    bf.bits = 0
+    bf.offset = 0
+End Sub
+
+Dim As Integer i
+Dim As BitFilter bf
+bf.nombre = "test.bin"
+
+' for each byte in s, write 7 bits skipping 1
+Dim As Byte s(10) => {Asc("a"), Asc("b"), Asc("c"), Asc("d"), _
+Asc("e"), Asc("f"), Asc("g"), Asc("h"), Asc("i"), Asc("j"), Asc("k")}
+openWriter(bf)
+For i = 0 To Ubound(s)
+    escribe(bf, s(), i, 7, 1)
+Next i
+closeWriter(bf)
+
+' read 7 bits and expand to each byte of s2 skipping 1 bit
+openReader(bf)
+Dim As Byte s2(0 To Ubound(s)) = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+For i = 0 To Ubound(s2)
+    lee(bf, s2(), i, 7, 1)
+Next i
+closeReader(bf)
+
+For i = 0 To Ubound(s2)
+    Print Chr(s2(i));
+Next i
+Print
+
+Sleep

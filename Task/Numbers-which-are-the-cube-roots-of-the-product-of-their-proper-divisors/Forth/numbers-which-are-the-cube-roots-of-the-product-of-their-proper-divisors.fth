@@ -1,5 +1,5 @@
 500000 constant limit
-variable pdc limit cells allot
+create pdc limit cells allot
 
 : main
   limit 0 do

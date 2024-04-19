@@ -25,4 +25,4 @@ proc sundaram np . primes[] .
 sundaram 100 primes[]
 print primes[]
 sundaram 1000000 primes[]
-print primes[-1]
+print primes[len primes[]]

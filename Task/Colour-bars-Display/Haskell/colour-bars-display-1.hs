@@ -18,9 +18,10 @@ barImage :: Int -> Int -> Image
 barImage w h = colorBars h $ zip (barWidths nBars w) attrs
   where attrs = map color2attr colors
         nBars = length colors
-        colors = [black, brightRed, brightGreen, brightMagenta, brightCyan, brightYellow, brightWhite]
+        colors = [black, brightRed, brightGreen, brightBlue, brightMagenta, brightCyan, brightYellow, brightWhite]
         color2attr c = Attr Default Default (SetTo c)
 
+main :: IO ()
 main = do
     cfg <- standardIOConfig
     vty <- mkVty cfg

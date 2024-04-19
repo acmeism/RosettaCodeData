@@ -11,13 +11,8 @@ func ends s$ t$ .
    return 0
 .
 func contains s$ t$ .
-   for i to len s$ - len t$ + 1
-      if substr s$ i len t$ = t$
-         return 1
-      .
-   .
-   return 0
+   return if strpos s$ t$ > 0
 .
 print starts "hello world" "he"
 print ends "hello world" "rld"
-print contains "hello world" "wo"
+print contains "hello world" "wor"

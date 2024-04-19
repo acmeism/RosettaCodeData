@@ -25,18 +25,18 @@ func timp x y .
    .
    return x
 .
-print "     (AND)      ( OR)      (EQV)      (IMP)     (NOT)"
-print "     F ? T      F ? T      F ? T      F ? T          "
-print "    -------------------------------------------------"
+print "     (AND)    ( OR)    (EQV)    (IMP)   (NOT)"
+print "     F ? T    F ? T    F ? T    F ? T        "
+print "    -----------------------------------------"
 for i = -1 to 1
    o$ = " " & sym$[i] & " | "
    o$ &= sym$[tand -1 i] & " " & sym$[tand 0 i] & " " & sym$[tand 1 i]
-   o$ &= "      "
+   o$ &= "    "
    o$ &= sym$[tor -1 i] & " " & sym$[tor 0 i] & " " & sym$[tor 1 i]
-   o$ &= "      "
+   o$ &= "    "
    o$ &= sym$[timp -1 i] & " " & sym$[timp 0 i] & " " & sym$[timp 1 i]
-   o$ &= "      "
+   o$ &= "    "
    o$ &= sym$[timp -1 i] & " " & sym$[timp 0 i] & " " & sym$[timp 1 i]
-   o$ &= "       " & sym$[tnot i]
+   o$ &= "     " & sym$[tnot i]
    print o$
 .

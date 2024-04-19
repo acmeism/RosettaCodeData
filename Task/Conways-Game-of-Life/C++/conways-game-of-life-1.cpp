@@ -1,204 +1,253 @@
 #include <iostream>
-#define HEIGHT 4
-#define WIDTH 4
+#include <vector>
+#include <SFML/Graphics.hpp>
+#include <thread>
+#include <chrono>
+using namespace std;
 
-struct Shape {
-public:
-    char xCoord;
-    char yCoord;
-    char height;
-    char width;
-    char **figure;
+class Life {
+    private:
+        int ticks;
+        bool pass;
+        int height;
+        int width;
+        bool **board;
+        bool **buffer;
+        vector<pair<float,float>> liveCoords;
+        void init();
+        void lives(int x, int y);
+        void dies(int x, int y);
+        bool isAlive(bool **curr, int x, int y);
+        int checkNeighbors(bool **curr, int x, int y);
+        void evaluatePosition(bool** curr, int x, int y);
+    public:
+        Life(int w = 100, int h = 50, int seed = 1337);
+        Life(const Life& life);
+        ~Life();
+        vector<pair<float,float>> doTick();
+        Life& operator=(const Life& life);
 };
-
-struct Glider : public Shape {
-    static const char GLIDER_SIZE = 3;
-    Glider( char x , char y );
-    ~Glider();
-};
-
-struct Blinker : public Shape {
-    static const char BLINKER_HEIGHT = 3;
-    static const char BLINKER_WIDTH = 1;
-    Blinker( char x , char y );
-    ~Blinker();
-};
-
-class GameOfLife {
-public:
-    GameOfLife( Shape sh );
-    void print();
-    void update();
-    char getState( char state , char xCoord , char yCoord , bool toggle);
-    void iterate(unsigned int iterations);
-private:
-    char world[HEIGHT][WIDTH];
-    char otherWorld[HEIGHT][WIDTH];
-    bool toggle;
-    Shape shape;
-};
-
-GameOfLife::GameOfLife( Shape sh ) :
-    shape(sh) ,
-    toggle(true)
-{
-    for ( char i = 0; i < HEIGHT; i++ ) {
-        for ( char j = 0; j < WIDTH; j++ ) {
-            world[i][j] = '.';
-        }
-    }
-    for ( char i = shape.yCoord; i - shape.yCoord < shape.height; i++ ) {
-        for ( char j = shape.xCoord; j - shape.xCoord < shape.width; j++ ) {
-            if ( i < HEIGHT && j < WIDTH ) {
-                world[i][j] =
-                    shape.figure[ i - shape.yCoord ][j - shape.xCoord ];
-            }
+void Life::init() {
+    board = new bool*[height];
+    buffer = new bool*[height];
+    for (int y = 0; y < height; y++) {
+        board[y] = new bool[width];
+        buffer[y] = new bool[width];
+        for (int x = 0; x < width; x++) {
+            board[y][x] = false;
+            buffer[y][x] = false;
         }
     }
 }
 
-void GameOfLife::print() {
-    if ( toggle ) {
-        for ( char i = 0; i < HEIGHT; i++ ) {
-            for ( char j = 0; j < WIDTH; j++ ) {
-                std::cout << world[i][j];
-            }
-            std::cout << std::endl;
+Life::Life(int w, int h, int seed) {
+    width = w;
+    height = h;
+    init();
+    for (int i = 0; i < seed; i++) {
+        board[rand() % height][rand() % width] = true;
+    }
+    pass = true;
+}
+
+Life::Life(const Life& life) {
+    width = life.width;
+    height = life.height;
+    init();
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            board[y][x] = life.board[y][x];
+            buffer[y][x] = life.buffer[y][x];
+        }
+    }
+}
+
+Life& Life::operator=(const Life& life) {
+    width = life.width;
+    height = life.height;
+    init();
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            board[y][x] = life.board[y][x];
+            buffer[y][x] = life.buffer[y][x];
+        }
+    }
+    return *this;
+}
+
+Life::~Life() {
+    for (int i = 0; i < height; i++) {
+        delete [] board[i];
+        delete [] buffer[i];
+    }
+    delete [] board;
+    delete [] buffer;
+}
+
+vector<pair<float,float>> Life::doTick() {
+    liveCoords.clear();
+    bool **currentGeneration = pass ? board:buffer;
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            evaluatePosition(currentGeneration, x, y);
+        }
+    }
+    pass = !pass;
+    ticks++;
+    return liveCoords;
+}
+
+
+bool Life::isAlive(bool **curr, int x, int y) {
+    return curr[y][x];
+}
+int Life::checkNeighbors(bool **curr, int x, int y) {
+    int lc = 0;
+    int dx[8] = {-1, 0, 1,1,1,-1, 0,-1};
+    int dy[8] = {-1,-1,-1,0,1, 1, 1, 0};
+    for (int i = 0; i < 8; i++) {
+        int nx = ((dx[i]+x)+width) % width;
+        int ny = ((dy[i]+y)+height) % height;
+        lc += isAlive(curr, nx, ny);
+    }
+    return lc;
+}
+void Life::lives(int x, int y) {
+    if (!pass) {
+        board[y][x] = true;
+    } else {
+        buffer[y][x] = true;
+    }
+    liveCoords.push_back(make_pair((float)x,(float)y));
+}
+void Life::dies(int x, int y) {
+    if (!pass) {
+        board[y][x] = false;
+    } else {
+        buffer[y][x] = false;
+    }
+}
+void Life::evaluatePosition(bool** generation, int x, int y) {
+    int lc = checkNeighbors(generation, x, y);
+    if (isAlive(generation, x, y)) {
+        if (lc == 2 || lc == 3) {
+            lives(x, y);
+        } else {
+            dies(x, y);
         }
     } else {
-        for ( char i = 0; i < HEIGHT; i++ ) {
-            for ( char j = 0; j < WIDTH; j++ ) {
-                std::cout << otherWorld[i][j];
-            }
-            std::cout << std::endl;
-        }
-    }
-    for ( char i = 0; i < WIDTH; i++ ) {
-        std::cout << '=';
-    }
-    std::cout << std::endl;
-}
-
-void GameOfLife::update() {
-    if (toggle) {
-        for ( char i = 0; i < HEIGHT; i++ ) {
-            for ( char j = 0; j < WIDTH; j++ ) {
-                otherWorld[i][j] =
-                    GameOfLife::getState(world[i][j] , i , j , toggle);
-            }
-        }
-        toggle = !toggle;
-    } else {
-        for ( char i = 0; i < HEIGHT; i++ ) {
-            for ( char j = 0; j < WIDTH; j++ ) {
-                world[i][j] =
-                    GameOfLife::getState(otherWorld[i][j] , i , j , toggle);
-            }
-        }
-        toggle = !toggle;
-    }
-}
-
-char GameOfLife::getState( char state, char yCoord, char xCoord, bool toggle ) {
-    char neighbors = 0;
-    if ( toggle ) {
-        for ( char i = yCoord - 1; i <= yCoord + 1; i++ ) {
-            for ( char j = xCoord - 1; j <= xCoord + 1; j++ ) {
-                if ( i == yCoord && j == xCoord ) {
-                    continue;
-                }
-                if ( i > -1 && i < HEIGHT && j > -1 && j < WIDTH ) {
-                    if ( world[i][j] == 'X' ) {
-                        neighbors++;
-                    }
-                }
-            }
-        }
-    } else {
-        for ( char i = yCoord - 1; i <= yCoord + 1; i++ ) {
-            for ( char j = xCoord - 1; j <= xCoord + 1; j++ ) {
-                if ( i == yCoord && j == xCoord ) {
-                    continue;
-                }
-                if ( i > -1 && i < HEIGHT && j > -1 && j < WIDTH ) {
-                    if ( otherWorld[i][j] == 'X' ) {
-                        neighbors++;
-                    }
-                }
-            }
-        }
-    }
-    if (state == 'X') {
-        return ( neighbors > 1 && neighbors < 4 ) ? 'X' : '.';
-    }
-    else {
-        return ( neighbors == 3 ) ? 'X' : '.';
-    }
-}
-
-void GameOfLife::iterate( unsigned int iterations ) {
-    for ( int i = 0; i < iterations; i++ ) {
-        print();
-        update();
-    }
-}
-
-Glider::Glider( char x , char y ) {
-    xCoord = x;
-    yCoord = y;
-    height = GLIDER_SIZE;
-    width = GLIDER_SIZE;
-    figure = new char*[GLIDER_SIZE];
-    for ( char i = 0; i < GLIDER_SIZE; i++ ) {
-        figure[i] = new char[GLIDER_SIZE];
-    }
-    for ( char i = 0; i < GLIDER_SIZE; i++ ) {
-        for ( char j = 0; j < GLIDER_SIZE; j++ ) {
-            figure[i][j] = '.';
-        }
-    }
-    figure[0][1] = 'X';
-    figure[1][2] = 'X';
-    figure[2][0] = 'X';
-    figure[2][1] = 'X';
-    figure[2][2] = 'X';
-}
-
-Glider::~Glider() {
-    for ( char i = 0; i < GLIDER_SIZE; i++ ) {
-        delete[] figure[i];
-    }
-    delete[] figure;
-}
-
-Blinker::Blinker( char x , char y ) {
-    xCoord = x;
-    yCoord = y;
-    height = BLINKER_HEIGHT;
-    width = BLINKER_WIDTH;
-    figure = new char*[BLINKER_HEIGHT];
-    for ( char i = 0; i < BLINKER_HEIGHT; i++ ) {
-        figure[i] = new char[BLINKER_WIDTH];
-    }
-    for ( char i = 0; i < BLINKER_HEIGHT; i++ ) {
-        for ( char j = 0; j < BLINKER_WIDTH; j++ ) {
-            figure[i][j] = 'X';
+        if (lc == 3) {
+            lives(x, y);
+        } else {
+            dies(x, y);
         }
     }
 }
 
-Blinker::~Blinker() {
-    for ( char i = 0; i < BLINKER_HEIGHT; i++ ) {
-        delete[] figure[i];
-    }
-    delete[] figure;
+class App {
+    private:
+        void sleep();
+        void drawLiveCells();
+        void render();
+        void handleEvent(sf::Event& event);
+        void saveDisplay();
+        int width;
+        int height;
+        Life life;
+        bool isRecording;
+        int tick;
+        sf::RenderWindow* window;
+        sf::RenderTexture* texture;
+    public:
+        App(int w = 100, int h = 50);
+        void start();
+};
+
+App::App(int w, int h) {
+    height = h;
+    width = w;
+    life = Life(width, height);
+    isRecording = false;
+    tick = 0;
 }
 
-int main() {
-    Glider glider(0,0);
-    GameOfLife gol(glider);
-    gol.iterate(5);
-    Blinker blinker(1,0);
-    GameOfLife gol2(blinker);
-    gol2.iterate(4);
+void App::start() {
+    sf::Event event;
+    window = new sf::RenderWindow(sf::VideoMode(width*10, height*10), "The Game of Life");
+    texture = new sf::RenderTexture();
+    texture->create(width*10, height*10);
+    window->setFramerateLimit(60);
+    while (window->isOpen()) {
+        while (window->pollEvent(event)) {
+            handleEvent(event);
+        }
+        render();
+        tick++;
+    }
+    delete window;
+    delete texture;
+}
+
+void App::handleEvent(sf::Event& event) {
+    if (event.type == sf::Event::Closed) {
+        window->close();
+    }
+    if (event.type == sf::Event::KeyPressed) {
+        switch (event.key.code) {
+            case sf::Keyboard::R:
+                life = Life(width, height);
+                break;
+            case sf::Keyboard::S:
+                isRecording = !isRecording;
+                break;
+            case sf::Keyboard::Q:
+            case sf::Keyboard::Escape:
+                window->close();
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+void App::sleep() {
+    std::this_thread::sleep_for(350ms);
+}
+
+void App::drawLiveCells() {
+
+    float XSCALE = 10.0, YSCALE = 10.0;
+    sf::RectangleShape rect;
+    rect.setSize(sf::Vector2f(XSCALE, YSCALE));
+    rect.setFillColor(sf::Color::Green);
+    auto coords = life.doTick();
+    texture->clear(sf::Color::Black);
+    for (auto m : coords) {
+        rect.setPosition(m.first*XSCALE, m.second*YSCALE);
+        texture->draw(rect);
+    }
+    texture->display();
+}
+
+void App::render() {
+    drawLiveCells();
+    window->clear();
+    sf::Sprite sprite(texture->getTexture());
+    window->draw(sprite);
+    window->display();
+    if (isRecording) saveDisplay();
+    sleep();
+}
+
+void App::saveDisplay() {
+    string name = "tick" + to_string(tick) + ".png";
+    sf::Image image = texture->getTexture().copyToImage();
+    image.saveToFile(name);
+}
+
+int main(int argc, char* argv[]) {
+    srand(time(0));
+    App app;
+    app.start();
+    return 0;
 }

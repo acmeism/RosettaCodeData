@@ -28,7 +28,7 @@ const func string: md5 (in var string: message) is func
         6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21);
     const array integer: k is createMd5Table;
     var integer: length is 0;
-    var integer: chunkIndex is 0;
+    var integer: wordIndex is 1;
     var integer: index is 0;
     var array bin32: m is 16 times bin32.value;
     var integer: a0 is 16#67452301;   # a
@@ -49,13 +49,14 @@ const func string: md5 (in var string: message) is func
     # Append '0' bits, so that the resulting bit length is congruent to 448 (mod 512).
     message &:= "\0;" mult 63 - (length + 8) mod 64;
     # Append length of message (before pre-processing), in bits, as 64-bit little-endian integer.
-    message &:= int64AsEightBytesLe(8 * length);
+    message &:= bytes(8 * length, UNSIGNED, LE, 8);
 
     # Process the message in successive 512-bit chunks:
-    for chunkIndex range 1 to length(message) step 64 do
+    while wordIndex <= length(message) do
       # Break chunk into sixteen 32-bit little-endian words.
       for index range 1 to 16 do
-        m[index] := bin32(bytes2Int(message[chunkIndex + 4 * pred(index) len 4], UNSIGNED, LE));
+        m[index] := bin32(bytes2Int(message[wordIndex fixLen 4], UNSIGNED, LE));
+        wordIndex +:= 4;
       end for;
 
       a := bin32(a0 mod 16#100000000);
@@ -69,13 +70,13 @@ const func string: md5 (in var string: message) is func
           g := index;
         elsif index <= 32 then
           f := c >< (d & (b >< c));
-          g := (5 * index - 4) mod 16 + 1;
+          g := succ((5 * index - 4) mod 16);
         elsif index <= 48 then
           f := b >< c >< d;
-          g := (3 * index + 2) mod 16 + 1;
+          g := succ((3 * index + 2) mod 16);
         else
           f := c >< (b | (bin32(16#ffffffff) >< d));
-          g := (7 * pred(index)) mod 16 + 1;
+          g := succ((7 * pred(index)) mod 16);
         end if;
 
         temp := d;
@@ -92,13 +93,13 @@ const func string: md5 (in var string: message) is func
       b0 +:= ord(b);
       c0 +:= ord(c);
       d0 +:= ord(d);
-    end for;
+    end while;
 
     # Produce the final hash value:
-    digest := int32AsFourBytesLe(a0) &
-              int32AsFourBytesLe(b0) &
-              int32AsFourBytesLe(c0) &
-              int32AsFourBytesLe(d0);
+    digest := bytes(a0 mod 16#100000000, UNSIGNED, LE, 4) &
+              bytes(b0 mod 16#100000000, UNSIGNED, LE, 4) &
+              bytes(c0 mod 16#100000000, UNSIGNED, LE, 4) &
+              bytes(d0 mod 16#100000000, UNSIGNED, LE, 4);
   end func;
 
 const func boolean: checkMd5 (in string: message, in string: hexMd5) is

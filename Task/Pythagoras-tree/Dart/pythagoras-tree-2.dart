@@ -21,8 +21,7 @@ class TreePainter extends CustomPainter {
       basis = [];
       for (var (a, b) in basis0) {
         final v = Offset((b - a).dy, (a - b).dx);
-        final (c, d) = (a + v, b + v);
-        final e = (c + d + v) / 2;
+        final [c, d, e] = [a, b, (a + b + v) / 2].map((p) => p + v).toList();
         basis.addAll([(c, e), (e, d)]);
         path.addPolygon([a, c, e, d, c, d, b], true);
       }

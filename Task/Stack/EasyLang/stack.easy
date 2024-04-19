@@ -3,10 +3,11 @@ proc push v . .
    stack[] &= v
 .
 func pop .
-   if len stack[] = 0
+   lng = len stack[]
+   if lng = 0
       return 0
    .
-   r = stack[-1]
+   r = stack[lng]
    len stack[] -1
    return r
 .

@@ -1,6 +1,5 @@
-template<class T>
-class tree
-{
+template<typename T>
+class tree {
   T value;
   tree *left;
   tree *right;

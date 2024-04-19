@@ -34,7 +34,7 @@ BEGIN # model Abelian sandpiles #
     OP   MAX = ( [,]INT s )INT:
          BEGIN
             INT result := s[ 1 LWB s, 2 LWB s ];
-            FOR i FROM 1 LWB s TO 2 UPB s DO
+            FOR i FROM 1 LWB s TO 1 UPB s DO
                 FOR j FROM 2 LWB s TO 2 UPB s DO
                     IF s[ i, j ] > result THEN result := s[ i, j ] FI
                 OD

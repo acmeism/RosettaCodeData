@@ -31,8 +31,7 @@ public class SetConsolidation
     private static IEnumerable<IEnumerable<T>> ConsolidateSets1<T>(IEnumerable<IEnumerable<T>> sets,
         IEqualityComparer<T> comparer = null)
     {
-        if (comparer == null) comparer = EqualityComparer<T>.Default;
-        var elements = new Dictionary<T, Node<T>>();
+        var elements = new Dictionary<T, Node<T>>(comparer );
         foreach (var set in sets) {
             Node<T> top = null;
             foreach (T value in set) {

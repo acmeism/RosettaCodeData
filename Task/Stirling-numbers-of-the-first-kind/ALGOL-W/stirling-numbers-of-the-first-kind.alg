@@ -18,13 +18,13 @@ begin % show some (unsigned) Stirling numbers of the first kind              %
         end for_n ;
         % print the Stirling numbers up to n, k = 12                          %
         write( "Unsigned Stirling numbers of the first kind:" );
-        write( " k" );
-        for k := 0 until MAX_STIRLING do writeon( i_w := 10, s_w := 0, k );
+        write( " k  0" );
+        for k := 1 until MAX_STIRLING do writeon( i_w := if k < 6 then 10 else 9, s_w := 0, k );
         write( " n" );
         for n := 0 until MAX_STIRLING do begin
-            write( i_w := 2, s_w := 0, n );
-            for k := 0 until n do begin
-                writeon( i_w := 10, s_w := 0, s1( n, k ) )
+            write( i_w := 2, s_w := 0, n, i_w := 3, s1( n, 0 ) );
+            for k := 1 until n do begin
+                writeon( i_w := if k < 6 then 10 else 9, s_w := 0, s1( n, k ) )
             end for_k
         end for_n
     end

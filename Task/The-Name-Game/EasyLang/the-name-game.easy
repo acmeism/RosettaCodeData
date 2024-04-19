@@ -1,65 +1,26 @@
-proc toLowercase string$ . result$ .
-   for i = 1 to len string$
-      code = strcode substr string$ i 1
-      if code >= 65 and code <= 90
-         code += 32
-      .
-      result$ &= strchar code
+proc verse x$ . .
+   x1$ = substr x$ 1 1
+   y$ = substr x$ 2 99
+   if strpos "AEIOU" x1$ <> 0
+      h$ = strchar (strcode x1$ + 32)
+      y$ = h$ & y$
    .
-.
-proc findInStrArray array$[] item$ . index .
-   for i = 1 to len array$[]
-      if array$[i] = item$
-         index = i
-         return
-      .
+   b$ = "b" & y$
+   f$ = "f" & y$
+   m$ = "m" & y$
+   if x1$ = "B"
+      b$ = y$
+   elif x1$ = "F"
+      f$ = y$
+   elif x1$ = "M"
+      m$ = y$
    .
-   index = 0
+   print x$ & ", " & x$ & ", bo-" & b$
+   print "Banana-fana fo-" & f$
+   print "Fee-fi-mo-" & m$
+   print x$ & "!"
 .
-# This version actually handles consonant clusters
-name$ = input
-toLowercase name$ lowerName$
-vowels$[] = [ "a" "e" "i" "o" "u" ]
-for i = 1 to len lowerName$
-   letter$ = substr lowerName$ i 1
-   findInStrArray vowels$[] letter$ index
-   if index <> 0
-      truncName1$ = substr lowerName$ i len lowerName$
-      break 1
-   .
-   truncName1$ = ""
+for n$ in [ "Gary" "Earl" "Billy" "Felix" "Mary" ]
+   verse n$
+   print ""
 .
-firstLetter$ = substr lowerName$ 1 1
-if firstLetter$ <> "b"
-   b$ = "b"
-.
-if firstLetter$ <> "f"
-   f$ = "f"
-.
-if firstLetter$ <> "m"
-   m$ = "m"
-.
-if b$ = "" or f$ = "" or m$ = ""
-   truncName2$ = substr lowerName$ 2 len lowerName$
-.
-# Determine the appropriate name for each line
-if b$ = ""
-   bName$ = truncName2$
-else
-   bName$ = truncName1$
-.
-if f$ = ""
-   fName$ = truncName2$
-else
-   fName$ = truncName1$
-.
-if m$ = ""
-   mName$ = truncName2$
-else
-   mName$ = truncName1$
-.
-# Print the song
-print name$ & ", " & name$ & ", " & "bo-" & b$ & bName$
-print "Banana-fana fo-" & f$ & fName$
-print "Fee-fi-mo-" & m$ & mName$
-print name$ & "!"

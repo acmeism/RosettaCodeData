@@ -6,4 +6,5 @@ for k = 1 to base * base - 1
       write k & " "
    .
 .
+print ""
 print "Trying " & c2 & " numbers instead of " & c1 & " numbers saves " & 100 - 100 * c2 / c1

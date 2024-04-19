@@ -1,18 +1,21 @@
 <?php
 
-function quibble($arr){
+function quibble($arr) {
 
-  $words = count($arr);
+    switch (count($arr)) {
 
-  if($words == 0){
-    return '{}';
-  }elseif($words == 1){
-    return '{'.$arr[0].'}';
-  }elseif($words == 2){
-    return '{'.$arr[0].' and '.$arr[1].'}';
-  }else{
-    return '{'.implode(', ',  array_splice($arr, 0, -1) ). ' and '.$arr[0].'}';
-  }
+        case 0:
+            return '{}';
+
+        case 1:
+            return "{{$arr[0]}}";
+
+        default:
+            $left = implode(', ', array_slice($arr, 0, -1));
+            $right = array_slice($arr, -1)[0];
+            return "{{$left} and {$right}}";
+
+    }
 
 }
 
@@ -27,3 +30,4 @@ $tests = [
 foreach ($tests as $test) {
   echo quibble($test) . PHP_EOL;
 }
+?>

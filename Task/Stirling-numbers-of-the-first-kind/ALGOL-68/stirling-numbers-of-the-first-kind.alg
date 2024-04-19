@@ -1,5 +1,4 @@
-BEGIN
-    # show some (unsigned) Stirling numbers of the first kind            #
+BEGIN # show some (unsigned) Stirling numbers of the first kind          #
 
     # specify the precision of LONG LONG INT, we need about 160 digits   #
     # for Stirling numbers of the first kind with n, k = 100             #
@@ -28,13 +27,13 @@ BEGIN
         INT max stirling = 12;
         REF[,]SINT s1 = make s1( max stirling, FALSE );
         print( ( "Unsigned Stirling numbers of the first kind:", newline ) );
-        print( ( " k" ) );
-        FOR k FROM 0 TO max stirling DO print( ( whole( k, -10 ) ) ) OD;
+        print( ( " k  0" ) );
+        FOR k TO max stirling DO print( ( whole( k, IF k < 6 THEN -10 ELSE -9 FI ) ) ) OD;
         print( ( newline, " n", newline ) );
         FOR n FROM 0 TO max stirling DO
-            print( ( whole( n, -2 ) ) );
-            FOR k FROM 0 TO n DO
-                print( ( whole( s1[ n, k ], -10 ) ) )
+            print( ( whole( n, -2 ), whole( s1[ n, 0 ], -3 ) ) );
+            FOR k TO n DO
+                print( ( whole( s1[ n, k ], IF k < 6 THEN -10 ELSE -9 FI ) ) )
             OD;
             print( ( newline ) )
         OD

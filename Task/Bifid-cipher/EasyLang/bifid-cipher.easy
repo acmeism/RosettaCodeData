@@ -1,30 +1,24 @@
 func$ crypt enc msg$ key$ .
-   key$[] = strchars key$
    n = len msg$
    for i to len msg$
       c$ = substr msg$ i 1
-      for j to 25
-         if c$ = key$[j]
-            break 1
-         .
-      .
-      j -= 1
+      j = strpos key$ c$ - 1
       h[] &= j div 5
       h[] &= j mod 5
    .
    if enc = 1
       for i = 1 step 4 to 2 * n - 3
          j = h[i] * 5 + h[i + 2] + 1
-         r$ &= key$[j]
+         r$ &= substr key$ j 1
       .
       for i = 2 step 4 to 2 * n - 2
          j = h[i] * 5 + h[i + 2] + 1
-         r$ &= key$[j]
+         r$ &= substr key$ j 1
       .
    else
       for i = 1 to n
          j = h[i] * 5 + h[i + n] + 1
-         r$ &= key$[j]
+         r$ &= substr key$ j 1
       .
    .
    return r$

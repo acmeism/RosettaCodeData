@@ -9,8 +9,7 @@ void main() {
     final lvlPolygons = basis0.map((pp) {
       final (a, b) = pp;
       final v =  Point((b - a).y, (a - b).x);
-      final (c, d) = (a + v, b + v);
-      final e = (c + d + v) * 0.5;
+      final [c, d, e] = [a, b, (a + b + v) * 0.5].map((p) => p + v).toList();
       basis.addAll([(c, e), (e, d)]);
       return '<polygon points="${[a, c, e, d, c, d, b].expand((p) => [p.x, p.y]).join(' ')}"/>';
     }).join('\n');

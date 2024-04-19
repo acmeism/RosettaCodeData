@@ -1,6 +1,9 @@
-days:" "vs"first second third fourth fifth sixth seventh eighth ninth tenth eleventh twelfth"
+DAYS:" "vs"first second third fourth fifth sixth",
+  " seventh eighth ninth tenth eleventh twelfth"
 
-gifts:(
+STANZA:(                              / final stanza
+  "On the twelfth day of Christmas";
+  "My true love gave to me:";
   "Twelve drummers drumming";
   "Eleven pipers piping";
   "Ten lords a-leaping";
@@ -15,7 +18,7 @@ gifts:(
   "And a partridge in a pear tree.";
   "")
 
-verses:stanza 0 1,/:{(reverse x)+2+til each 2+x}til 12
-lyric:raze .[;0 2;{"A",5_x}] verses{@[x;0;ssr[;"twelfth";y]]}'days
-
-1 "\n"sv lyric;  // print
+-1 raze
+  .[;0 2;"A",5_]                         / tweak one line
+  .[;(::;0);ssr[;"twelfth";];DAYS]       / number the verses
+  STANZA 0 1,/:#\:[;til 15] -2 -til 12;  / compose 12 verses

@@ -1,0 +1,106 @@
+Function unicode_2_utf8(x As Long) As String
+    Dim As String y
+    Dim As Long r
+    Select Case x
+    Case 0 To &H7F
+        y = Chr(x)
+    Case &H80 To &H7FF
+        y = Chr(192 + x \ 64) + Chr(128 + x Mod 64)
+    Case &H800 To &H7FFF, 32768 To 65535
+        r = x \ 64
+        y = Chr(224 + r \ 64) + Chr(128 + r Mod 64) + Chr(128 + x Mod 64)
+    Case &H10000 To &H10FFFF
+        r = x \ 4096
+        y = Chr(240 + r \ 64) + Chr(128 + r Mod 64) + Chr(128 + (x \ 64) Mod 64) + Chr(128 + x Mod 64)
+    Case Else
+        Print "what else? " & x & " " & Hex(x)
+    End Select
+    Return y
+End Function
+
+Function utf8_2_unicode(x As String) As Long
+    Dim As Long primero, segundo, tercero, cuarto
+    Dim As Long total
+    Select Case Len(x)
+    Case 1 'one byte
+        If Asc(x) < 128 Then
+            total = Asc(x)
+        Else
+            Print "highest bit set error"
+        End If
+    Case 2 'two bytes and assume primero byte is leading byte
+        If Asc(x) \ 32 = 6 Then
+            primero = Asc(x) Mod 32
+            If Asc(Mid(x, 2, 1)) \ 64 = 2 Then
+                segundo = Asc(Mid(x, 2, 1)) Mod 64
+            Else
+                Print "mask error"
+            End If
+        Else
+            Print "leading byte error"
+        End If
+        total = 64 * primero + segundo
+    Case 3 'three bytes and assume primero byte is leading byte
+        If Asc(x) \ 16 = 14 Then
+            primero = Asc(x) Mod 16
+            If Asc(Mid(x, 2, 1)) \ 64 = 2 Then
+                segundo = Asc(Mid(x, 2, 1)) Mod 64
+                If Asc(Mid(x, 3, 1)) \ 64 = 2 Then
+                    tercero = Asc(Mid(x, 3, 1)) Mod 64
+                Else
+                    Print "mask error last byte"
+                End If
+            Else
+                Print "mask error middle byte"
+            End If
+        Else
+            Print "leading byte error"
+        End If
+        total = 4096 * primero + 64 * segundo + tercero
+    Case 4 'four bytes and assume primero byte is leading byte
+        If Asc(x) \ 8 = 30 Then
+            primero = Asc(x) Mod 8
+            If Asc(Mid(x, 2, 1)) \ 64 = 2 Then
+                segundo = Asc(Mid(x, 2, 1)) Mod 64
+                If Asc(Mid(x, 3, 1)) \ 64 = 2 Then
+                    tercero = Asc(Mid(x, 3, 1)) Mod 64
+                    If Asc(Mid(x, 4, 1)) \ 64 = 2 Then
+                        cuarto = Asc(Mid(x, 4, 1)) Mod 64
+                    Else
+                        Print "mask error last byte"
+                    End If
+                Else
+                    Print "mask error tercero byte"
+                End If
+            Else
+                Print "mask error second byte"
+            End If
+        Else
+            Print "mask error leading byte"
+        End If
+        total = Clng(262144 * primero + 4096 * segundo + 64 * tercero + cuarto)
+    Case Else
+        Print "more bytes than expected"
+    End Select
+    Return total
+End Function
+
+Dim As Long cp(4) = {65, 246, 1046, 8364, 119070} '[{&H0041,&H00F6,&H0416,&H20AC,&H1D11E}]
+Dim As String r, s
+Dim As integer i, j
+Print "ch  unicode  UTF-8 encoded  decoded"
+For i = Lbound(cp) To Ubound(cp)
+    Dim As Long cpi = cp(i)
+    r = unicode_2_utf8(cpi)
+    s = Hex(cpi)
+    Print Chr(cpi); Space(10 - Len(s)); s;
+    s = ""
+    For j = 1 To Len(r)
+        s &= Hex(Asc(Mid(r, j, 1))) & " "
+    Next j
+    Print Space(16 - Len(s)); s;
+    s = Hex(utf8_2_unicode(r))
+    Print Space(8 - Len(s)); s
+Next i
+
+Sleep

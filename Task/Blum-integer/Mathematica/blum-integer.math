@@ -1,0 +1,70 @@
+ClearAll[BlumIntegerQ, BlumIntegersInRange, PrimePi2, BlumCount, binarySearch, BlumInts, timing, upperLimitEstimate, lastDigit, lastDigitDistributionPercents];
+
+BlumIntegerQ[n_Integer] := With[{factors = FactorInteger[n]},
+    n ~ Mod ~ 4 == 1 &&
+    Length[factors] == 2 &&
+    factors[[1, 1]] ~ Mod ~ 4 == 3 &&
+    Last@Total@factors == 2
+];
+SetAttributes[BlumIntegerQ, Listable];
+
+BlumIntegersInRange[n_Integer] := BlumIntegersInRange[1, n];
+BlumIntegersInRange[start_Integer, end_Integer] :=
+  Select[Range[start + (4 - start) ~ Mod ~ 4, end, 4] + 1, BlumIntegerQ];
+
+(* Counts semiprimes.  See https://people.maths.ox.ac.uk/erban/papers/paperDCRE.pdf *)
+
+PrimePi2[x_] := (PrimePi[Sqrt[x]] - PrimePi[Sqrt[x]]^2)/2 + Sum[PrimePi[x/Prime[p]], {p, 1, PrimePi[Sqrt[x]]}];
+SetAttributes[PrimePi2, Listable];
+
+(* Blum integers are semiprimes that are 1 mod 4, with two distinct factors where both factors are 3 mod 4. The following function gives an approximation of the number of Blum integers <= x.
+
+According to my tests, this function tends to overestimate by approximately 5% in the range we're interested in.
+*)
+
+BlumCount[x_] := Ceiling[(PrimePi2[x] - PrimePi[Sqrt[x]]) / 4];
+SetAttributes[BlumCount, Listable];
+
+binarySearch[f_, targetValue_] :=
+      Module[{lo = 1, mid, hi = 1, currentValue},
+         While[f[hi] < targetValue,
+    	hi *= 2;];
+      While[lo <= hi,
+    	mid = Ceiling[(lo + hi) / 2];
+    	currentValue = f[mid];
+    	If[currentValue < targetValue,
+     		lo = mid + 1;];
+    	If[currentValue > targetValue,
+     		hi = mid - 1;];
+    	If[currentValue == targetValue,
+     		While[f[mid] == targetValue,
+      		mid++;
+      		];
+     	Return[mid - 1];
+     	];
+    ];
+   ];
+
+lastDigit[n_Integer] := n ~ Mod ~ 10;
+SetAttributes[lastDigit, Listable];
+
+upperLimitEstimate = Ceiling[binarySearch[BlumCount, 400000]* 1.1];
+timing = First@AbsoluteTiming[BlumInts = BlumIntegersInRange[upperLimitEstimate];];
+lastDigitDistributionPercents = N[Counts@lastDigit@BlumInts[[;; 400000]] / 4000, 5];
+
+Print["Calculated the first ", Length[BlumInts],
+  " Blum integers in ", timing, " seconds."];
+Print[];
+Print["First 50 Blum integers:"];
+Print[TableForm[Partition[BlumInts[[;; 50]], 10],
+   TableAlignments -> Right]];
+Print[];
+Print[Grid[
+  Table[{"The ", n , "th Blum integer is: ",
+    BlumInts[[n]]}, {n, {26828, 100000, 200000, 300000, 400000}}] ,
+  Alignment -> Right]]
+Print[];
+Print["% distribution of the first 400,000 Blum integers:"];
+Print[Grid[
+   Table[{lastDigitDistributionPercents[n], "% end in ",
+     n}, {n, {1, 3, 7, 9}} ], Alignment -> Right]];

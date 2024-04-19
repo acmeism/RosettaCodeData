@@ -6,6 +6,7 @@ string menuSelect(in string[] entries) {
     pure nothrow {
         try {
             immutable n = input.to!int;
+
             return typeof(return)((n >= 0 && n <= nEntries) ? n : -1);
         } catch (Exception e) // Very generic
             return typeof(return)(-1); // Not valid.
@@ -19,8 +20,11 @@ string menuSelect(in string[] entries) {
         foreach (immutable i, const entry; entries)
             writefln("  %d) %s", i, entry);
         "> ".write;
+
         immutable input = readln.chomp;
-        immutable choice = validChoice(input, entries.length - 1);
+
+        immutable choice = validChoice(input, cast(int) (entries.length - 1));
+
         if (choice.isNull)
             "Wrong choice.".writeln;
         else
@@ -31,5 +35,6 @@ string menuSelect(in string[] entries) {
 void main() {
     immutable items = ["fee fie", "huff and puff",
                        "mirror mirror", "tick tock"];
+
     writeln("You chose '", items.menuSelect, "'.");
 }

@@ -1,87 +1,93 @@
 MODULE RosettaMergeSortUse;
 
 	(* Import Modules: *)
-	
-
 	IMPORT Sort := RosettaMergeSort, Out;
 
 	(* Type Definitions: *)
 	TYPE
-		(* a linked list node containing an integer and a pointer to the next node *)
+		(* a character list *)
 		List = POINTER TO RECORD
-			value: INTEGER;
+			value: CHAR;
 			next: List
 		END;
 
 		(* Implement the abstract record type Sort.Template *)
-		Template = RECORD (Sort.Template) END;
+		Order = ABSTRACT RECORD (Sort.Template) END;
+		Asc = RECORD (Order) END;
+		Bad = RECORD (Order) END;
+		Desc = RECORD (Order) END;
 
 	(* Abstract Procedure Implementations: *)
 
-	(* Compare integers in the list nodes to determine their order in the sorted list *)
-	(* For the sort to be stable `front` comes before `rear` if they are equal *)
-	PROCEDURE (IN t: Template) Before (front, rear: ANYPTR): BOOLEAN;
-	BEGIN RETURN front(List).value <= rear(List).value END Before;
-
 	(* Return the next node in the linked list *)
-	PROCEDURE (IN t: Template) Next (s: ANYPTR): ANYPTR;
+	PROCEDURE (IN t: Order) Next (s: ANYPTR): ANYPTR;
 	BEGIN RETURN s(List).next END Next;
 
-	(* Set the next pointer of a list node *)
-	PROCEDURE (IN t: Template) Set (s, next: ANYPTR): ANYPTR;
+	(* Set the next pointer of list item `s` to `next` -  Return the updated `s` *)
+	PROCEDURE (IN t: Order) Set (s, next: ANYPTR): ANYPTR;
 	BEGIN
-		IF next = NIL THEN
-			s(List).next := NIL
-		ELSE
-			s(List).next := next(List)
-		END;
+		IF next = NIL THEN s(List).next := NIL
+					  ELSE s(List).next := next(List) END;
 		RETURN s
 	END Set;
 
+	(* Ignoring case, compare characters to determine ascending order in the sorted list *)
+	(* For the sort to be stable `front` comes before `rear` if they are equal *)
+	PROCEDURE (IN t: Asc) Before (front, rear: ANYPTR): BOOLEAN;
+	BEGIN
+		RETURN CAP(front(List).value) <= CAP(rear(List).value)
+	END Before;
+
+	(* Unstable sort!!! *)
+	PROCEDURE (IN t: Bad) Before (front, rear: ANYPTR): BOOLEAN;
+	BEGIN
+		RETURN CAP(front(List).value) < CAP(rear(List).value)
+	END Before;
+
+	(* Ignoring case, compare characters to determine descending order in the sorted list *)
+	(* For the sort to be stable `front` comes before `rear` if they are equal *)
+	PROCEDURE (IN t: Desc) Before (front, rear: ANYPTR): BOOLEAN;
+	BEGIN
+		RETURN CAP(front(List).value) >= CAP(rear(List).value)
+	END Before;
+
 	(* Helper Procedures: *)
 
-	(* Prefix a node to a list *)
-	PROCEDURE Prefix (value: INTEGER; s: List): List;
-		VAR new: List;
+	(* Takes a string and converts it into a linked list of characters *)
+	PROCEDURE Explode (str: ARRAY OF CHAR): List;
+		VAR i: INTEGER; h, t: List;
 	BEGIN
-		NEW(new); new.value := value; new.next := s; RETURN new
-	END Prefix;
+		i := LEN(str$);
+		WHILE i # 0 DO
+			t := h; NEW(h);
+			DEC(i); h.value := str[i];
+			h.next := t
+		END;
+		RETURN h
+	END Explode;
 
-	(* Write a list *)
+	(* Outputs the characters in a linked list as a string in quotes *)
 	PROCEDURE Show (s: List);
-		VAR count: INTEGER;
+		VAR i: INTEGER;
 	BEGIN
-		count := 0;
-		WHILE s # NIL DO
-			IF count = 10 THEN
-					Out.Ln; (* Insert a newline after displaying 10 numbers *)
-					count := 0
-			END;
-			Out.Int(s.value, 4);
-			s := s.next;
-			INC(count)
-		END
+		Out.Char('"');
+		WHILE s # NIL DO Out.Char(s.value); s := s.next END;
+		Out.Char('"')
 	END Show;
 
 	(* Main Procedure: *)
 	PROCEDURE Use*;
-		VAR t: Template; s: List;
-		(* Calls Prefix to add integers to the beginning of the list `s` *)
-		PROCEDURE b (value: INTEGER); BEGIN s := Prefix(value, s) END b;
+		VAR a: Asc; b: Bad; d: Desc; s: List;
 	BEGIN
-		(* Use the `b` procedure to add the integers to the list `s` *)
-		b(663); b(085); b(534); b(066); b(038); b(323); b(727); b(651);
-		b(625); b(706); b(149); b(956); b(804); b(626); b(106); b(230);
-		b(314); b(249); b(758); b(236); b(775); b(399); b(701); b(296);
-		b(770); b(380); b(403); b(760); b(159); b(551); b(153); b(297);
-		b(130); b(866); b(937); b(226); b(298); b(029); b(149); b(381);
-		b(590); b(255); b(101); b(485); b(801); b(223); b(645); b(458);
-		b(068);  b(683);
-		Out.String("Before:"); Out.Ln;
-		Show(s); Out.Ln;
-		s := t.Sort(s)(List);
-		Out.String("After:"); Out.Ln;
-		Show(s); Out.Ln
+		s := Explode("A quick brown fox jumps over the lazy dog");
+		Out.String("Before:"); Out.Ln; Show(s); Out.Ln;
+		s := a.Sort(s)(List); (* Ascending stable sort *)
+		Out.String("After Asc:"); Out.Ln; Show(s); Out.Ln;
+		s := b.Sort(s)(List); (* Ascending unstable sort *)
+		Out.String("After Bad:"); Out.Ln; Show(s); Out.Ln;
+		s := d.Sort(s)(List); (* Descending stable sort *)
+		Out.String("After Desc:"); Out.Ln; Show(s); Out.Ln
 	END Use;
 
-END RosettaMergeSortUse.Use
+
+END RosettaMergeSortUse.

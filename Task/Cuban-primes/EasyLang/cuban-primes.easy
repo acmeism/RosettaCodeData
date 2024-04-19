@@ -16,7 +16,7 @@ while cnt < 100000
       cnt += 1
       if cnt <= 200
          write di & " "
-         if cnt mod 8 = 0
+         if cnt mod 5 = 0
             print ""
          .
       .

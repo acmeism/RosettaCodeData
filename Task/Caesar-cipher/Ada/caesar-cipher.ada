@@ -1,45 +1,58 @@
-with Ada.Text_IO;
+-- Caesar Cipher Implementation in Ada
+
+with Ada.Text_IO; use Ada.Text_IO;
 
 procedure Caesar is
 
-   type modulo26 is modulo 26;
-
-   function modulo26 (Character: Character; Output: Character) return modulo26 is
+   -- Base function to encrypt a character
+   function Cipher(Char_To_Encrypt: Character; Shift: Integer; Base: Character) return Character is
+      Base_Pos : constant Natural := Character'Pos(Base);
    begin
-      return modulo26 (Character'Pos(Character)+Character'Pos(Output));
-   end modulo26;
+      return Character'Val((Character'Pos(Char_To_Encrypt) + Shift - Base_Pos) mod 26 + Base_Pos);
+   end Cipher;
 
-   function Character(Val: in  modulo26; Output: Character)
-                        return Character is
+   -- Function to encrypt a character
+   function Encrypt_Char(Char_To_Encrypt: Character; Shift: Integer) return Character is
    begin
-      return Character'Val(Integer(Val)+Character'Pos(Output));
-   end Character;
+      case Char_To_Encrypt is
+         when 'A'..'Z' =>
+            -- Encrypt uppercase letters
+            return Cipher (Char_To_Encrypt, Shift, 'A');
+         when 'a'..'z' =>
+            -- Encrypt lowercase letters
+            return Cipher (Char_To_Encrypt, Shift, 'a');
+         when others =>
+            -- Leave other characters unchanged
+            return Char_To_Encrypt;
+      end case;
+   end Encrypt_Char;
 
-   function crypt (Playn: String; Key: modulo26) return String is
-      Ciph: String(Playn'Range);
-
+   -- Function to decrypt a character
+   function Decrypt_Char(Char_To_Decrypt: Character; Shift: Integer) return Character is
    begin
-      for I in Playn'Range loop
-         case Playn(I) is
-            when 'A' .. 'Z' =>
-               Ciph(I) := Character(modulo26(Playn(I)+Key), 'A');
-            when 'a' .. 'z' =>
-               Ciph(I) := Character(modulo26(Playn(I)+Key), 'a');
-            when others =>
-               Ciph(I) := Playn(I);
-         end case;
-      end loop;
-      return Ciph;
-   end crypt;
+      return Encrypt_Char(Char_To_Decrypt, -Shift);
+   end Decrypt_Char;
 
-   Text:  String := Ada.Text_IO.Get_Line;
-   Key: modulo26 := 3; -- Default key from "Commentarii de Bello Gallico" shift cipher
+   Message: constant String := Ada.Text_IO.Get_Line;
+   Shift: Positive := 3; -- Default key from "Commentarii de Bello Gallico" shift cipher
+                         -- Shift value (can be any positive integer)
 
-begin -- encryption main program
+   Encrypted_Message: String(Message'Range);
+   Decrypted_Message: String(Message'Range);
+begin
+   -- Encrypt the message
+   for I in Message'Range loop
+      Encrypted_Message(I) := Encrypt_Char(Message(I), Shift);
+   end loop;
 
-   Ada.Text_IO.Put_Line("Playn ------------>" & Text);
-   Text := crypt(Text, Key);
-   Ada.Text_IO.Put_Line("Ciphertext ----------->" & Text);
-   Ada.Text_IO.Put_Line("Decrypted Ciphertext ->" & crypt(Text, -Key));
+   -- Decrypt the encrypted message
+   for I in Message'Range loop
+      Decrypted_Message(I) := Decrypt_Char(Encrypted_Message(I), Shift);
+   end loop;
+
+   -- Display results
+   Put_Line("Plaintext: " & Message);
+   Put_Line("Ciphertext: " & Encrypted_Message);
+   Put_Line("Decrypted Ciphertext: " & Decrypted_Message);
 
 end Caesar;

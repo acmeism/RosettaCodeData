@@ -14,9 +14,11 @@ proc yellowstone count . yellow[] .
    yellow[] = [ 1 2 3 ]
    num = 4
    while len yellow[] < count
+      yell1 = yellow[len yellow[] - 1]
+      yell2 = yellow[len yellow[]]
       for i to len notyellow[]
          test = notyellow[i]
-         if gcd yellow[-2] test > 1 and gcd yellow[-1] test = 1
+         if gcd yell1 test > 1 and gcd yell2 test = 1
             break 1
          .
       .
@@ -24,7 +26,7 @@ proc yellowstone count . yellow[] .
          yellow[] &= notyellow[i]
          remove_at i notyellow[]
       else
-         while gcd yellow[-2] num <= 1 or gcd yellow[-1] num <> 1
+         while gcd yell1 num <= 1 or gcd yell2 num <> 1
             notyellow[] &= num
             num += 1
          .

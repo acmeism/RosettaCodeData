@@ -8,7 +8,7 @@ fastfunc isprim num .
    .
    return 1
 .
-func weiferich p .
+func wieferich p .
    if isprim p = 0
       return 0
    .
@@ -24,7 +24,7 @@ func weiferich p .
 .
 print "Wieferich primes less than 5000: "
 for i = 2 to 5000
-   if weiferich i = 1
+   if wieferich i = 1
       print i
    .
 .

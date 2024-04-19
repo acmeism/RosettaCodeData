@@ -1,0 +1,144 @@
+include "cowgol.coh";
+
+const MAXPRIM := 100000;
+const MAXPRIM_B := (MAXPRIM >> 3) + 1;
+
+var primebits: uint8[MAXPRIM_B];
+typedef ENTRY_T is @indexof primebits;
+
+sub pentry(n: uint32): (ent: ENTRY_T, bit: uint8) is
+    ent := (n >> 3) as ENTRY_T;
+    bit := (n & 7) as uint8;
+end sub;
+
+sub setprime(n: uint32, prime: uint8) is
+    var ent: ENTRY_T;
+    var bit: uint8;
+    (ent, bit) := pentry(n);
+    var one: uint8 := 1;
+    primebits[ent] := primebits[ent] & ~(one << bit);
+    primebits[ent] := primebits[ent] | (prime << bit);
+end sub;
+
+sub prime(n: uint32): (prime: uint8) is
+    var ent: ENTRY_T;
+    var bit: uint8;
+    (ent, bit) := pentry(n);
+    prime := (primebits[ent] >> bit) & 1;
+end sub;
+
+sub sieve() is
+    MemSet(&primebits[0], 0xFF, @bytesof primebits);
+    setprime(0, 0);
+    setprime(1, 0);
+    var p: uint32 := 2;
+    while p*p <= MAXPRIM loop
+        var c := p*p;
+        while c <= MAXPRIM loop
+            setprime(c, 0);
+            c := c + p;
+        end loop;
+        p := p + 1;
+    end loop;
+end sub;
+
+sub nextprime(p: uint32): (r: uint32) is
+    r := p;
+    loop
+        r := r + 1;
+        if prime(r) != 0 then break; end if;
+    end loop;
+end sub;
+
+sub partition(x: uint32, n: uint8, part: [uint32]): (r: uint8) is
+    record State is
+        x: uint32;
+        n: uint8;
+        p: uint32;
+        part: [uint32];
+    end record;
+
+    var stack: State[128];
+    var sp: @indexof stack := 0;
+
+    sub Push(x: uint32, n: uint8, p: uint32, part: [uint32]) is
+        stack[sp].x := x;
+        stack[sp].n := n;
+        stack[sp].p := p;
+        stack[sp].part := part;
+        sp := sp + 1;
+    end sub;
+
+    sub Pull(): (x: uint32, n: uint8, p: uint32, part: [uint32]) is
+        sp := sp - 1;
+        x := stack[sp].x;
+        n := stack[sp].n;
+        p := stack[sp].p;
+        part := stack[sp].part;
+    end sub;
+
+    r := 0;
+    Push(x, n, 1, part);
+    while sp > 0 loop
+        var p: uint32;
+        (x, n, p, part) := Pull();
+        p := nextprime(p);
+
+        if x < p then
+            continue;
+        end if;
+
+        if n == 1 then
+            if prime(x) != 0 then
+                r := 1;
+                [part] := x;
+                return;
+            end if;
+        else
+            [part] := p;
+            Push(x, n, p, part);
+            Push(x-p, n-1, p, @next part);
+        end if;
+    end loop;
+    r := 0;
+end sub;
+
+sub showpartition(x: uint32, n: uint8) is
+    print("Partitioning ");
+    print_i32(x);
+    print(" with ");
+    print_i8(n);
+    print(" primes: ");
+
+    var part: uint32[64];
+    if partition(x, n, &part[0]) != 0 then
+        print_i32(part[0]);
+        var i: @indexof part := 1;
+        while i < n as @indexof part loop
+            print_char('+');
+            print_i32(part[i]);
+            i := i + 1;
+        end loop;
+    else
+        print("Not possible");
+    end if;
+    print_nl();
+end sub;
+
+sieve();
+
+record Test is
+    x: uint32;
+    n: uint8;
+end record;
+
+var tests: Test[] := {
+    {99809, 1}, {18, 2}, {19, 3}, {20, 4}, {2017, 24},
+    {22699, 1}, {22699, 2}, {22699, 3}, {22699, 4}, {40355, 3}
+};
+
+var test: @indexof tests := 0;
+while test < @sizeof tests loop
+    showpartition(tests[test].x, tests[test].n);
+    test := test + 1;
+end loop;

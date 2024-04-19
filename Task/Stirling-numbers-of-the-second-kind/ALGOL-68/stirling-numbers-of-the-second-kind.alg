@@ -1,5 +1,4 @@
-BEGIN
-    # show some Stirling numbers of the second kind                          #
+BEGIN # show some Stirling numbers of the second kind                        #
 
     # specify the precision of LONG LONG INT, somewhat under 160 digits are  #
     # needed for Stirling numbers of the second kind with n, k = 100         #
@@ -26,12 +25,12 @@ BEGIN
         REF[,]SINT s2 = make s2( max stirling );
         print( ( "Stirling numbers of the second kind:", newline ) );
         print( ( " k" ) );
-        FOR k FROM 0 TO max stirling DO print( ( whole( k, -10 ) ) ) OD;
+        FOR k FROM 0 TO max stirling DO print( ( whole( k, -8 ) ) ) OD;
         print( ( newline, " n", newline ) );
         FOR n FROM 0 TO max stirling DO
             print( ( whole( n, -2 ) ) );
             FOR k FROM 0 TO n DO
-                print( ( whole( s2[ n, k ], -10 ) ) )
+                print( ( whole( s2[ n, k ], -8 ) ) )
             OD;
             print( ( newline ) )
         OD

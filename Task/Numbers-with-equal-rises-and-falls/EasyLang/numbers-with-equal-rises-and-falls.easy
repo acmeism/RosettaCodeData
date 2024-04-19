@@ -27,7 +27,7 @@ repeat
       cnt += 1
       if cnt <= 200
          write n
-         if cnt mod 20 = 0
+         if cnt mod 10 = 0
             print ""
          .
       .

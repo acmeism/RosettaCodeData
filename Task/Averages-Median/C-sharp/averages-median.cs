@@ -1,33 +1,14 @@
-using System;
-using System.Linq;
-
-namespace Test
+double median(double[] arr)
 {
-    class Program
-    {
-        static void Main()
-        {
-            double[] myArr = new double[] { 1, 5, 3, 6, 4, 2 };
-
-            myArr = myArr.OrderBy(i => i).ToArray();
-            // or Array.Sort(myArr) for in-place sort
-
-            int mid = myArr.Length / 2;
-            double median;
-
-            if (myArr.Length % 2 == 0)
-            {
-                //we know its even
-                median = (myArr[mid] + myArr[mid - 1]) / 2.0;
-            }
-            else
-            {
-                //we know its odd
-                median = myArr[mid];
-            }
-
-            Console.WriteLine(median);
-            Console.ReadLine();
-        }
-    }
+	var sorted = arr.OrderBy(x => x).ToList();
+	var mid = arr.Length / 2;
+	return arr.Length % 2 == 0
+		? (sorted[mid] + sorted[mid-1]) / 2
+		: sorted[mid];
 }
+
+var write = (double[] x) =>
+	Console.WriteLine($"[{string.Join(", ", x)}]: {median(x)}");
+write(new double[] { 1, 5, 3, 6, 4, 2 }); //even
+write(new double[] { 1, 5, 3, 6, 4, 2, 7 }); //odd
+write(new double[] { 5 }); //single

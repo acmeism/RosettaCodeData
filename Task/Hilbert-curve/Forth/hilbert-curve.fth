@@ -1,6 +1,6 @@
 include lib/graphics.4th
 
-64 constant /width                     \ hilbert curve order^2
+64 constant /width                     \ Hilbert curve order^2
  9 constant /length                    \ length of a line
 
 variable origin                        \ point of origin
@@ -29,5 +29,5 @@ aka r"@ i2                             \ to make it a bit more readable
 585 pic_width ! 585 pic_height !       \ set canvas size
 color_image 255 whiteout blue          \ paint blue on white
 0 dup origin!                          \ set point of origin
-0 dup /width over dup hilbert          \ hilbert curve, order=8
+0 dup /width over dup hilbert          \ Hilbert curve, order=8
 s" ghilbert.ppm" save_image            \ save the image

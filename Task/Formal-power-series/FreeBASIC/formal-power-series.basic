@@ -1,0 +1,126 @@
+Type fps_t
+    As Integer tipo
+    As fps_t Ptr s1, s2
+    As Single a0
+End Type
+
+Enum fps_type
+    FPS_CONST = 0
+    FPS_ADD
+    FPS_SUB
+    FPS_MUL
+    FPS_DIV
+    FPS_DERIV
+    FPS_INT
+End Enum
+
+Function fps_new() As fps_t Ptr
+    Dim As fps_t Ptr x = Callocate(1, Sizeof(fps_t))
+    x->a0 = 0
+    x->s1 = 0
+    x->s2 = 0
+    x->tipo = 0
+    Return x
+End Function
+
+Sub fps_redefine(x As fps_t Ptr, op As Integer, y As fps_t Ptr, z As fps_t Ptr)
+    x->tipo = op
+    x->s1 = y
+    x->s2 = z
+End Sub
+
+Function _binary(x As fps_t Ptr, y As fps_t Ptr, op As Integer) As fps_t Ptr
+    Dim As fps_t Ptr s = fps_new()
+    s->s1 = x
+    s->s2 = y
+    s->tipo = op
+    Return s
+End Function
+
+Function _unary(x As fps_t Ptr, op As Integer) As fps_t Ptr
+    Dim As fps_t Ptr s = fps_new()
+    s->s1 = x
+    s->tipo = op
+    Return s
+End Function
+
+Function term(x As fps_t Ptr, n As Integer) As Single
+    Dim As Single ret = 0
+    Dim As Integer i
+
+    Select Case x->tipo
+    Case FPS_CONST
+        Return Iif(n > 0, 0, x->a0)
+    Case FPS_ADD
+        ret = term(x->s1, n) + term(x->s2, n)
+    Case FPS_SUB
+        ret = term(x->s1, n) - term(x->s2, n)
+    Case FPS_MUL
+        For i = 0 To n
+            ret += term(x->s1, i) * term(x->s2, n - i)
+        Next i
+    Case FPS_DIV
+        If term(x->s2, 0) = 0 Then Return 0 / 0 ' NaN
+        ret = term(x->s1, n)
+        For i = 1 To n
+            ret -= term(x->s2, i) * term(x, n - i) / term(x->s2, 0)
+        Next i
+    Case FPS_DERIV
+        ret = n * term(x->s1, n + 1)
+    Case FPS_INT
+        If n = 0 Then Return x->a0
+        ret = term(x->s1, n - 1) / n
+    Case Else
+        Print "Unknown operator "; x->tipo
+        End 1
+    End Select
+
+    Return ret
+End Function
+
+Function fps_const(a0 As Single) As fps_t Ptr
+    Dim As fps_t Ptr x = fps_new()
+    x->tipo = 0
+    x->a0 = a0
+    Return x
+End Function
+
+
+Dim As Integer i
+Dim As fps_t Ptr one = fps_const(1)
+Dim As fps_t Ptr fcos = fps_new() ' cosine
+Dim As fps_t Ptr fsin = _unary(fcos, FPS_INT) ' sine
+Dim As fps_t Ptr ftan = _binary(fsin, fcos, FPS_DIV) ' tangent
+
+' redefine cos to complete the mutual recursion
+fps_redefine(fcos, FPS_SUB, one, _unary(fsin, FPS_INT))
+
+Dim As fps_t Ptr fexp = fps_const(1) ' exponential
+' make exp recurse on self
+fps_redefine(fexp, FPS_INT, fexp, 0)
+
+Print "Sin:";
+For i = 0 To 9
+    Print " "; term(fsin, i);
+Next i
+Print
+
+Print "Cos:";
+For i = 0 To 9
+    Print " "; term(fcos, i);
+Next i
+Print
+
+Print "Tan:";
+For i = 0 To 9
+    Print " "; term(ftan, i);
+Next i
+Print
+
+Print "Exp:";
+For i = 0 To 9
+    Print " "; term(fexp, i);
+Next i
+Print
+
+Sleep

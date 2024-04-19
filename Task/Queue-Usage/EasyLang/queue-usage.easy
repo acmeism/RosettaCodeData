@@ -1,6 +1,7 @@
-##
+#
 # queue definition
 #
+##
 qu_enq 2
 qu_enq 5
 qu_enq 7

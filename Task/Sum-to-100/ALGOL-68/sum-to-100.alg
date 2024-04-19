@@ -25,65 +25,63 @@ BEGIN
     []CHAR sign char = []CHAR( "-", " ", "+" )[ AT -1 ];
     # we don't distinguish between strings starting "+1" and starting " 1" #
     FOR s1 FROM -1 TO 0 DO
-        sum string[  1 ] := sign char[ s1 ];
-        FOR s2 FROM -1 TO 1 DO
-            sum string[  3 ] := sign char[ s2 ];
-            FOR s3 FROM -1 TO 1 DO
-                sum string[  5 ] := sign char[ s3 ];
-                FOR s4 FROM -1 TO 1 DO
-                    sum string[  7 ] := sign char[ s4 ];
-                    FOR s5 FROM -1 TO 1 DO
-                        sum string[  9 ] := sign char[ s5 ];
-                        FOR s6 FROM -1 TO 1 DO
-                            sum string[ 11 ] := sign char[ s6 ];
-                            FOR s7 FROM -1 TO 1 DO
-                                sum string[ 13 ] := sign char[ s7 ];
-                                FOR s8 FROM -1 TO 1 DO
-                                    sum string[ 15 ] := sign char[ s8 ];
-                                    FOR s9 FROM -1 TO 1 DO
-                                        sum string[ 17 ] := sign char[ s9 ];
-                                        INT number := 0;
-                                        INT part   := IF s1 < 0 THEN -1 ELSE 1 FI;
-                                        IF s2 = 0 THEN part *:= 10 +:= 2 * SIGN part ELSE number +:= part; part := 2 * s2 FI;
-                                        IF s3 = 0 THEN part *:= 10 +:= 3 * SIGN part ELSE number +:= part; part := 3 * s3 FI;
-                                        IF s4 = 0 THEN part *:= 10 +:= 4 * SIGN part ELSE number +:= part; part := 4 * s4 FI;
-                                        IF s5 = 0 THEN part *:= 10 +:= 5 * SIGN part ELSE number +:= part; part := 5 * s5 FI;
-                                        IF s6 = 0 THEN part *:= 10 +:= 6 * SIGN part ELSE number +:= part; part := 6 * s6 FI;
-                                        IF s7 = 0 THEN part *:= 10 +:= 7 * SIGN part ELSE number +:= part; part := 7 * s7 FI;
-                                        IF s8 = 0 THEN part *:= 10 +:= 8 * SIGN part ELSE number +:= part; part := 8 * s8 FI;
-                                        IF s9 = 0 THEN part *:= 10 +:= 9 * SIGN part ELSE number +:= part; part := 9 * s9 FI;
-                                        number +:= part;
-                                        IF  number >= LWB solutions
-                                        AND number <= UPB solutions
-                                        THEN
-                                            solutions[ number ] +:= ";" + sum string;
-                                            count    [ number ] +:= 1
-                                        FI;
-                                        BOOL inserted := FALSE;
-                                        FOR l pos FROM LWB largest TO UPB largest WHILE NOT inserted DO
-                                            IF number > largest[ l pos ] THEN
-                                                # found a new larger number #
-                                                FOR m pos FROM UPB largest BY -1 TO l pos + 1 DO
-                                                    largest      [ m pos ] := largest      [ m pos - 1 ];
-                                                    largest count[ m pos ] := largest count[ m pos - 1 ]
-                                                OD;
-                                                largest      [ l pos ] := number;
-                                                largest count[ l pos ] := 1;
-                                                inserted := TRUE
-                                            ELIF number = largest[ l pos ] THEN
-                                                # have another way of generating this number #
-                                                largest count[ l pos ] +:= 1;
-                                                inserted := TRUE
-                                            FI
-                                        OD
-                                    OD
-                                OD
+       sum string[  1 ] := sign char[ s1 ];
+       FOR s2 FROM -1 TO 1 DO
+          sum string[  3 ] := sign char[ s2 ];
+          FOR s3 FROM -1 TO 1 DO
+             sum string[  5 ] := sign char[ s3 ];
+             FOR s4 FROM -1 TO 1 DO
+                sum string[  7 ] := sign char[ s4 ];
+                FOR s5 FROM -1 TO 1 DO
+                   sum string[  9 ] := sign char[ s5 ];
+                   FOR s6 FROM -1 TO 1 DO
+                      sum string[ 11 ] := sign char[ s6 ];
+                      FOR s7 FROM -1 TO 1 DO
+                         sum string[ 13 ] := sign char[ s7 ];
+                         FOR s8 FROM -1 TO 1 DO
+                            sum string[ 15 ] := sign char[ s8 ];
+                            FOR s9 FROM -1 TO 1 DO
+                               sum string[ 17 ] := sign char[ s9 ];
+                               INT number := 0;
+                               INT part   := IF s1 < 0 THEN -1 ELSE 1 FI;
+                               IF s2 = 0 THEN part *:= 10 +:= 2 * SIGN part ELSE number +:= part; part := 2 * s2 FI;
+                               IF s3 = 0 THEN part *:= 10 +:= 3 * SIGN part ELSE number +:= part; part := 3 * s3 FI;
+                               IF s4 = 0 THEN part *:= 10 +:= 4 * SIGN part ELSE number +:= part; part := 4 * s4 FI;
+                               IF s5 = 0 THEN part *:= 10 +:= 5 * SIGN part ELSE number +:= part; part := 5 * s5 FI;
+                               IF s6 = 0 THEN part *:= 10 +:= 6 * SIGN part ELSE number +:= part; part := 6 * s6 FI;
+                               IF s7 = 0 THEN part *:= 10 +:= 7 * SIGN part ELSE number +:= part; part := 7 * s7 FI;
+                               IF s8 = 0 THEN part *:= 10 +:= 8 * SIGN part ELSE number +:= part; part := 8 * s8 FI;
+                               IF s9 = 0 THEN part *:= 10 +:= 9 * SIGN part ELSE number +:= part; part := 9 * s9 FI;
+                               number +:= part;
+                               IF  number >= LWB solutions AND number <= UPB solutions THEN
+                                   solutions[ number ] +:= ";" + sum string;
+                                   count    [ number ] +:= 1
+                               FI;
+                               BOOL inserted := FALSE;
+                               FOR l pos FROM LWB largest TO UPB largest WHILE NOT inserted DO
+                                  IF number > largest[ l pos ] THEN
+                                     # found a new larger number #
+                                     FOR m pos FROM UPB largest BY -1 TO l pos + 1 DO
+                                        largest      [ m pos ] := largest      [ m pos - 1 ];
+                                        largest count[ m pos ] := largest count[ m pos - 1 ]
+                                     OD;
+                                     largest      [ l pos ] := number;
+                                     largest count[ l pos ] := 1;
+                                     inserted := TRUE
+                                  ELIF number = largest[ l pos ] THEN
+                                     # have another way of generating this number #
+                                     largest count[ l pos ] +:= 1;
+                                     inserted := TRUE
+                                  FI
+                               OD
                             OD
-                        OD
-                    OD
+                         OD
+                      OD
+                   OD
                 OD
-            OD
-        OD
+             OD
+          OD
+       OD
     OD;
 
     # show the solutions for 100 #
@@ -110,7 +108,8 @@ BEGIN
             number with max := largest[ n ]
         FI
     OD;
-    print( ( whole( number with max, 0 ), " has the maximum number of solutions: ", whole( max solutions, 0 ), newline ) );
+    print( ( whole( number with max, 0 ), " has the maximum number of solutions: " ) );
+    print( ( whole( max solutions, 0 ), newline ) );
     # find the smallest positive number that has no solutions #
     BOOL have solutions := TRUE;
     FOR n FROM 0 TO max number

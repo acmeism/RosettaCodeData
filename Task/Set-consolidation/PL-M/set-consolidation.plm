@@ -1,0 +1,92 @@
+100H:
+BDOS: PROCEDURE (F,A); DECLARE F BYTE, A ADDRESS; GO TO 5; END BDOS;
+EXIT: PROCEDURE; GO TO 0; END EXIT;
+PUTC: PROCEDURE (C); DECLARE C BYTE; CALL BDOS(2, C); END PUTC;
+PUTS: PROCEDURE (S); DECLARE S ADDRESS; CALL BDOS(9, S); END PUTS;
+
+BIT: PROCEDURE (I) ADDRESS;
+    DECLARE I BYTE;
+    IF I=0 THEN RETURN 1;
+    RETURN SHL(DOUBLE(1), I);
+END BIT;
+
+PRINT$SET: PROCEDURE (SET);
+    DECLARE SET ADDRESS, I BYTE;
+    CALL PUTC('(');
+    DO I=0 TO 15;
+        IF (BIT(I) AND SET) <> 0 THEN CALL PUTC('A' + I);
+    END;
+    CALL PUTC(')');
+END PRINT$SET;
+
+MAKE$SET: PROCEDURE (SETSTR) ADDRESS;
+    DECLARE SETSTR ADDRESS, ITEM BASED SETSTR BYTE;
+    DECLARE SET ADDRESS, POS ADDRESS;
+    SET = 0;
+    DO WHILE ITEM <> '$';
+        POS = ITEM - 'A';
+        IF POS < 16 THEN SET = SET OR BIT(POS);
+        SETSTR = SETSTR + 1;
+    END;
+    RETURN SET;
+END MAKE$SET;
+
+CONSOLIDATE: PROCEDURE (SETS, N) BYTE;
+    DECLARE (SETS, S BASED SETS) ADDRESS;
+    DECLARE (N, I, J, CHANGE) BYTE;
+
+STEP:
+    CHANGE = 0;
+    DO I=0 TO N-1;
+        DO J=I+1 TO N-1;
+            IF (S(I) AND S(J)) <> 0 THEN DO;
+                S(I) = S(I) OR S(J);
+                S(J) = 0;
+                CHANGE = 1;
+            END;
+        END;
+    END;
+    IF CHANGE THEN GO TO STEP;
+
+    DO I=0 TO N-1;
+        IF S(I)=0 THEN
+            DO J=I+1 TO N-1;
+                S(J-1) = S(J);
+            END;
+    END;
+
+    DO I=0 TO N-1;
+        IF S(I)=0 THEN RETURN I;
+    END;
+    RETURN N;
+END CONSOLIDATE;
+
+TEST: PROCEDURE (SETS, N);
+    DECLARE (SETS, S BASED SETS) ADDRESS;
+    DECLARE (N, I) BYTE;
+    DO I=0 TO N-1;
+        CALL PRINT$SET(S(I));
+    END;
+    CALL PUTS(.' -> $');
+    N = CONSOLIDATE(SETS, N);
+    DO I=0 TO N-1;
+        CALL PRINT$SET(S(I));
+    END;
+    CALL PUTS(.(13,10,'$'));
+END TEST;
+
+DECLARE S (5) ADDRESS;
+
+S(0) = MAKE$SET(.'AB$'); S(1) = MAKE$SET(.'CD$');
+CALL TEST(.S, 2);
+S(0) = MAKE$SET(.'AB$'); S(1) = MAKE$SET(.'BD$');
+CALL TEST(.S, 2);
+S(0) = MAKE$SET(.'AB$'); S(1) = MAKE$SET(.'CD$');
+S(2) = MAKE$SET(.'DB$');
+CALL TEST(.S, 3);
+S(0) = MAKE$SET(.'HIK$'); S(1) = MAKE$SET(.'AB$');
+S(2) = MAKE$SET(.'CD$'); S(3) = MAKE$SET(.'DB$');
+S(4) = MAKE$SET(.'FGH$');
+CALL TEST(.S, 5);
+CALL EXIT;
+EOF

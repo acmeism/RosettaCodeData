@@ -1,0 +1,54 @@
+SUB consolidate (s$)
+    DIM sets$(100)
+    n = 0
+    FOR i = 1 TO LEN(s$)
+        IF MID$(s$, i, 1) = "," THEN
+            n = n + 1
+        ELSE
+            sets$(n) = sets$(n) + MID$(s$, i, 1)
+        END IF
+    NEXT i
+
+    FOR i = 0 TO n
+        p = i
+        ts$ = ""
+        FOR j = i TO 0 STEP -1
+            IF ts$ = "" THEN
+                p = j
+            END IF
+            ts$ = ""
+            FOR k = 1 TO LEN(sets$(p))
+                IF j > 0 THEN
+                    IF INSTR(sets$(j - 1), MID$(sets$(p), k, 1)) = 0 THEN
+                        ts$ = ts$ + MID$(sets$(p), k, 1)
+                    END IF
+                END IF
+            NEXT k
+            IF LEN(ts$) < LEN(sets$(p)) THEN
+                IF j > 0 THEN
+                    sets$(j - 1) = sets$(j - 1) + ts$
+                    sets$(p) = "-"
+                    ts$ = ""
+                END IF
+            ELSE
+                p = i
+            END IF
+        NEXT j
+    NEXT i
+
+    temp$ = sets$(0)
+    FOR i = 1 TO n
+        temp$ = temp$ + "," + sets$(i)
+    NEXT i
+
+    PRINT s$; " = "; temp$
+END SUB
+
+DIM test$(3)
+test$(0) = "AB"
+test$(1) = "AB,CD"
+test$(2) = "AB,CD,DB"
+test$(3) = "HIK,AB,CD,DB,FGH"
+FOR t = 0 TO 3
+    CALL consolidate(test$(t))
+NEXT t

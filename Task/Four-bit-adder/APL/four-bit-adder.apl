@@ -2,9 +2,9 @@
 not ← { ~ ⍵ }   ⍝ in Dyalog these assignments can be simplified to "not ← ~", "and ← ∧", etc.
 and ← { ⍺ ∧ ⍵ }
 or ← { ⍺ ∨ ⍵ }
+nand ← { ⍺ ⍲ ⍵ }
 
 ⍝ Build the complex gates
-nand ← { not ⍺ and ⍵ } ⍝ similarly this can be built with composition as "nand ← not and"
 xor ← { (⍺ and not ⍵) or (⍵ and not ⍺) }
 
 ⍝ And the multigate components. Our bit vectors are MSB first, so for consistency

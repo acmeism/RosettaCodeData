@@ -8,7 +8,7 @@ def checksum(sedol):
     tmp = sum(map(lambda ch, weight: char2value(ch) * weight,
                   sedol, sedolweight)
                )
-    return str((10 - (tmp % 10)) % 10)
+    return str((-tmp) % 10)
 
 for sedol in '''
     710889

@@ -4,7 +4,7 @@
 declare -ir one=10**9
 declare -i e n rfct=one
 
-while (( (rfct /= ++n) != 0 ))
+while (( rfct /= ++n ))
 do e+=rfct
 done
 

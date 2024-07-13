@@ -1,0 +1,310 @@
+include resources "24 Game Icon.icns"
+
+#build CompilerOptions @"-Wno-unused-variable"
+
+_mEdit = 2
+editmenu _mEdit
+
+begin globals
+long gPosition
+end globals
+
+void local fn EraseErrorText
+
+  CGRect r
+  r = fn CGRectMake(10, 200, 400, 15)
+  rect fill r,fn ColorBlack
+
+end fn
+
+local fn ArcRandom( a as long, b as long ) as long
+  long i
+  cln i = (arc4random()%(b-a+1))+a;
+end fn = fn floor(i)
+
+local fn GetRandomNumbers as CFStringRef
+
+  // 96 number groups
+
+  CFArrayRef combos = @[¬
+
+  // The first 32 are easy
+  @"1 2 3 4", @"2 4 6 8", @"1 2 4 8", @"1 3 4 6", @"1 2 6 8",
+  @"2 3 4 8", @"1 3 6 9", @"1 2 7 8", @"2 3 6 8", @"1 4 6 8",
+  @"2 2 3 9", @"3 4 6 6", @"2 3 3 8", @"1 5 6 6", @"2 4 4 6",
+  @"1 3 8 8", @"2 2 6 9", @"3 3 6 9", @"1 2 5 9", @"2 4 5 5",
+  @"1 3 5 9", @"2 2 4 9", @"1 2 3 6", @"1 2 2 9", @"1 2 3 9",
+  @"1 2 4 6", @"1 2 4 4", @"1 2 2 6", @"1 3 3 6", @"1 1 4 6",
+  @"1 1 2 8", @"1 1 3 8",
+  // The middle 32 are medium
+  @"1 5 5 9", @"4 4 6 9", @"2 3 7 9",@"3 5 8 8", @"1 6 6 8",
+  @"3 3 5 6", @"1 4 5 8", @"3 3 6 7",@"2 5 5 8", @"4 4 7 9",
+  @"1 5 6 9", @"3 3 8 9", @"2 6 6 7",@"4 5 7 8", @"2 2 5 9",
+  @"2 4 6 7", @"1 5 6 8", @"3 4 7 7",@"2 5 6 6", @"3 4 5 9",
+  @"1 6 7 9", @"2 3 7 8", @"1 4 6 9",@"2 3 5 9", @"3 4 4 8",
+  @"2 5 8 9", @"1 4 8 9", @"3 3 4 9",@"2 6 7 9", @"1 3 5 7",
+  @"1 3 6 6", @"2 2 5 7",
+  // The last 32 are hard
+  @"1 5 7 9",@"3 4 7 9", @"2 5 7 8", @"3 4 8 9", @"3 4 5 8",
+  @"2 6 6 9",@"4 4 5 7", @"2 4 6 9", @"1 4 7 7", @"2 3 8 9",
+  @"2 3 4 7",@"3 3 4 8", @"1 3 7 9", @"2 4 5 9", @"1 3 6 8",
+  @"2 4 4 9",@"1 5 8 9", @"3 3 5 9", @"2 6 8 9", @"1 4 4 7",
+  @"2 3 6 7",@"1 3 5 8", @"2 4 7 8", @"1 3 4 7", @"2 3 5 6",
+  @"1 4 5 6",@"3 3 5 7", @"2 2 3 6", @"3 3 7 7", @"3 3 7 9",
+  @"4 4 8 9",@"2 4 8 9"]
+
+  long i = fn ArcRandom( 0, len(combos) - 1 )
+  gPosition = i
+
+end fn = combos[i]
+
+
+local fn EvaluateMath( equation as CFStringRef ) as CFStringRef
+  equation = fn StringByReplacingOccurrencesOfString( lcase(equation), @"x", @"*" )
+
+  CFStringRef           result = NULL
+  RegularExpressionRef   regex = fn RegularExpressionWithPattern( @"[0-9.]+", NSRegularExpressionCaseInsensitive, NULL )
+  CFArrayRef           matches = fn RegularExpressionMatches( regex, equation, 0, fn CFRangeMake( 0, len(equation) ) )
+  NSInteger     intConversions = 0
+  TextCheckingResultRef  match
+  CFRange originalRange
+  CFRange adjustedRange
+  CFStringRef     value
+
+  for match in matches
+    originalRange = fn TextCheckingResultRange( match )
+    adjustedRange = fn CFRangeMake( ( originalRange.location + ( intConversions * len( @".0") ) ), originalRange.length )
+    value = fn StringSubstringWithRange( equation, adjustedRange )
+    if fn StringContainsString( value, @"." )
+      continue
+    else
+      equation = fn StringByReplacingCharactersInRange( equation, adjustedRange, fn StringWithFormat( @"%@.0", value ) )
+      intConversions++
+    end if
+  next
+  ExceptionRef e
+  try
+    ExpressionRef expression = fn ExpressionWithFormat( equation )
+    CFNumberRef       number = fn ExpressionValueWithObject( expression, NULL, NULL )
+    result = fn StringWithFormat( @"%.3f", dblval( number ) )
+  end try
+
+  catch (e)
+    result = fn StringWithFormat( @"%@", e ) : exit fn
+  end catch
+  // Test if result is an integer and, if so, return result as an integer
+  if( fn StringDoubleValue( result ) == fn floorf( fn StringDoubleValue( result ) ) )
+    result = fn ArrayFirstObject( fn StringComponentsSeparatedByString( result, @"." ) )
+  end if
+end fn = result
+
+
+local fn QuitOrPlayAlert(GameResult as CFStringRef)
+  alert -2,,GameResult,@"You won!",@"Quit;Play Again"
+  AlertButtonSetKeyEquivalent( 2, 2, @"\e" )
+  short result
+  result = alert 2
+  if ( result != NSAlertSecondButtonReturn ) then appterminate
+end fn
+
+
+local fn BuildWindow
+  CGRect r = fn CGRectMake( 0, 0, 580, 250)
+  window 1, @"24 Game", r
+  windowcenter(1)
+  WindowSetBackgroundColor(1,fn ColorBlack)
+
+end fn
+
+/////////  Start  //////////
+
+fn BuildWindow
+
+
+short d(4), i
+CFStringRef CheckForDuplicates(97)
+for i = 1 to 96
+  CheckForDuplicates(i) = @""
+next i
+
+short DuplicatesCounter
+DuplicatesCounter = 0
+
+
+"Main"
+
+cls
+text ,,fn colorWhite
+
+print
+print %(10,15),"Given four numbers and using just the +, -, *, and / operators; and the"
+print %(10,30),"possible use of parenthesis (), enter an expression that equates to 24."
+print %(10,45),"You must use all your numbers and only those numbers."
+print %(10,60),"Examples: 9618 Solution 9 + 6 + 1 + 8 or 3173 Solution (3 * 7) - (1 - 4)"
+print
+print %(10,85),"Enter Q to quit or S to skip to the next number."
+
+"GetFourNumbers"
+
+CFArrayRef randomNumbers : randomNumbers= fn StringComponentsSeparatedByString( fn GetRandomNumbers, @" " )
+CFStringRef  RandomNumberblock : RandomNumberblock = @""
+CFStringRef  RandomNumberblockAdd : RandomNumberblockAdd = @""
+
+for i = 0 to 3
+  // create a string from the 4 numbers
+  RandomNumberblockAdd = randomNumbers[i]
+  RandomNumberblock = fn StringByAppendingString(RandomNumberblock,RandomNumberblockAdd)
+  RandomNumberblock = fn StringByAppendingString(RandomNumberblock,@" ")
+next i
+
+
+if DuplicatesCounter = > 96
+  // reset counter when last number is retrieved and start from the first number block
+  DuplicatesCounter = 0
+  for i = 1 to 96
+    CheckForDuplicates(i) = @""
+  next i
+end if
+
+for i = 1 to 96
+  // check the current numbers with the numbers already used
+  if fn StringIsEqual(RandomNumberblock,CheckForDuplicates(i))
+    RandomNumberblock = fn StringWithString(CheckForDuplicates(DuplicatesCounter))
+    goto "GetFourNumbers"
+  end if
+next i
+
+DuplicatesCounter ++
+CheckForDuplicates(DuplicatesCounter)  = fn StringWithString(RandomNumberblock)
+
+d(1) = fn StringIntegerValue( randomNumbers[0] )
+d(2) = fn StringIntegerValue( randomNumbers[1] )
+d(3) = fn StringIntegerValue( randomNumbers[2] )
+d(4) = fn StringIntegerValue( randomNumbers[3] )
+
+short dots = 0
+
+//d(1) = 9:d(2) = 6:d(3) = 1:d(4) = 8  // Uncomment to test with 9618 numbers. Solution 9 + 6 + 1 + 8
+//d(1) = 6:d(2) = 5:d(3) = 3:d(4) = 8  // Uncomment to test with 6538 numbers. Solution 6 / ( 5 - 3 ) * 8
+//d(1) = 3:d(2) = 1:d(3) = 7:d(4) = 3 // Uncomment to test with 3773 numbers. Solution ((3 * 1) * 7) + 3
+//d(1) = 4:d(2) = 2:d(3) = 7:d(4) = 1 // Uncomment to test with 4271 numbers. Solution (4 * ( 7 - 2 + 1 )
+// NOTE: When using these test numbers, also uncomment dots = 0 below here to prevent misleading dot displays
+
+
+if gPosition <= 32 then dots = 1
+if gPosition > 32 and gPosition < 65 then dots = 2
+if gPosition > 64 then dots = 3
+
+//dots = 0  uncomment when testing the numbers above to prevent misleading dot displays
+
+print
+text ,,fn colorGreen
+print %(15,110),"These are your numbers, difficulty level ";
+//  @"\U000026AA" is white unicode dot - Easy difficulty (One-Dot)
+//  @"\U0001F534" is red unicode dot - Medium difficulty (Two-Dots)
+//  @"\U0001F7E1" is yellow unicode dot - Hard difficulty (Three-Dots)
+
+if dots = 1 then print @"\U000026AA Easy"
+if dots = 2 then print @"\U0001F534 \U0001F534 Medium"
+if dots = 3 then print @"\U0001F7E1 \U0001F7E1 \U0001F7E1 Hard"
+
+print %(55,125)
+text ,18,fn colorGreen
+for i = 1 to 4
+  print d(i); " ";
+next
+
+print
+
+text ,12,fn colorWhite
+printf @"\n\n\n"
+
+CFStringRef expr
+bool        TryAgain : TryAgain = _false
+CFStringRef MessageText
+CFStringRef UserInput = NULL
+
+"InputExpression"
+
+if TryAgain
+  MessageText = fn StringWithFormat( @"Enter math expression: [ '%@' was incorrect ]", expr )
+  UserInput = input %(10, 190), MessageText, @"123456789+-*/()qs", YES,, 0
+else
+  UserInput = input %(10, 190), @"Enter math expression:", @"123456789+-*/()qs", YES,, 0
+end if
+
+if ( UserInput == NULL ) then "InputExpression"
+expr = UserInput
+if expr = @"" then "InputExpression"
+if fn StringIsEqual(ucase(expr) , @"Q") then appterminate
+if fn StringIsEqual(ucase(expr) , @"S") then "Main"
+
+
+//check expr for validity
+
+short                  j
+bool       GotAllNumbers : GotAllNumbers = _false
+short ThisNumberPosition : ThisNumberPosition = 0
+short         GotaNumber : GotaNumber = 0
+short       TotalNumbers : TotalNumbers = 0
+
+short ExtraNumbers:ExtraNumbers = 0
+
+for i = 1 to len$(fn stringpascalstring(expr))
+  if asc(mid$(fn stringpascalstring(expr),i,1)) > 48 && asc(mid$(fn stringpascalstring(expr),i,1)) < 58
+    ExtraNumbers ++
+  end if
+next i
+
+if ExtraNumbers > 4
+  fn EraseErrorText
+  text ,,fn colorRed
+  TryAgain = _true
+  print %(10,200);"Error! Extra numbers not allowed": goto "InputExpression"
+  text ,,fn colorWhite
+end if
+
+
+for i = 1 to 4
+  GotaNumber = 0
+  for j = 0 to len(expr) -1
+    ThisNumberPosition = instr( j, expr, right(str( d(i)),1 ))
+    ThisNumberPosition ++
+    if ThisNumberPosition then GotaNumber = _true
+  next j
+  if GotaNumber then TotalNumbers ++
+next i
+
+if TotalNumbers => 4 then GotAllNumbers = _true
+
+if GotAllNumbers = _false
+  fn EraseErrorText
+  text ,,fn colorRed
+  TryAgain = _true
+  print %(10,200);"ERROR! Must use all your numbers and only those numbers." : goto "InputExpression"
+  text ,,fn colorWhite
+end if
+
+fn EraseErrorText
+
+
+if fn EvaluateMath( expr ) = _false
+  text ,,fn colorRed
+  TryAgain = _true
+  Print %(10,200);"Error! Incorrect math sequence."
+  goto "InputExpression"
+  text ,,fn colorWhite
+end if
+
+CFStringRef GameResult
+if fn StringIntegerValue( fn EvaluateMath( expr ) ) == 24 then GameResult =  @"Correct" else GameResult =  @"Incorrect"
+
+if GameResult =  @"Incorrect"
+  TryAgain = _true
+  goto "InputExpression"
+end if
+
+fn QuitOrPlayAlert(GameResult)
+goto "Main"
+
+handleevents

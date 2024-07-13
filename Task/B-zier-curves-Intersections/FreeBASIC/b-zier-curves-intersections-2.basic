@@ -1,0 +1,215 @@
+' In this program, both of the curves are adaptively "flattened":
+' that is, converted to a piecewise linear approximation. Then the
+' problem is reduced to finding intersections of line segments.
+'
+' How efficient or inefficient the method is I will not try to answer.
+' (And I do sometimes compute things "too often", although a really good
+' optimizer might fix that.)
+'
+' I will use the symmetric power basis that was introduced by J. Sánchez-Reyes:
+'
+'   J. Sánchez-Reyes, ‘The symmetric analogue of the polynomial power
+'       basis’, ACM Transactions on Graphics, vol 16 no 3, July 1997, page 319.
+'
+'   J. Sánchez-Reyes, ‘Applications of the polynomial s-power basis
+'       in geometry processing’, ACM Transactions on Graphics, vol 19
+'       no 1, January 2000, page 35.
+'
+' Flattening a quadratic that is represented in this basis has a few
+' advantages, which I will not go into here. */
+
+Type bernstein_spline
+    b0 As Double
+    b1 As Double
+    b2 As Double
+End Type
+
+Type spower_spline
+    c0 As Double
+    c1 As Double
+    c2 As Double
+End Type
+
+Type spower_curve
+    x As spower_spline
+    y As spower_spline
+End Type
+
+' Convert a non-parametric spline from Bernstein basis to s-power.
+Function bernstein_spline_to_spower(S As bernstein_spline) As spower_spline
+    Dim As spower_spline T
+    T.c0 = S.b0
+    T.c1 = (2 * S.b1) - S.b0 - S.b2
+    T.c2 = S.b2
+    Return T
+End Function
+
+' Compose (c0, c1, c2) with (t0, t1). This will map the portion [t0,t1] onto
+' [0,1]. (To get these expressions, I did not use the general-degree methods
+' described by Sánchez-Reyes, but instead used Maxima, some while ago.)
+'
+' This method is an alternative to de Casteljau subdivision, and can be done
+' with the coefficients in any basis. Instead of breaking the spline into two
+' pieces at a parameter value t, it gives you the portion lying between two
+' parameter values. In general that requires two applications of de Casteljau
+' subdivision. On the other hand, subdivision requires two applications of the
+' following.
+Function spower_spline_portion(S As spower_spline, t0 As Double, t1 As Double) As spower_spline
+    Dim As Double t0_t0 = t0 * t0
+    Dim As Double t0_t1 = t0 * t1
+    Dim As Double t1_t1 = t1 * t1
+    Dim As Double c2p1m0 = S.c2 + S.c1 - S.c0
+
+    Dim As spower_spline T
+    T.c0 = S.c0 + (c2p1m0 * t0) - (S.c1 * t0_t0)
+    T.c1 = (S.c1 * t1_t1) - (2 * S.c1 * t0_t1) + (S.c1 * t0_t0)
+    T.c2 = S.c0 + (c2p1m0 * t1) - (S.c1 * t1_t1)
+    Return T
+End Function
+
+Function spower_curve_portion(C As spower_curve, t0 As Double, t1 As Double) As spower_curve
+    Dim As spower_curve D
+    D.x = spower_spline_portion(C.x, t0, t1)
+    D.y = spower_spline_portion(C.y, t0, t1)
+    Return D
+End Function
+
+' Given a parametric curve, is it "flat enough" to have its quadratic
+' terms removed?
+Function flat_enough(C As spower_curve, tol As Double) As Boolean
+  ' The degree-2 s-power polynomials are 1-t, t(1-t), t. We want to
+  ' remove the terms in t(1-t). The maximum of t(1-t) is 1/4, reached
+  ' at t=1/2. That accounts for the 1/8=0.125 in the following:
+    Dim As Double cx0 = C.x.c0
+    Dim As Double cx1 = C.x.c1
+    Dim As Double cx2 = C.x.c2
+    Dim As Double cy0 = C.y.c0
+    Dim As Double cy1 = C.y.c1
+    Dim As Double cy2 = C.y.c2
+    Dim As Double dx = cx2 - cx0
+    Dim As Double dy = cy2 - cy0
+    Dim As Double error_squared = 0.125 * ((cx1 * cx1) + (cy1 * cy1))
+    Dim As Double length_squared = (dx * dx) + (dy * dy)
+    Return (error_squared <= length_squared * tol * tol)
+End Function
+
+' Given two line segments, do they intersect? One solution to this problem is
+' to use the implicitization method employed in the Maxima example, except to
+' do it with linear instead of quadratic curves. That is what I do here, with
+' the the roles of who gets implicitized alternated. If both ways you get as
+' answer a parameter in [0,1], then the segments intersect.
+Sub test_line_segment_intersection(ax0 As Double, ax1 As Double, _
+    ay0 As Double, ay1 As Double, bx0 As Double, bx1 As Double, _
+    by0 As Double, by1 As Double, Byref they_intersect As Boolean, _
+    Byref x As Double, Byref y As Double)
+    Dim As Double anumer = ((bx1 - bx0) * ay0 - (by1 - by0) * ax0 _
+    + bx0 * by1 - bx1 * by0)
+    Dim As Double bnumer = -((ax1 - ax0) * by0 - (ay1 - ay0) * bx0 _
+    + ax0 * ay1 - ax1 * ay0)
+    Dim As Double denom = ((ax1 - ax0) * (by1 - by0) _
+    - (ay1 - ay0) * (bx1 - bx0))
+    Dim As Double ta = anumer / denom   ' Parameter of segment a.
+    Dim As Double tb = bnumer / denom   ' Parameter of segment b.
+    they_intersect = (0 <= ta And ta <= 1 And 0 <= tb And tb <= 1)
+    If they_intersect Then
+        x = ((1 - ta) * ax0) + (ta * ax1)
+        y = ((1 - ta) * ay0) + (ta * ay1)
+    End If
+End Sub
+
+Function too_close(x As Double, y As Double, xs() As Double, ys() As Double, _
+    num_points As Integer, spacing As Double) As Boolean
+    Dim As Boolean tooclose = False
+    Dim As Integer i = 0
+    While Not tooclose And i <> num_points
+        tooclose = (Abs(x - xs(i)) < spacing And Abs(y - ys(i)) < spacing)
+        i += 1
+    Wend
+    Return tooclose
+End Function
+
+Sub recursion(tp0 As Double, tp1 As Double, tq0 As Double, tq1 As Double, _
+    P As spower_curve, Q As spower_curve, tol As Double, spacing As Double, _
+    max_points As Integer, xs() As Double, ys() As Double, Byref num_points As Integer)
+    If num_points = max_points Then
+        ' do nothing
+    Elseif Not flat_enough(spower_curve_portion(P, tp0, tp1), tol) Then
+        Dim As Double tp_half = (0.5 * tp0) + (0.5 * tp1)
+        If Not flat_enough(spower_curve_portion(Q, tq0, tq1), tol) Then
+            Dim As Double tq_half = (0.5 * tq0) + (0.5 * tq1)
+            recursion(tp0, tp_half, tq0, tq_half, P, Q, tol, _
+            spacing, max_points, xs(), ys(), num_points)
+            recursion(tp0, tp_half, tq_half, tq1, P, Q, tol, _
+            spacing, max_points, xs(), ys(), num_points)
+            recursion(tp_half, tp1, tq0, tq_half, P, Q, tol, _
+            spacing, max_points, xs(), ys(), num_points)
+            recursion(tp_half, tp1, tq_half, tq1, P, Q, tol, _
+            spacing, max_points, xs(), ys(), num_points)
+        Else
+            recursion(tp0, tp_half, tq0, tq1, P, Q, tol, _
+            spacing, max_points, xs(), ys(), num_points)
+            recursion(tp_half, tp1, tq0, tq1, P, Q, tol, _
+            spacing, max_points, xs(), ys(), num_points)
+        End If
+    Elseif Not flat_enough(spower_curve_portion(Q, tq0, tq1), tol) Then
+        Dim As Double tq_half = (0.5 * tq0) + (0.5 * tq1)
+        recursion(tp0, tp1, tq0, tq_half, P, Q, tol, _
+        spacing, max_points, xs(), ys(), num_points)
+        recursion(tp0, tp1, tq_half, tq1, P, Q, tol, _
+        spacing, max_points, xs(), ys(), num_points)
+    Else
+        Dim As spower_curve P1 = spower_curve_portion(P, tp0, tp1)
+        Dim As spower_curve Q1 = spower_curve_portion(Q, tq0, tq1)
+        Dim As Boolean they_intersect
+        Dim As Double x, y
+        test_line_segment_intersection(P1.x.c0, P1.x.c2, _
+        P1.y.c0, P1.y.c2, _
+        Q1.x.c0, Q1.x.c2, _
+        Q1.y.c0, Q1.y.c2, _
+        they_intersect, x, y)
+        If they_intersect And Not too_close(x, y, xs(), ys(), num_points, spacing) Then
+        xs(num_points) = x
+        ys(num_points) = y
+        num_points += 1
+    End If
+End If
+End Sub
+
+Sub find_intersections(P As spower_curve, Q As spower_curve, _
+    flatness_tolerance As Double, point_spacing As Double, _
+    max_points As Integer, xs() As Double, ys() As Double, _
+    Byref num_points As Integer)
+    num_points = 0
+    recursion(0, 1, 0, 1, P, Q, flatness_tolerance, point_spacing, _
+    max_points, xs(), ys(), num_points)
+End Sub
+
+Dim As bernstein_spline bPx = Type<bernstein_spline>(-1, 0, 1)
+Dim As bernstein_spline bPy = Type<bernstein_spline>(0, 10, 0)
+Dim As bernstein_spline bQx = Type<bernstein_spline>(2, -8, 2)
+Dim As bernstein_spline bQy = Type<bernstein_spline>(1, 2, 3)
+
+Dim As spower_spline Px = bernstein_spline_to_spower(bPx)
+Dim As spower_spline Py = bernstein_spline_to_spower(bPy)
+Dim As spower_spline Qx = bernstein_spline_to_spower(bQx)
+Dim As spower_spline Qy = bernstein_spline_to_spower(bQy)
+
+Dim As spower_curve P = Type<spower_curve>(Px, Py)
+Dim As spower_curve Q = Type<spower_curve>(Qx, Qy)
+
+Dim As Double flatness_tolerance = 0.001
+Dim As Double point_spacing = 0.000001 ' Max norm minimum spacing.
+
+Const max_points As Integer = 10
+Dim As Double xs(max_points)
+Dim As Double ys(max_points)
+Dim As Integer num_points
+
+find_intersections(P, Q, flatness_tolerance, point_spacing, _
+max_points, xs(), ys(), num_points)
+
+For i As Integer = 0 To num_points - 1
+    Print "("; xs(i); ", "; ys(i); ")"
+Next i
+
+Sleep

@@ -1,5 +1,4 @@
-proc matmul . m1[][] m2[][] r[][] .
-   r[][] = [ ]
+func[][] matmul m1[][] m2[][] .
    for i to len m1[][]
       r[][] &= [ ]
       for j = 1 to len m2[1][]
@@ -9,8 +8,8 @@ proc matmul . m1[][] m2[][] r[][] .
          .
       .
    .
+   return r[][]
 .
-mat1[][] = [ [ 1 2 3 ] [ 4 5 6 ] ]
-mat2[][] = [ [ 1 2 ] [ 3 4 ] [ 5 6 ] ]
-matmul mat1[][] mat2[][] erg[][]
-print erg[][]
+a[][] = [ [ 1 2 3 ] [ 4 5 6 ] ]
+b[][] = [ [ 1 2 ] [ 3 4 ] [ 5 6 ] ]
+print matmul a[][] b[][]

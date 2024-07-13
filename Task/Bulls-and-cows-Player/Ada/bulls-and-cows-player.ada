@@ -127,7 +127,7 @@ procedure Bulls_Player is
       function Has_To_Be_Removed (Position : Positive) return Boolean is
          Testant    : constant Sequence := V.Element (Position);
          Bull_Score : Natural           := 0;
-         Cows_Score : Natural := 0;
+         Cow_Score : Natural := 0;
       begin
          for I in Testant'Range loop
             for J in S'Range loop

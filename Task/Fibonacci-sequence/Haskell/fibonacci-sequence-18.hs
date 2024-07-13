@@ -1,1 +1,2 @@
-f (n,(a,b)) = (2*n,(a*a+b*b,2*a*b+b*b))     -- iterate f (1,(0,1)) ; b is nth
+ *Main> (length &&& take 20) . show . fst $ fibN2 (10^6)
+(208988,"19532821287077577316")

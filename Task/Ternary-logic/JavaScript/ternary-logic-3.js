@@ -1,5 +1,4 @@
-trit = {false: 'F', maybe: 'U', true: 'T'}
-nand    = (a, b) => (a == trit.false || b == trit.false) ? trit.true : (a == trit.maybe || b == trit.maybe) ? trit.maybe : trit.false
+nand    = (a, b) => (a == false || b == false) ? true : (a == undefined || b == undefined) ? undefined : false
 not     = (a)    => nand(a, a)
 and     = (a, b) => not(nand(a, b))
 or      = (a, b) => nand(not(a), not(b))

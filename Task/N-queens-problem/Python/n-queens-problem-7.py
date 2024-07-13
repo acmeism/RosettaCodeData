@@ -1,23 +1,23 @@
-def queens(n):
-    a = list(range(n))
-    up = [True]*(2*n - 1)
-    down = [True]*(2*n - 1)
-    def sub(i):
-        if i == n:
-            yield tuple(a)
-        else:
+def queens(n: int):
+
+    def sub(i: int):
+        if i < n:
             for k in range(i, n):
                 j = a[k]
-                p = i + j
-                q = i - j + n - 1
-                if up[p] and down[q]:
-                    up[p] = down[q] = False
+                if b[i + j] and c[i - j]:
                     a[i], a[k] = a[k], a[i]
+                    b[i + j] = c[i - j] = False
                     yield from sub(i + 1)
-                    up[p] = down[q] = True
+                    b[i + j] = c[i - j] = True
                     a[i], a[k] = a[k], a[i]
+        else:
+            yield a
+
+    a = list(range(n))
+    b = [True] * (2 * n - 1)
+    c = [True] * (2 * n - 1)
     yield from sub(0)
 
-#Count solutions for n=8:
-sum(1 for p in queens(8))
+
+sum(1 for p in queens(8))  # count solutions
 92

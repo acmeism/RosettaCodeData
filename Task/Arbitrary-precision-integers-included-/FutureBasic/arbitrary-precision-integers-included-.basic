@@ -1,0 +1,64 @@
+/*
+
+Uses GMP for Multiple Precision Arithmetic
+Install GMP using terminal and Homebrew command, "brew install gmp"
+before running this app in FutureBasic.
+
+Homebrew available here, https://brew.sh
+
+*/
+
+
+include "NSLog.incl"
+
+void local fn GMPoutput
+  CFStringRef     sourcePath = fn StringByAppendingPathComponent( @"/tmp/", @"temp.m" )
+  CFStringRef executablePath = fn StringByAppendingPathComponent( @"/tmp/", @"temp" )
+  CFStringRef         gmpStr = @"#import <Foundation/Foundation.h>\n#import <gmp.h>\n¬
+  int main(int argc, const char * argv[]) {\n¬
+  @autoreleasepool {\n¬
+  mpz_t a;\n¬
+  mpz_init_set_ui(a, 5);\n¬
+  mpz_pow_ui(a, a, 1 << 18);\n¬
+  size_t len = mpz_sizeinbase(a, 10);\n¬
+  printf(\"GMP says size is: %zu\\n\", len);\n¬
+  char *s = mpz_get_str(0, 10, a);\n¬
+  size_t trueLen = strlen(s);\n¬
+  printf(\"  Actual size is: %zu\\n\", trueLen);\n¬
+  printf(\"First & Last 20 digits: %.20s…%s\\n\", s, s + trueLen - 20);\n¬
+  }\n¬
+  return 0;\n¬
+  }"
+  fn StringWriteToURL( gmpStr, fn URLFileURLWithPath( sourcePath ), YES, NSUTF8StringEncoding, NULL )
+
+  TaskRef task = fn TaskInit
+  TaskSetExecutableURL( task, fn URLFileURLWithPath( @"usr/bin/clang" ) )
+  CFArrayRef arguments = @[@"-o", executablePath, sourcePath, @"-lgmp", @"-fobjc-arc"]
+  TaskSetArguments( task, arguments )
+  PipeRef pipe = fn PipeInit
+  TaskSetStandardInput( task, pipe )
+  fn TaskLaunch( task, NULL )
+  TaskWaitUntilExit( task )
+
+  if ( fn TaskTerminationStatus( task ) == 0 )
+    TaskRef executionTask = fn TaskInit
+    TaskSetExecutableURL( executionTask, fn URLFileURLWithPath( executablePath ) )
+    PipeRef executionPipe = fn PipeInit
+    TaskSetStandardOutput( executionTask, executionPipe )
+    FileHandleRef executionFileHandle = fn PipeFileHandleForReading( executionPipe )
+    fn TaskLaunch( executionTask, NULL )
+    TaskWaitUntilExit( executionTask )
+    CFDataRef outputData = fn FileHandleReadDataToEndOfFile( executionFileHandle, NULL )
+    CFStringRef outputStr  = fn StringWithData( outputData, NSUTF8StringEncoding )
+    NSLog( @"%@", outputStr )
+  else
+    alert 1,, @"GMP required but not installed"
+  end if
+
+  fn FileManagerRemoveItemAtURL( fn URLFileURLWithPath( sourcePath     ) )
+  fn FileManagerRemoveItemAtURL( fn URLFileURLWithPath( executablePath ) )
+end fn
+
+fn GMPoutput
+
+HandleEvents

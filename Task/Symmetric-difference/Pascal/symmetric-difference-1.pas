@@ -21,7 +21,7 @@ VAR
 BEGIN
   Put('ListA          -> ', ListA);
   Put('ListB          -> ', ListB);
-  Put('ListA >< ListB -> ', ListA >< ListB);
+  Put('ListA >< ListB -> ', (ListA - ListB) + (ListB - ListA));
   Put('ListA -  ListB -> ', ListA -  ListB);
   Put('ListB -  ListA -> ', ListB -  ListA);
   ReadLn;

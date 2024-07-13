@@ -58,7 +58,7 @@ public final class FactorialBaseNumbersIndexingPermutations {
 		System.out.println("Random shuffle:");
 		ThreadLocalRandom random = ThreadLocalRandom.current();
 		factoradic.clear();
-		for ( int i = 0; i < 52; i++ ) {
+		for ( int i = 0; i < cards.size() - 1; i++ ) {
 			factoradic.add(random.nextInt(cards.size() - i));
 		}
 		System.out.println(toString(factoradic, ".") + " --> ");

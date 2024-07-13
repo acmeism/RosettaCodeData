@@ -1,25 +1,23 @@
-       >>SOURCE FORMAT IS FIXED
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. EULER.
+       PROGRAM-ID. euler.
        DATA DIVISION.
        WORKING-STORAGE SECTION.
-           01 EPSILON USAGE COMPUTATIONAL-2 VALUE 1.0E-15.
-           01 FACT USAGE BINARY-DOUBLE UNSIGNED VALUE 1.
-           01 N USAGE BINARY-INT UNSIGNED.
-           01 E USAGE COMPUTATIONAL-2 VALUE 2.0.
-           01 E0 USAGE COMPUTATIONAL-2 value 0.0.
-           01 RESULT-MESSAGE.
-              03 FILLER PIC X(4) VALUE 'e = '.
-              03 RESULT-VALUE PIC 9.9(18) USAGE DISPLAY.
+       77 epsilon USAGE FLOAT-LONG VALUE IS 1.0E-15.
+       77 fact USAGE IS BINARY-DOUBLE UNSIGNED VALUE IS 1.
+       77 n    USAGE IS BINARY-LONG UNSIGNED.
+       77 e    USAGE IS FLOAT-LONG VALUE IS 2.0.
+       77 e0   USAGE IS FLOAT-LONG VALUE IS 0.0.
+       01 result-message.
+          03 FILLER PICTURE IS X(4) VALUE IS 'e = '.
+          03 result-value PICTURE IS 9.9(18) USAGE IS DISPLAY.
        PROCEDURE DIVISION.
-       MAIN SECTION.
-           PERFORM
-              VARYING N FROM 2 BY 1
-              UNTIL FUNCTION ABS(E - E0) < EPSILON
-              MOVE E TO E0
-              COMPUTE FACT = FACT * N
-              COMPUTE E = E + 1.0 / FACT
+           PERFORM WITH TEST BEFORE VARYING n FROM 2 BY 1
+           UNTIL FUNCTION ABS(e - e0) IS LESS THAN epsilon
+              MOVE e TO e0
+              MULTIPLY n BY fact
+              COMPUTE e = e + 1.0 / fact
            END-PERFORM.
-           MOVE E TO RESULT-VALUE.
-           DISPLAY RESULT-MESSAGE.
+           MOVE e TO result-value.
+           DISPLAY result-message.
            STOP RUN.
+       END PROGRAM euler.

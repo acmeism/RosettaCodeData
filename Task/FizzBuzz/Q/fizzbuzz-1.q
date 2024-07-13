@@ -1,1 +1,1 @@
-{(2 sv not x mod/:5 3)'[;`fizz;`buzz;`fizzbuzz]`$string x}
+{(`$string x)^`fizzbuzz`buzz`fizz`(x mod\:15 5 3)?'0}

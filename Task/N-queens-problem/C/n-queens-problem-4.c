@@ -1,69 +1,91 @@
 #include <stdio.h>
-#define MAXN 31
+#include <stdlib.h>
 
-int nqueens(int n)
+typedef unsigned int uint;
+uint count = 0;
+
+#define ulen sizeof(uint) * 8
+
+/* could have defined as int solve(...), but void may have less
+   chance to confuse poor optimizer */
+void solve(int n)
 {
-  int q0,q1;
-  int cols[MAXN], diagl[MAXN], diagr[MAXN], posibs[MAXN]; // Our backtracking 'stack'
-  int num=0;
-  //
-  // The top level is two fors, to save one bit of symmetry in the enumeration by forcing second queen to
-  // be AFTER the first queen.
-  //
-  for (q0=0; q0<n-2; q0++) {
-    for (q1=q0+2; q1<n; q1++){
-      int bit0 = 1<<q0;
-      int bit1 = 1<<q1;
-      int d=0; // d is our depth in the backtrack stack
-      cols[0] = bit0 | bit1 | (-1<<n); // The -1 here is used to fill all 'coloumn' bits after n ...
-      diagl[0]= (bit0<<1 | bit1)<<1;
-      diagr[0]= (bit0>>1 | bit1)>>1;
+	int cnt = 0;
+	const uint full = -(int)(1 << (ulen - n));
+	register uint bits, pos, *m, d, e;
 
-      //  The variable posib contains the bitmask of possibilities we still have to try in a given row ...
-      int posib = ~(cols[0] | diagl[0] | diagr[0]);
+	uint b0, b1, l[32], r[32], c[32], mm[33] = {0};
+	n -= 3;
+	/* require second queen to be left of the first queen, so
+	   we ever only test half of the possible solutions. This
+	   is why we can't handle n=1 here */
+	for (b0 = 1U << (ulen - n - 3); b0; b0 <<= 1) {
+		for (b1 = b0 << 2; b1; b1 <<= 1) {
+			d = n;
+			/* c: columns occupied by previous queens.
+			   l: columns attacked by left diagonals
+			   r: by right diagnoals */
+			c[n] = b0 | b1;
+			l[n] = (b0 << 2) | (b1 << 1);
+			r[n] = (b0 >> 2) | (b1 >> 1);
 
-      while (d >= 0) {
-        while(posib) {
-          int bit = posib & -posib; // The standard trick for getting the rightmost bit in the mask
-          int ncols= cols[d] | bit;
-          int ndiagl = (diagl[d] | bit) << 1;
-          int ndiagr = (diagr[d] | bit) >> 1;
-          int nposib = ~(ncols | ndiagl | ndiagr);
-          posib^=bit; // Eliminate the tried possibility.
+			/* availabe columns on current row. m is stack */
+			bits = *(m = mm + 1) = full & ~(l[n] | r[n] | c[n]);
 
-          // The following is the main additional trick here, as recognizing solution can not be done using stack level (d),
-          // since we save the depth+backtrack time at the end of the enumeration loop. However by noticing all coloumns are
-          // filled (comparison to -1) we know a solution was reached ...
-          // Notice also that avoiding an if on the ncols==-1 comparison is more efficient!
-          num += ncols==-1;
+			while (bits) {
+				/* d: depth, aka row. counting backwards
+				   because !d is often faster than d != n */
+				while (d) {
+					/* pos is right most nonzero bit */
+					pos = -(int)bits & bits;
 
-          if (nposib) {
-            if (posib) { // This if saves stack depth + backtrack operations when we passed the last possibility in a row.
-              posibs[d++] = posib; // Go lower in stack ..
-            }
-            cols[d] = ncols;
-            diagl[d] = ndiagl;
-            diagr[d] = ndiagr;
-            posib = nposib;
-          }
-        }
-        posib = posibs[--d]; // backtrack ...
-      }
-    }
-  }
-  return num*2;
+					/* mark bit used. only put current bits
+					   on stack if not zero, so backtracking
+					   will skip exhausted rows (because reading
+					   stack variable is sloooow compared to
+					   registers) */
+					if ((bits &= ~pos))
+						*m++ = bits | d;
+
+					/* faster than l[d+1] = l[d]... */
+					e = d--;
+					l[d] = (l[e] | pos) << 1;
+					r[d] = (r[e] | pos) >> 1;
+					c[d] =  c[e] | pos;
+
+					bits = full & ~(l[d] | r[d] | c[d]);
+
+					if (!bits) break;
+					if (!d) { cnt++; break; }
+				}
+				/* Bottom of stack m is a zero'd field acting
+				   as sentinel.  When saving to stack, left
+				   27 bits are the available columns, while
+				   right 5 bits is the depth. Hence solution
+				   is limited to size 27 board -- not that it
+				   matters in foreseeable future. */
+				d = (bits = *--m) & 31U;
+				bits &= ~31U;
+			}
+		}
+	}
+	count = cnt * 2;
 }
 
-
-main(int ac , char **av)
+int main(int c, char **v)
 {
-  if(ac != 2) {
-    printf("usage: nq n\n");
-    return 1;
-  }
-  int n = atoi(av[1]);
-  if(n<1 || n > MAXN) {
-    printf("n must be between 2 and 31!\n");
-  }
-  printf("Number of solution for %d is %d\n",n,nqueens(n));
+	int nn;
+	if (c <= 1 || (nn = atoi(v[1])) <= 0) nn = 8;
+
+	if (nn > 27) {
+		fprintf(stderr, "Value too large, abort\n");
+		exit(1);
+	}
+
+	/* Can't solve size 1 board; might as well skip 2 and 3 */
+	if (nn < 4) count = nn == 1;
+	else	    solve(nn);
+
+	printf("\nSolutions: %d\n", count);
+	return 0;
 }

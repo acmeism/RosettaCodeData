@@ -50,7 +50,7 @@ final class RIPEMD160 {
 	}
 	
 	private static byte[] addPadding(String aMessage) {
-		byte[] bytes = aMessage.getBytes(StandardCharsets.UTF_8);
+		byte[] bytes = aMessage.getBytes(StandardCharsets.ISO_8859_1);
 		bytes = Arrays.copyOf(bytes, bytes.length + 1);
 		bytes[bytes.length - 1] = (byte) 0x80;		
 				

@@ -1,7 +1,6 @@
-proc propdivs n . divs[] .
-   divs[] = [ ]
+func[] propdivs n .
    if n < 2
-      return
+      return [ ]
    .
    divs[] &= 1
    sqr = sqrt n
@@ -13,14 +12,13 @@ proc propdivs n . divs[] .
          .
       .
    .
+   return divs[]
 .
 for i to 10
-   propdivs i d[]
-   write i & ":"
-   print d[]
+   print i & ":" & propdivs i
 .
 for i to 20000
-   propdivs i d[]
+   d[] = propdivs i
    if len d[] > max
       max = len d[]
       maxi = i

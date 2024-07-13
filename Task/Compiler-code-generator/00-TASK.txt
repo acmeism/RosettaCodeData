@@ -1,5 +1,265 @@
-Code Generator
+{{task heading|Code Generator}}
 
 A code generator translates the output of the syntax analyzer and/or semantic analyzer
 into lower level code, either assembly, object, or virtual.
+
+;Task
+
+Take the output of the Syntax analyzer [[Compiler/syntax_analyzer|task]] - which is a [[Flatten_a_list|flattened]] Abstract Syntax Tree (AST) - and convert it to virtual machine code, that can be run by the
+[[Compiler/virtual_machine_interpreter|Virtual machine interpreter]].  The output is in text format, and represents virtual assembly code.
+
+The program should read input from a file and/or stdin, and write output to a file and/or
+stdout.
+
+;Example - given the simple program (below), stored in a file called while.t, create the list of tokens, using one of the Lexical analyzer [[Compiler/lexical_analyzer|solutions]]
+
+ lex < while.t > while.lex
+
+;Run one of the Syntax analyzer [[Compiler/syntax_analyzer|solutions]]:
+
+ parse < while.lex > while.ast
+
+;while.ast can be input into the code generator.
+
+;The following table shows the input to lex, lex output, the AST produced by the parser, and the generated virtual assembly code.
+
+ Run as:  lex < while.t | parse | gen
+
+{| class="wikitable"
+|-
+! Input to lex
+! Output from lex, input to parse
+! Output from parse
+! Output from gen, input to VM
+|-
+| style="vertical-align:top" |
+<syntaxhighlight lang="c">count = 1;
+while (count < 10) {
+    print("count is: ", count, "\n");
+    count = count + 1;
+}</syntaxhighlight>
+
+| style="vertical-align:top" |
+<b><pre>
+    1      1   Identifier      count
+    1      7   Op_assign
+    1      9   Integer              1
+    1     10   Semicolon
+    2      1   Keyword_while
+    2      7   LeftParen
+    2      8   Identifier      count
+    2     14   Op_less
+    2     16   Integer             10
+    2     18   RightParen
+    2     20   LeftBrace
+    3      5   Keyword_print
+    3     10   LeftParen
+    3     11   String          "count is: "
+    3     23   Comma
+    3     25   Identifier      count
+    3     30   Comma
+    3     32   String          "\n"
+    3     36   RightParen
+    3     37   Semicolon
+    4      5   Identifier      count
+    4     11   Op_assign
+    4     13   Identifier      count
+    4     19   Op_add
+    4     21   Integer              1
+    4     22   Semicolon
+    5      1   RightBrace
+    6      1   End_of_input</pre></b>
+
+| style="vertical-align:top" |
+<b><pre>Sequence
+Sequence
+;
+Assign
+Identifier    count
+Integer       1
+While
+Less
+Identifier    count
+Integer       10
+Sequence
+Sequence
+;
+Sequence
+Sequence
+Sequence
+;
+Prts
+String        "count is: "
+;
+Prti
+Identifier    count
+;
+Prts
+String        "\n"
+;
+Assign
+Identifier    count
+Add
+Identifier    count
+Integer       1</pre></b>
+
+| style="vertical-align:top" |
+<b><pre>Datasize: 1 Strings: 2
+"count is: "
+"\n"
+   0 push  1
+   5 store [0]
+  10 fetch [0]
+  15 push  10
+  20 lt
+  21 jz     (43) 65
+  26 push  0
+  31 prts
+  32 fetch [0]
+  37 prti
+  38 push  1
+  43 prts
+  44 fetch [0]
+  49 push  1
+  54 add
+  55 store [0]
+  60 jmp    (-51) 10
+  65 halt</pre></b>
+|}
+
+; Input format:
+
+As shown in the table, above, the output from the [[Compiler/syntax_analyzer|syntax analyzer]] is a flattened AST.
+
+In the AST, Identifier, Integer, and String, are terminal nodes, e.g, they do not have child nodes.
+
+Loading this data into an internal parse tree should be as simple as:
+
+<syntaxhighlight lang="python">
+def load_ast()
+    line = readline()
+    # Each line has at least one token
+    line_list = tokenize the line, respecting double quotes
+
+    text = line_list[0] # first token is always the node type
+
+    if text == ";"
+        return None
+
+    node_type = text # could convert to internal form if desired
+
+    # A line with two tokens is a leaf node
+    # Leaf nodes are: Identifier, Integer String
+    # The 2nd token is the value
+    if len(line_list) > 1
+        return make_leaf(node_type, line_list[1])
+
+    left = load_ast()
+    right = load_ast()
+    return make_node(node_type, left, right)
+</syntaxhighlight>
+
+; Output format - refer to the table above
+
+* The first line is the header: Size of data, and number of constant strings.
+** size of data is the number of 32-bit unique variables used.  In this example, one variable, '''count'''
+** number of constant strings is just that - how many there are
+* After that, the constant strings
+* Finally, the assembly code
+
+;Registers:
+
+* sp: the stack pointer - points to the next top of stack.  The stack is a 32-bit integer array.
+
+* pc: the program counter - points to the current instruction to be performed.  The code is an array of bytes.
+
+;Data: 
+
+32-bit integers and strings
+
+;Instructions:
+
+Each instruction is one byte.  The following instructions also have a 32-bit integer operand:
+
+ fetch [index]
+
+where index is an index into the data array.
+
+ store [index]
+
+where index is an index into the data array.
+
+ push n
+
+where value is a 32-bit integer that will be pushed onto the stack.
+
+ jmp (n) addr
+
+where (n) is a 32-bit integer specifying the distance between the current location and the
+desired location.  addr is an unsigned value of the actual code address.
+
+ jz (n) addr
+
+where (n) is a 32-bit integer specifying the distance between the current location and the
+desired location.  addr is an unsigned value of the actual code address.
+
+The following instructions do not have an operand.  They perform their operation directly
+against the stack:
+
+For the following instructions, the operation is performed against the top two entries in
+the stack:
+
+ add
+ sub
+ mul
+ div
+ mod
+ lt
+ gt
+ le
+ ge
+ eq
+ ne
+ and
+ or
+
+For the following instructions, the operation is performed against the top entry in the
+stack:
+
+ neg
+ not
+
+ prtc
+
+Print the word at stack top as a character.
+
+ prti
+
+Print the word at stack top as an integer.
+
+ prts
+
+Stack top points to an index into the string pool.  Print that entry.
+
+ halt
+
+Unconditional stop.
+
+; Additional examples
+
+Your solution should pass all the test cases above and the additional tests found '''[[Compiler/Sample_programs|Here]]'''.
+
+{{task heading|Reference}}
+
+The C and Python versions can be considered reference implementations.
+
+;Related Tasks
+
+* [[Compiler/lexical_analyzer|Lexical Analyzer task]]
+* [[Compiler/syntax_analyzer|Syntax Analyzer task]]
+* [[Compiler/virtual_machine_interpreter|Virtual Machine Interpreter task]]
+* [[Compiler/AST_interpreter|AST Interpreter task]]
+
+<hr>
+__TOC__
 

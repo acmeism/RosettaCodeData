@@ -20,13 +20,6 @@ class G2048 {
             for (j in 0..3) _board[i][j] = Tile.new(0, false)
         }
         _rand = Random.new()
-        initializeBoard()
-    }
-
-    initializeBoard() {
-        for (y in 0..3) {
-            for (x in 0..3) _board[x][y] = Tile.new(0, false)
-        }
     }
 
     loop() {

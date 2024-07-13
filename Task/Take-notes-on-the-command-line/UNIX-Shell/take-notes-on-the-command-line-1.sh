@@ -1,8 +1,12 @@
 #
-NOTES=$HOME/notes.txt
-if [[ $# -eq 0 ]] ; then
-  [[ -r  $NOTES ]] && more $NOTES
-else
-  date >> $NOTES
-  echo "  $*" >> $NOTES
+
+if
+  declare NOTES=$HOME/notes.txt
+  (($#))
+then
+  {
+    date
+    echo "  $*"
+  } >> $NOTES
+else [[ -r  $NOTES ]] && more $NOTES
 fi

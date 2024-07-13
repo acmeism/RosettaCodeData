@@ -1,6 +1,9 @@
 with Ada.Characters.Latin_1;
 with Ada.Streams.Stream_IO;  use Ada.Streams.Stream_IO;
 
+with Bitmap_Store; use Bitmap_Store;
+-- This package is defined in the Bitmap task.
+
 procedure Put_PPM (File : File_Type; Picture : Image) is
    use Ada.Characters.Latin_1;
    Size   : constant String := Integer'Image (Picture'Length (2)) & Integer'Image (Picture'Length (1));

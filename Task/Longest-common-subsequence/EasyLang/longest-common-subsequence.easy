@@ -1,5 +1,5 @@
 func$ right a$ n .
-   return substr a$ -n n
+   return substr a$ (len a$ - n + 1) n
 .
 func$ left a$ n .
    if n < 0

@@ -15,7 +15,7 @@ fastfunc isprim num .
    .
    return 1
 .
-func nextprim n .
+fastfunc nextprim n .
    repeat
       n += 2
       until isprim n = 1
@@ -47,4 +47,5 @@ repeat
       .
    .
 .
+print ""
 print "Ormiston triples before 1 billion: " & cnt

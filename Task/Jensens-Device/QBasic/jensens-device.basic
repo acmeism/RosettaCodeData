@@ -1,0 +1,12 @@
+CALL EVALUATION
+END
+
+SUB Evaluation
+    LET lo = 1
+    LET hi = 100
+    LET temp = 0
+    FOR i = lo TO hi
+        LET temp = temp + (1 / i)
+    NEXT i
+    PRINT temp
+END SUB

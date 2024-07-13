@@ -49,7 +49,7 @@ final class SHA256 {
 	}
 	
 	private static byte[] addPadding(String message) {
-		byte[] bytes = message.getBytes(StandardCharsets.UTF_8);
+		byte[] bytes = message.getBytes(StandardCharsets.ISO_8859_1);
 		bytes = Arrays.copyOf(bytes, bytes.length + 1);
 		bytes[bytes.length - 1] = (byte) 0x80;
 				

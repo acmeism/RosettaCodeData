@@ -68,8 +68,8 @@ package body Generic_Inverted_Index is
 
    procedure Iterate(The_Sources: Vector) is
    begin
-      for Some_Element in The_Sources loop
-         Do_Something(Element(Some_Element));
+      for Some_Element of The_Sources loop
+         Do_Something(Some_Element);
       end loop;
    end Iterate;
 

@@ -1,0 +1,181 @@
+#version 3.7;
+
+global_settings {
+	assumed_gamma 1
+}
+
+#declare Rows = 15;
+#declare Cols = 17;
+
+#declare Seed = seed(2); // A seed produces a fixed sequence of pseudorandom numbers
+
+#declare Wall = prism {
+	0, 0.8, 7,
+	<0, -0.5>, <0.05, -0.45>, <0.05, 0.45>, <0, 0.5>,
+	<-0.05, 0.45>, <-0.05, -0.45>, <0, -0.5>
+	texture {
+		pigment {
+			brick colour rgb 1, colour rgb <0.8, 0.25, 0.1> // Colour mortar, colour brick
+			brick_size 3*<0.25, 0.0525, 0.125>
+			mortar 3*0.01 // Size of the mortar
+		}
+		normal { wrinkles 0.75 scale 0.01 }
+		finish { diffuse 0.9 phong 0.2 }
+     }
+}
+
+#macro Fisher_Yates_Shuffle(Stack, Start, Top)
+	#for (I, Top, Start+1, -1)
+		#local J = floor(rand(Seed)*I + 0.5);
+		#if (J != I) // Waste of time swapping an element with itself
+			#local Src_Row = Stack[I][0];
+			#local Src_Col = Stack[I][1];
+			#local Dst_Row = Stack[I][2];
+			#local Dst_Col = Stack[I][3];
+			#declare Stack[I][0] = Stack[J][0];
+			#declare Stack[I][1] = Stack[J][1];
+			#declare Stack[I][2] = Stack[J][2];
+			#declare Stack[I][3] = Stack[J][3];
+			#declare Stack[J][0] = Src_Row;
+			#declare Stack[J][1] = Src_Col;
+			#declare Stack[J][2] = Dst_Row;
+			#declare Stack[J][3] = Dst_Col;
+		#end
+	#end
+#end
+
+#macro Initialise(Visited, North_Walls, East_Walls)
+	#for (R, 0, Rows-1)
+		#for (C, 0, Cols-1)
+			#declare Visited[R][C] = false;
+			#declare North_Walls[R][C] = true;
+			#declare East_Walls[R][C] = true;
+		#end
+	#end
+#end
+
+#macro Push(Stack, Top, Src_Row, Src_Col, Dst_Row, Dst_Col)
+	#declare Top = Top + 1;
+	#declare Stack[Top][0] = Src_Row;
+	#declare Stack[Top][1] = Src_Col;
+	#declare Stack[Top][2] = Dst_Row;
+	#declare Stack[Top][3] = Dst_Col;
+#end
+
+#macro Generate_Maze(Visited, North_Walls, East_Walls)
+	#local Stack = array[Rows*Cols][4]; // 0: from row, 1: from col, 2: to row, 3: to col
+	#local Row = floor(rand(Seed)*(Rows-1) + 0.5); // Random start row
+	#local Col = floor(rand(Seed)*(Cols-1) + 0.5); // Random start column
+	#local Top = -1;
+	Push(Stack, Top, Row, Col, Row, Col)
+
+	#while (Top >= 0)
+		#declare Visited[Row][Col] = true;
+		#local Start = Top + 1;
+
+		#if (Row < Rows-1) // Add north neighbour
+			#if (Visited[Row+1][Col] = false)
+				Push(Stack, Top, Row, Col, Row+1, Col)
+			#end
+		#end
+
+		#if (Col < Cols-1) // Add east neighbour
+			#if (Visited[Row][Col+1] = false)
+				Push(Stack, Top, Row, Col, Row, Col+1)
+			#end
+		#end
+
+		#if (Row > 0) // Add south neighbour
+			#if (Visited[Row-1][Col] = false)
+				Push(Stack, Top, Row, Col, Row-1, Col)
+			#end
+		#end
+
+		#if (Col > 0) // Add west neighbour
+			#if (Visited[Row][Col-1] = false)
+				Push(Stack, Top, Row, Col, Row, Col-1)
+			#end
+		#end
+
+		Fisher_Yates_Shuffle(Stack, Start, Top)
+
+		#local Removed_Wall = false;
+		#while (Top >= 0 & Removed_Wall = false)
+			#local Src_Row = Stack[Top][0];
+			#local Src_Col = Stack[Top][1];
+			#local Dst_Row = Stack[Top][2];
+			#local Dst_Col = Stack[Top][3];
+			#declare Top = Top - 1;
+
+			#if (Visited[Dst_Row][Dst_Col] = false)
+				#if (Dst_Row = Src_Row+1 & Dst_Col = Src_Col) // North wall
+					#declare North_Walls[Src_Row][Src_Col] = false;
+				#elseif (Dst_Row = Src_Row & Dst_Col = Src_Col+1) // East wall
+					#declare East_Walls[Src_Row][Src_Col] = false;
+				#elseif (Dst_Row = Src_Row-1 & Dst_Col = Src_Col) // South wall
+					#declare North_Walls[Dst_Row][Src_Col] = false;
+				#elseif (Dst_Row = Src_Row & Dst_Col = Src_Col-1) // West wall
+					#declare East_Walls[Src_Row][Dst_Col] = false;
+				#else
+					#error "Unknown wall!\n"
+				#end
+
+				#declare Row = Dst_Row;
+				#declare Col = Dst_Col;
+				#declare Removed_Wall = true;
+			#end
+		#end
+	#end
+#end
+
+#macro Draw_Maze(North_Walls, East_Walls)
+	merge {
+		#for (R, 0, Rows-1)
+			object { Wall translate <1, 0, 0.5> translate <-1, 0, R> } // West edge
+			#for (C, 0, Cols-1)
+				#if (R = 0) // South edge
+					object { Wall rotate y*90 translate <0.5, 0, 1> translate <C, 0, -1> }
+				#end
+				#if (North_Walls[R][C])
+					object { Wall rotate y*90 translate <0.5, 0, 1> translate <C, 0, R> }
+				#end
+				#if (East_Walls[R][C])
+					object { Wall translate <1, 0, 0.5> translate <C, 0, R> }
+				#end
+			#end
+		#end
+		translate <-0.5*Cols, 0, 0> // Centre maze on x=0
+	}
+#end
+
+camera {
+	location <0, 13, -2>
+	right x*image_width/image_height
+	look_at <0, 2, 5>
+}
+
+light_source {
+	<-0.1*Cols, Rows, 0.5*Rows>, colour rgb <1, 1, 1>
+	area_light
+	x, y, 3, 3
+	circular orient
+}
+
+box {
+	<-0.5*Cols, -0.1, 0>, <0.5*Cols, 0, Rows>
+	texture {
+		pigment {
+			checker	colour rgb <0, 0.3, 0> colour rgb <0, 0.4, 0>
+			scale 0.5
+		}
+		finish { specular 0.5 reflection { 0.1 } }
+	}
+}
+
+#declare Visited = array[Rows][Cols];
+#declare North_Walls = array[Rows][Cols];
+#declare East_Walls = array[Rows][Cols];
+
+Initialise(Visited, North_Walls, East_Walls)
+Generate_Maze(Visited, North_Walls, East_Walls)
+Draw_Maze(North_Walls, East_Walls)

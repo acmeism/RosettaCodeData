@@ -1,0 +1,91 @@
+        org     100h
+        mvi     b,30            ; Counter
+        push    b
+loop:   lhld    curcub          ; DE = current cube
+        xchg
+        lhld    cursqr          ; HL = current square
+        call    cdehl
+        jc      advcub          ; DE < HL, next cube
+        jz      advsqr          ; DE = HL, both square and cube
+        call    prhl            ; HL = square but not cube, print it
+        pop     b               ; Get counter
+        dcr     b               ; Decrease counter
+        rz                      ; Stop when zero reached
+        push    b               ; Push counter back
+advsqr: call    nexsqr          ; Next square
+        jmp     loop
+advcub: call    nexcub          ; Next cube
+        jmp     loop
+
+        ; compare DE to HL
+cdehl:  mov     a,d
+        cmp     h
+        rnz
+        mov     a,e
+        cmp     l
+        ret
+
+        ; Get next square (starting with 1)
+nexsqr: lhld    sqdiff          ; DE = current difference
+        xchg
+        lhld    cursqr          ; HL = current square
+        dad     d               ; Add difference to square
+        inx     d               ; Increment difference twice
+        inx     d
+        shld    cursqr          ; Update current square
+        xchg
+        shld    sqdiff          ; Update current difference
+        ret
+cursqr: dw      0               ; Current square
+sqdiff: dw      1               ; Difference to next squre
+
+        ; Get next cube (starting with 1)
+nexcub: lhld    csumst          ; DE = start of current sum
+        xchg
+        lxi     h,0             ; HL = current cube
+        lda     csumn           ; A = amount of numbers to sum
+csumlp: dad     d               ; Add to current cube
+        inx     d               ; Next odd number
+        inx     d
+        dcr     a               ; Until done summing
+        jnz     csumlp
+        shld    curcub          ; Store next sum
+        xchg
+        shld    csumst          ; Store start of next sum
+        lxi     h,csumn         ; Increment sum counter
+        inr     m
+        ret
+curcub: dw      0               ; Current cube
+csumst: dw      1               ; Start of current sum
+csumn:  db      1               ; Amount of numbers to sum
+
+        ; Print HL as a decimal value
+prhl:   push    h               ; Store registers
+        push    d
+        push    b
+        lxi     b,pnum          ; Store pointer to buffer on stack
+        push    b
+        lxi     b,-10           ; Divide by 10 using trial subtraction
+prdgt:  lxi     d,-1            ; D =
+prdgtl: inx     d
+        dad     b
+        jc      prdgtl
+        mvi     a,'0'+10        ; ASCII digit + 10
+        add     l               ; L = remainder - 10
+        pop     h               ; Get pointer to buffer
+        dcx     h               ; Go back one digit
+        mov     m,a             ; Store digit
+        push    h               ; Store pointer to buffer
+        xchg                    ; HL = n/10
+        mov     a,h             ; Zero?
+        ora     l
+        jnz     prdgt           ; If not, get more digits
+        mvi     c,9             ; 9 = CP/M print string
+        pop     d               ; DE = buffer
+        call    5
+        pop     b               ; Restore registers
+        pop     d
+        pop     h
+        ret
+        db      '*****'         ; Number placeholder
+pnum:   db      13,10,'$'

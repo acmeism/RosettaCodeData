@@ -1,0 +1,162 @@
+' The control points of a planar quadratic Bézier curve form a
+' triangle--called the "control polygon"--that completely contains
+' the curve. Furthermore, the rectangle formed by the minimum and
+' maximum x and y values of the control polygon completely contain
+' the polygon, and therefore also the curve.
+'
+' Thus a simple method for narrowing down where intersections might
+' be is: subdivide both curves until you find "small enough" regions
+' where these rectangles overlap.
+
+#define Min(a, b) iif((a) < (b), (a), (b))
+#define Max(a, b) iif((a) > (b), (a), (b))
+
+' Note that these are all mutable as we need to pass by reference.
+Type Punto
+    x As Double
+    y As Double
+End Type
+
+Type QuadSpline
+    c0 As Double
+    c1 As Double
+    c2 As Double    ' Non-parametric spline
+End Type
+
+Type QuadCurve
+    x As QuadSpline
+    y As QuadSpline     ' Planar parametric spline
+End Type
+
+' Subdivision by de Casteljau's algorithm
+Sub subdivideQuadSpline(q As QuadSpline, t As Double, u As QuadSpline, v As QuadSpline)
+    Dim As Double s = 1.0 - t
+    Dim As Double c0 = q.c0
+    Dim As Double c1 = q.c1
+    Dim As Double c2 = q.c2
+    u.c0 = c0
+    v.c2 = c2
+    u.c1 = s * c0 + t * c1
+    v.c1 = s * c1 + t * c2
+    u.c2 = s * u.c1 + t * v.c1
+    v.c0 = u.c2
+End Sub
+
+Sub subdivideQuadCurve(q As QuadCurve, t As Double, u As QuadCurve, v As QuadCurve)
+    subdivideQuadSpline(q.x, t, u.x, v.x)
+    subdivideQuadSpline(q.y, t, u.y, v.y)
+End Sub
+
+' It is assumed that xa0 <= xa1, ya0 <= ya1, xb0 <= xb1, and yb0 <= yb1.
+Function rectsOverlap(xa0 As Double, ya0 As Double, xa1 As Double, ya1 As Double, _
+    xb0 As Double, yb0 As Double, xb1 As Double, yb1 As Double) As Boolean
+    Return (xb0 <= xa1 And xa0 <= xb1 And yb0 <= ya1 And ya0 <= yb1)
+End Function
+
+Function max3(x As Double, y As Double, z As Double) As Double
+    Return Max(Max(x, y), z)
+End Function
+
+Function min3(x As Double, y As Double, z As Double) As Double
+    Return Min(Min(x, y), z)
+End Function
+
+' This accepts the point as an intersection if the boxes are small enough.
+Sub testIntersect(p As QuadCurve, q As QuadCurve, tol As Double, _
+    Byref exclude As Boolean, Byref accept As Boolean, Byref intersect As Punto)
+    Dim As Double pxmin = min3(p.x.c0, p.x.c1, p.x.c2)
+    Dim As Double pymin = min3(p.y.c0, p.y.c1, p.y.c2)
+    Dim As Double pxmax = max3(p.x.c0, p.x.c1, p.x.c2)
+    Dim As Double pymax = max3(p.y.c0, p.y.c1, p.y.c2)
+
+    Dim As Double qxmin = min3(q.x.c0, q.x.c1, q.x.c2)
+    Dim As Double qymin = min3(q.y.c0, q.y.c1, q.y.c2)
+    Dim As Double qxmax = max3(q.x.c0, q.x.c1, q.x.c2)
+    Dim As Double qymax = max3(q.y.c0, q.y.c1, q.y.c2)
+    exclude = True
+    accept = False
+    If rectsOverlap(pxmin, pymin, pxmax, pymax, qxmin, qymin, qxmax, qymax) Then
+        exclude = False
+        Dim As Double xmin = Max(pxmin, qxmin)
+        Dim As Double xmax = Min(pxmax, qxmax)
+        Assert(xmax >= xmin)
+        If xmax - xmin <= tol Then
+            Dim As Double ymin = Max(pymin, qymin)
+            Dim As Double ymax = Min(pymax, qymax)
+            Assert(ymax >= ymin)
+            If ymax - ymin <= tol Then
+                accept = True
+                intersect.x = 0.5 * xmin + 0.5 * xmax
+                intersect.y = 0.5 * ymin + 0.5 * ymax
+            End If
+        End If
+    End If
+End Sub
+
+Function seemsToBeDuplicate(intersects() As Punto, icount As Integer, _
+    xy As Punto, spacing As Double) As Boolean
+    Dim As Boolean seemsToBeDup = False
+    Dim As Integer i = 0
+    While Not seemsToBeDup And i <> icount
+        Dim As Punto pt = intersects(i)
+        seemsToBeDup = Abs(pt.x - xy.x) < spacing And Abs(pt.y - xy.y) < spacing
+        i += 1
+    Wend
+    Return seemsToBeDup
+End Function
+
+Sub findIntersects(p As QuadCurve, q As QuadCurve, tol As Double, _
+    spacing As Double, intersects() As Punto)
+    Dim As Integer numIntersects = 0
+    Type workset
+        p As QuadCurve
+        q As QuadCurve
+    End Type
+    Dim As workset workload(64)
+    Dim As Integer numWorksets = 1
+    workload(0) = Type<workset>(p, q)
+
+    ' Quit looking after having emptied the workload.
+    While numWorksets <> 0
+        Dim As workset work = workload(numWorksets-1)
+        numWorksets -= 1
+        Dim As Boolean exclude, accept
+        Dim As Punto intersect
+        testIntersect(work.p, work.q, tol, exclude, accept, intersect)
+        If accept Then
+            ' To avoid detecting the same intersection twice, require some
+            ' space between intersections.
+            If Not seemsToBeDuplicate(intersects(), numIntersects, intersect, spacing) Then
+                intersects(numIntersects) = intersect
+                numIntersects += 1
+            End If
+        Elseif Not exclude Then
+            Dim As QuadCurve p0, p1, q0, q1
+            subdivideQuadCurve(work.p, 0.5, p0, p1)
+            subdivideQuadCurve(work.q, 0.5, q0, q1)
+            workload(numWorksets) = Type<workset>(p0, q0)
+            numWorksets += 1
+            workload(numWorksets) = Type<workset>(p0, q1)
+            numWorksets += 1
+            workload(numWorksets) = Type<workset>(p1, q0)
+            numWorksets += 1
+            workload(numWorksets) = Type<workset>(p1, q1)
+            numWorksets += 1
+        End If
+    Wend
+End Sub
+
+Dim As QuadCurve p, q
+p.x = Type<QuadSpline>(-1.0,  0.0, 1.0)
+p.y = Type<QuadSpline>( 0.0, 10.0, 0.0)
+q.x = Type<QuadSpline>( 2.0, -8.0, 2.0)
+q.y = Type<QuadSpline>( 1.0,  2.0, 3.0)
+Dim As Double tol = 0.0000001
+Dim As Double spacing = tol * 10.0
+Dim As Punto intersects(4)
+findIntersects(p, q, tol, spacing, intersects())
+For i As Integer = 0 To 3
+    Print "("; intersects(i).x; ", "; intersects(i).y; ")"
+Next i
+
+Sleep

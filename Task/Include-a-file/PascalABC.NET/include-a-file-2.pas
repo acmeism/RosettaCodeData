@@ -1,0 +1,1 @@
+procedure Hello := Print('Hello');

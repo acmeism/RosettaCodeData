@@ -37,21 +37,22 @@ private:
 
 class P_adic {
 public:
-	// Create a P-adic number, with p = 'prime', from the given rational 'numerator' / 'denominator'.
+	// Create a P_adic number, with p = 'prime', from the given rational 'numerator' / 'denominator'.
 	P_adic(const uint32_t& prime, int32_t numerator, int32_t denominator) : prime(prime) {
 		if ( denominator == 0 ) {
-			std::invalid_argument("Denominator cannot be zero");
+			throw std::invalid_argument("Denominator cannot be zero");
 		}
 
 		order = 0;
 
 		// Process rational zero
 		if ( numerator == 0 ) {
+			digits.assign(DIGITS_SIZE, 0);
 			order = ORDER_MAX;
 			return;
 		}
 
-		// Remove multiples of 'prime' and adjust the order of the P-adic number accordingly
+		// Remove multiples of 'prime' and adjust the order of the P_adic number accordingly
 		while ( modulo_prime(numerator) == 0 ) {
 			numerator /= static_cast<int32_t>(prime);
 			order += 1;
@@ -62,7 +63,7 @@ public:
 			order -= 1;
 		}
 
-		// Standard calculation of P-adic digits
+		// Standard calculation of P_adic digits
 		const uint64_t inverse = modulo_inverse(denominator);
 		while ( digits.size() < DIGITS_SIZE ) {
 			const uint32_t digit = modulo_prime(numerator * inverse);
@@ -85,17 +86,17 @@ public:
 		}
 	}
 
-	// Return the sum of this P-adic number with the given P-adic number.
+	// Return the sum of this P_adic number with the given P_adic number.
 	P_adic add(P_adic other) {
 		if ( prime != other.prime ) {
-			std::invalid_argument("Cannot add p-adic's with different primes");
+			throw std::invalid_argument("Cannot add p-adic's with different primes");
 		}
 
 		std::vector<uint32_t> this_digits = digits;
 		std::vector<uint32_t> other_digits = other.digits;
 		std::vector<uint32_t> result;
 
-		// Adjust the digits so that the P-adic points are aligned
+		// Adjust the digits so that the P_adic points are aligned
 		for ( int32_t i = 0; i < -order + other.order; ++i ) {
 			other_digits.insert(other_digits.begin(), 0);
 		}
@@ -116,12 +117,12 @@ public:
 		return P_adic(prime, result, all_zero_digits(result) ? ORDER_MAX : std::min(order, other.order));
 	}
 
-	// Return the Rational representation of this P-adic number.
+	// Return the Rational representation of this P_adic number.
 	Rational convert_to_rational() {
 		std::vector<uint32_t> numbers = digits;
 
 		// Zero
-		if ( all_zero_digits(numbers) ) {
+		if ( numbers.empty() || all_zero_digits(numbers) ) {
 			return Rational(1, 0);
 		}
 
@@ -171,37 +172,38 @@ public:
 		return Rational(numerator, denominator);
 	}
 
-	// Return a string representation of this p-adic.
+	// Return a string representation of this P_adic number.
 	std::string to_string() {
-		while ( digits.size() > PRECISION ) {
-			digits.pop_back();
-		}
-		pad_with_zeros(digits);
+		std::vector<uint32_t> numbers = digits;
+		pad_with_zeros(numbers);
 
 		std::string result = "";
-		for ( int64_t i = digits.size() - 1; i >= 0; --i ) {
+		for ( int64_t i = numbers.size() - 1; i >= 0; --i ) {
 			result += std::to_string(digits[i]);
 		}
 
 		if ( order >= 0 ) {
 			for ( int32_t i = 0; i < order; ++i ) {
 				result += "0";
-				result.erase(result.begin());
 			}
 
 			result += ".0";
 		} else {
 			result.insert(result.length() + order, ".");
+
+			while ( result[result.length() - 1] == '0' ) {
+				result = result.substr(0, result.length() - 1);
+			}
 		}
 
-		return " ..." + result;
+		return " ..." + result.substr(result.length() - PRECISION - 1);
 	}
 
 private:
 	/**
-	 * Create a P-adic, with p = 'prime', directly from a vector of digits.
+	 * Create a P_adic, with p = 'prime', directly from a vector of digits.
 	 *
-	 * With 'order' = 0, the vector [1, 2, 3, 4, 5] creates the p-adic ...54321.0
+	 * For example: with 'order' = 0, the vector [1, 2, 3, 4, 5] creates the p-adic ...54321.0,
 	 * 'order' > 0 shifts the vector 'order' places to the left and
 	 * 'order' < 0 shifts the vector 'order' places to the right.
 	 */
@@ -209,10 +211,10 @@ private:
 		: prime(prime), digits(digits), order(order) {
 	}
 
-	// Transform the given vector of digits representing a p-adic number
-	// into a vector which represents the negation of the p-adic number.
-	void negate_digits(std::vector<uint32_t> numbers) {
-		numbers[0] = ( prime - numbers[0] ) % prime;
+	// Transform the given vector of digits representing a P_adic number
+	// into a vector which represents the negation of the P_adic number.
+	void negate_digits(std::vector<uint32_t>& numbers) {
+		numbers[0] = modulo_prime(prime - numbers[0]);
 		for ( uint64_t i = 1; i < numbers.size(); ++i ) {
 			numbers[i] = prime - 1 - numbers[i];
 		}
@@ -221,7 +223,7 @@ private:
 	// Return the multiplicative inverse of the given number modulo 'prime'.
 	uint32_t modulo_inverse(const uint32_t& number) const {
 		uint32_t inverse = 1;
-		while ( ( inverse * number ) % prime != 1 ) {
+		while ( modulo_prime(inverse * number) != 1 ) {
 			inverse += 1;
 		}
 		return inverse;
@@ -233,9 +235,9 @@ private:
 		return ( div >= 0 ) ? div : div + prime;
 	}
 
-	// The given vector is padded on the right by zeros up to a maximum length of 'PRECISION'.
-	void pad_with_zeros(std::vector<uint32_t> vector) {
-		while ( vector.size() < PRECISION ) {
+	// The given vector is padded on the right by zeros up to a maximum length of 'DIGITS_SIZE'.
+	void pad_with_zeros(std::vector<uint32_t>& vector) {
+		while ( vector.size() < DIGITS_SIZE ) {
 			vector.emplace_back(0);
 		}
 	}
@@ -288,7 +290,7 @@ int main() {
 	std::cout << "4 / 97     => " << padic_two.to_string() << std::endl;
 
 	P_adic sum = padic_one.add(padic_two);
-	std::cout << "sum       => " << sum.to_string() << std::endl;
+	std::cout << "sum        => " << sum.to_string() << std::endl;
 	std::cout << "Rational = " << sum.convert_to_rational().to_string() << std::endl;
 	std::cout << std::endl;
 

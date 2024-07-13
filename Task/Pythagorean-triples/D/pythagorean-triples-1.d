@@ -10,6 +10,6 @@ void main() @safe {
         .map!(t => tuple(t[0 .. 2].gcd == 1, t[]));
 
     auto xs = triples(100);
-    writeln("Up to 100 there are ", xs.count, " triples, ",
-            xs.filter!q{ a[0] }.count, " are primitive.");
+    writefln("\nUp to %d there are %d triples, %d are primitive.", N, xs.count,
+            xs.filter!q{ a[0] }.count);
 }

@@ -1,32 +1,42 @@
-/*REXX program counts the number of divisors (tau,  or sigma_0)  up to and including  N.*/
-parse arg LO HI cols .                           /*obtain optional argument from the CL.*/
-if   LO=='' |   LO==","  then  LO=   1           /*Not specified?  Then use the default.*/
-if   HI=='' |   HI==","  then  HI=  LO + 100 - 1 /*Not specified?  Then use the default.*/
-if cols=='' | cols==","  then cols= 20           /* "      "         "   "   "     "    */
-w= 2 + (HI>45359)                                /*W:  used to align the output columns.*/
-say 'The number of divisors  (tau)  for integers up to '    n    " (inclusive):";      say
-say '─index─'   center(" tau (number of divisors) ",  cols * (w+1)  +  1,  '─')
-$=;                                   c= 0       /*$:  the output list,  shown ROW/line.*/
-                do j=LO  to HI;       c= c + 1   /*list # proper divisors (tau) 1 ──► N */
-                $= $  right( tau(j), w)          /*add a tau number to the output list. */
-                if c//cols \== 0  then iterate   /*Not a multiple of ROW? Don't display.*/
-                idx= j - cols + 1                /*calculate index value (for this row).*/
-                say center(idx, 7)    $;  $=     /*display partial list to the terminal.*/
-                end   /*j*/
-
-if $\==''  then say center(idx+cols, 7)    $     /*there any residuals left to display ?*/
-exit 0                                           /*stick a fork in it,  we're all done. */
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-tau: procedure; parse arg x 1 y                  /*X  and  $  are both set from the arg.*/
-     if x<6  then return 2 + (x==4) - (x==1)     /*some low #s should be handled special*/
-     odd= x // 2                                 /*check if  X  is odd (remainder of 1).*/
-     if odd  then       #= 2                     /*Odd?    Assume divisor count of  2.  */
-             else do;   #= 4;   y= x % 2;   end  /*Even?      "      "      "    "  4.  */
-                                                 /* [↑]  start with known number of divs*/
-        do j=3  for x%2-3  by 1+odd  while j<y   /*for odd number,  skip even numbers.  */
-        if x//j==0  then do                      /*if no remainder, then found a divisor*/
-                         #= # + 2;   y= x % j    /*bump # of divisors;  calculate limit.*/
-                         if j>=y  then do;   #= # - 1;   leave;   end   /*reached limit?*/
-                         end                     /*                     ___             */
-                    else if j*j>x  then leave    /*only divide up to   √ x              */
-        end   /*j*/;               return #      /* [↑]  this form of DO loop is faster.*/
+/* REXX program counts the number of divisors (tau,cr sigma_0)                    */
+/* for a range of numbers                                                         */
+Parse Arg lo hi cols .                     /*obtain optional argument from the CL.*/
+If   lo=='' |   lo==',' Then lo=1          /*Not specified?  Then use the default.*/
+If   hi=='' |   hi==',' Then hi=lo+100-1   /*Not specified?  Then use the default.*/
+If cols==''             Then cols=20       /* "      "         "   "   "     "    */
+w=2+(hi>45359)                             /* width of columns tau(4mns5360)=100  */
+Say 'The number of divisors (tau) from' lo 'to' hi '(inclusive):'
+Say ''
+Say '-number' center(' tau (number of divisors) ',cols*(w+1)+1,'-')
+line=''
+c=0
+index=lo
+Do j=lo To hi
+  c=c+1
+  line=line right(tau(j),w)                /* add a tau number to the output line. */
+  If c//cols=0  Then Do                    /* line has cols numbers                */
+    Say center(index,7) line
+    line=''
+    cnt=0
+    Index=index+cols
+    End
+  End   /*j*/
+If line\=='' Then
+  Say center(index,7) line                 /*there any residuals left To display ? */
+Exit 0                                     /*stick a fork in it,  we're all done.  */
+/*---------------------------------------------------------------------------------*/
+tau: Procedure
+  Parse Arg x
+  If x<6 Then                              /* some low numbers are handled special */
+    Return 2+(x==4)-(x==1)
+  tau=0
+  odd=x//2
+  Do j=1 by 1 While j*j<x
+    If odd & j//2=0 Then                   /* even j can't be a divisor of an odd x*/
+      Iterate
+    If x//j==0  Then                       /* if no remainder, then found a divisor*/
+      tau=tau+2                            /* bump n of divisors                   */
+    End
+  If j*j=x Then                            /* x is a square                        */
+    tau=tau+1                              /* its root is a divisor                */
+  Return tau

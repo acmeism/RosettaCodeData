@@ -1,7 +1,6 @@
 proto md5($msg) returns Blob is export {*}
 multi md5(Str $msg) { md5 $msg.encode }
 multi md5(Blob $msg) {
-  my \bits = 8 * $msg.elems;
   my buf8 $buf .= new;
   $buf.write-uint32: $buf.elems, $_, LittleEndian for
     reduce -> Blob $blob, blob32 $X {
@@ -29,9 +28,9 @@ multi md5(Blob $msg) {
     (BEGIN blob32.new: 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476),
     |map { blob32.new: @$_ },
       {
-        $^b.push(blob8.new(@$_).read-uint32(0)) for (@$msg, 0x80, 0x00 xx (-(bits div 8 + 1 + 8) % 64))
+        $^b.push(blob8.new(@$_).read-uint32(0)) for (@$msg, 0x80, 0x00 xx (-($msg.elems + 1 + 8) % 64))
             .flat.rotor(4);
-        $b.write-uint64: $b.elems, bits, LittleEndian;
+        $b.write-uint64: $b.elems, 8*$msg.elems, LittleEndian;
         $b;
       }(buf32.new)
     .rotor(16);

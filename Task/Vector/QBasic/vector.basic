@@ -1,0 +1,39 @@
+DECLARE SUB showarray (vect3!())
+CLS
+DIM vect1(2)
+vect1(1) = 5: vect1(2) = 7
+DIM vect2(2)
+vect2(1) = 2: vect2(2) = 3
+DIM vect3(UBOUND(vect1))
+FOR n = 1 TO UBOUND(vect1)
+    vect3(n) = vect1(n) + vect2(n)
+NEXT n
+PRINT "["; STR$(vect1(1)); ","; STR$(vect1(2)); " ] + ["; STR$(vect2(1)) + ","; STR$(vect2(2)); " ] = ";
+CALL showarray(vect3())
+FOR n = 1 TO UBOUND(vect1)
+    vect3(n) = vect1(n) - vect2(n)
+NEXT n
+PRINT "["; STR$(vect1(1)); ","; STR$(vect1(2)); " ] - ["; STR$(vect2(1)) + ","; STR$(vect2(2)); " ] = ";
+CALL showarray(vect3())
+FOR n = 1 TO UBOUND(vect1)
+    vect3(n) = vect1(n) * 11
+NEXT n
+PRINT "["; STR$(vect1(1)); ","; STR$(vect1(2)); " ] *  11      = ";
+CALL showarray(vect3())
+FOR n = 1 TO UBOUND(vect1)
+    vect3(n) = vect1(n) / 2
+NEXT n
+PRINT "["; STR$(vect1(1)); ","; STR$(vect1(2)); " ] /  2       = ";
+CALL showarray(vect3())
+END
+
+SUB showarray (vect3())
+    PRINT "[";
+    svect$ = ""
+    FOR n = 1 TO UBOUND(vect3)
+        svect$ = svect$ + STR$(vect3(n)) + ","
+    NEXT n
+    svect$ = LEFT$(svect$, LEN(svect$) - 1)
+    PRINT svect$;
+    PRINT " ]"
+END SUB

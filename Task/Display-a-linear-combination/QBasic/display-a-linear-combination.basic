@@ -1,0 +1,37 @@
+DIM scalars(1 TO 10, 1 TO 4)
+scalars(1, 1) = 1: scalars(1, 2) = 2: scalars(1, 3) = 3
+scalars(2, 1) = 0: scalars(2, 2) = 1: scalars(2, 3) = 2: scalars(2, 4) = 3
+scalars(3, 1) = 1: scalars(3, 2) = 0: scalars(3, 3) = 3: scalars(3, 4) = 4
+scalars(4, 1) = 1: scalars(4, 2) = 2: scalars(4, 3) = 0
+scalars(5, 1) = 0: scalars(5, 2) = 0: scalars(5, 3) = 0
+scalars(6, 1) = 0
+scalars(7, 1) = 1: scalars(7, 2) = 1: scalars(7, 3) = 1
+scalars(8, 1) = -1: scalars(8, 2) = -1: scalars(8, 3) = -1
+scalars(9, 1) = -1: scalars(9, 2) = -2: scalars(9, 3) = 0: scalars(9, 4) = -3
+scalars(10, 1) = -1
+
+CLS
+FOR n = 1 TO UBOUND(scalars)
+    cadena$ = ""
+    scalar = 0
+    FOR m = 1 TO UBOUND(scalars, 2)
+        scalar = scalars(n, m)
+        IF scalar <> 0 THEN
+            IF scalar = 1 THEN
+                cadena$ = cadena$ + "+e" + STR$(m)
+            ELSEIF scalar = -1 THEN
+               cadena$ = cadena$ + "-e" + STR$(m)
+            ELSE
+                IF scalar > 0 THEN
+                    cadena$ = cadena$ + CHR$(43) + STR$(scalar) + "*e" + STR$(m)
+                ELSE
+                    cadena$ = cadena$ + STR$(scalar) + "*e" + STR$(m)
+                END IF
+            END IF
+        END IF
+    NEXT m
+    IF cadena$ = "" THEN cadena$ = "0"
+    IF LEFT$(cadena$, 1) = "+" THEN cadena$ = RIGHT$(cadena$, LEN(cadena$) - 1)
+    PRINT cadena$
+NEXT n
+END

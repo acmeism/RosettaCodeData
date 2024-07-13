@@ -9,18 +9,18 @@
         (a, b, c) => {
             const go = hanoi(n - 1);
 
-            return Boolean(n) ? [
-                ...go(a, c, b),
-                ...[
-                    [a, b]
-                ],
-                ...go(c, b, a)
-            ] : [];
+            return n
+                ? [
+                    ...go(a, c, b),
+                    [a, b],
+                    ...go(c, b, a)
+                ]
+                : [];
         };
 
 
     // ---------------------- TEST -----------------------
     return hanoi(3)("left", "right", "mid")
-        .map(d => `${d[0]} -> ${d[1]}`)
-        .join("\n");
+    .map(d => `${d[0]} -> ${d[1]}`)
+    .join("\n");
 })();

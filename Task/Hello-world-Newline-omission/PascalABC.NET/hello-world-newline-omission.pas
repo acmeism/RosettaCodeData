@@ -1,0 +1,2 @@
+##
+Write('Goodbye, World!');

@@ -12,5 +12,5 @@ pub fn main() !void {
     try stdout_wr.print("lower: {s}\n", .{lower});
     try stdout_wr.print("upper: {s}\n", .{upper});
 
-    // TODO use https://github.com/jecolon/zigstr
+    // TODO use https://codeberg.org/dude_the_builder/zigstr
 }

@@ -1,0 +1,138 @@
+// ---------------
+include "NSLog.incl"
+include "Tlbx Speech.incl"
+include "Tlbx AVFoundation.incl"
+
+output "RecordToTextDemo"
+
+#plist CFBundleIdentifier @"com.futurebasic.RecordToTextDemo"
+#plist NSSpeechRecognitionUsageDescription @"Enable speech recognition."
+#plist NSMicrophoneUsageDescription @"This app requires microphone access."
+
+#define FILE_URL fn URLByAppendingPathComponent(fn FileManagerURLForApplicationDirectory,@"MyAudioFile.m4a")
+#define RECORDER_KEY @"recorder"
+
+
+_window = 1
+begin enum 1
+  _recordBtn
+end enum
+
+
+void local fn FixViews
+  dispatchmain
+    AVAudioRecorderRef recorder = fn AppProperty( RECORDER_KEY )
+    if ( recorder )
+      button _recordBtn,,, @"Stop Recording",,,, _window
+    else
+      button _recordBtn,,, @"Start Recording",,,, _window
+    end if
+  dispatchend
+end fn
+
+
+void local fn BuildWindow
+  window _window, @"Record Demo", (0,0,480,270)
+  button _recordBtn,,, @"Start Recording", (13,13,129,32)
+end fn
+
+
+void local fn MyRecognitionTaskHandler( ref as SFSpeechRecognizerRef, result as SFSpeechRecognitionResultRef, err as ErrorRef, userData as ptr )
+  SFTranscriptionRef transcription = fn SFSpeechRecognitionResultBestTranscription( result )
+
+  if ( err )
+    NSLog(@"error")
+  else
+    if ( fn SFSpeechRecognitionResultIsFinal( result ) )
+      NSLog(@"%@",fn SFTranscriptionFormattedString( transcription ))
+    end if
+  end if
+end fn
+
+
+void local fn MyRequestAuthorization( status as SFSpeechRecognizerAuthorizationStatus, userData as ptr )
+  SFSpeechRecognizerRef            recognizer
+  SFSpeechURLRecognitionRequestRef request
+
+  select ( status )
+    case SFSpeechRecognizerAuthorizationStatusNotDetermined : NSLog(@"Authorization not determined")
+    case SFSpeechRecognizerAuthorizationStatusDenied        : NSLog(@"Authorization denied")
+    case SFSpeechRecognizerAuthorizationStatusRestricted    : NSLog(@"Authorization restricted")
+    case SFSpeechRecognizerAuthorizationStatusAuthorized
+      recognizer = fn SFSpeechRecognizerInit
+      if ( fn SFSpeechRecognizerIsAvailable( recognizer ) )
+        if ( FILE_URL )
+          fn SoundPlay( fn SoundWithContentsOfURL( FILE_URL, YES ) )
+          request = fn SFSpeechURLRecognitionRequestWithURL( FILE_URL )
+          SFSpeechRecognizerSetSupportsOnDeviceRecognition( recognizer, YES )
+          fn SFSpeechRecognizerRecognitionTaskWithResultHandler( recognizer, request, @fn MyRecognitionTaskHandler, NULL )
+        end if
+      else
+        NSLog(@"Speech recognizer not available")
+      end if
+  end select
+end fn
+
+
+void local fn RecognizeSpeech
+  SFSpeechRecognizerRequestAuthorization( @fn MyRequestAuthorization, NULL )
+end fn
+
+
+void local fn RecordAudio
+  CFDictionaryRef settings = @{
+  AVFormatIDKey:@(kAudioFormatMPEG4AAC),
+  AVEncoderAudioQualityKey:@(AVAudioQualityHigh),
+  AVSampleRateKey:@44100.0,
+  AVNumberOfChannelsKey:@1,
+  AVLinearPCMBitDepthKey:@16}
+
+  AVAudioFormatRef format = fn AVAudioFormatWithSettings( settings )
+  AVAudioRecorderRef recorder = fn AVAudioRecorderWithFormat( FILE_URL, format, NULL )
+  AppSetProperty( RECORDER_KEY, recorder )
+  fn FixViews
+  fn AVAudioRecorderRecord( recorder )
+end fn
+
+
+void local fn MyRequestAccessHandler( granted as BOOL, userData as ptr )
+  if ( granted ) then fn RecordAudio
+end fn
+
+
+void local fn StartStopRecording
+  AVAudioRecorderRef    recorder = fn AppProperty( RECORDER_KEY )
+  AVAuthorizationStatus status
+
+  if ( recorder )
+    AVAudioRecorderStop( recorder )
+    AppRemoveProperty( RECORDER_KEY )
+    fn FixViews
+    fn RecognizeSpeech
+  else
+    status = fn   AVCaptureDeviceAuthorizationStatus( AVMediaTypeAudio )
+    select ( status )
+      case AVAuthorizationStatusDenied     : NSLog(@"Denied")
+      case AVAuthorizationStatusRestricted : NSLog(@"Restricted")
+      case AVAuthorizationStatusAuthorized : fn RecordAudio
+      case AVAuthorizationStatusNotDetermined
+        AVCaptureDeviceRequestAccess( AVMediaTypeAudio, @fn MyRequestAccessHandler, NULL )
+    end select
+  end if
+end fn
+
+
+void local fn DoDialog( ev as long, tag as long )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case _recordBtn : fn StartStopRecording
+      end select
+  end select
+end fn
+
+fn BuildWindow
+
+on dialog fn DoDialog
+
+HandleEvents

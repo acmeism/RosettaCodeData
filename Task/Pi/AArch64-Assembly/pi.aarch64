@@ -1,0 +1,146 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program calculPi64.s   */
+/* for algorithm see a french site : http://www.yann-ollivier.org/pi/pi.php */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ NBVAL, 8400     //(2400 decimales) or 16800 (4800 décimales) or 33600 (9600 decimales)
+.equ BASE, 10000
+
+//.include "../ficmacros32.inc"       // for debugging developper
+/************************************/
+/* Initialized data                 */
+/************************************/
+.data
+
+szCarriageReturn:     .asciz "\n"
+szMessStart:          .asciz "Program 64 bits start.\n"
+szNBZero1:            .asciz "0"
+szNBZero2:            .asciz "00"
+szNBZero3:            .asciz "000"
+.align 2
+
+/************************************/
+/* UnInitialized data               */
+/************************************/
+.bss
+sZoneConv:            .skip 24
+ibuffer:              .skip 4 * (NBVAL+1)
+/************************************/
+/*  code section                    */
+/************************************/
+.text
+.global main
+main:                        // entry of program
+    ldr x0,qAdrszMessStart
+    bl affichageMess
+    ldr x7,iA
+    mov x0,x7
+    mov x1,#5
+    udiv x2,x0,x1           // A / 5
+    mov x1,#0
+    ldr x8,qAdribuffer
+    ldr x9,iC               // C
+1:                          // init start array
+    str w2,[x8,x1, lsl #2]  // store A/5
+    add x1,x1,#1
+    cmp x1,x9
+    blt 1b
+
+    mov x10,#0              // E
+2:                          // begin loop 1
+    mov x4,#0               // D
+    lsl x5,x9,#1            // G
+    mov x6,x9               // B
+3:                          // loop 2
+    ldr w1,[x8,x6, lsl #2]
+    mul x1,x7,x1            //
+    add x4,x4,x1            // new D
+    sub x5,x5,#1            // g = g -1
+    mov x0,x4               // D
+    mov x1,x5               // G
+    udiv x2,x0,x1
+    msub x3,x1,x2,x0
+    str w3,[x8,x6, lsl #2]  // D modulo G
+    mov x4,x2
+    sub x5,x5,#1            // G=G-1
+    subs x6,x6,#1           // B=B-1
+    ble 4f                  // end loop 2 ?
+    mul x4,x6,x4            // no compute new D
+    b 3b                    // and loop 2
+4:
+    mov x0,x4               // D
+    mov x1,x7               // A
+    udiv x2,x0,x1
+    msub x3,x1,x2,x0
+    add x0,x2,x10           // D/A + E
+    bl afficherDecimale
+
+    mov x10,x3              // E=D modulo A
+    subs x9,x9,#14
+    bgt 2b                  // end loop 1 ?
+
+100:                         // standard end of the program
+    mov x0, #0               // return code
+    mov x8,EXIT
+    svc 0                    // perform the system call
+qAdrsZoneConv:            .quad sZoneConv
+
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrszMessStart:          .quad szMessStart
+
+
+qAdribuffer:  .quad ibuffer
+iA:   .quad BASE
+iC:   .quad NBVAL
+/******************************************************************/
+/*     Display decimales                                   */
+/******************************************************************/
+/* x0 contains decimale  */
+afficherDecimale:
+    stp x4,lr,[sp,-16]!         // save  registers
+    mov x4,x0
+    ldr x1,ival1
+    cmp x0,x1
+    bgt 3f
+    cmp x0,#99
+    ble 1f
+    ldr x0,qAdrszNBZero1        // display 1 zero
+    bl affichageMess
+    mov x0,x4
+    b 3f
+1:
+    cmp x0,#9
+    ble 2f
+    ldr x0,qAdrszNBZero2        // display 2 zeroes
+    bl affichageMess
+    mov x0,x4
+    b 3f
+2:
+    ldr x0,qAdrszNBZero3        // display 3 zeroes
+    bl affichageMess
+    mov x0,x4
+3:                              // conversion and display
+    ldr x1,qAdrsZoneConv
+    bl conversion10             // decimal conversion
+    mov x2,#0
+    strb w2,[x1,x0]
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+
+100:
+    ldp x4,lr,[sp],16         // restaur  registers
+    ret
+ival1:      .quad 999
+qAdrszNBZero1:  .quad szNBZero1
+qAdrszNBZero2:  .quad szNBZero2
+qAdrszNBZero3:  .quad szNBZero3
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

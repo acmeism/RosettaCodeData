@@ -1,7 +1,8 @@
-select
-   delay 10.0;
-   Put_Line ("Cannot finish this in 10s");
-then abort
-   -- do some lengthy calculation
-   ...
-end select;
+Outer:
+loop
+   -- do something
+   loop
+      exit Outer when Finished;
+      -- do something else
+   end loop;
+end loop Outer;

@@ -1,0 +1,67 @@
+DECLARE SUB DRDP (ListaDePuntos() AS DOUBLE, ini AS INTEGER, fin AS INTEGER, epsilon AS DOUBLE)
+DECLARE FUNCTION DistanciaPerpendicular! (tabla() AS DOUBLE, i AS INTEGER, ini AS INTEGER, fin AS INTEGER)
+
+CONST True = -1
+DIM matriz(1 TO 10, 1 TO 3) AS DOUBLE
+DATA 0,0,1,0.1,2,-0.1,3,5,4,6,5,7,6,8.1,7,9,8,9,9,9
+FOR i = LBOUND(matriz) TO UBOUND(matriz)
+    READ matriz(i, 1), matriz(i, 2)
+NEXT i
+
+CALL DRDP(matriz(), 1, 10, 1)
+
+PRINT "Remaining points after simplifying:"
+matriz(1, 3) = True: matriz(10, 3) = True
+FOR i = LBOUND(matriz) TO UBOUND(matriz)
+    IF matriz(i, 3) THEN PRINT "("; matriz(i, 1); ", "; matriz(i, 2); ")  ";
+NEXT i
+END
+
+FUNCTION DistanciaPerpendicular (tabla() AS DOUBLE, i AS INTEGER, ini AS INTEGER, fin AS INTEGER)
+    DIM dx AS DOUBLE, dy AS DOUBLE, mag AS DOUBLE, pvx AS DOUBLE, pvy AS DOUBLE
+    DIM pvdot AS DOUBLE, dsx AS DOUBLE, dsy AS DOUBLE, ax AS DOUBLE, ay AS DOUBLE
+
+    dx = tabla(fin, 1) - tabla(ini, 1)
+    dy = tabla(fin, 2) - tabla(ini, 2)
+
+    'Normalise
+    mag = (dx ^ 2 + dy ^ 2) ^ .5
+    IF mag > 0 THEN dx = dx / mag: dy = dy / mag
+
+    pvx = tabla(i, 1) - tabla(ini, 1)
+    pvy = tabla(i, 2) - tabla(ini, 2)
+
+    'Get dot product (project pv onto normalized direction)
+    pvdot = dx * pvx + dy * pvy
+
+    'Scale line direction vector
+    dsx = pvdot * dx
+    dsy = pvdot * dy
+
+    'Subtract this from pv
+    ax = pvx - dsx
+    ay = pvy - dsy
+
+    DistanciaPerpendicular = (ax ^ 2 + ay ^ 2) ^ .5
+END FUNCTION
+
+SUB DRDP (ListaDePuntos() AS DOUBLE, ini AS INTEGER, fin AS INTEGER, epsilon AS DOUBLE)
+    DIM dmax AS DOUBLE, d AS DOUBLE
+    DIM indice AS INTEGER, i AS INTEGER
+    ' Find the point with the maximum distance
+
+    IF UBOUND(ListaDePuntos) < 2 THEN PRINT "Not enough points to simplify": END
+
+    FOR i = ini + 1 TO fin
+        d = DistanciaPerpendicular(ListaDePuntos(), i, ini, fin)
+        IF d > dmax THEN indice = i: dmax = d
+    NEXT
+
+    ' If max distance is greater than epsilon, recursively simplify
+    IF dmax > epsilon THEN
+        ListaDePuntos(indice, 3) = True
+        ' Recursive call
+        CALL DRDP(ListaDePuntos(), ini, indice, epsilon)
+        CALL DRDP(ListaDePuntos(), indice, fin, epsilon)
+    END IF
+END SUB

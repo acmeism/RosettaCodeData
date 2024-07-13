@@ -1,5 +1,4 @@
 proc lookandsay . a$ .
-   s$ = ""
    c = 1
    p$ = substr a$ 1 1
    for i = 2 to len a$

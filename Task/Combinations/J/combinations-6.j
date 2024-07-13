@@ -1,7 +1,1 @@
- combr=: dyad define
-  if.(x=#y) +. x=1 do.
-    y
-  else.
-    (({.y) ,. (x-1) combr (}.y)) , (x combr }.y)
-  end.
-)
+combr=: ((0,.$:&.<:),1+($:<:))` ([:i.<:,[)  @.(>:+.0=[)M.

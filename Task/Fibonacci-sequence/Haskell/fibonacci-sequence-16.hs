@@ -1,35 +1,44 @@
-import Control.Arrow ((&&&))
+import Data.List (transpose)
 
-fibstep :: (Integer, Integer) -> (Integer, Integer)
-fibstep (a, b) = (b, a + b)
+fib
+  :: (Integral b, Num a)
+  => b -> a
+fib 0 = 0 -- this line is necessary because "something ^ 0" returns "fromInteger 1", which unfortunately
+-- in our case is not our multiplicative identity (the identity matrix) but just a 1x1 matrix of 1
+fib n = (last . head . unMat) (Mat [[1, 1], [1, 0]] ^ n)
 
-fibnums :: [Integer]
-fibnums = map fst $ iterate fibstep (0, 1)
+-- Code adapted from Matrix exponentiation operator task ---------------------
+(<+>)
+  :: Num c
+  => [c] -> [c] -> [c]
+(<+>) = zipWith (+)
 
-fibN2 :: Integer -> (Integer, Integer)
-fibN2 m
-  | m < 10 = iterate fibstep (0, 1) !! fromIntegral m
-fibN2 m = fibN2_next (n, r) (fibN2 n)
-  where
-    (n, r) = quotRem m 3
+(<*>)
+  :: Num a
+  => [a] -> [a] -> a
+(<*>) = (sum .) . zipWith (*)
 
-fibN2_next (n, r) (f, g)
-  | r == 0 = (a, b) -- 3n  ,3n+1
-  | r == 1 = (b, c) -- 3n+1,3n+2
-  | r == 2 = (c, d) -- 3n+2,3n+3   (*)
-  where
-    a =
-      5 * f ^ 3 +
-      if even n
-        then 3 * f
-        else (-3 * f) -- 3n
-    b = g ^ 3 + 3 * g * f ^ 2 - f ^ 3 -- 3n+1
-    c = g ^ 3 + 3 * g ^ 2 * f + f ^ 3 -- 3n+2
-    d =
-      5 * g ^ 3 +
-      if even n
-        then (-3 * g)
-        else 3 * g -- 3(n+1)   (*)
+newtype Mat a = Mat
+  { unMat :: [[a]]
+  } deriving (Eq)
 
+instance Show a =>
+         Show (Mat a) where
+  show xm = "Mat " ++ show (unMat xm)
+
+instance Num a =>
+         Num (Mat a) where
+  negate xm = Mat $ map (map negate) $ unMat xm
+  xm + ym = Mat $ zipWith (<+>) (unMat xm) (unMat ym)
+  xm * ym =
+    Mat
+      [ [ xs Main.<*> ys -- to distinguish from standard applicative operator
+        | ys <- transpose $ unMat ym ]
+      | xs <- unMat xm ]
+  fromInteger n = Mat [[fromInteger n]]
+  abs = undefined
+  signum = undefined
+
+-- TEST ----------------------------------------------------------------------
 main :: IO ()
-main = print $ (length &&& take 20) . show . fst $ fibN2 (10 ^ 2)
+main = (print . take 10 . show . fib) (10 ^ 5)

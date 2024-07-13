@@ -1,0 +1,371 @@
+NoMainWin
+WindowWidth=900
+WindowHeight=720
+BackgroundColor$ =  "191 191 255" ' buttonface default
+Global Deck, MaxDecks
+
+StaticText #1.Debug "", 0, 0, 600, 20
+StaticText #1.StaticText "Ten Decks of Poker Hands", 50, 50, 3000, 40
+Button #1.Deal "Deal", [Start], UL, 700, 180, 80, 40
+Button #1.TenThousand "10,000", [TenThousand],  UL, 700, 250, 80, 40
+Button #1.Stats "History", ShowStats, UL, 700, 320, 80, 40
+Button #1.Quit "Quit", Quit, UL, 700, 390, 80, 40
+TextEditor #1.TextEditor 50, 100, 600, 500
+
+open "POKER HANDS" for dialog as #1
+#1 "TrapClose Quit"
+#1 "Font Ariel 12 Bold"
+#1.StaticText "!Font Ariel 16 Bold"
+#1.TextEditor "!Font Courier_New 14 Bold"
+if not(exists("Poker Hands.txt")) then #1.Stats "!Disable"
+MaxDecks=10
+wait
+
+[TenThousand]
+TenThousand = 1
+[Start]
+if TenThousand then
+    MaxDecks=10000
+    #1.TextEditor "!Hide"
+    #1.Deal "!Hide"
+     #1.TenThousand "!Hide"
+     #1.Stats "!Hide"
+     #1.Quit "!Hide"
+     #1.StaticText "Ten Thousand Decks of Poker Hands"
+end if
+Deck += 1
+if TenThousand then #1.Debug Str$(Deck)
+if Deck>MaxDecks then Deck -= 1: call Quit
+#1.TextEditor "!cls"
+call ShuffleDeck 0
+'call TestDeck
+NextCard=1
+for y=1 to 10
+    for x=1 to 5
+        y$ = A$(NextCard)
+        B$(x) = ConvertHiCard$(y$)
+        NextCard += 1
+    next x
+    sort B$(), 1, 5
+    for x=NextCard-5 to NextCard-1
+        #1.TextEditor A$(x)+"  ";
+    next x
+    #1.TextEditor "    ";
+
+    Values$="" 'determine high value of hand
+    for x=1 to 5
+    Values$ = Values$ + left$(B$(x),1)
+    next x
+    HiValue$ = RealValue$(right$(Values$,1))
+
+    z=0: Flush=0: Straight=0: Royal=0: FourKind=0
+    ThreeKind=0: Pair=0: TwoPair=0: FullHouse=0
+    if Flush() then Flush=1
+    x = Straight()
+    if x then Straight=1: if x=9 then Royal=1
+    z$ = Kind$()
+    Value$ = RealValue$(right$(z$,1))
+    z=val(left$(z$, len(z$)-1))
+    if z=41 then FourKind=1
+    if z=32 then FullHouse=1
+    if z=31 then ThreeKind=1
+    if z=22 then TwoPair=1
+    if z=21 then Pair=1
+
+    select case
+        case Straight and Royal and Flush: #1.TextEditor "Royal Flush": Stats(1) += 1
+        case Straight and Flush: #1.TextEditor "Straight Flush, " + HiValue$ + " high": Stats(2) += 1
+        case FourKind: #1.TextEditor "Four of a kind, " + Value$ + "s": Stats(3) += 1
+        case FullHouse: #1.TextEditor "Full House, " + Value$ + "s high": Stats(4) += 1
+        case Flush: #1.TextEditor "Flush, " + HiValue$ + " high": Stats(5) += 1
+        case Straight: #1.TextEditor "Straight, " + HiValue$ + " high": Stats(6) += 1
+        case ThreeKind: #1.TextEditor "Three of a kind, " + Value$ + "s": Stats(7) += 1
+        case TwoPair: #1.TextEditor "Two Pair, " + Value$ + " high": Stats(8) += 1
+        case Pair: #1.TextEditor "Pair " + Value$ + "s": Stats(9) += 1
+        case else: #1.TextEditor HiValue$ + " high"
+    end select
+next y
+#1.TextEditor ""
+#1.TextEditor "Deck #" + str$(Deck)
+if TenThousand then goto [Start] else wait
+
+function RealValue$(Value$)
+    select case Value$
+        case "A": RealValue$="T"
+        case "B": RealValue$="J"
+        case "C": RealValue$="Q"
+        case "D": RealValue$="K"
+        case "E":  RealValue$="A"
+        case else: RealValue$=Value$
+    end select
+end function
+
+sub SaveStats Deck
+    Stats(0) = 10*Deck
+    if not(exists("Poker Hands.txt")) then
+        open "Poker Hands.txt" for output as #2
+        for x=0 to 9
+            print #2 Stats(x)
+        next
+        close #2
+        #1.Stats "!Enable"
+    else
+        open "Poker Hands.txt" for input as #2
+        for x=0 to 9
+            input #2 History(x)
+        next
+        close #2
+        for x=0 to 9
+            History(x) += Stats(x)
+        next
+        open "Poker Hands.txt" for output as #2
+        for x=0 to 9
+            print #2 History(x)
+        next
+        close #2
+    end if
+end sub
+
+sub ShowStats
+    if exists("Poker Hands.txt") then
+        open "Poker Hands.txt" for input as #2
+        for x=0 to 9
+            input #2 History(x)
+        next
+        close #2
+        #1.TextEditor "!cls"
+
+        for x=1 to 9
+            Total += History(x)
+        next x
+        Nothing = History(0) - Total
+
+        for x=0 to 9
+            #1.TextEditor using("###,### ", History(x));
+            select case x
+                case 0:  #1.TextEditor "hands               "
+                case 1:  #1.TextEditor "royal flush      " + using("##.# %", History(x)/History(0)*100)
+                case 2:  #1.TextEditor "straight flush   " + using("##.# %", History(x)/History(0)*100)
+                case 3:  #1.TextEditor "four of a kind   " + using("##.# %", History(x)/History(0)*100)
+                case 4:  #1.TextEditor "full house       " + using("##.# %", History(x)/History(0)*100)
+                case 5:  #1.TextEditor "flush            " + using("##.# %", History(x)/History(0)*100)
+                case 6:  #1.TextEditor "straight         " + using("##.# %", History(x)/History(0)*100)
+                case 7:  #1.TextEditor "three of a kind  " + using("##.# %", History(x)/History(0)*100)
+                case 8:  #1.TextEditor "two pair         " + using("##.# %", History(x)/History(0)*100)
+                case 9:  #1.TextEditor "pair             " + using("##.# %", History(x)/History(0)*100)
+            end select
+        next
+    #1.TextEditor using("###,### ", Nothing) + "nothing         " + using("###.# %", Nothing/History(0)*100)
+    end if
+end sub
+
+function Kind$()
+    for x=1 to 5
+        C$(x) = left$(B$(x), 1)
+    next x
+    if C$(1) = C$(2) then 'check for Lo4
+        Lo2=1
+         if C$(2) = C$(3) then
+            Lo2=0: Lo3=1
+            if C$(3) = C$(4) then
+                Lo3=0: Kind$="41" + left$(C$(4),1): exit function
+            end if
+        end if
+    end if
+
+    if C$(5) = C$(4) then 'check for Hi4
+        Hi2=1
+         if C$(4) = C$(3) then
+            Hi2=0: Hi3=1
+            if C$(3) = C$(2) then
+                Hi3=0: Kind$="41" + left$(C$(5),1): exit function
+            end if
+        end if
+    end if
+
+    if Lo3 then 'check for Full House and 3Kind
+        if C$(4) = C$(5) then
+            Kind$="32" + left$(C$(3),1): exit function
+        else
+            Kind$="31" + left$(C$(3),1): exit function
+        end if
+    end if
+    if Hi3 then
+        if C$(1) = C$(2) then
+            Kind$="32" + left$(C$(5),1): exit function
+        else
+            Kind$="31" + left$(C$(5),1): exit function
+        end if
+    end if
+    if C$(2) = C$(3) and C$(3) = C$(4) then 'Mid3
+        Kind$="31" + left$(C$(4),1): exit function
+    end if
+
+    if Lo2 and Hi2 then 'check for pairs
+        Kind$="22" + left$(C$(5),1): exit function
+    end if
+    if Lo2 and (C$(3)=C$(4)) then
+        Kind$="22" + left$(C$(4),1): exit function
+    end if
+    if Hi2 and (C$(3)=C$(2)) then
+        Kind$="22" + left$(C$(5),1): exit function
+    end if
+
+    if Lo2 then Kind$="21" + left$(C$(2),1)
+    if Hi2 then Kind$="21" + left$(C$(5),1)
+    if C$(2)=C$(3) then Kind$="21" + left$(C$(3),1)
+    if C$(3)=C$(4) then Kind$="21" + left$(C$(4),1)
+end function
+
+function Straight()
+    Order$="23456789ABCDEF"
+    for x=1 to 5
+        Ranks$ = Ranks$ + left$(B$(x), 1)
+    next x
+    x = instr(Order$, Ranks$)
+    if x then Straight=x
+end function
+
+function Flush()
+    Flush=1
+    for x=1 to 5
+        Suits$ = Suits$ + right$(B$(x), 1)
+    next x
+    for x=2 to 5
+        if mid$(Suits$, x,  1) <> left$(Suits$, 1) then Flush=0: exit function
+    next x
+end function
+
+sub ShuffleDeck Jokers
+    Jokers = int(abs(Jokers)): if Jokers>4 then Jokers=4
+    Size=52 + Jokers
+    dim CardDeck$(Size+10,1), A$(Size+10) 'Open new card deck
+[Start]
+    for x=1 to Size
+        CardDeck$(x,0) = "99"
+    next x
+
+    for x=1 to Size
+    1  y=RandomNumber(1,Size)
+        if CardDeck$(y,0)="99" then CardDeck$(y,0)=str$(x) else goto 1
+    next x
+
+    for x=1 to Size 'Examine shuffled deck
+        if CardDeck$(x,0)=str$(x) then z = 1: exit for
+    next x
+    if z then z=0: goto [Start]
+    for x=1 to Size 'Save shuffled deck
+        A$(x) = CardFace$(val(CardDeck$(x,0)))
+    next x
+    A$(0) = str$(Size)
+end sub
+
+function CardFace$(n)
+    select case n
+         case 1: CardFace$="AD"
+         case 2: CardFace$="2D"
+         case 3: CardFace$="3D"
+         case 4: CardFace$="4D"
+         case 5: CardFace$="5D"
+         case 6: CardFace$="6D"
+         case 7: CardFace$="7D"
+         case 8: CardFace$="8D"
+         case 9: CardFace$="9D"
+         case 10: CardFace$="TD"
+         case 11: CardFace$="JD"
+         case 12: CardFace$="QD"
+         case 13: CardFace$="KD"
+         case 14: CardFace$="AC"
+         case 15: CardFace$="2C"
+         case 16: CardFace$="3C"
+         case 17: CardFace$="4C"
+         case 18: CardFace$="5C"
+         case 19: CardFace$="6C"
+         case 20: CardFace$="7C"
+         case 21: CardFace$="8C"
+         case 22: CardFace$="9C"
+         case 23: CardFace$="TC"
+         case 24: CardFace$="JC"
+         case 25: CardFace$="QC"
+         case 26: CardFace$="KC"
+         case 27: CardFace$="AH"
+         case 28: CardFace$="2H"
+         case 29: CardFace$="3H"
+         case 30: CardFace$="4H"
+         case 31: CardFace$="5H"
+         case 32: CardFace$="6H"
+         case 33: CardFace$="7H"
+         case 34: CardFace$="8H"
+         case 35: CardFace$="9H"
+         case 36: CardFace$="TH"
+         case 37: CardFace$="JH"
+         case 38: CardFace$="QH"
+         case 39: CardFace$="KH"
+         case 40: CardFace$="AS"
+         case 41: CardFace$="2S"
+         case 42: CardFace$="3S"
+         case 43: CardFace$="4S"
+         case 44: CardFace$="5S"
+         case 45: CardFace$="6S"
+         case 46: CardFace$="7S"
+         case 47: CardFace$="8S"
+         case 48: CardFace$="9S"
+         case 49: CardFace$="TS"
+         case 50: CardFace$="JS"
+         case 51: CardFace$="QS"
+         case 52: CardFace$="KS"
+         case 53: CardFace$="X1"
+         case 54: CardFace$="X2"
+         case 55: CardFace$="X3"
+         case 56: CardFace$="X4"
+     end select
+end function
+
+function RandomNumber(a, b)
+    smaller = min(a, b)
+    range = abs(int(a-b))+1
+    if range < 1 then exit function
+    r = int(rnd()*range)
+    RandomNumber = r + smaller
+end function
+
+function ConvertHiCard$(Card$)
+    select case left$(Card$,1)
+        case "T": left$(Card$,1)="A"
+        case "J": left$(Card$,1)="B"
+        case "Q": left$(Card$,1)="C"
+        case "K": left$(Card$,1)="D"
+        case "A": left$(Card$,1)="E"
+        case "X": left$(Card$,1)="F"
+    end select
+    ConvertHiCard$ = Card$
+end function
+
+sub TestDeck
+    data KD, KC, KS, AH, AS ' full house
+    data 6D, 6C, 6S, 6H, 8H ' four of a kind (io)
+    data 2D, 4S, 4C, TH, TD ' two pair
+    data 4H, 5H, 6H, 7H, 8H ' straight flush
+    data 9S, QD, QC, QH, 3D ' three of a kind
+    data 6H, 7D, 8C, 9C, TS ' straight
+    data TH, AH, AS, AC, AD ' four of a kind (hI)
+    data 3S, 5S, 7S, 9S, JS ' flush
+    data  AD, KD, QD, JD, TD ' royal flush
+    data 2C, 2D, 3H, 4S, 5C ' one pair
+    dim A$(50)
+    for x=1 to 50
+        read A$(x)
+    next x
+end sub
+
+function exists(FileName$)
+    files "", FileName$, FileDir$()
+    FileCount$ = FileDir$(0, 0)
+    exists = val(FileCount$)
+end function
+
+sub Quit
+    if Deck = MaxDecks then call SaveStats Deck
+    close #1
+    end
+end sub

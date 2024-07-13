@@ -1,38 +1,43 @@
-/*REXX pgm displays   N   tau numbers,  an integer divisible by the # of its divisors). */
-parse arg n cols .                               /*obtain optional argument from the CL.*/
-if    n=='' |    n==","  then    n= 100          /*Not specified?  Then use the default.*/
-if cols=='' | cols==","  then cols=  10          /*Not specified?  Then use the default.*/
-w= max(8, length(n) )                            /*W:  used to align 1st output column. */
-@tau= ' the first '  commas(n)   " tau numbers " /*the title of the tau numbers table.  */
-say ' index │'center(@tau,  1 + cols*(w+1)     ) /*display the title of the output table*/
-say '───────┼'center(""  ,  1 + cols*(w+1), '─') /*   "     " header  "  "     "     "  */
-idx= 1;                  #= 0;           $=      /*idx: line;   #:  tau numbers;  $: #s */
-           do j=1  until #==n                    /*search for   N   tau numbers         */
-           if j//tau(j) \==0  then iterate       /*Is this a tau number?  No, then skip.*/
-           #= # + 1                              /*bump the count of tau numbers found. */
-           $= $  right( commas(j), w)            /*add a tau number to the output list. */
-           if #//cols\==0     then iterate       /*Not a multiple of cols?  Don't show. */
-           say center(idx, 7)'│'   substr($, 2)  /*display partial list to the terminal.*/
-           idx= idx + cols;               $=     /*bump idx by number of cols; nullify $*/
-           end   /*j*/
-
-if $\==''  then say center(idx, 7)"│"  substr($, 2)  /*possible display residual output.*/
-say '───────┴'center(""  ,  1 + cols*(w+1), '─')
-exit 0                                           /*stick a fork in it,  we're all done. */
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-commas: parse arg ?;  do jc=length(?)-3  to 1  by -3; ?=insert(',', ?, jc); end;  return ?
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-tau: procedure; parse arg x 1 y                  /*X  and  $  are both set from the arg.*/
-     if x<6  then return 2 + (x==4) - (x==1)     /*some low #s should be handled special*/
-     odd= x // 2                                 /*check if  X  is odd (remainder of 1).*/
-     if odd  then do;   #= 2;               end  /*Odd?    Assume divisor count of  2.  */
-             else do;   #= 4;   y= x % 2;   end  /*Even?      "      "      "    "  4.  */
-                                                 /* [↑]  start with known number of divs*/
-        do j=3  for x%2-3  by 1+odd  while j<y   /*for odd number,  skip even numbers.  */
-        if x//j==0  then do                      /*if no remainder, then found a divisor*/
-                         #= # + 2;   y= x % j    /*bump # of divisors;  calculate limit.*/
-                         if j>=y  then do;   #= # - 1;   leave;   end   /*reached limit?*/
-                         end                     /*                     ___             */
-                    else if j*j>x  then leave    /*only divide up to   √ x              */
-        end   /*j*/                              /* [↑]  this form of DO loop is faster.*/
-     return #
+/*REXX pgm displays N tau numbers (integers divisible by the # of its divisors).  */
+Parse Arg n cols .                        /*obtain optional argument from the CL. */
+If    n=='' |    n==','  Then    n= 100   /*Not specified?  Then use the default. */
+If cols=='' | cols==','  Then cols=  10   /*Not specified?  Then use the default. */
+w=6                                       /*W:  used To align 1st output column.  */
+ttau=' the first ' commas(n) ' tau numbers' /* the title of the table.            */
+Say ' index ¦'center(ttau,cols*(w+1)     )  /* display the title                  */
+Say '-------+'center(''  ,cols*(w+1),'-')
+idx=1
+nn=0                                      /* number of tau numbers                */
+dd=''
+Do j=1  Until nn==n                       /* search for   N   tau numbers         */
+  If j//tau(j)==0 Then Do                 /* If this is a tau number              */
+    nn=nn+1                               /* bump the count of tau numbers found. */
+    dd=dd right(commas(j),w)              /* add a tau number To the output list. */
+    If nn//cols==0 Then Do                /* a line is full                       */
+      Say center(idx,7)'¦' substr(dd,2)   /* display partial list To the terminal.*/
+      idx= idx+cols                       /* bump idx by number of cols           */
+      dd=''
+      End
+    End
+  End
+If dd\=='' Then Say center(idx,7)'¦' substr(dd,2) /*possible display rest         */
+Say '--------'center(''  ,cols*(w+1),'-')
+Exit 0                                    /*stick a fork in it,we're all done.    */
+/*--------------------------------------------------------------------------------*/
+commas: Parse Arg ?; Do jc=length(?)-3 To 1 by -3; ?=insert(',',?,jc); End; Return ?
+/*--------------------------------------------------------------------------------*/
+tau: Procedure
+  Parse Arg x
+  If x<6 Then                              /* some low numbers are handled special */
+    Return 2+(x==4)-(x==1)
+  tau=0
+  odd=x//2
+  Do j=1 by 1 While j*j<x
+    If odd & j//2=0 Then                   /* even j can't be a divisor of an odd x*/
+      Iterate
+    If x//j==0  Then                       /* If no remainder,Then found a divisor*/
+      tau=tau+2                            /* bump n of divisors                   */
+    End
+  If j*j=x Then                            /* x is a square                        */
+    tau=tau+1                              /* its root is a divisor                */
+  Return tau

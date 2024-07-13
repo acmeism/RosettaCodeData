@@ -25,8 +25,8 @@ procedure Test_Polymorphic_Copy is
       -- The function knows nothing about S and creates a copy on the heap
    function Clone (X : T'Class) return T_ptr is
    begin
-      return new T'Class(X);
-   end Copier;
+      return new T'Class'(X);
+   end Clone;
 
    package Derived is
       type S is new T with null record;
@@ -43,8 +43,8 @@ procedure Test_Polymorphic_Copy is
 
    Object_1 : T;
    Object_2 : S;
-   Object_3 : T_ptr := Clone(T);
-   Object_4 : T_ptr := Clone(S);
+   Object_3 : T_ptr := Clone(Object_1);
+   Object_4 : T_ptr := Clone(Object_2);
 begin
    Copier (Object_1);
    Copier (Object_2);

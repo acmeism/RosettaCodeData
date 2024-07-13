@@ -27,12 +27,12 @@ procedure Count_Examples is
       A       : Attr;
       Page    : Aws.Response.Data;
       Uri_Xml : constant String :=
-         "http://rosettacode.org/mw/api.php?action=query&list=categorymembers"
+         "https://rosettacode.org/w/api.php?action=query&list=categorymembers"
          &
          "&format=xml&cmlimit=500&cmtitle=Category:";
    begin
-      Page := Client.Get (Uri_Xml & Category);
-      if Response.Status_Code (Page) not  in Messages.Success then
+      Page := Client.Get (Uri_Xml & Category, Follow_Redirection => True);
+      if AWS.Response.Status_Code (Page) not  in Messages.Success then
          raise Client.Connection_Error;
       end if;
       declare
@@ -65,10 +65,11 @@ procedure Count_Examples is
    begin
       Page :=
          Client.Get
-           ("http://rosettacode.org/mw/index.php?title=" &
+           ("https://rosettacode.org/w/index.php?title=" &
             Aws.Url.Encode (Title) &
-            "&action=raw");
-      Response.Message_Body (Page, File);
+             "&action=raw",
+           Follow_Redirection => True);
+      AWS.Response.Message_Body (Page, File);
       while not End_Of_File (File) loop
          Resources.Get_Line (File, Buffer, Last);
          Position :=

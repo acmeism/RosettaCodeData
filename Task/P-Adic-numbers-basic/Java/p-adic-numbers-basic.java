@@ -1,3 +1,8 @@
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
 public final class PAdicNumbersBasic {
 
 	public static void main(String[] args) {
@@ -124,7 +129,7 @@ final class Padic {
     	List<Integer> numbers = new ArrayList<Integer>(digits);    	
     	
     	// Zero
-    	if ( allZeroDigits(numbers) ) {
+    	if ( numbers.isEmpty() || allZeroDigits(numbers) ) {
     		return new Rational(0, 1);
     	}    	
     	
@@ -177,29 +182,28 @@ final class Padic {
     /**
 	 * Return a string representation of this p-adic.
 	 */
-	public String toString() {
-		while ( digits.size() > PRECISION ) {
-			digits.removeLast();
-		}
-		padWithZeros(digits);
-		
-		StringBuilder builder = new StringBuilder();
-		for ( int i = digits.size() - 1; i >= 0; i-- ) {
-			builder.append(digits.get(i));
-		}
+	public String toString() {		
+		List<Integer> numbers = new ArrayList<Integer>(digits);
+		padWithZeros(numbers);
+		Collections.reverse(numbers);		
+		String numberString = numbers.stream().map(String::valueOf).collect(Collectors.joining());
+		StringBuilder builder = new StringBuilder(numberString);
 		
 		if ( order >= 0 ) {
 			for ( int i = 0; i < order; i++ ) {
 				builder.append("0");
-				builder.deleteCharAt(0);
 			}
 			
 			builder.append(".0");
 		} else {
 			builder.insert(builder.length() + order, ".");
+			
+			while ( builder.toString().endsWith("0") ) {
+				builder.deleteCharAt(builder.length() - 1);
+			}
 		}		
 		
-		return " ..." + builder.toString();
+		return " ..." + builder.toString().substring(builder.length() - PRECISION - 1);		
 	}	
 		
 	// PRIVATE //
@@ -214,7 +218,6 @@ final class Padic {
 	private Padic(int aPrime, List<Integer> aDigits, int aOrder) {
 		prime = aPrime;		
 		digits = new ArrayList<Integer>(aDigits);
-		padWithZeros(digits);
 		order = aOrder;
 	}	
 	
@@ -235,7 +238,7 @@ final class Padic {
 	 * into a list which represents the negation of the p-adic number.
 	 */
 	private void negateList(List<Integer> aDigits) {		
-		aDigits.set(0, ( prime - aDigits.get(0) ) % prime);
+		aDigits.set(0, Math.floorMod(prime - aDigits.get(0), prime));
     	for ( int i = 1; i < aDigits.size(); i++ ) {
     		aDigits.set(i, prime - 1 - aDigits.get(i));
     	}
@@ -266,7 +269,7 @@ final class Padic {
 	 * The given list is padded on the right by zeros up to a maximum length of 'PRECISION'.
 	 */
 	private static void padWithZeros(List<Integer> aList) {
-		while ( aList.size() < PRECISION ) {
+		while ( aList.size() < DIGITS_SIZE ) {
 			aList.addLast(0);
 		}
 	}

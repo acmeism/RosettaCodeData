@@ -11,11 +11,10 @@ fn main(){
             doors[current - 1] = true
             increment++
             door_nbr += 2 * increment + 1
-        }
+			print('O')
+		} else {
+			print('=')
+		}
     }
-    doors.map( fn( it bool) bool {  // graphically represent opened doors
-        print( if it {( 'O')} else {('=')} )
-        return it
-    })
     println('')
 }

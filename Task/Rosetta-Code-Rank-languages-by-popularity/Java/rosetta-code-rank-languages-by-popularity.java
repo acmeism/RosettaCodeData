@@ -1,3 +1,4 @@
+import  java.net.URI;
 import  java.net.URL;
 import  java.net.URLConnection;
 import  java.io.*;
@@ -45,10 +46,8 @@ public class GetRCLanguages
         try
         {
 
-            URL            url = new URL( path );
+            URL            url = new URI( path ).toURL();
             URLConnection  rc  = url.openConnection();
-            // Rosetta Code objects to the default Java user agant so use a blank one
-            rc.setRequestProperty( "User-Agent", "" );
             BufferedReader bfr = new BufferedReader( new InputStreamReader( rc.getInputStream() ) );
 
             gcmcontinue[0]      = "";
@@ -56,27 +55,27 @@ public class GetRCLanguages
             String line         = bfr.readLine();
             while( line != null )
             {
-                line = line.trim();
-                if     ( line.startsWith( "[title]" ) )
+                line = line.trim().replaceAll( "[\",]", "" );
+                if     ( line.startsWith( "title" ) )
                 {
-                    // have a programming language - should look like "[title] => Category:languageName"
-                    languageName = after( line, ':' ).trim();
+                    // have a programming language - should look like "title: Category:languageName"
+                    languageName = after( after( line, ':' ), ':' ).trim();
                 }
-                else if( line.startsWith( "[pages]" ) )
+                else if( line.startsWith( "pages" ) )
                 {
                     // number of pages the language has (probably)
-                    String pageCount = after( line, '>' ).trim();
-                    if( pageCount.compareTo( "Array" ) != 0 )
+                    String pageCount = after( line, ':' ).trim();
+                    if( pageCount.compareTo( "{" ) != 0 )
                     {
-                        // haven't got "[pages] => Array" - must be a number of pages
+                        // haven't got "pages: {" - must be a number of pages
                         languageList.add( ( (char) Integer.parseInt( pageCount ) ) + languageName );
                         languageName = "?";
-                    } // if [pageCount.compareTo( "Array" ) != 0
+                    } // if [pageCount.compareTo( "{" ) != 0
                 }
-                else if( line.startsWith( "[gcmcontinue]" ) )
+                else if( line.startsWith( "gcmcontinue" ) )
                 {
                     // have an indication of wether there is more data or not
-                    gcmcontinue[0] = after( line, '>' ).trim();
+                    gcmcontinue[0] = after( line, ':' ).trim().replaceAll( "[|]", "%7C" );
                 } // if various line starts
                 line = bfr.readLine();
             } // while line != null
@@ -96,13 +95,13 @@ public class GetRCLanguages
         gcmcontinue[0]                 = "";
         do
         {
-            String path = ( "http://www.rosettacode.org/mw/api.php?action=query"
+            String path = ( "https://www.rosettacode.org/w/api.php?action=query"
                           + "&generator=categorymembers"
                           + "&gcmtitle=Category:Programming%20Languages"
                           + "&gcmlimit=500"
                           + ( gcmcontinue[0].compareTo( "" ) == 0 ? "" : ( "&gcmcontinue=" + gcmcontinue[0] ) )
                           + "&prop=categoryinfo"
-                          + "&format=txt"
+                          + "&format=jsonfm"
                           );
             parseContent( path, gcmcontinue, languageList );
         }

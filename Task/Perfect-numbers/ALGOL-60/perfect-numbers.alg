@@ -1,10 +1,10 @@
 begin
 
-comment - return p mod q;
-integer procedure mod(p, q);
-  value p, q; integer p, q;
+comment - return n mod m;
+integer procedure mod(n, m);
+  value n, m; integer n, m;
 begin
-  mod := p - q * entier(p / q);
+  mod := n - m * entier(n / m);
 end;
 
 comment - return true if n is perfect, otherwise false;
@@ -38,6 +38,6 @@ for i := 2 step 1 until 10000 do
     end;
 outstring(1,"\n");
 outinteger(1,found);
-outstring(1,"perfect numbers were found");
+outstring(1," were found");
 
 end

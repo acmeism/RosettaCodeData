@@ -1,0 +1,35 @@
+DECLARE SUB fib (a() AS INTEGER)
+
+CLS
+PRINT "  fibonacci =>";
+DIM a(1 TO 2) AS INTEGER
+a(1) = 1: a(2) = 1
+CALL fib(a())
+PRINT " tribonacci =>";
+DIM b(1 TO 3) AS INTEGER
+b(1) = 1: b(2) = 1: b(3) = 2
+CALL fib(b())
+PRINT " tetranacci =>";
+DIM c(1 TO 4) AS INTEGER
+c(1) = 1: c(2) = 1: c(3) = 2: c(4) = 4
+CALL fib(c())
+PRINT "      lucas =>";
+DIM d(1 TO 2) AS INTEGER
+d(1) = 2: d(2) = 1
+CALL fib(d())
+END
+
+SUB fib (a() AS INTEGER)
+    DIM f(24)
+    b = 0
+    FOR x = 1 TO UBOUND(a)
+        b = b + 1
+        f(x) = a(x)
+    NEXT x
+    FOR i = b TO 12 + b
+        PRINT USING "#### "; f(i - b + 1);
+        FOR j = (i - b + 1) TO i
+            f(i + 1) = f(i + 1) + f(j)
+        NEXT j
+    NEXT i
+END SUB

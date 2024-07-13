@@ -1,0 +1,2 @@
+##
+Write(real.PositiveInfinity);

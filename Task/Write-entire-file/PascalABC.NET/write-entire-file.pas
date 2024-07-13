@@ -1,0 +1,2 @@
+##
+WriteAllText('a.txt','string');

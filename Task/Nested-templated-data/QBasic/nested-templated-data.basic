@@ -1,0 +1,33 @@
+True = -1: False = NOT True
+
+DIM p(6)
+DIM p$(6)
+p$(0) = "Payload#0": p$(1) = "Payload#1"
+p$(2) = "Payload#2": p$(3) = "Payload#3"
+p$(4) = "Payload#4": p$(5) = "Payload#5"
+p$(6) = "Payload#6"
+DIM q(6)
+DIM t(2, 3)
+t(0, 0) = 1: t(0, 1) = 2
+t(1, 0) = 3: t(1, 1) = 4: t(1, 2) = 1
+t(2, 0) = 5
+
+FOR i = LBOUND(t) TO UBOUND(t)              '0 To 2
+    FOR j = LBOUND(t, 2) TO UBOUND(t, 2)    '0 To 3
+        IF t(i, j) <> 0 THEN
+            q(t(i, j)) = True
+            t(i, j) = t(i, j) + 1
+        END IF
+    NEXT j
+NEXT i
+
+FOR i = LBOUND(t) TO UBOUND(t)              '0 To 2
+    FOR j = LBOUND(t, 2) TO UBOUND(t, 2)    '0 To 3
+        IF t(i, j) <> 0 THEN PRINT p$(t(i, j) - 1); " ";
+    NEXT j
+    PRINT
+NEXT i
+
+FOR i = LBOUND(q) TO UBOUND(q)
+    IF q(i) = False THEN PRINT p$(i); " is not used"
+NEXT i

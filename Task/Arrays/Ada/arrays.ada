@@ -1,9 +1,10 @@
 procedure Array_Test is
 
-   A, B : array (1..20) of Integer;
+   type Example_Array_Type is array (1..20) of Integer;
+   A, B : Example_Array_Type;
 
    -- Ada array indices may begin at any value, not just 0 or 1
-   C : array (-37..20) of integer
+   C : array (-37..20) of Integer;
 
    -- Ada arrays may be indexed by enumerated types, which are
    -- discrete non-numeric types
@@ -26,7 +27,7 @@ procedure Array_Test is
    Const         : constant Arr := (1 .. 10 => 1, 11 .. 20 => 2, 21 | 22 => 3);
    Centered      : Arr (-50..50) := (0 => 1, Others => 0);
 
-   Result        : Integer
+   Result        : Integer;
 begin
 
    A := (others => 0);     -- Assign whole array
@@ -37,7 +38,7 @@ begin
    A (3..5) := (2, 4, -1); -- Assign a constant slice
    A (3..5) := A (4..6);   -- It is OK to overlap slices when assigned
 
-   Fingers_Extended'First := False; -- Set first element of array
-   Fingers_Extended'Last := False;  -- Set last element of array
+   Fingers_Extended(Fingers'First) := False; -- Set first element of array
+   Fingers_Extended(Fingers'Last) := False;  -- Set last element of array
 
 end Array_Test;

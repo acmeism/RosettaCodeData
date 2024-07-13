@@ -20,5 +20,6 @@ BEGIN # find additive primes - primes whose digit sum is also prime #
             FI
         FI
     OD;
-    print( ( newline, "Found ", whole( additive count, 0 ), " additive primes below ", whole( UPB prime + 1, 0 ), newline ) )
+    print( ( newline, "Found ", whole( additive count, 0 ) ) );
+    print( ( " additive primes below ", whole( UPB prime + 1, 0 ), newline ) )
 END

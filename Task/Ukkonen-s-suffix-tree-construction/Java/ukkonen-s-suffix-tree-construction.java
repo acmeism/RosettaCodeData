@@ -22,21 +22,21 @@ public final class UkkonenSuffixTree {
 			final long start = System.currentTimeMillis();			
 			SuffixTree tree = new SuffixTree(piDigits);			
 			Map<String, Set<Integer>> substrings = tree.getLongestRepeatedSubstrings();			
-			final long finish = System.currentTimeMillis();
+			final long end = System.currentTimeMillis();
 			
 			System.out.println("First " + limit + " digits of pi has longest repeated characters:");
 			for ( String substring : substrings.keySet() ) {
 				System.out.print("    '" + substring + "' starting at index ");
-				for ( Iterator<Integer> iterator = substrings.get(substring).iterator(); iterator.hasNext(); ) {
-					System.out.print(iterator.next());
-					if ( iterator.hasNext() ) {
+				for ( Iterator<Integer> iter = substrings.get(substring).iterator(); iter.hasNext(); ) {
+					System.out.print(iter.next());
+					if ( iter.hasNext() ) {
 						System.out.print(" and ");
 					}
 				}
 				System.out.println();
 			}
 			
-			System.out.println("Time taken: " + ( finish - start ) + " milliseconds." + System.lineSeparator());
+			System.out.println("Time taken: " + ( end - start ) + " milliseconds." + System.lineSeparator());
 		}
 		
 		System.out.println("The timings show that the implementation has approximately linear performance.");

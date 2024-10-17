@@ -32,15 +32,12 @@ BEGIN
            ( number = described number )
        END; # SELFDESCRIBING #
 
-main: (
-
-    FOR i TO 100 000 000
+FOR i TO 100 000 000
     DO
         IF SELFDESCRIBING i
         THEN
             print( ( i, " is self describing", newline ) )
         FI
     OD
-)
 
 END

@@ -26,8 +26,8 @@ std::vector<double> list_prime_reciprocals(const int32_t& limit) {
 }
 
 int main() {
-	std::vector<double> prime_reciprocals = list_prime_reciprocals(100'000'000);
-	const double euler = 0.577'215'664'901'532'861;
+	std::vector<double> prime_reciprocals = list_prime_reciprocals(100000000);
+	const double euler = 0.577215664901532861;
 	double sum = 0.0;
 	for ( double reciprocal : prime_reciprocals ) {
 		sum += reciprocal + log(1.0 - reciprocal);

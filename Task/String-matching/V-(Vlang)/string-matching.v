@@ -4,5 +4,5 @@ fn main() {
     println(str.ends_with('zn')) // False
     println(str.contains('bb')) // False
     println(str.contains('ab')) // True
-    println(str.index('bc') or {-1}) // 1 // Vlang arrays are 0 based, so first char position is 0 and no result assigned -1
+    println(str.index('bc') or {-1}) // 1 // V arrays are 0 based; first char position is 0
 }

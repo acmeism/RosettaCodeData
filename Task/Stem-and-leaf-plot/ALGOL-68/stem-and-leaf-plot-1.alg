@@ -1,6 +1,6 @@
 BEGIN # produce a stem and leaf plot of some numbers, leaf = last digit,     #
       #                                               stem = leading digits  #
-    PR read "rows.incl.a68" PR               # include row (array) utilities #
+    PR read "sort.incl.a68" PR       # include row (array) sorting utilities #
     []INT data = (  12, 127,  28,  42,  39, 113,  42,  18,  44, 118,  44
                  ,  37, 113, 124,  37,  48, 127,  36,  29,  31, 125, 139
                  , 131, 115, 105, 132, 104, 123,  35, 113, 122,  42, 117
@@ -48,8 +48,7 @@ BEGIN # produce a stem and leaf plot of some numbers, leaf = last digit,     #
 
     # sort the data                                                          #
     [ LWB data : UPB data ]INT sorted data := data;
-    QUICKSORT sorted data FROMELEMENT LWB sorted data TOELEMENT UPB sorted data;
-    # plot the data: stem = element / 10, leaf = element MOD 10              #
-    stem and leaf plot( sorted data, 0, ( INT n )INT: n OVER 10, ( INT n )INT: n MOD 10 )
+    # sort and plot the data: stem = element / 10, leaf = element MOD 10     #
+    stem and leaf plot( QUICKSORT sorted data, 0, ( INT n )INT: n OVER 10, ( INT n )INT: n MOD 10 )
 
 END

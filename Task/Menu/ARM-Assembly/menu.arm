@@ -1,0 +1,240 @@
+/* ARM assembly Raspberry PI  */
+/*  program menu1.s   */
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.include "../constantes.inc"
+.equ STDIN,    1
+.equ READ, 3
+
+.equ BUFFERSIZE, 2000
+/*******************************************/
+/*   Macros                              */
+/*******************************************/
+//.include "../../ficmacros32.inc"            @ for developer debugging
+
+
+/*******************************************/
+/* Initialized data */
+/*******************************************/
+.data
+szMessDebutPgm:   .asciz "Program 32 bits start. \n"
+szCarriageReturn: .asciz "\n"
+szMessFinOK:      .asciz "Program normal end. \n"
+szMessError:      .asciz "\nError  Buffer too small!!!\n"
+
+szChoose:         .asciz "\nMake your choise: "
+szMessErrorNum:   .asciz "Error : number do not exists!!\n"
+szMesschoose:     .asciz "\nYou have chosen: "
+szLigne1:         .asciz "fee fie"
+szLigne2:         .asciz "huff and puff"
+szLigne3:         .asciz "mirror mirror"
+szLigne4:         .asciz "tick tock"
+
+tabMenu:          .int szLigne1
+                  .int szLigne2
+                  .int szLigne3
+                  .int szLigne4
+.equ NBLIGNES,    (. - tabMenu ) / 4
+/*******************************************/
+/* UnInitialized data */
+/*******************************************/
+.bss
+.align 4
+sBuffer:                .skip  BUFFERSIZE
+sBuffer1:               .skip  BUFFERSIZE
+/*******************************************/
+/*  code section */
+/*******************************************/
+.text
+.global main
+main:
+    ldr r0,iAdrszMessDebutPgm
+    bl affichageMess
+1:
+    ldr r0,iAdrtabMenu            @ display menu
+    ldr r1,iAdrsBuffer
+    bl displayMenu
+    mov r5,r0
+    ldr r0,iAdrszChoose           @ display string
+    bl affichageMess
+    bl keyboardInput
+    //affregtit saisie
+    sub r0,#'0'                   @ input control
+    cmp r0,#0
+    ble error
+    cmp r0,r5
+    bge error
+    sub r4,r0,#1                  @ compute index choose string
+    ldr r0,iAdrszMesschoose
+    bl affichageMess
+    ldr r1,iAdrtabMenu            @  menu
+    ldr r0,[r1,r4,lsl #2]         @ load line address
+    bl affichageMess              @ and display
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    b 1b                          @ loop
+error:
+    ldr r0,iAdrszMessErrorNum
+    bl affichageMess
+    b 1b
+
+
+
+    ldr r0,iAdrszMessFinOK
+    bl affichageMess
+    b 100f
+99:
+    ldr r0,iAdrszMessError        @ error
+    bl affichageMess
+    mov r0, #1
+100:                              @ standard end of the program
+    mov r0, #0                    @ return code
+    mov r7, #EXIT                 @ request to exit program
+    svc 0                         @ perform system call
+iAdrsBuffer:              .int sBuffer
+iAdrszChoose:             .int szChoose
+iAdrszMessDebutPgm:       .int szMessDebutPgm
+iAdrszMessFinOK:          .int szMessFinOK
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszMessError:          .int szMessError
+iAdrszMessErrorNum:       .int szMessErrorNum
+iAdrszMesschoose:         .int szMesschoose
+/******************************************************************/
+/*     display menu                         */
+/******************************************************************/
+/* r0 contains menu address */
+/* r1 contains buffer address */
+/* r0 return index max     */
+displayMenu:
+    push {r1-r9,lr}          @ save  registers
+    mov  r8,r0
+    mov r9,r1
+    bl searchMaxSize          @ compute max size line
+    mov r7,r0                 @ maxi size
+    mov r5,#0
+1:
+    ldr r6,[r8,r5,lsl #2]     @ load line address
+    mov r2,#0
+2:
+    mov r0,r6
+    mov r1,r9
+    bl copyString             @ copy menu line to buffer
+    sub r1,r7,r0              @ compute maxi len - string length
+    mov r3,#0
+    mov r2,#' '
+3:                            @ loop to add space in buffer
+    cmp r3,r1
+    bge 4f
+    strb r2,[r9,r0]
+    add r0,r0,#1
+    add r3,r3,#1
+    b 3b
+4:
+    strb r2,[r9,r0]           @ add one space
+    add r0,r0,#1
+    mov r2,#':'
+    strb r2,[r9,r0]           @ add : to buffer
+    add r0,r0,#1
+    mov r2,#' '
+    strb r2,[r9,r0]           @ add one space
+    add r0,r0,#1
+    mov r4,r0
+    add r0,r5,#1              @ index
+    add r1,r9,r4
+    bl conversion10           @ decimal conversion
+    add r1,r0,r4
+    add r1,r1,#1
+    mov r2,#0x0a
+    strb r2,[r9,r1]          @ add : to buffer
+    add r1,r1,#1
+    mov r2,#0
+    strb r2,[r9,r1]          @ add 0 final to buffer
+
+    mov r0,r9                @ buffer display
+    bl affichageMess
+
+    add  r5,r5,#1            @ increment indice
+    cmp r5,#NBLIGNES         @ maxi ?
+    blt 1b
+    add r0,r5,#1             @ index max
+
+100:
+    pop {r1-r9,pc}          @ restaur registers
+
+/******************************************************************/
+/*     search max size of menu lines                         */
+/******************************************************************/
+/* r0 contains menu address  */
+/* r0 return max lenght  */
+searchMaxSize:
+    push {r1-r5,lr}           @ save  registers
+    mov r1,#0
+    mov r5,#0                 @ max size
+1:
+    ldr r2,[r0,r1,lsl #2]     @ load line address
+    mov r3,#0                 @ char indice
+2:
+    ldrb r4,[r2,r3]           @ load char
+    cmp r4,#0                 @ end string ?
+    beq 3f
+    add r3,r3,#1
+    b 2b                      @ loop
+3:
+    cmp r3,r5                 @ compare length and size maxi
+    movgt r5,r3
+    add r1,r1,#1
+    cmp r1,#NBLIGNES
+    blt 1b
+    mov r0,r5                 @ return maxi size
+
+100:
+    pop {r1-r5,pc}            @ restaur registers
+iAdrtabMenu:     .int tabMenu
+/******************************************************************/
+/*     copy strings                         */
+/******************************************************************/
+/* r0 contains string address  */
+/* r1 contains address buffer
+/* r0 return max lenght  */
+copyString:
+    push {r1-r3,lr}       @ save  registers
+    mov r2,#0
+1:
+    ldrb r3,[r0,r2]       @ load byte
+    cmp r3,#0             @ final zero
+    beq 2f
+    strb r3,[r1,r2]       @ store byte in buffer
+    add r2,r2,#1
+    b 1b
+2:
+    mov r0,r2             @ return buffer position
+100:
+    pop {r1-r3,pc}        @ restaur registers
+/******************************************************************/
+/*            string entry                                       */
+/******************************************************************/
+/* r0 return the first character of human entry */
+keyboardInput:
+    push {r1-r7,lr}        @ save registers
+    mov r0,#STDIN          @ Linux input console
+    ldr r1,iAdrsBuffer1    @ buffer address
+    mov r2,#BUFFERSIZE     @ buffer size
+    mov r7,#READ           @ request to read datas
+    svc 0                  @ call system
+    ldr r1,iAdrsBuffer1    @ buffer address
+    ldrb r0,[r1]           @ load first character
+100:
+    pop {r1-r7,pc}
+iAdrsBuffer1:         .int sBuffer1
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

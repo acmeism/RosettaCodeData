@@ -1,4 +1,4 @@
-#
+#!/usr/bin/env bash
 
 if
   declare NOTES=$HOME/notes.txt
@@ -6,7 +6,8 @@ if
 then
   {
     date
-    echo "  $*"
+    echo -e "\t$*"
   } >> $NOTES
-else [[ -r  $NOTES ]] && more $NOTES
+elif [[ -r $NOTES ]]
+then more $NOTES
 fi

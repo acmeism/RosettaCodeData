@@ -1,21 +1,18 @@
-proc digitalRoot n . x persistence .
-   numberString$ = n
-   currentPersist = 0
-   while len numberString$ > 1
-      for i = 1 to len numberString$
-         sum += number substr numberString$ i 1
-      .
-      numberString$ = sum
-      currentPersist += 1
-      sum = 0
+func digsum num .
+   while num > 0
+      s += num mod 10
+      num = num div 10
    .
-   x = number numberString$
-   persistence = currentPersist
+   return s
+.
+func[] digrootpers x .
+   while x > 9
+      x = digsum x
+      cnt += 1
+   .
+   return [ x cnt ]
 .
 numbers[] = [ 627615 39390 588225 393900588225 ]
 for i in numbers[]
-   digitalRoot i x persistence
-   print i
-   print "Additive persistence: " & persistence
-   print "Digital root: " & x
+   print i & " -> " & digrootpers i
 .

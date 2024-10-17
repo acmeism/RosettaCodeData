@@ -1,1 +1,9 @@
-   t@<t:1 3 5 7 9 8 6 4 2
+    :[
+        0=#x;           / if length of x is zero
+        x;              / then return x
+                        / else
+        ,/(             / join the results of:
+          _f x[&x<p]         / sort (recursively) elements less than pivot p
+          x[&x=p]            / elements equal to p
+          _f x[&x>p])        / sort (recursively) elements greater than p
+     ]

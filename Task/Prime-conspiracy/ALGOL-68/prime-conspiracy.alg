@@ -1,16 +1,10 @@
-# extend SET, CLEAR and ELEM to operate on rows of BITS #
-OP   SET   = ( INT n, REF[]BITS b )REF[]BITS:
-     BEGIN
-         INT w = n OVER bits width;
-         b[ w ] := ( ( 1 + ( n MOD bits width ) ) SET b[ w ] );
-         b
-     END # SET # ;
+# extend CLEAR and ELEM to operate on rows of BITS #
 OP   CLEAR = ( INT n, REF[]BITS b )REF[]BITS:
      BEGIN
          INT w = n OVER bits width;
          b[ w ] := ( ( 1 + ( n MOD bits width ) ) CLEAR b[ w ] );
          b
-     END # SET # ;
+     END # CLEAR # ;
 OP   ELEM  = ( INT n, REF[]BITS b )BOOL: ( 1 + ( n MOD bits width ) ) ELEM b[ n OVER bits width ];
 
 # constructs a bit array long enough to hold n values #

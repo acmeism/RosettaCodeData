@@ -15,7 +15,7 @@ fn test(src string) {
 	for _ in 0..tests {
 		sum += method(src)
 	}
-	println('${m_string(src)} produces ${100.0 * f32(sum) / f32(tests)}% deaths.')
+	println("${m_string(src)} produces ${100.0 * f32(sum) / f32(tests)}% deaths.")
 }
 
 fn rshift() {
@@ -76,5 +76,5 @@ fn m_string(s string) string {
 		   else {}
 		}
 	}
-	return l.join(', ')
+	return l.join(", ")
 }

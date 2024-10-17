@@ -1,0 +1,479 @@
+/* ARM assembly Raspberry PI  */
+/*  program readconf.s   */
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.include "../constantes.inc"
+.equ BUFFERSIZE, 2000
+.equ NBPARAM,  20
+.equ NBITEMMAXI, 5
+.equ READ,   3
+.equ WRITE,  4
+.equ OPEN,   5
+.equ CLOSE,  6
+.equ O_RDWR,  0x0002         @ open for reading and writing
+/*******************************************/
+/*   Macros                              */
+/*******************************************/
+//.include "../../ficmacros32.inc"            @ for developer debugging
+
+/************************************/
+/* structure   */
+/************************************/
+
+/* structure parametres linkedlist*/
+    .struct  0
+llistPar_next:                             @ next element
+    .struct  llistPar_next + 4
+llistPar_keyaddress:                            @ element value
+    .struct  llistPar_keyaddress + 4
+llistPar_optionaddress:                            @ element value
+    .struct  llistPar_optionaddress + 4
+llistPar_end:
+
+/* structure  options linkedlist*/
+    .struct  0
+llist_next:                             @ next element
+    .struct  llist_next + 4
+llist_value:                            @ element value
+    .struct  llist_value + 4
+llist_end:
+
+/*******************************************/
+/* Initialized data */
+/*******************************************/
+.data
+szMessDebutPgm:    .asciz "Program 32 bits start. \n"
+szCarriageReturn:  .asciz "\n"
+szMessFinOK:       .asciz "Program normal end. \n"
+szMessOpen:        .asciz "File open error.\n"
+szMessRead:        .asciz "File read error.\n"
+szMessClose:       .asciz "File close error.\n"
+szFileName1:       .asciz "conf1.txt"
+szLib1:            .asciz " : "
+szLib2:            .asciz " = "
+szLib3:            .asciz "  "
+
+/*******************************************/
+/* UnInitialized data */
+/*******************************************/
+.bss
+sBuffer:           .skip BUFFERSIZE
+.align 4
+sZoneConv:         .skip 24
+iPtrRead:          .skip 4
+llistParam:        .skip llistPar_end * NBPARAM
+llistOptions:      .skip llist_end * NBITEMMAXI * NBPARAM
+/*******************************************/
+/*  code section */
+/*******************************************/
+.text
+.global main
+main:
+    ldr r0,iAdrszMessDebutPgm
+    bl affichageMess
+    ldr r0,iAdrszMessDebutPgm
+    ldr r0,iAdrszFilename1
+    ldr r1,iAdrsBuffer            @ read configuration file
+    mov r2,#BUFFERSIZE
+    bl readFile
+    cmp r0,#-1
+    beq 100f
+    ldr r0,iAdrllistParam          @ init llist paramétres
+    mov r1,#0
+    str r1,[r0,#llistPar_next]
+
+    mov r4,r0
+1:                                 @ loop line reading
+    ldr r0,iAdrsBuffer             @ read line of buffer
+    mov r1,r4
+    bl readLine
+    cmp r0,#-1                     @ end line ?
+    beq 2f
+    mov r2,r0
+    ldr r0,iAdrsBuffer             @ line parser
+    add r0,r0,r2
+    bl lineParser
+    b 1b
+2:
+    ldr r0,iAdrllistParam          @ display llist paramétres
+    bl displayListParam
+
+    ldr r0,iAdrszMessFinOK
+    bl affichageMess
+
+100:                              @ standard end of the program
+    mov r0, #0                    @ return code
+    mov r7, #EXIT                 @ request to exit program
+    svc 0                         @ perform system call
+iAdrszMessDebutPgm:       .int szMessDebutPgm
+iAdrszMessFinOK:          .int szMessFinOK
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrsBuffer:              .int sBuffer
+iAdrszFilename1:          .int szFileName1
+iAdrllistParam:           .int llistParam
+/*******************************************/	
+/*          Parser line of file        */
+/*******************************************/	
+/* r0  address line */
+/* r1   line size */
+lineParser:                         @
+    push {r0-r8,fp,lr}
+    cmp r1,#0                       @ empty line
+    beq 100f
+    mov r6,r0
+    mov r4,#0
+    ldrb r5,[r0,r4]                 @ load first character
+    cmp r5,#'#'                     @  comment ?
+    beq 100f
+    cmp r5,#';'                     @  comment ?
+    beq 100f
+    mov r7,r1                       @ line size
+    mov r4,#0
+1:                                  @ supp spaces
+    ldrb r3,[r6,r4]
+    cmp r3,#' '
+    addeq r4,r4,#1
+    beq 1b
+    cmp r3,#0                        @ spaces line
+    beq 100f
+    add r0,r0,r4                     @ word key address
+    mov r1,r7                        @ line size
+    bl traitwordkey
+    mov r8,r0                        @ list element adress
+    cmp r1,r7
+    bge 100f
+    mov r4,r1                        @ new position
+    mov r0,#llist_end * NBITEMMAXI   @ create options list
+    bl reserverPlace
+    str r0,[r8,#llistPar_optionaddress]
+    mov r1,#0                        @ and init
+    str r1,[r0,#llist_next]
+    mov r9,r0
+
+2:                                   @ loop supp space, :, =
+    ldrb r3,[r6,r4]
+    cmp r3,#' '
+    addeq r4,r4,#1
+    beq 2b
+    cmp r3,#':'
+    addeq r4,r4,#1
+    beq 2b
+    cmp r3,#'='
+    addeq r4,r4,#1
+    beq 2b
+    cmp r3,#0                        @ spaces line
+    beq 100f
+
+    add r0,r6,r4                     @ first options address
+    mov r1,r7                        @ line size
+    mov r2,r9                        @ option list address
+    bl traitOptions
+
+100:
+    pop {r0-r8,fp,pc}
+/***************************************************/
+/*   word key analyser                  */
+/***************************************************/
+/* r0 contains address begin word key */
+/* r1   line size */
+/* r0 return list element address */
+/* r1 return new line pointer    */
+traitwordkey:            @ INFO: traitwordkey
+    push {r2-r6,lr}      @ save registers
+    mov r5,r0
+    mov r4,#0
+1:                       @ loop size compute
+    ldrb r3,[r0,r4]
+    cmp r3,#' '          @ end key
+    beq 2f
+    cmp r3,#'='          @ end key
+    beq 2f
+    cmp r3,#0x0D         @ end key
+    beq 2f
+    add r4,r4,#1         @ increment indice and loop
+    cmp r4,r1
+    blt 1b
+2:
+    add r0,r4,#1         @ reserve area in buffer area
+    bl reserverPlace
+    mov r6,r0            @ save address area
+    mov r2,#0
+3:                       @ copy key in reserved array
+   ldrb r3,[r5,r2]
+   strb r3,[r6,r2]
+   add r2,r2,#1
+   cmp r2,r4
+   blt 3b
+   mov r3,#0
+   strb r3,[r6,r2]        @ final zero
+
+   ldr r0,iAdrllistParam  @ insert param in list
+   mov r1,r6              @ key string address
+   mov r2,#0              @ init option list address
+   bl insertElementParam
+                          @ r0 return element address
+   mov r1,r4              @ and key size
+
+100:
+    pop {r2-r6,pc}
+/***************************************************/
+/*   traitement options                   */
+/***************************************************/
+/* r0 contains address begin word options */
+/* r1   line size */
+/* r2 contains list options address */
+/* r0 return new line pointer    */
+traitOptions:                @ INFO: traitOptions
+    push {r2-r6,lr}          @ save registers
+    mov r5,r0
+    mov r8,r1
+    mov r7,r2
+0:
+    mov r4,#0
+1:                       @ loop size compute
+    ldrb r3,[r5,r4]
+    cmp r3,#','          @ end option
+    beq 2f
+    cmp r3,#0x0D         @ end line
+    beq 2f
+    cmp r3,#0x0A         @
+    beq 100f
+    add r4,r4,#1
+    cmp r4,r8
+    blt 1b
+2:
+    add r0,r4,#1
+    bl reserverPlace
+    mov r6,r0
+    mov r2,#0
+3:                       @ copy option in reserved array
+    ldrb r3,[r5,r2]
+    strb r3,[r6,r2]
+    add r2,r2,#1
+    cmp r2,r4
+    blt 3b
+    mov r3,#0
+    strb r3,[r6,r2]      @ final zero
+    mov r0,r7            @ list options address
+    mov r1,r6
+    mov r2,#0
+    bl insertElement
+    add r4,r4,#1
+    add r5,r5,r4
+    cmp r4,r8         @ end line ?
+    blt 0b
+
+100:
+    pop {r2-r6,pc}
+
+/***************************************************/
+/*   read file                   */
+/***************************************************/
+/* r0 contains file name */
+/* r1 contains a file buffer */
+/* r2 contains buffer size */
+/* r0 return buffer size */
+readFile:                    @ INFO: readFile
+    push {r1-r9,lr}          @ save registers
+    mov r9,r1                @ file buffer
+    mov r6,r2
+    mov r10,r3
+    mov r1,#O_RDWR           @ flags
+    mov r2,#0                @ mode
+    mov r7,#OPEN             @ file open
+    svc 0
+    cmp r0,#0                @ error ?
+    ble 99f
+    mov r8,r0                @ FD save
+
+    mov r0,r8
+    mov r1,r9                @ read buffer address
+    mov r2,r6
+    mov r7,#READ             @ call system read file
+    svc 0
+    cmp r0,#0                @ error read ?
+    blt 97f
+    mov r6,r0                @ save file size
+    mov r0,r8                @ FD
+    mov r7,#CLOSE            @ call system close file
+    svc 0
+    cmp r0,#0                @ error close ?
+    blt 96f
+
+    mov r0,r6                @ return buffer size
+    b 100f
+96:                          @ display error messages
+    ldr r0,iAdrszMessClose
+    bl affichageMess
+    mov r0,#-1               @ error
+    b 100f
+97:
+    ldr r0,iAdrszMessRead
+    bl affichageMess
+    mov r0,#-1               @ error
+    b 100f
+99:
+    ldr r0,iAdrszMessOpen
+    bl  affichageMess
+    mov r0,#-1               @ error
+
+ 100:
+    pop {r1-r9,pc}
+iAdrszMessOpen:     .int szMessOpen
+iAdrszMessRead:     .int szMessRead
+iAdrszMessClose:    .int szMessClose
+/***************************************************/
+/*   read line                   */
+/***************************************************/
+/* r0 contains a file buffer */
+/* r1 contains text buffer size */
+/* r0 return pointer address line or -1 if end */
+/* r1 return line size  */
+readLine:                    @ INFO: readLine
+    push {r2-r9,lr}          @ save registers
+    ldr r2,iAdriPtrRead
+    ldr r3,[r2]
+    cmp r3,r1
+    movge r0,#-1             @ end buffer
+    bge 100f
+    mov r4,r3
+    ;mov r5,#0
+    mov r6,#0                @ line size
+1:
+    ldrb r5,[r0,r4]
+    cmp r5,#0x0D
+    beq 3f
+    add r4,r4,#1
+    cmp r4,r1                @ end buffer ?
+    strge r4,[r2]            @ new begin line pointeur
+    movge r0,r3              @ line begin
+    movge r1,r6              @ return size
+    bge 100f                 @ end
+    add r6,r6,#1
+    b 1b                     @ and loop
+3:
+    add r4,r4,#2             @ supp 0D0A
+    str r4,[r2]              @ new begin line pointeur
+    mov r0,r3                @ line begin
+    mov r1,r6                @ return size
+    b 100f
+100:
+    pop {r2-r9,pc}
+iAdriPtrRead:    .int iPtrRead
+/******************************************************************/
+/*     display list param                       */
+/******************************************************************/
+/* r0 contains the address of the list */
+displayListParam:                       @ INFO: insertElementParam
+    push {r1-r6,lr}                       @ save  registers
+    mov r4,r0
+1:                                      @ display loop param
+    ldr r2,[r4,#llistPar_next]          @ end list ?
+    cmp r2,#0
+    beq 100f                            @ yes
+    ldr r0,[r4,#llistPar_keyaddress]    @ load key word address
+    bl affichageMess
+    ldr r3,[r4,#llistPar_optionaddress] @ options ?
+    cmp r3,#0
+    beq 3f
+    ldr r0,iAdrszLib1
+    bl affichageMess
+    mov r0,r3
+    mov r6,#1
+
+2:                                       @ loop display options
+    ldr r5,[r3,#llist_next]              @ end list ?
+    cmp r5,#0
+    beq 3f                               @ yes
+    mov r0,r6                            @ display indice option
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r4,#0
+    strb r4,[r1,r0]
+    ldr r0,iAdrsZoneConv
+    bl affichageMess
+    ldr r0,iAdrszLib2
+    bl affichageMess
+    ldr r0,[r3,#llist_value]
+    bl affichageMess
+    ldr r0,iAdrszLib3
+    bl affichageMess
+    add r6,r6,#1
+    mov r3,r5
+    b 2b
+3:
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    mov r4,r2
+    b 1b
+
+100:
+    pop {r1-r6,pc}
+iAdrsZoneConv:   .int sZoneConv
+iAdrszLib1:      .int szLib1
+iAdrszLib2:      .int szLib2
+iAdrszLib3:      .int szLib3
+/******************************************************************/
+/*     insert element at end of list                          */
+/******************************************************************/
+/* r0 contains the address of the list */
+/* r1 contains key string address  */
+/* r2 contains option list address
+/* r0 returns address of element or - 1 if error */
+insertElementParam:                       @ INFO: insertElementParam
+    push {r1-r4,lr}                       @ save  registers
+    mov r4,#llistPar_end * NBPARAM
+    add r4,r4,r0                          @ compute address end list
+1:                                        @ start loop
+    ldr r3,[r0,#llistPar_next]            @ load next pointer
+    cmp r3,#0                             @ = zero
+    movne r0,r3                           @ no -> loop with pointer
+    bne 1b
+    add r3,r0,#llistPar_end               @ yes -> compute next free address
+    cmp r3,r4                             @ > list end
+    movge r0,#-1                          @ yes -> error
+    bge 100f
+    str r3,[r0,#llistPar_next]            @ store next address in current pointer
+    str r1,[r0,#llistPar_keyaddress]      @ store element value
+    str r2,[r0,#llistPar_optionaddress]
+    mov r1,#0
+    str r1,[r3,#llistPar_next]            @ init next pointer in next address
+
+100:
+    pop {r1-r4,lr}                        @ restaur registers
+    bx lr                                 @ return
+    /******************************************************************/
+/* r0 contains the address of the list */
+/* r1 contains key string address  */
+/* r0 returns address of element or - 1 if error */
+insertElement:                            @ INFO: insertElement
+    push {r1-r3,lr}                       @ save  registers
+    mov r2,#llist_end * NBITEMMAXI
+    add r2,r2,r0                             @ compute address end list
+1:                                        @ start loop
+    ldr r3,[r0,#llist_next]               @ load next pointer
+    cmp r3,#0                             @ = zero
+    movne r0,r3                           @ no -> loop with pointer
+    bne 1b
+    add r3,r0,#llist_end                  @ yes -> compute next free address
+    cmp r3,r2                             @ > list end
+    movge r0,#-1                          @ yes -> error
+    bge 100f
+    str r3,[r0,#llist_next]               @ store next address in current pointer
+    str r1,[r0,#llist_value]              @ store element value
+    mov r1,#0
+    str r1,[r3,#llist_next]               @ init next pointer in next address
+
+100:
+    pop {r1-r3,lr}                        @ restaur registers
+    bx lr                                 @ return
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

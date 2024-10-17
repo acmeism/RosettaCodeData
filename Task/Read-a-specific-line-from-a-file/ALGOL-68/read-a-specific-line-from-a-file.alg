@@ -17,44 +17,38 @@ PROC read specific line = ( STRING     file name
         FALSE
      ELSE
         # file opened OK #
-        err         := "";
+        err  := "";
         BOOL at eof := FALSE;
-        # set the EOF handler for the file #
+        # set the EOF handler for the file             #
+        # notes that we reached EOF on the latest read #
+        # and returns TRUE so processing can continue  #
         on logical file end( input file
-                           , ( REF FILE f )BOOL:
-                             BEGIN
-                                 # note that we reached EOF on the #
-                                 # latest read #
-                                 at eof := TRUE;
-
-                                 # return TRUE so processing can continue #
-                                 TRUE
-                             END
+                           , ( REF FILE f )BOOL: at eof := TRUE
                            );
-         INT    line number := 0;
-         STRING text;
-         WHILE line number < number
-           AND NOT at eof
-         DO
-             get( input file, ( text, newline ) );
-             line number +:= 1
-         OD;
-         # close the file #
-         close( input file );
-         # return the line or an error message depending on whether #
-         # we got a line with the required number or not            #
-         IF line number = number
-         THEN
-             # got the required line #
-             line := text;
-             TRUE
-         ELSE
-             # not enough lines in the file #
-             err  := """" + file name + """ is too short";
-             FALSE
-         FI
+        INT    line number := 0;
+        STRING text;
+        WHILE line number < number
+          AND NOT at eof
+        DO
+            get( input file, ( text, newline ) );
+            line number +:= 1
+        OD;
+        # close the file #
+        close( input file );
+        # return the line or an error message depending on whether #
+        # we got a line with the required number or not            #
+        IF line number = number
+        THEN
+            # got the required line #
+            line := text;
+            TRUE
+        ELSE
+            # not enough lines in the file #
+            err  := """" + file name + """ is too short";
+            FALSE
+        FI
      FI; # read specific line #
-main:(
+BEGIN
     # read the seventh line of this source and print it #
     # (or an error message if we can't)                 #
     STRING line;
@@ -67,4 +61,4 @@ main:(
         # got an error #
         print( ( "unable to read line: """ + err + """" ) )
     FI
-)
+END

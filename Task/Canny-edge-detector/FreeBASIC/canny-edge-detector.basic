@@ -1,0 +1,116 @@
+#define MIN(a, b) iif((a) < (b), (a), (b))
+#define MAX(a, b) iif((a) > (b), (a), (b))
+
+Const MaxBrightness = 255
+
+' Función para leer un archivo PPM
+Function readPPM(nombre As String, Byref ancho As Integer, Byref alto As Integer, image() As Ubyte) As Boolean
+    Dim As Integer ff
+    Dim As String t, dcol
+
+    If nombre = "" Then
+        Print "No PPM file name indicated."
+        Return False
+    End If
+
+    ff = Freefile
+    Open nombre For Binary As #ff
+    If Err Then
+        Print "File "; nombre; " not found."
+        Return False
+    End If
+
+    Line Input #ff, t
+    If t <> "P6" Then
+        Print "File is NOT PPM P6 type."
+        Close #ff
+        Return False
+    End If
+
+    Do
+        Line Input #ff, t
+    Loop While Left(t, 1) = "#"
+
+    Dim As Integer posic = 1
+    While Mid(t, posic, 1) = " "
+        posic += 1
+    Wend
+    ancho = Val(Mid(t, posic))
+
+    While Mid(t, posic, 1) <> " "
+        posic += 1
+    Wend
+    While Mid(t, posic, 1) = " "
+        posic += 1
+    Wend
+    alto = Val(Mid(t, posic))
+
+    Line Input #ff, dcol
+
+    Redim image(0 To ancho * alto * 3 - 1)
+    Get #ff, , image()
+
+    Close #ff
+    Return True
+End Function
+
+Dim As Integer ancho, alto
+Dim image() As Ubyte
+
+If readPPM("i:\Lena.ppm", ancho, alto, image()) Then
+    Dim As Integer newAncho = ancho, newAlto = alto
+    Dim pixelsGray(newAncho - 1, newAlto - 1) As Integer
+    Dim C_E_D(2, 2) As Integer
+
+    ' Define edge detection filter
+    Dim As Integer dato(8) => {-1, -1, -1, -1, 8, -1, -1, -1, -1}
+    Dim As Integer i, j
+    For i = 0 To 2
+        For j = 0 To 2
+            C_E_D(i, j) = dato(i * 3 + j)
+        Next j
+    Next i
+
+    ' Convert image to grayscale
+    Dim As Integer x, y, r, g, b, lumin, k
+    For y = 0 To newAlto - 1
+        For x = 0 To newAncho - 1
+            r = image((y * newAncho + x) * 3)
+            g = image((y * newAncho + x) * 3 + 1)
+            b = image((y * newAncho + x) * 3 + 2)
+            lumin = Int(0.2126 * r + 0.7152 * g + 0.0722 * b)
+            pixelsGray(x, y) = lumin
+        Next x
+    Next y
+
+    Dim new_image(newAncho - 1, newAlto - 1) As Integer
+    Dim As Integer divisor = 1
+
+    ' Apply edge detection filter
+    Dim As Integer newRGB
+    For y = 1 To newAlto - 2
+        For x = 1 To newAncho - 2
+            newRGB = 0
+            For i = -1 To 1
+                For j = -1 To 1
+                    newRGB += C_E_D(i + 1, j + 1) * pixelsGray(x + i, y + j)
+                Next j
+            Next i
+            new_image(x, y) = Max(Min(newRGB / divisor, 255), 0)
+        Next x
+    Next y
+
+    ' Show the result
+    Screenres newAncho, newAlto, 32
+    Windowtitle ("Canny edge detector")
+    For y = 0 To newAlto - 1
+        For x = 0 To newAncho - 1
+            k = new_image(x, y)
+            Pset (x, y), Rgb(k, k, k)
+        Next x
+    Next y
+Else
+    Print "Error loading PPM file."
+End If
+
+Sleep

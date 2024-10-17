@@ -1,0 +1,237 @@
+/* ARM assembly Raspberry PI  */
+/*  program invphrase.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.include "../constantes.inc"
+
+.equ BUFFERSIZE,    200
+/*******************************************/
+/*   Macros                              */
+/*******************************************/
+//.include "../../ficmacros32.inc"            @ for developer debugging
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessDebutPgm:   .asciz "Program 32 bits start. \n"
+szCarriageReturn: .asciz "\n"
+szMessFinOK:      .asciz "Program normal end. \n"
+szMessErreur:     .asciz "Error  !!!\n"
+szSpace1:         .asciz " "
+
+szPhrase1:          .asciz "rosetta code phrase reversal"
+.equ LGPHRASE1,  . -  szPhrase1 - 1
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr r0,iAdrszMessDebutPgm
+    bl affichageMess               @ start message
+
+    ldr r0,iAdrszPhrase1           @ load phrase adress
+    mov r1,#LGPHRASE1
+    bl inverseChar
+
+    ldr r0,iAdrszPhrase1           @ load phrase adress
+    mov r1,#LGPHRASE1
+    bl inverseWord
+
+    ldr r0,iAdrszPhrase1           @ load phrase adress
+    mov r1,#LGPHRASE1              @ phrase size
+    bl inverseWordString
+
+
+    ldr r0,iAdrszMessFinOK
+    bl affichageMess
+    b 100f
+99:
+    ldr r0,iAdrszMessErreur        @ error
+    bl affichageMess
+    mov r0, #1                     @ return code error
+    b 100f
+100:
+    mov r7,#EXIT                   @ program end
+    svc #0                         @ system call
+iAdrszMessDebutPgm:          .int szMessDebutPgm
+iAdrszMessFinOK:             .int szMessFinOK
+iAdrszMessErreur:            .int szMessErreur
+iAdrszPhrase1:               .int szPhrase1
+/***************************************************/
+/*   word inversion                  */
+/***************************************************/
+/* r0 contains line address t  */
+/* r1 contains line length */
+inverseChar:
+    push {r1-r8,lr}        @ save registers
+    sub sp,#BUFFERSIZE     @ reserve place on the stack
+    mov r7,sp              @
+    mov r4,r0              @ begin line address
+    add r8,r0,r1           @ end line address indice at line end
+    sub r8,r8,#1
+    mov r6,#0              @ store indice
+1:                         @ line analyse loop
+    cmp r8,r4              @ end line ?
+    blt 2f
+    ldrb r2,[r8]           @ load one char
+    strb r2,[r7,r6]
+    add r6,r6,#1
+    sub r8,r8,#1           @ and loop
+    b 1b
+2:
+    mov r2,#0x0A
+    strb r2,[r7,r6]
+    add r6,r6,#1
+    mov r2,#0
+    strb r2,[r7,r6]        @ final zero
+    mov r0,r7
+    bl affichageMess
+    add sp,#BUFFERSIZE     @ free reserved place
+
+ 100:                      @ end function
+    pop {r1-r8,pc}         @ restaur registers
+/***************************************************/
+/*   word string inversion                  */
+/***************************************************/
+/* r0 contains line address t  */
+/* r1 contains line length */
+inverseWordString:
+    push {r1-r7,lr}        @ save registers
+    sub sp,#BUFFERSIZE     @ reserve place on the stack
+    mov r7,sp              @ and save address
+    sub r5,r1,#1           @ phrase length start indice at line end
+    mov r6,#0              @ word length
+    mov r3,#0              @ inverted phrase indice
+1:                         @ line analyse loop
+    cmp r5,#0              @ end line ?
+    blt 10f
+    ldrb r2,[r0,r5]        @ load one char
+    cmp r2,#' '            @ space ?
+    bne 3f
+    mov r4,#0              @ indice word
+    add r1,r5,#1
+2:                         @ loop copy word to buffer
+    ldrb r2,[r0,r1]        @ load one char
+    strb r2,[r7,r3]        @ store in buffer
+    add r3,r3,#1           @ increment indice
+    add r1,r1,#1
+    add r4,r4,#1
+    cmp r4,r6
+    blt 2b
+    mov r2,#' '
+    strb r2,[r7,r3]        @ store in buffer
+    add r3,r3,#1
+    mov r6,#0
+    sub r5,r5,#1           @ no ->loop
+    b 1b
+
+3:
+    add r6,r6,#1           @ increment word length
+    sub r5,r5,#1           @ and loop
+    b 1b
+
+ 10:                       @ line end
+    mov r4,#0              @ indice word
+    add r1,r5,#1
+ 11:                       @ loop copy word to buffer
+    ldrb r2,[r0,r1]        @ load one char
+    strb r2,[r7,r3]        @ store in buffer
+    add r3,r3,#1
+    add r1,r1,#1
+    add r4,r4,#1
+    cmp r4,r6
+    blt 11b
+    mov r2,#0x0A           @ add return line
+    strb r2,[r7,r3]        @ store in buffer
+    add r3,r3,#1
+    mov r2,#0              @ final zero
+    strb r2,[r7,r3]        @ store in buffer
+    add r3,r3,#1
+    mov r0,r7              @ buffer display
+    bl affichageMess
+
+    add sp,#BUFFERSIZE     @ free reserved place
+ 100:                      @ end function
+    pop {r1-r7,pc}         @ restaur registers
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszSpace1:             .int szSpace1
+/***************************************************/
+/*   word string inversion                  */
+/***************************************************/
+/* r0 contains phrase address  */
+/* r1 containsphrase length */
+inverseWord:
+    push {r1-r8,lr}        @ save registers
+    sub sp,#BUFFERSIZE     @ reserve place on the stack
+    mov r7,sp
+    mov r8,#0              @ phrase indice
+    mov r6,#0              @ word length
+    mov r3,#0              @ inverted phrase indice
+1:                         @ phrase analyse loop
+    cmp r8,r1              @ end phrase ?
+    bgt 4f
+    ldrb r2,[r0,r8]        @ load one char
+    cmp r2,#' '            @ space ?
+    bne 3f
+    mov r5,#0              @ indice inverted word
+    sub r4,r8,#1           @ hparse word indice
+2:                         @ inversion word loop
+    ldrb r2,[r0,r4]        @ load one char of word end
+    strb r2,[r7,r3]        @ store in begin position
+    add r3,r3,#1           @ increment indice inverted phrase
+    add r5,r5,#1           @ increment word length counter
+    sub r4,r4,#1           @ decrement indice phrase
+    cmp r5,r6              @ length equal ?
+    blt 2b                 @ no ->loop
+    mov r2,#' '            @ store one space
+    strb r2,[r7,r3]
+    mov r6,#0              @ raz word length
+    add r3,r3,#1           @ increment indice inverted phrase
+    add r8,r8,#1           @  and loop
+    b 1b
+3:                         @ word character
+    add r6,r6,#1           @ increment word length
+    add r8,r8,#1           @ loop
+    b 1b
+4:
+    mov r5,#0              @
+    sub r4,r8,#2           @ 0 final in phrase
+5:                         @ inversion last word
+    ldrb r2,[r0,r4]
+    strb r2,[r7,r3]
+    add r3,r3,#1
+    add r5,r5,#1
+    sub r4,r4,#1
+    cmp r5,r6
+    blt 5b
+    mov r2,#0x0A           @ add return line
+    strb r2,[r7,r3]
+    add r3,r3,#1
+    mov r2,#0              @ zero final
+    strb r2,[r7,r3]
+
+    mov r0,r7              @ buffer display
+    bl affichageMess
+    add sp,#BUFFERSIZE
+100:                       @ end function
+    pop {r1-r8,pc}         @ restaur registers
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

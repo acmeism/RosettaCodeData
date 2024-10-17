@@ -9,3 +9,7 @@ sub inverse($n, :$modulo) {
 }
 
 say inverse 42, :modulo(2017)
+
+# or use a built-in routine - https://docs.raku.org/routine/expmod , kudos to trizen++
+
+say expmod(42, -1, 2017);

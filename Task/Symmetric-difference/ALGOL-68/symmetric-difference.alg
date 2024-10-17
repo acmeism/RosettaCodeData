@@ -41,16 +41,19 @@ BEGIN
     OD;
     result
 END # + # ;
-# construct the associative arrays for the task                   #
-REF AARRAY a := INIT LOC AARRAY;
-REF AARRAY b := INIT LOC AARRAY;
-a // []STRING( "John", "Bob", "Mary", "Serena" );
-b // []STRING( "Jim", "Mary", "John", "Bob" );
-# find and show the symetric difference of a and b                #
-REF AARRAY c := ( a - b ) + ( b - a );
-REF AAELEMENT e := FIRST c;
-WHILE e ISNT nil element DO
-    print( ( " ", key OF e ) );
-    e := NEXT c
-OD;
-print( ( newline ) )
+
+BEGIN # task #
+    # construct the associative arrays for the task               #
+    REF AARRAY a := INIT LOC AARRAY;
+    REF AARRAY b := INIT LOC AARRAY;
+    a // []STRING( "John", "Bob", "Mary", "Serena" );
+    b // []STRING( "Jim", "Mary", "John", "Bob" );
+    # find and show the symetric difference of a and b            #
+    REF AARRAY c := ( a - b ) + ( b - a );
+    REF AAELEMENT e := FIRST c;
+    WHILE e ISNT nil element DO
+        print( ( " ", key OF e ) );
+        e := NEXT c
+    OD;
+    print( ( newline ) )
+END

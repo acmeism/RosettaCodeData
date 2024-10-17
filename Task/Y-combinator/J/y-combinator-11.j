@@ -1,20 +1,14 @@
-Y=:1 :0
-  f=. u Defer
-  (5!:1<'f') f y
-)
-
-Defer=: 1 :0
-:
-  g=. x&(x`:6)
-  (5!:1<'g') u y
-)
-
-almost_factorial=: 4 :0
-  if. 0 >: y do. 1
-  else. y * x`:6 y-1 end.
-)
-
-almost_fibonacci=: 4 :0
-  if. 2 > y do. y
-  else. (x`:6 y-1) + x`:6 y-2 end.
-)
+   1 2 3 '([:`(>:@:])`(<:@:[ u 1:)`(<:@[ u [ u <:@:])@.(#.@,&*))'XY"0/  1 2 3 4 5 NB. Ackermann function...
+ 3  4  5   6   7
+ 5  7  9  11  13
+13 29 61 125 253
+                               '1:`(<: u <:)@.* : (+ + 2 * u@:])'XY"0/~ i.7       NB. Ambivalent recursion...
+2  5 14 35 80 173 362
+3  6 15 36 81 174 363
+4  7 16 37 82 175 364
+5  8 17 38 83 176 365
+6  9 18 39 84 177 366
+7 10 19 40 85 178 367
+8 11 20 41 86 179 368
+   NB. OEIS A097813 - main diagonal
+   NB. OEIS A050488 = A097813 - 1 - adyacent upper off-diagonal

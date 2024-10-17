@@ -4,11 +4,6 @@
 MODE POINT  = STRUCT( REAL x, y    );
 MODE CIRCLE = STRUCT( REAL x, y, r );
 
-
-# PRINT operator                                                             #
-OP PRINT = ( POINT  p )VOID: print( ( "Point(", x OF p, ",", y OF p, ")" ) );
-OP PRINT = ( CIRCLE c )VOID: print( ( "Circle(", r OF c, " @ ", x OF c, ",", y OF c, ")" ) );
-
 # getters                                                                    #
 OP XCOORD = ( POINT p )REAL: x OF p;
 OP YCOORD = ( POINT p )REAL: y OF p;
@@ -16,6 +11,9 @@ OP YCOORD = ( POINT p )REAL: y OF p;
 OP XCOORD = ( CIRCLE c )REAL: x OF c;
 OP YCOORD = ( CIRCLE c )REAL: y OF c;
 OP RADIUS = ( CIRCLE c )REAL: r OF c;
+
+# returns the centre of the circle                                           #
+OP CENTRE = ( CIRCLE c )POINT: ( x OF c, y OF c );
 
 # setters                                                                    #
 # the setters are dyadic operators so need a priority - we make them lowest  #
@@ -42,6 +40,11 @@ OP   SETYCOORD = ( REF POINT  p, INT  y )REF POINT:  ( y OF p := y; p );
 OP   SETXCOORD = ( REF CIRCLE c, INT  x )REF CIRCLE: ( x OF c := x; c );
 OP   SETYCOORD = ( REF CIRCLE c, INT  y )REF CIRCLE: ( y OF c := y; c );
 OP   SETRADIUS = ( REF CIRCLE c, INT  r )REF CIRCLE: ( r OF c := r; c );
+
+# PRINT operator                                                             #
+OP PRINT = ( POINT  p )VOID: print( ( "Point(", x OF p, ",", y OF p, ")" ) );
+OP PRINT = ( CIRCLE c )VOID:
+   BEGIN print( ( "Circle(", r OF c, " @ " ) ); PRINT CENTRE c; print( ( ")" ) ) END;
 
 # copy constructors                                                          #
 # A copy constructor is not needed as assignment will generate a copy        #
@@ -84,12 +87,21 @@ BEGIN
 
     CIRCLE c1 := CIRCLE( 1.1, 2.4, 4.1 );
     POINT  p1 := new point at the origin;
+    POINT  p2 := new point at the origin;
 
-    PRINT c1; newline( stand out );
+    PRINT c1; print( ( newline ) );
 
     # move c1 so it is centred on p1                                         #
     ( c1 SETXCOORD XCOORD p1 ) SETYCOORD YCOORD p1;
 
-    PRINT c1; newline( stand out )
+    PRINT c1; print( ( newline ) );
+
+    # offset p2 from the centre of c1                                        #
+    p2 SETXCOORD ( XCOORD c1 + 1.0 ) SETYCOORD ( YCOORD c1 + 6.0 );
+    # and a new circle with a larger radius at that point                    #
+    CIRCLE c2 := new circle at the origin( 10 );
+    c2 SETXCOORD XCOORD p2 SETYCOORD YCOORD p2 SETRADIUS ENTIER ( RADIUS c1 + 5.1 );
+
+    PRINT c2; print( ( newline  ) )
 
 END

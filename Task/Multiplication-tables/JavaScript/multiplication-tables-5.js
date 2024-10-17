@@ -9,15 +9,13 @@
 
         return [
             ["x", ...xs],
-            ...xs.flatMap(
-                x => [
-                    [x, ...xs.flatMap(
-                        y => y < x ? (
-                            [""]
-                        ) : [`${x * y}`]
-                    )]
-                ]
-            )
+            ...xs.flatMap(x => [
+                [x, ...xs.flatMap(
+                    y => y < x
+                        ? [""]
+                        : [`${x * y}`]
+                )]
+            ])
         ];
     };
 
@@ -32,7 +30,8 @@
                 "width:33em",
                 "height:33em",
                 "table-layout:fixed"
-            ].join(";")
+            ]
+                .join(";")
         })(
             multTable(1)(12)
         );
@@ -40,10 +39,12 @@
     // ---------------- GENERIC FUNCTIONS ----------------
 
     // enumFromTo :: Int -> Int -> [Int]
-    const enumFromTo = m => n =>
-        n >= m ? Array.from({
-            length: Math.floor(n - m) + 1
-        }, (_, i) => m + i) : [];
+    const enumFromTo = m =>
+        // Enumeration of the integers from m to n.
+        n => Array.from(
+            { length: 1 + n - m },
+            (_, i) => m + i
+        );
 
 
     // ------------------- FORMATTING --------------------
@@ -53,18 +54,21 @@
         rows => {
             const
                 style = ["class", "style"].reduce(
-                    (a, k) => k in opts ? (
-                        `${a}${k}="${opts[k]}" `
-                    ) : a, ""
+                    (a, k) => k in opts
+                        ? `${a}${k}="${opts[k]}" `
+                        : a,
+                    ""
                 ),
                 body = rows.map((row, i) => {
                     const
                         cells = row.map(
                             x => `${x}` || " "
-                        ).join(" || ");
+                        )
+                            .join(" || ");
 
                     return `${i ? "|" : "!"} ${cells}`;
-                }).join("\n|-\n");
+                })
+                    .join("\n|-\n");
 
             return `{| ${style}\n${body}\n|}`;
         };

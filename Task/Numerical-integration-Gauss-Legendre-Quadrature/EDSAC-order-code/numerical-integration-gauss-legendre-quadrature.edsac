@@ -1,0 +1,296 @@
+[Gauss-Legendre quadrature for Rosetta Code.
+ EDSAC, initial orders 2.]
+
+          T46K P5F        [EDITABLE: N parameter, order of G-L quadrature.
+                           In the address field, maximum value 31.]
+  [Arrange the storage]
+          T48K P56F       [& (delta), 36 locations: library subroutine D6 for division (*)]
+          T54K P92F       [C, 44 locations, library subroutine T1 for cosine]
+          T50K P136F      [X, 36 locations: library subroutine E2 for exponential.]
+          T52K P172F      [A, 41 locations: print subroutine]
+          T47K P218F      [M, 70 locations: main routine]
+          T51K P300F      [G, 243 locations: subroutine for G-L quadrature]
+          T45K P560F      [H, 16 locations: data for quadrature s/r]
+          T44K P576F      [! (phi): function to be integrated]
+[(*) Library subroutine R9, which is called at load time, is also loaded at 56.
+     It can be overwritten when no longer needed.]
+[--------------------------------------------------------------------------
+ Library subroutine R9 to read integers from tape at load time.
+ Must be loaded at location 56]
+          T56K
+          GKT20FVDL8FA40DUDTFI40FA40FS39FG@S2FG23FA5@T5@E4@
+[--------------------------------------------------------------------------
+ Library subroutine M3, prints header at load time and is then overwritten.]
+          PFGKIFAFRDLFUFOFE@A6FG@E8FEZPF
+      *!ROOTS!!!!!!!!!!WEIGHTS@&# [last char sets teleprinter to figures]
+      .. PK              [after header, blank tape and PK (WWG, 1951, page 91)]
+[---------------------------------------------------------------------------
+ ! (phi) parameter: function f(x) to be integrated.
+ Input:  0D = x
+ Output: 0D = f(x)
+ For Rosetta Code task after scaling, f(x) = (exp(x)/2)^5]
+          E25K T! GK
+          A3F T23@        [plant return link as usual]
+          AD T4D          [x to 4D]
+    [4]   A4@ GX          [call library subroutine E2; places exp(x) - 1 in 4D]
+          A4D RD A24@     [acc := exp(x)/2]
+          YF TD           [round, and save in 0D]
+          HD VD YF T4D    [acc := (exp(x)/2)^2, round, to 4D]
+          H4D V4D YF T4D  [acc := (exp(x)/2)^4, round, to 4D]
+          H4D VD YF TD    [acc := (exp(x)/2)^5, round, return in 0D]
+   [23]   ZF              [(planted) jump back to caller]
+   [24]   IF              [constant 1/2]
+[-------------------------------------------------------------------------------
+ H parameter: Data for quadrature subroutine.
+ Limits of integration are c - h and c + h.]
+          E25K TH GK
+          E69K T#H        [at load time, call R9 to read constants]
+          0F              [0#H = c = 0]
+          10307921510F    [2#H = h = 3/5]
+          17F             [epsilon = 10^-9, criterion for convergence]
+          210828714#      [pi/256]
+          T8Z             [resume normal loading at 8H]
+    [8]   PN              [n = order of G-L quadrature, set by N parameter at head of program]
+    [9]   T1024D          [T order for exclusive end of EDSAC memory]
+   [10]   P2F             [add 2 to address]
+   [11]   MF              [add to T order to make A order with same address]
+[The following are set up at runtime:]
+   [12]   PF              [2*n]
+   [13]   TD              [T order for first reciprocal in array]
+   [14]   TD              [T order for first root in array]
+   [15]   TD              [T order for first weight in array]
+[----------------------------------------------------------------------
+ G parameter: subroutine for Gauss-Legendre quadrature.
+ Input:  via H and ! (phi) parameters (see above)
+ Output: Estimated integral is returned in 0D.]
+          E25K TG GK
+          G22@
+    [1]   K4096F          [place this so that 35-bit values come at even addresses]
+    [2]   PF PF           [root of Legendre polynomial]
+    [4]   PF PF           [correction to root during Newton-Raphson process]
+    [6]   PF PF           [weighted sum of function values]
+    [8]   PF PF           [temporary store]
+   [10]   PF PF           [temporary store]
+[The next 3 are negated values of polynomials (j = 2,...,n)]
+   [12]   PF PF           [-P_j(x)]
+   [14]   PF PF           [-P_j-1(x)]
+   [16]   PF PF           [-P_j-2(x)]
+   [18]   Y2F             [subtract to convert T to V order, with address 2 less]
+   [19]   PF              [negative count of roots]
+   [20]   P1024F          [1/32 (where max n is 31)]
+   [21]   PF
+   [22]   A3F T190@       [plant return link as usual]
+[Set up T orders for workspace, working down from top of EDSAc memory.
+ Weights 1024 - 2*n, roots 1024 - 4*n, reciprocals 1024 - 6*n + 2]
+          A8H LD T12H     [set up 2*n from n]
+          A9H U139@       [exclusive end of weights]
+          S12H U15H U131@ U127@ [start of weights = end of roots]
+          S12H U14H U119@ [start of roots = end of reciprocals]
+          S12H A10H U13H T55@ [start of reciprocals]
+[Calculate the reciprocals 1/j for j := 2, ..., n]
+          A20@ T21@
+          E45@            [skip update first time]
+   [43]   A14H T55@       [update T order]
+   [45]   TD T4D          [clear 0D and 4D for division routine]
+          A20@ U1F A21@ U21@ T5F
+   [52]   A52@ G& AD      [division, acc := 1/j]
+   [55]   TD              [store in array]
+          A55@ A10H S14H G43@
+[Prepare to calculate first approximations to roots; here with acc = 0.]
+          A6#H TD         [0D := pi/256 for division]
+          T4D             [clear whole of 4D, including sandwich bit]
+          A8H LD A2F      [2*n + 1 in address field i.e. *2^-15]
+          L32F T5F        [4D := (2*n + 1)/256, extended to 35 bits]
+   [68]   A68@ G&         [call division subroutine, 0D := pi/(2*n + 1)]
+          AD U8#@         [store pi/(2*n + 1)]
+          R1F TD SD T10#@ [store -pi/4*(2*n + 1)]
+
+[Calculate the (n div 2) positive roots; negative roots follow by symmetry.
+ If n is odd, the root at 0 is treated separately.]
+        [Given n in address field, want (n div 2) in address field,
+         with low bit = 0. A bit tricky.]
+          A8H R1F TF AF LD
+          TF SF           [from n, get (n div 2) in the address field]
+   [83]   T19@            [initialize negative count of roots]
+          A10#@ A8#@ U10#@
+          T4D
+   [88]   A88@ GC         [call cosine subroutine]
+          A4D LD          [first approx to root]
+          E96@            [skip correction the first time]
+        [Inner loop; next approximation for current root]
+   [93]   TF A2#@ A4#@    [clear acc; add correction to root]
+   [96]   U2#@ TD         [store approx to root, also pass to Legendre subroutine]
+          A8H T4F         [pass n to Legendre subroutine]
+  [100]   A100@ G191@     [call Legendre]
+          A1@ H2#@ N2#@   [acc := 1 - x^2]
+          T10D H10D       [to mult reg.]
+          V8D             [acc := 1/deriv]
+          T10D H10D       [to mult reg.]
+          N6D U4#@        [calculate and store corection]
+          E115@ TD SD     [acc := abs(correction)]
+  [115]   S4#H E93@       [if not converged yet, loop back]
+          TF A2#@         [acc := root]
+  [119]   TD              [copy to caller's array]
+          A119@ A10H T119@ [post-inc forward index]
+          A127@ S10H T127@ [pre-dec backward index]
+          S2#@            [acc := -root]
+  [127]   TD              [copy to caller's array]
+        [Calculate weight for this root. Mult. reg. still contains 1/deriv]
+          V8D
+          LD              [times 2 to conform to Rosetta code convention]
+          UD
+  [131]   TD
+          A131@ A10H T131@ [post-inc forward index]
+          A139@ S10H T139@ [pre-dec backward index]
+          AD
+  [139]   TD
+          A19@ A2F G83@
+        [Finished loop round roots. If n is odd, still need root at 0.]
+          A119@ U150@     [copy T order in case we need it]
+          S127@ E160@     [if T orders are equal n is even, so done]
+          TF A131@ T159@  [copy T order for weight]
+  [150]   TD
+          TD A8H T4F      [set up parameters for Legendre]
+  [154]   A154@ G191@     [call Legendre for x = 0]
+          H8D V8D
+          LD              [times 2 to conform to Rosetta code convention]
+  [159]   TD
+
+[Code to carry out quadrature, using roots and weights calculated above.
+ Based on library subroutine Q3, but simpler (doesn't exploit the symmetry)
+ Here with acc = 0]
+  [160]   T6#@            [initialize weighted sum to 0]
+          A14H S18@ T173@ [form and plant V order for double word before roots]
+          S8H             [initialize negative counter to -n]
+[Start of loop to add weighted sums]
+  [165]   T19@            [update negative counter]
+          A173@ A10H U173@ [form and plant V order for next root]
+          A12H T179@      [form and plant V order for next weight]
+       [Limits of integration are c - h and c + h]
+          A#H H2#H        [acc := c, mult reg := h]
+  [173]   VD              [(planted) acc := c + h*root{i} (i = 1, ... n)]
+          YF TD           [round, and pass to function to be integrated]
+  [176]   A176@ G!        [call function, returns value in 0D]
+          HD              [mult reg := function value]
+  [179]   VD              [(planted) acc := value*weight{i} (i = 1, ... n)]
+          YF A6#@ T6#@    [round, update sum]
+          A19@ A2F G165@  [loop back till done n values]
+       [Now have weighted sum. Multiply by h, round, return to caller]
+          H6#@ V2#H YF TD
+  [190]   ZF
+[--------------]
+[Subroutine to evaluate Legendre polynomial P_n(x) and (in effect) P_n'(x)]
+[Input:  0D = x; 4F = n in address field, where n = 2..31 (not checked)
+ Output: 6D = P_n(x), 8D = 1/{(1 - x^2)*P_n'(x)}
+ Works with negated Legendre polynomials, because EDSAC supports -1 but not +1.
+ Calculates -P_2{x}, -P_3{x}, ..., -P_n{x} recursively from -P_0(x), -P_1(x)
+ For given j in {2..n} denote y0 = -P_j(x), y1 = -P_j-1(x), y2 = -P_j-2(x).
+ From the formulae in the task description we get:
+   y0 = (1 - 1/j)*(x*y1 - y0) + x*y1
+   and, with j = n,  1/{(1 - x^2)*P_n'(x)} = -(1/n)/(y1 - x*y0)]
+  [191]   A3F T242@       [plant return link as usual]
+          T16#@           [clear y2 including sandwich bit]
+          A1@ T16#@       [y2 := -1, extended to 35 bits]
+          SD T14#@        [y1 := -x]
+          A13H A11H T219@ [form and plant A order for reciprocal]
+          S4F A2F T5F     [negative count in 5F]
+          E213@           [skip update the first time]
+  [205]   T5F             [update negative count]
+          A14#@ T16#@ A12#@ T14#@ [y2 := y1; y1 := y0]
+          A219@ A10H T219@ [inc address in A order]
+  [213]   HD V14#@ U6D    [save x*y1 in 6D]
+          S16#@ T8D       [save x*y1 - y2 in 8D]
+          A1@             [acc := -1]
+  [219]   AD              [(planted) acc := -1 + 1/j (j = 2,...,n)]
+          T10D H10D       [copy to mult. reg.]
+          N8D             [acc := (1 - 1/j) * (x*y1 - y2)]
+          A6D T12#@       [y0 := (2 - 1/j)*x*y1 - (1 - 1/j)*y2]
+          A5F A2F G205@   [iterate until have P_n(x)]
+       [Now want 1 / n*(y2 - x*y1)]
+          A219@ T230@     [plant H order for 1 - 1/n]
+  [230]   AD HD           [acc := 1/n; mult reg := x]
+          TD              [pass 1/n as dividend to division subroutine]
+          A14#@ N12#@     [acc := y1 - x*y0]
+          T4D             [pass as divisor to division s/r]
+  [236]   A236@ G&        [call division subroutine, 0D := (1/n)/(y1 - x*y0)]
+       [Return values to caller, remembering that local values are negated]
+          SD T8D S12#@ T6D
+  [242]   ZF              [(planted) return to caller]
+[-------------------------------------------------------------------------------
+ Main routine]
+          E25K TM GK
+          E69K T#@        [call R9 at load time to read constant]
+         13743895347#     [4/5 ]
+          T2Z             [resume normal loading at 2@]
+    [2]   PF PF
+    [4]   PF
+         [Characters for printing]
+    [5]   K2048F          [set letters on teleprinter]
+    [6]   #F              [set figures on teleprinter]
+    [7]   IF              [letter I]
+    [8]   NF              [letter N]
+    [9]   XF              [slash]
+   [10]   VF              [equals sign]
+   [11]   QF              [figure 1]
+   [12]   PF              [figure 0]
+   [13]   @F              [carriage return]
+   [14]   &F              [line feed]
+   [15]   !F              [space]
+         [Enter with acc = 0]
+   [16]   A16@ GG         [do quadrature, result/160 in 0D]
+          HD V#@ LD YF    [acc := 0D*(8/5) = result/100, and round]
+          T2#@            [save over printing of roots and weights]
+          A14H A11H U30@  [form and plant A order for first root]
+          A12H T36@       [form and plant A order for first weight]
+          S8H             [acc := -n]
+   [29]   T4@             [update negative count (also used as letter T)]
+   [30]   AD TD           [pass root to print subroutine in 0D]
+   [32]   A32@ GA O15@ O15@ [print root and 2 spaces]
+   [36]   AD TD           [pass weight to print subroutine in 0D]
+   [38]   A38@ GA O13@ O14@ [print weight and new line]
+          A30@ A10H T30@  [inc address of root]
+          A36@ A10H T36@  [inc address of weight]
+          A4@ A2F G29@    [inc negative count, loop till done]
+       [Print result of integration, preceded by 'INT/100 =']
+          O5@ O7@ O8@ O29@ O6@
+          O9@ O11@ O12@ O12@
+          O15@ O10@
+          A2#@ TD         [pass result to print subroutine in 0D]
+   [64]   A64@ GA O13@ O14@ [print result and new line]
+       [Exit]
+          O6@             [print dummy char to flush teleprinter buffer]
+          ZF              [halt the machine]
+[-----------------------------------------------------------------------
+ Library subroutine T1: calculates cos(x), where abs(x) <= pi/2
+ Input:  4D = x/2
+ Output: 4D = cos(x)/2
+ Requires library subroutine R9.]
+          E25K TC
+          GKT20FVDL8FA40DUDTFI40FA40FS39FG@S2FG23FA5@T5@E4@E13ZT32#@
+          1614F73454F243967F54539267F763549741F5726623061#
+          TZA3FT30@H4DV4DYFT4DH4DN32#@A34#@TDNDA36#@TDNDA38#@
+          TDNDA40#@TDNDA42#@TDNDYFTDNDS4DA31@YFT4DEFIFT44Z
+[-----------------------------------------------------------------------
+ Library subroutine D6: Division, accurate, fast.
+ 36 locations, workspace 6D and 8D.
+ 0D := 0D/4D, where 4D <> 0, -1.]
+          E25K T&
+          GKA3FT34@S4DE13@T4DSDTDE2@T4DADLDTDA4DLDE8@RDU4DLDA35@
+          T6DE25@U8DN8DA6DT6DH6DS6DN4DA4DYFG21@SDVDTDEFW1526D
+[--------------------------------------------------------------------------
+ Library subroutine E2: exponential function. 19 locations.
+ Input:  4D = x where -1 <= x < ln(2).
+ Output: 4D = exp(x) - 1]
+          E25K TX
+          GKA3FT18@YFLDT6DH4DV4DTDH6DVDRDA4DYFT4DA6DLDE4@TDEF
+[-----------------------------------------------------------------------
+ Subroutine to print 35-bit number in 0D to 10 decimal places.
+ Wrapper for library subroutine P1, which prints only non-negative
+   numbers and does not include '0.']
+          E25K TA
+          GKA3FT17@ADE8@TDSDO@E9@O18@YFYFTDO16@O19@A14@G20@P10FZF!FMFA38@
+          U37@S40@T25@H39@PFT25@VDUFOFFFSFL4FTDA25@A2FG26@EFU3FJFM1F
+[----------------------------------------------------------------------]
+          E25K TM GK      [M parameter again]
+          E16Z            [define entry point]
+          PF              [acc = 0 on entry]

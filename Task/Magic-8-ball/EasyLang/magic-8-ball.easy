@@ -4,5 +4,5 @@ repeat
    print "What would you like to know? "
    q$ = input
    until q$ = "q"
-   print answers$[randint len answers$[]]
+   print answers$[random len answers$[]]
 .

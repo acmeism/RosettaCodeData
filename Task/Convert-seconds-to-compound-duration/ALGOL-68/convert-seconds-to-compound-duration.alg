@@ -1,10 +1,10 @@
 # MODE to hold the compound duration #
 MODE DURATION = STRUCT( INT weeks, days, hours, minutes, seconds );
 
-# returns seconds converted to a DURATION #
-OP TODURATION = ( LONG INT seconds )DURATION:
+# returns number of seconds converted to a DURATION #
+OP TODURATION = ( LONG INT number of seconds )DURATION:
    BEGIN
-       LONG INT time     := seconds;
+       LONG INT time     := number of seconds;
        DURATION result   := DURATION( 0, 0, 0, 0, 0 );
        seconds OF result := SHORTEN ( time MOD  60 );
        time OVERAB 60;
@@ -16,19 +16,30 @@ OP TODURATION = ( LONG INT seconds )DURATION:
        time OVERAB 7;
        weeks   OF result := SHORTEN   time;
        result
-   END # DURATION # ;# returns seconds converted to a DURATION #
-OP TODURATION = ( INT seconds )DURATION: TODURATION LENG seconds;
+   END # DURATION # ;
+# returns number of seconds converted to a DURATION #
+OP TODURATION = ( INT number of seconds )DURATION: TODURATION LENG number of seconds;
 
 # returns a readable form of the DURATION #
 OP TOSTRING = ( DURATION t )STRING:
    BEGIN
        STRING result    := "";
        STRING separator := "";
-       IF weeks   OF t /= 0 THEN result +:= separator + whole( weeks   OF t, 0 ) + " wk";  separator := ", " FI;
-       IF days    OF t /= 0 THEN result +:= separator + whole( days    OF t, 0 ) + " d";   separator := ", " FI;
-       IF hours   OF t /= 0 THEN result +:= separator + whole( hours   OF t, 0 ) + " hr";  separator := ", " FI;
-       IF minutes OF t /= 0 THEN result +:= separator + whole( minutes OF t, 0 ) + " min"; separator := ", " FI;
-       IF seconds OF t /= 0 THEN result +:= separator + whole( seconds OF t, 0 ) + " sec"; separator := ", " FI;
+       IF weeks   OF t /= 0 THEN
+           result +:= separator + whole( weeks   OF t, 0 ) + " wk";  separator := ", "
+       FI;
+       IF days    OF t /= 0 THEN
+           result +:= separator + whole( days    OF t, 0 ) + " d";   separator := ", "
+       FI;
+       IF hours   OF t /= 0 THEN
+           result +:= separator + whole( hours   OF t, 0 ) + " hr";  separator := ", "
+       FI;
+       IF minutes OF t /= 0 THEN
+           result +:= separator + whole( minutes OF t, 0 ) + " min"; separator := ", "
+       FI;
+       IF seconds OF t /= 0 THEN
+           result +:= separator + whole( seconds OF t, 0 ) + " sec"; separator := ", "
+       FI;
        IF result = ""
        THEN
            # duration is 0 #

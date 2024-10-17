@@ -1,11 +1,13 @@
 # set the required precision of LONG LONG values using    #
 # "PR precision n PR" if required                         #
-PR precision 24 PR
+# PR precision 24 PR # # not requied for ALGOL 68 Genie   #
+                       # the default precision is > 24    #
+                       # and can't be reduced to 24       #
 
 # returns TRUE if v has an integer value, FALSE otherwise #
 OP ISINT = ( LONG LONG COMPL v )BOOL:
    IF im OF v /= 0 THEN
-       # v has an imaginary part #
+       # v has an imaginarh part #
        FALSE
    ELSE
        # v has a real part only #
@@ -15,7 +17,10 @@ OP ISINT = ( LONG LONG COMPL v )BOOL:
 # test ISINT #
 
 PROC test is int = ( LONG LONG COMPLEX v )VOID:
-     print( ( re OF v, "_", im OF v, IF ISINT v THEN " is " ELSE " is not " FI, "integral", newline ) );
+     BEGIN
+        print( ( float( re OF v, -36, 28, 4 ), "_", float( im OF v, -36, 28, 4 ) ) );
+        print( ( IF ISINT v THEN " is " ELSE " is not " FI, "integral", newline ) )
+     END # test is int # ;
 
 
 test is int( 1 );

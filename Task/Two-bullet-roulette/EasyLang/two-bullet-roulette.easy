@@ -19,7 +19,7 @@ proc load . .
    rshift
 .
 proc spin . .
-   lim = randint 6
+   lim = random 6
    for i = 1 to lim - 1
       rshift
    .

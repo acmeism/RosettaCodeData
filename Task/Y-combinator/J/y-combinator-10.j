@@ -1,6 +1,1 @@
-   sr=. [ apply f.,&<                 NB. Self referring
-   lv=. (((^:_1)b.)(`(<'0';_1)))(`:6) NB. Linear representation of a verb argument
-   Y=. (&>)/lv(&sr)                   NB. Y with embedded states
-   Y=. 'Y'f.                          NB. Fixing it...
-   Y                                  NB. ... To make it stateless (i.e., a combinator)
-((((&>)/)((((^:_1)b.)(`_1))(`:6)))(&([ 128!:2 ,&<)))
+XY=. (1 :'('':''<@;(1;~":0)<@;<@((":0)&;))u')(1 :'('':''<@;(1;~":0)<@;<@((":0)&;))((''u u`:6('',(5!:5<''u''),'')`:6 y''),(10{a.),'':'',(10{a.),''x(u u`:6('',(5!:5<''u''),'')`:6)y'')')(1 :'u u`:6')

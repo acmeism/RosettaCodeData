@@ -12,7 +12,8 @@ public final class HomePrimes {
 	public static void main(String[] aArgs) {
 		listPrimes(PRIME_LIMIT);
 		
-		List<Integer> values = List.of( 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 65 );
+		List<Integer> values =
+            List.of( 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 65 );
 		for ( int value : values ) {
 			BigInteger number = BigInteger.valueOf(value);
 			List<BigInteger> previousNumbers = Stream.of( number ).collect(Collectors.toList());

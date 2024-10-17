@@ -46,7 +46,7 @@ BEGIN # Steffenses's method - translated from the ATS sample #
 
     PROC implicit equation = ( REAL x, y )REAL: ( 5 * x * x ) + y - 5;
 
-    PROC f = ( REAL t )REAL: # find fixed points of this function #
+    PROC fn = ( REAL t )REAL: # find fixed points of this function #
          BEGIN
             REAL x = x convex left parabola( t );
             REAL y = y convex left parabola( t );
@@ -60,7 +60,7 @@ BEGIN # Steffenses's method - translated from the ATS sample #
         REAL t0 := 0;
         TO 11 DO
             print( ( "t0 = ", FMT t0, " : " ) );
-            CASE steffensen aitken( f, t0, 0.00000001, 1000 )
+            CASE steffensen aitken( fn, t0, 0.00000001, 1000 )
               IN ( VOID   ): print( ( "no answer", newline) )
                , ( REAL t ):
                      IF REAL x = x convex left parabola( t )

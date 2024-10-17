@@ -1,0 +1,64 @@
+define switch function isbn (value stream vs-s) as
+  local integer li-total initial {0}
+  local integer li-check
+  repeat scan vs-s
+    ; Any digits in an ISBN-13 may be separated by a hyphen or space
+    match (digit => lpv-1 ('-' | space)? digit => lpv-3 ('-' | space)? ) => p
+      ; Add the first digit to the total and add the second multiplied by 3
+      increment li-total by (lpv-1 + (lpv-3 * 3))
+    match any => lpv-c
+      ; This is always the thirteenth digit, the 'check' digit
+      set li-check to lpv-c
+  again
+  do when 10 - li-total modulo 10 = li-check
+    return true
+  else when li-total modulo 10 = 0 and li-check = 0
+    return true
+  else
+    return false
+  done
+
+process
+  ; These are the first four test ISBN-13s from the problem description, with
+  ; the first and third being valid and the second and fourth invalid.
+  submit "978-0596528126"
+  submit "978-0596528120"
+  submit "978-1788399081"
+  submit "978-1788399083"
+
+  ; This ISBN-13 is from https://isbn-information.com/the-13-digit-isbn.html
+  submit "978-1-86197-876-9"
+  submit "978 1 86197 876 9"
+
+  ; These ISBNs are from https://en.wikipedia.org/wiki/ISBN
+  submit "978-3-16-148410-0"
+  submit "978 3 16 148410 9" ; But this one has had the 'check' digit changed
+  submit "This is valid: 978-0-306-40615-7^" ; Adding some extra complexity :)
+  submit "978-03-0640-615 7." ; Formatted as "EAN-Group-Publisher-Title Check"
+
+  ; These strings show how non-ISBN-13 numbers must be (and are) ignored.
+  submit "This is a 14-digit number - 555-30640610555 - so it is ignored.%n"
+  submit "This is an ISBN-10, so it is ignored too: 0-306-40615-2.%n"
+
+; This find rule will only find a string that is an ISBN-13 (digit/-/space)
+; combination.  It has been split into three lines to make it easier to see
+; what is being done.
+;   1. The string must either be preceded by any character other than a digit
+;      or start the stream, and
+;   2. It must then have 12 digits (with optional hyphens or spaces
+;      intermingled) and must conclude with a digit, and
+;   3. It either must not be followed by a another digit (making it more
+;      than 13 digits, so not an ISBN-13) or the stream ends.
+find ([any \ digit] | value-start) => lpv-s
+     ((digit ('-' | space)?){12} digit) => lpv-n
+     ([any \ digit] | value-end) => lpv-e
+  output lpv-s || lpv-n || lpv-e
+  do when isbn(lpv-n) = true
+    output ' (good)%n'
+  else
+    output ' (bad)%n'
+  done
+
+; output all other characters verbatim
+find any => lpv-char
+  output lpv-char

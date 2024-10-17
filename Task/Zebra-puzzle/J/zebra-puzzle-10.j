@@ -1,12 +1,8 @@
-   houses solve3 constraints,<zebra
-┌─────────┬─────┬──────┬──────┬──────────┐
-│Norwegian│cats │water │yellow│Dunhill   │
-├─────────┼─────┼──────┼──────┼──────────┤
-│Dane     │horse│tea   │blue  │Blend     │
-├─────────┼─────┼──────┼──────┼──────────┤
-│English  │birds│milk  │red   │PallMall  │
-├─────────┼─────┼──────┼──────┼──────────┤
-│German   │zebra│coffee│green │Prince    │
-├─────────┼─────┼──────┼──────┼──────────┤
-│Swede    │dog  │beer  │white │BlueMaster│
-└─────────┴─────┴──────┴──────┴──────────┘
+zebra=: (-i.5)|."0 1 (<(<'zebra') 1}ehs),4$<ehs
+
+solve3=: 4 :0
+p=. *./@:((0~:#)S:0)
+f=. [:~.&.> [: compose&.>~/y&,
+z=. f^:(3>[:#(#~p"1)&>)^:_ <,:x
+> (#~([:*./[:;[:<@({.~:}.)\.;)"1)(#~p"1); z
+)

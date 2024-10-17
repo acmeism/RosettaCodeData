@@ -1,6 +1,6 @@
 func rollstat .
    for i to 4
-      h = randint 6
+      h = random 6
       s += h
       min = lower min h
    .

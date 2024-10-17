@@ -1,13 +1,13 @@
-# removes the specified number of lines from a file, starting at start line (numbered from 1) #
+# removes the specified number of lines from a file, starting at start line (numbered fromm 1) #
 # returns TRUE if successful, FALSE otherwise #
 PROC remove lines = ( STRING file name, INT start line, INT number of lines )BOOL:
-     IF  number of lines < 0 OR start line < 1
+     IF   number of lines < 0 OR start line < 1
      THEN
         # invalid parameters #
         print( ( "number of lines must be >= 0 and start line must be >= 1", newline ) );
         FALSE
-     ELIF  FILE temp file;
-           create( temp file, stand back channel ) /= 0
+     ELIF FILE temp file;
+          create( temp file, stand back channel ) /= 0
      THEN
         # unable to create a temporary output file #
         print( (  "Unable to create temporary file", newline ) );
@@ -18,8 +18,8 @@ PROC remove lines = ( STRING file name, INT start line, INT number of lines )BOO
         # we would have to get its name ( with "idf( temp file )", close it and re-open it #
         print( ( "Temp file is not rewindable", newline ) );
         FALSE
-     ELIF  FILE input file;
-           open( input file, file name, stand in channel ) /= 0
+     ELIF FILE input file;
+          open( input file, file name, stand in channel ) /= 0
      THEN
         # failed to open the file #
         print( (  "Unable to open """ + file name + """", newline ) );
@@ -27,16 +27,10 @@ PROC remove lines = ( STRING file name, INT start line, INT number of lines )BOO
      ELSE
         # files opened OK #
         BOOL at eof := FALSE;
-        # set the EOF handler for the original file #
-        on logical file end( input file
-                           , ( REF FILE f )BOOL:
-                             BEGIN
-                                 # note that we reached EOF on the latest read #
-                                 at eof := TRUE;
-                                 # return TRUE so processing can continue #
-                                 TRUE
-                             END
-                           );
+        # set the EOF handler for the original file    #
+        # notes that we reached EOF on the latest read #
+        # and returns TRUE so processing can continue  #
+        on logical file end( input file, ( REF FILE f )BOOL: at eof := TRUE );
         # copy the input file to the temp file #
         WHILE STRING line;
               get( input file, ( line, newline ) );
@@ -55,15 +49,7 @@ PROC remove lines = ( STRING file name, INT start line, INT number of lines )BOO
             # opened OK - copy the temporary file #
             reset( temp file ); # rewinds the input file #
             at eof := FALSE;
-            on logical file end( temp file
-                               , ( REF FILE f )BOOL:
-                                 BEGIN
-                                     # note that we reached EOF on the latest read #
-                                     at eof := TRUE;
-                                     # return TRUE so processing can continue #
-                                     TRUE
-                                 END
-                               );
+            on logical file end( temp file, ( REF FILE f )BOOL: at eof := TRUE );
             INT end line = ( start line - 1 ) + number of lines;
             INT line number := 0;
             WHILE STRING line;
@@ -83,7 +69,8 @@ PROC remove lines = ( STRING file name, INT start line, INT number of lines )BOO
             IF   line number < start line
             THEN
                 # didn't find the start line #
-                print( ( "Specified start line (", whole( start line, 0 ), ") not in ", file name, newline ) );
+                print( ( "Specified start line (", whole( start line, 0 ) ) );
+                print( ( ") not in ", file name, newline ) );
                 FALSE
             ELIF line number < end line
             THEN
@@ -98,24 +85,27 @@ PROC remove lines = ( STRING file name, INT start line, INT number of lines )BOO
      FI # remove lines # ;
 
 # test the line removal #
-BEGIN
-    FILE t;
-    open( t, "test.txt", stand out channel );
-    print( ( "Before...", newline ) );
-    FOR i TO 10 DO
-        STRING line = whole( i, - ( ( i MOD 5 ) + 3 ) );
-        put( t, ( line, newline ) );
-        print(  ( line, newline ) )
-    OD;
-    close( t );
-    remove lines( "test.txt", 2, 3 );
-    print( ( "After...", newline ) );
-    open( t, "test.txt", stand in channel );
-    FOR i TO  7 DO
-        STRING line;
-        get( t, ( line, newline ) );
-        print(  ( line, newline ) )
-    OD;
-    close( t );
-    print( ( "----", newline ) )
-END
+IF   FILE t;
+     open( t, "test.txt", stand out channel ) /= 0
+THEN print( ( "Unable to open test.txt for output", newline ) )
+ELSE print( ( "Before...", newline ) );
+     FOR i TO 10 DO
+         STRING line = whole( i, - ( ( i MOD 5 ) + 3 ) );
+         put( t, ( line, newline ) );
+         print(  ( line, newline ) )
+     OD;
+     close( t );
+     IF   NOT remove lines( "test.txt", 2, 3 )
+     THEN print( ( "Unable to remove lines", newline ) )
+     ELIF open( t, "test.txt", stand in channel ) /= 0
+     THEN print( ( "Unable to open modified test.txt for input", newline ) )
+     ELSE print( ( "After...", newline ) );
+          TO 7 DO
+              STRING line;
+              get( t, ( line, newline ) );
+              print(  ( line, newline ) )
+          OD;
+          close( t );
+          print( ( "----", newline ) )
+     FI
+FI

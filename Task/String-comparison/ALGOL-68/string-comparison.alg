@@ -1,4 +1,4 @@
-STRING a := "abc   ", b := "ABC ";
+STRING sa := "abc   ", sb := "ABC ";
 
 # when comparing strings, Algol 68 ignores trailing blanks                    #
 # so e.g. "a" = "a " is true                                                  #
@@ -8,15 +8,15 @@ PROC test = ( BOOL condition, STRING message )VOID:
     IF condition THEN print( ( message, newline ) ) FI;
 
 # equality?                                                                   #
-test( a = b, "a = b" );
+test( sa = sb, "sa = sb" );
 # inequality?                                                                 #
-test( a /= b, "a not = b" );
+test( sa /= sb, "sa not = sb" );
 
 # lexically ordered before?                                                   #
-test( a < b, "a < b" );
+test( sa < sb, "sa < sb" );
 
 # lexically ordered after?                                                    #
-test( a > b, "a > b" );
+test( sa >s b, "sa > sb" );
 
 # Algol 68's builtin string comparison operators are case-sensitive.          #
 # To perform case insensitive comparisons, procedures or operators            #
@@ -50,7 +50,7 @@ PROC caseless comparison = ( STRING a, b )INT:
 PROC equal ignoring case = ( STRING a, b )BOOL: caseless comparison( a, b ) = 0;
 # similar procedures for inequality and lexical ording ...                    #
 
-test( equal ignoring case( a, b ), "a = b (ignoring case)" );
+test( equal ignoring case( sa, sb ), "sa = sb (ignoring case)" );
 
 
 # Algol 68 is strongly typed - strings cannot be compared to e.g. integers    #
@@ -61,7 +61,7 @@ test( equal ignoring case( a, b ), "a = b (ignoring case)" );
 
 # Algol 68 also has <= and >= comparison operators for testing for            #
 # "lexically before or equal" and "lexically after or equal"                  #
-test( a <= b, "a <= b" );
-test( a >= b, "a >= b" );
+test( sa <= sb, "sa <= sb" );
+test( sa >= sb, "sa >= sb" )
 
 # there are no other forms of string comparison builtin to Algol 68           #

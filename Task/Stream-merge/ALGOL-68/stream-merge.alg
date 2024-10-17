@@ -1,35 +1,35 @@
 # merge a number of input files to an output file                             #
-PROC mergenf = ( []REF FILE inf, REF FILE out )VOID:
+PROC mergenf = ( []REF FILE inpf, REF FILE out )VOID:
      BEGIN
         INT        eof count := 0;
         BOOL       at eof    := FALSE;
-        []REF FILE inputs     = inf[ AT 1 ];
+        []REF FILE inputs     = inpf[ AT 1 ];
         INT   number of files = UPB inputs;
-        [ number of files ]BOOL eof;
+        [ number of files ]BOOL reached eof;
         [ number of files ]STRING line;
         FOR f TO number of files DO
-            eof[ f ] := FALSE;
-            on logical file end( inf[ f ], ( REF FILE f )BOOL:
-                                           BEGIN
-                                               # note that we reached EOF on the latest read #
-                                               # and return TRUE so processing can continue #
-                                               at eof := TRUE
-                                           END
+            reached eof[ f ] := FALSE;
+            on logical file end( inpf[ f ], ( REF FILE f )BOOL:
+                                            BEGIN
+                                                # note that we reached EOF on the latest read #
+                                                # and return TRUE so processing can continue #
+                                                at eof := TRUE
+                                            END
                                )
         OD;
         # read a line from one of the input files                              #
-        PROC read line = ( INT file number )VOID:
+        PROC read a line = ( INT file number )VOID:
              BEGIN
                  at eof := FALSE;
                  get( inputs[ file number ], ( line[ file number ], newline ) );
-                 eof[ file number ] := at eof;
+                 reached eof[ file number ] := at eof;
                  IF at eof THEN
                      # reached eof on this file                                #
                      eof count +:= 1
                  FI
-             END; # read line #
+             END; # read a line #
         # get the first line from each input file                              #
-        FOR f TO number of files DO read line( f ) OD;
+        FOR f TO number of files DO read a line( f ) OD;
         # merge the files                                                      #
         WHILE eof count < number of files DO
             # find the lowest line in the current set                          #
@@ -37,7 +37,7 @@ PROC mergenf = ( []REF FILE inf, REF FILE out )VOID:
             STRING low line    := "";
             BOOL   first file  := TRUE;
             FOR file pos TO number of files DO
-                IF eof[ file pos ] THEN
+                IF reached eof[ file pos ] THEN
                     # file is at eof - ignore it                               #
                     SKIP
                 ELIF first file THEN
@@ -54,7 +54,7 @@ PROC mergenf = ( []REF FILE inf, REF FILE out )VOID:
             # write the record from the lowest file and get the next record    #
             # from it                                                          #
             put( out, ( line[ low pos ], newline ) );
-            read line( low pos )
+            read a line( low pos )
         OD
      END; # mergenf #
 
@@ -65,11 +65,11 @@ PROC mergen = ( []STRING input list, STRING output name )VOID:
      BEGIN
         []STRING inputs       = input list[ AT 1 ];
         INT number of files   = UPB inputs;
-        [ number of files ]REF FILE inf;
+        [ number of files ]REF FILE inpf;
         # open the input files                                                  #
         FOR f TO number of files DO
-             inf[ f ] := LOC FILE;
-             IF  open( inf[ f ], inputs[ f ], stand in channel ) /= 0
+             inpf[ f ] := LOC FILE;
+             IF  open( inpf[ f ], inputs[ f ], stand in channel ) /= 0
              THEN
                  # failed to open the input file #
                  print( (  "Unable to open """ + input list[ f ] + """", newline ) );
@@ -85,15 +85,12 @@ PROC mergen = ( []STRING input list, STRING output name )VOID:
             stop
         ELSE
             # files opened OK, merge them #
-            mergenf( inf, output file );
+            mergenf( inpf, output file );
             # close the files #
             close( output file );
-            FOR f TO number of files DO close( inf[ f ] ) OD
+            FOR f TO number of files DO close( inpf[ f ] ) OD
         FI
      END; # mergen #
-
-# merges the two files in1 and in2 to output file #
-PROC merge2f = ( REF FILE in1, REF FILE in2, REF FILE output file )VOID: mergenf( ( in1, in2 ), output file );
 
 # merges the two files named in1 and in2 to the file named output file #
 PROC merge2 = ( STRING in1, STRING in2, STRING output file )VOID: mergen( ( in1, in2 ), output file );

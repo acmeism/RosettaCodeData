@@ -50,8 +50,6 @@ OP  TOHTML = ( REF NODE tree )STRING:
         THEN
             # the node has branches #
             REF NODE  child  := child OF tree;
-            INT child number := 1;
-            INT mid child     = ( child count + 1 ) OVER 2;
             child   := child OF tree;
             result +:= tr + nl;
             WHILE child ISNT nil node
@@ -78,7 +76,7 @@ OP +:= = ( REF NODE n, REF NODE sibling node )REF NODE:
         DO
             sibling := sibling OF sibling
         OD;
-        sibling OF sibling := sibling node
+        sibling OF sibling := sibling node # will get a potential scope violation warning #
     END # +:= # ;
 # appends a new sibling node to the node n, returns the sibling #
 OP +:= = ( REF NODE n, STRING   sibling value )REF NODE: n +:= new node( sibling value );

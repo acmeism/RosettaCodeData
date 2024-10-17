@@ -1,0 +1,52 @@
+#include "win/winsock2.bi"
+
+Const SERVER_IP = "127.0.0.1"
+Const PORT = 12345
+
+Sub initialize_winsock()
+    Dim wsadata As WSADATA
+    If WSAStartup(&h0202, @wsadata) <> 0 Then
+        Print "WSAStartup failed"
+        End 1
+    End If
+End Sub
+
+Sub cleanup_winsock()
+    WSACleanup()
+End Sub
+
+initialize_winsock()
+
+Dim client_socket As SOCKET
+client_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
+If client_socket = INVALID_SOCKET Then
+    Print "Socket creation failed"
+    cleanup_winsock()
+    End 1
+End If
+
+Dim server_addr As sockaddr_in
+server_addr.sin_family = AF_INET
+server_addr.sin_port = htons(PORT)
+server_addr.sin_addr.S_addr = inet_addr(SERVER_IP)
+
+If connect(client_socket, Cast(sockaddr Ptr, @server_addr), Sizeof(server_addr)) = SOCKET_ERROR Then
+    Print "Connect failed"
+    closesocket(client_socket)
+    cleanup_winsock()
+    End 1
+End If
+
+Dim buffer As zstring * 1024
+Do
+    Print "Enter message: ";
+    Input "", buffer
+    send(client_socket, @buffer, Len(buffer), 0)
+    Dim bytes_received As Integer
+    bytes_received = recv(client_socket, @buffer, Sizeof(buffer), 0)
+    If bytes_received <= 0 Then Exit Do
+    Print "Received: "; buffer
+Loop
+
+closesocket(client_socket)
+cleanup_winsock()

@@ -1,0 +1,151 @@
+Randomize Timer
+
+Const PI = 4 * Atn(1)
+Const SW = 400
+Const SH = 380
+Const RADIUS = 40
+Const RADCHK = 35 * 35
+
+Dim Shared As Integer hxc(20, 2), ltr(26)
+Dim Shared As Integer last = 0
+Dim Shared As Integer mx, my
+Dim Shared As String chosenLetters
+
+Sub shuffle()
+    Dim As Integer i, r1, r2
+    For i = 1 To 26
+        ltr(i) = i + 64
+    Next
+    For i = 1 To 77
+        r1 = Int(Rnd * 26) + 1
+        r2 = Int(Rnd * 26) + 1
+        Swap ltr(r1), ltr(r2)
+    Next
+End Sub
+
+Sub drawHexagon(cx As Integer, cy As Integer, r As Integer, c As Uinteger)
+    Dim As Single angle
+    Dim As Integer i, x(5), y(5)
+
+    For i = 0 To 5
+        angle = i * PI / 3
+        x(i) = cx + r * Cos(angle)
+        y(i) = cy + r * Sin(angle)
+    Next
+
+    For i = 0 To 5
+        Line (x(i), y(i))-(x((i+1) Mod 6), y((i+1) Mod 6)), c
+    Next
+End Sub
+
+Sub fillHexagon(cx As Integer, cy As Integer, r As Integer, c As Uinteger)
+    Dim As Single angle
+    Dim As Integer i, j, l, k, x(5), y(5)
+
+    For i = 0 To 5
+        angle = i * PI / 3
+        x(i) = cx + r * Cos(angle)
+        y(i) = cy + r * Sin(angle)
+    Next
+
+    For l = cy - r To cy + r
+        For k = cx - r To cx + r
+            Dim inside As Boolean = True
+            For i = 0 To 5
+                j = (i + 1) Mod 6
+                If (l - y(i)) * (x(j) - x(i)) - (k - x(i)) * (y(j) - y(i)) < 0 Then
+                    inside = False
+                    Exit For
+                End If
+            Next
+            If inside Then Pset (k, l), c
+        Next
+    Next
+End Sub
+
+Sub cell(cx As Integer, cy As Integer, fc As Uinteger, bc As Uinteger, tc As Uinteger, lt As String)
+    fillHexagon(cx, cy, RADIUS, bc)
+    drawHexagon(cx, cy, RADIUS, fc)
+    Draw String (cx-4, cy), lt, tc
+End Sub
+
+Sub grid(ox As Integer, oy As Integer, fc As Uinteger, bc As Uinteger, tc As Uinteger)
+    Dim As Integer i, j, cnt
+    Dim As Integer cx = ox, cy = oy
+    For i = 1 To 5
+        cy = oy + Iif((i And 1) = 0, 76, 42)
+        For j = 1 To 4
+            cnt += 1
+            Dim As String letter = Chr(ltr(cnt))
+            cell(cx, cy, fc, bc, tc, letter)
+            hxc(cnt, 0) = cx
+            hxc(cnt, 1) = cy
+            cy += 70
+        Next
+        cx += 61
+    Next
+End Sub
+
+Function pnc(ax As Single, ay As Single, bx As Single, by As Single) As Boolean
+    Return Iif((bx-ax)*(bx-ax)+(by-ay)*(by-ay) <= RADCHK, True, False)
+End Function
+
+Sub showLetter(key As String)
+    chosenLetters &= key
+    Draw String (20, SH - 15), chosenLetters, Rgb(255,255,255)
+    Draw String (20, SH + 5), "The user chose letter " & key & ".", Rgb(255,255,255)
+    last += 1
+    If last > 19 Then End
+End Sub
+
+Sub chkClick(x As Integer, y As Integer)
+    For i As Integer = 1 To 20
+        If pnc(x, y, hxc(i,0), hxc(i,1)) Then
+            If hxc(i,2) = 0 Then
+                hxc(i,2) = 1
+                Dim As String key = Chr(ltr(i))
+                cell(hxc(i,0), hxc(i,1), Rgb(0,0,0), Rgb(80,0,128), Rgb(255,255,255), key)
+                showLetter(key)
+                Exit For
+            End If
+        End If
+    Next
+End Sub
+
+Sub handleKey()
+    Dim As String key = Ucase(Inkey)
+    If key = Chr(27) Then End
+    Dim As Integer i, idx = Instr("ABCDEFGHIJKLMNOPQRSTUVWXYZ", key)
+    If idx <> 0 Then
+        For i = 1 To 20
+            If idx+64 = ltr(i) Then
+                If hxc(i,2) = 0 Then
+                    hxc(i,2) = 1
+                    cell(hxc(i,0), hxc(i,1), Rgb(0,0,0), Rgb(80,0,128), Rgb(255,255,255), key)
+                    showLetter(key)
+                    Exit For
+                End If
+            End If
+        Next
+    End If
+End Sub
+
+' Main program
+Screenres SW+6, SH+32, 32
+Windowtitle "FreeBASIC - Honeycombs"
+
+Line (0, 0)-(SW + 6, SH - 32), Rgb(255,255,255), BF
+
+shuffle()
+grid(75, 15, Rgb(0,0,0), Rgb(255,215,32), Rgb(0,0,0))
+
+Do
+    If Multikey(&h01) Then Exit Do  'ESCape
+
+    handleKey()
+
+    Dim As Integer mb
+    Getmouse mx, my, , mb
+    If mb And 1 Then chkClick(mx, my)
+    Sleep 10
+Loop

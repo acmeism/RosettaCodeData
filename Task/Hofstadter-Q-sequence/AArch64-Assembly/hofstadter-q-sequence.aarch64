@@ -1,0 +1,181 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program hofstader64.s   */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+/*******************************************/
+/* macros                             */
+/*******************************************/
+//.include "../../ficmacros64.inc"            // for developper debugging
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessDebutPgm:    .asciz "Program 64 bits start. \n"
+szCarriageReturn:  .asciz "\n"
+szMessFinOK:       .asciz "Program normal end. \n"
+szMessErreur:      .asciz "Error  !!!\n"
+szMessHofs:       .asciz "Hofstader numbers :\n"
+szSpace:           .asciz " "
+
+.align 4
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:               .skip 24
+.align 4
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr x0,qAdrszMessDebutPgm
+    bl affichageMess            // start message
+
+    ldr x0,qAdrszMessHofs
+    bl affichageMess
+
+    mov x0,10                   // maxi
+    mov x1,1                    // display number
+    bl genererHofs
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+    mov x0,1000                 // maxi
+    mov x1,0                    // display last number
+    bl genererHofs
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+    ldr x0,qMax100000            // maxi
+    mov x1,2                     // display counter
+    bl genererHofs
+    bl displayNumber             // display return number
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+    ldr x0,qAdrszMessFinOK
+    bl affichageMess
+    b 100f
+99:
+    ldr x0,qAdrszMessErreur     // error
+    bl affichageMess
+    mov x0, #1                  // return code error
+    b 100f
+100:
+    mov x8,EXIT
+    svc #0                      // system call
+qAdrszMessDebutPgm:          .quad szMessDebutPgm
+qAdrszMessFinOK:             .quad szMessFinOK
+qAdrszMessErreur:            .quad szMessErreur
+qAdrsZoneConv:               .quad sZoneConv
+qAdrszMessHofs:              .quad szMessHofs
+qMax100000:                  .quad 100000
+/***************************************************/
+/*   Generation Fibonacci numbers                  */
+/***************************************************/
+/* x0 contains limit number    */
+/* x1 display the last number */
+genererHofs:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    stp x8,x9,[sp,-16]!
+    stp x10,x11,[sp,-16]!
+    mov x2,x0
+    lsl x10,x0,3
+    sub sp,sp,x10               // reserve area on stack
+    mov x7,sp
+    mov x4,#0
+    mov x5,#0
+1:                              // init area loop
+    str x4,[x7,x5,lsl #3]
+    add x5,x5,#1
+    cmp x5,x2
+    blt 1b
+    mov x4,#1
+    str x4,[x7]                 // store value 1 in first item
+    str x4,[x7,8]               // store value 1 in second item
+    cmp x1,1                    // display number ?
+    bne 2f
+    mov x0,1                    // display L(1)
+    bl displayNumber
+    mov x0,1                    // display L(2)
+    bl displayNumber
+2:
+    mov x9,0
+    mov x4,#2
+3:
+    sub x3,x4,#1               // L -1
+    ldr x11,[x7,x3,lsl #3]      // load ancien result
+    sub x6,x4,x11
+    ldr x5,[x7,x6,lsl #3]
+    sub x3,x3,#1               // L - 2
+    ldr x8,[x7,x3,lsl #3]      // load ancien result
+    sub x6,x4,x8
+    ldr x8,[x7,x6,lsl #3]
+    add x5,x5,x8
+    str x5,[x7,x4,lsl #3]
+    cmp x5,x11
+    cinc x9,x9,lt
+
+    cmp x1,1
+    bne 4f
+    mov x0,x5
+    bl displayNumber
+4:
+
+    add x4,x4,#1               // increment counter
+    cmp x4,x2                  // end compute ?
+    blt 3b
+    cmp x1,1
+    bge 100f
+    mov x0,x5
+    bl displayNumber
+100:
+    mov x0,x9
+    add sp,sp,x10               // free reserved area
+    ldp x10,x11,[sp],16
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+/***************************************************/
+/*   display number                  */
+/***************************************************/
+/* x0 contains number  */
+displayNumber:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x2,#0
+    add x1,x1,x0
+    strb w2,[x1]
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+    ldr x0,qAdrszSpace
+    bl affichageMess
+100:
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+qAdrszCarriageReturn:         .quad szCarriageReturn
+qAdrszSpace:                  .quad szSpace
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

@@ -27,27 +27,28 @@ OP   FROMNBASE = ( STRING s, INT b )LONG INT:
         OD;
         result
      END # FROMNBASE # ;
+
 OP   FROMNBASE = ( CHAR c, INT b )LONG INT: STRING(c) FROMNBASE b;
 
 # returns n encoded as a string in the negative base b #
 PRIO TONBASE = 9;
 OP   TONBASE = ( LONG INT n, INT b )STRING:
-     BEGIN
-        STRING   result := "";
-        LONG INT v      := n;
-        WHILE
-            INT d := SHORTEN IF v < 0 THEN - ( ABS v MOD b ) ELSE v MOD b FI;
-            v OVERAB b;
-            IF d < 0
-            THEN
-                d -:= b;
-                v +:= 1
-            FI;
-            base digits[ d ] +=: result;
-            v /= 0
-        DO SKIP OD;
-        result
-     END # TONBASE # ;
+     IF   n = 0
+     THEN "0"
+     ELSE STRING   result := "";
+          LONG INT v      := n;
+          WHILE ABS v /= 0 DO
+              INT d := SHORTEN IF v < 0 THEN - ( ABS v MOD b ) ELSE v MOD b FI;
+              v OVERAB b;
+              IF d < 0
+              THEN
+                  d -:= b;
+                  v +:= 1
+              FI;
+              base digits[ d ] +=: result
+          OD;
+          result
+     FI # TONBASE # ;
 
 # tests the TONBASE and FROMNBASE operators #
 PROC test n base = ( LONG INT number, INT base, STRING expected )VOID:
@@ -66,4 +67,6 @@ test n base(                   146,  -3,    "21102" );
 test n base(                    15, -10,      "195" );
 # The defining document for ALGOL 68 spells the name "Algol 68" on the cover, though inside it is "ALGOL 68" #
 # at the risk of "judging a language by it's cover", we use "Algol 68" as the name here...                   #
-test n base( - LONG 36492107981104, -63, "Algol 68" )
+test n base( - LONG 36492107981104, -63, "Algol 68" );
+# test the single character decode operator                                                                  #
+print( ( "1 decodes to ", whole( "1" FROMNBASE -2, 0 ), " in base -2", newline ) )

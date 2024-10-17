@@ -1,0 +1,150 @@
+format ELF64 executable 3
+entry start
+bsize equ 24
+
+segment executable readable
+start:
+    pop    rdx
+    cmp    rdx,    1
+    jg     .getargv0
+    mov    qword[avar], 0
+    mov    qword[bvar], 0
+    jmp    .calculate
+ .getargv0:
+    pop    rdi
+    pop    rdi
+    call   atoq
+    mov    qword[avar], rax
+    cmp    rdx,     2
+    jg     .getargv1
+    mov    qword[bvar], 0
+    jmp    .calculate
+ .getargv1:
+    pop    rdi
+    call   atoq
+    mov    qword[bvar], rax
+ .calculate:
+    xor    rdi,    rdi
+    add    rdi,    qword[avar]
+    add    rdi,    qword[bvar]
+    call   printq
+ .exit0:
+    mov    rax,    60
+    xor    rdi,    rdi
+    syscall
+
+atoq:
+    push r8
+    push r9
+    push rdi
+    push rsi
+    push rdx
+    push rcx
+    xor  rcx, rcx
+    xor  rax, rax
+    xor  r8, r8
+    mov  r9, 1
+    cmp  byte[rdi], 0
+    jz  .exit
+    cmp byte[rdi], '-'
+    jne .stbegin
+    mov r9, -1
+    inc rdi
+  .stbegin:
+    cmp byte[rdi], '0'
+    jl  .return
+    cmp byte[rdi], '9'
+    jg  .return
+  .stloop:
+    cmp byte[rdi + r8], '0'
+    jl .calc0
+    cmp byte[rdi + r8], '9'
+    jg .calc0
+    mov sil, byte[rdi + r8]
+    sub rsi, '0'
+    push rsi
+    inc r8
+    jmp .stloop
+  .calc0:
+    xor rcx, rcx
+    mov rdi,  10
+    mov rsi, 1
+  .calc1:
+    pop rax
+    mul rsi
+    add rcx, rax
+    dec r8
+    jz  .return
+    mov rax, rsi
+    mul rdi
+    mov rsi, rax
+    jmp .calc1
+  .return:
+    xor rdx, rdx
+    mov rax, rcx
+    imul r9
+  .exit:
+    pop rcx
+    pop rdx
+    pop rsi
+    pop rdi
+    pop r9
+    pop r8
+    ret
+
+printq:
+    push   r9
+    push   rdi
+    push   rsi
+    push   rdx
+    mov    rax,    rdi
+    mov    r9,    bsize
+    dec    r9
+    mov    rsi,   10
+    sub    rsp,   bsize
+    sub    rax,    0
+    jns    .stloop
+    neg    rax
+  .stloop:
+    xor    rdx,   rdx
+    div    rsi
+    add    dl,   '0'
+    mov    byte[rsp + r9], dl
+    sub    rax,    0
+    jz     .negtest
+    dec    r9
+    jmp .stloop
+  .negtest:
+    sub    rdi,    0
+    jns    .printit
+    dec    r9
+    mov    byte[rsp + r9], '-'
+  .printit:
+    mov    rdx, bsize
+    sub    rdx, r9
+    mov    rsi, rsp
+    add    rsi, r9
+    mov    rdi, 1
+    mov    rax, 1
+    syscall
+    sub    rsp, 8
+    mov    byte[rsp], 0x0a
+    mov    rax, 1
+    mov    rdi, 1
+    mov    rsi, rsp
+    mov    rdx, 1
+    syscall
+    add    rsp, 8
+  .restores:
+    add    rsp, bsize
+    mov    rax, rdx
+    pop    rdx
+    pop    rsi
+    pop    rdi
+    pop    r9
+  .return:
+    ret
+
+segment readable writable
+avar: rq 1
+bvar: rq 1

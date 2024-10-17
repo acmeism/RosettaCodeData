@@ -2,11 +2,15 @@ import std.stdio, std.meta, std.range;
 
 TA[] select(TA, TI1, TC1, TI2, TC2, TI3, TC3, TP)
            (lazy TA mapper,
+
             ref TI1 iter1, TC1 items1,
             ref TI2 iter2, lazy TC2 items2,
             ref TI3 iter3, lazy TC3 items3,
+
             lazy TP where) {
+
   Appender!(TA[]) result;
+
   auto iters = AliasSeq!(iter1, iter2, iter3);
 
   foreach (el1; items1) {
@@ -22,13 +26,22 @@ TA[] select(TA, TI1, TC1, TI2, TC2, TI3, TC3, TP)
   }
 
   AliasSeq!(iter1, iter2, iter3) = iters;
+
   return result.data;
 }
 
 void main() {
   enum int n = 21;
+
   int x, y, z;
-  auto r = select([x,y,z], x, iota(1,n+1), y, iota(x,n+1), z,
-                  iota(y, n + 1), x*x + y*y == z*z);
+  auto r = select(
+                    [x,y,z],
+
+                     x, iota(  1, n+1),
+                     y, iota(x+1, n+1),
+                     z, iota(y+1, n+1),
+
+                     x*x + y*y == z*z
+                  );
   writeln(r);
 }

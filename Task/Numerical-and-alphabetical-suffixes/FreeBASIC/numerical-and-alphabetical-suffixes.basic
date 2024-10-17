@@ -1,0 +1,209 @@
+Type minmult
+    min As Integer
+    mult As Double
+End Type
+
+Type suffix_entry
+    key As String
+    value As minmult
+End Type
+
+Type metric_entry
+    key As String
+    value As Double
+End Type
+
+Dim Shared As suffix_entry abbrevs(5)
+Dim Shared As metric_entry metric(11)
+Dim Shared As metric_entry binary_metric(11)
+
+Sub initialize_data()
+    ' Initialize abbrevs
+    abbrevs(0).key = "PAIRs"      : abbrevs(0).value.min = 4 : abbrevs(0).value.mult = 2
+    abbrevs(1).key = "SCOres"     : abbrevs(1).value.min = 3 : abbrevs(1).value.mult = 20
+    abbrevs(2).key = "DOZens"     : abbrevs(2).value.min = 3 : abbrevs(2).value.mult = 12
+    abbrevs(3).key = "GRoss"      : abbrevs(3).value.min = 2 : abbrevs(3).value.mult = 144
+    abbrevs(4).key = "GREATGRoss" : abbrevs(4).value.min = 7 : abbrevs(4).value.mult = 1728
+    abbrevs(5).key = "GOOGOLs"    : abbrevs(5).value.min = 6 : abbrevs(5).value.mult = 1e100
+
+    ' Initialize metric
+    metric(0).key = "K"  : metric(0).value = 1e3
+    metric(1).key = "M"  : metric(1).value = 1e6
+    metric(2).key = "G"  : metric(2).value = 1e9
+    metric(3).key = "T"  : metric(3).value = 1e12
+    metric(4).key = "P"  : metric(4).value = 1e15
+    metric(5).key = "E"  : metric(5).value = 1e18
+    metric(6).key = "Z"  : metric(6).value = 1e21
+    metric(7).key = "Y"  : metric(7).value = 1e24
+    metric(8).key = "X"  : metric(8).value = 1e27
+    metric(9).key = "W"  : metric(9).value = 1e30
+    metric(10).key = "V" : metric(10).value = 1e33
+    metric(11).key = "U" : metric(11).value = 1e36
+
+    ' Initialize binary_metric
+    binary_metric(0).key = "Ki"  : binary_metric(0).value = 2^10
+    binary_metric(1).key = "Mi"  : binary_metric(1).value = 2^20
+    binary_metric(2).key = "Gi"  : binary_metric(2).value = 2^30
+    binary_metric(3).key = "Ti"  : binary_metric(3).value = 2^40
+    binary_metric(4).key = "Pi"  : binary_metric(4).value = 2^50
+    binary_metric(5).key = "Ei"  : binary_metric(5).value = 2^60
+    binary_metric(6).key = "Zi"  : binary_metric(6).value = 2^70
+    binary_metric(7).key = "Yi"  : binary_metric(7).value = 2^80
+    binary_metric(8).key = "Xi"  : binary_metric(8).value = 2^90
+    binary_metric(9).key = "Wi"  : binary_metric(9).value = 2^100
+    binary_metric(10).key = "Vi" : binary_metric(10).value = 2^110
+    binary_metric(11).key = "Ui" : binary_metric(11).value = 2^120
+End Sub
+
+Function fact(num As String, d As Integer) As Longint
+    Dim As Longint prod = 1
+    Dim As Integer i, n = Val(num)
+    For i = n To 1 Step -d
+        prod *= i
+    Next
+    Return prod
+End Function
+
+Function removeCommas(s As String) As String
+    Dim As String result = ""
+    For i As Integer = 1 To Len(s)
+        If Mid(s, i, 1) <> "," Then result &= Mid(s, i, 1)
+    Next
+    Return result
+End Function
+
+Function parse(number As String) As Double
+    Dim As Integer i, j, k
+    Dim As String num, suf
+    Dim As Double result = 0
+
+    ' find index of last digit
+    For i = Len(number) - 1 To 0 Step -1
+        If Mid(number, i + 1, 1) >= "0" And Mid(number, i + 1, 1) <= "9" Then Exit For
+    Next
+
+    num = Left(number, i + 1)
+    num = Trim(removeCommas(num)) ' get rid of any commas
+    suf = Ucase(Mid(number, i + 2))
+
+    If suf = "" Then Return Val(num)
+
+    If Left(suf, 1) = "!" Then Return fact(num, Len(suf))
+
+    For i = 0 To Ubound(abbrevs)
+        Dim As String k = Ucase(abbrevs(i).key)
+        If Left(k, Len(suf)) = suf And Len(suf) >= abbrevs(i).value.min Then
+            Return Val(num) * abbrevs(i).value.mult
+        End If
+    Next
+
+    result = Val(num)
+    For i = 1 To Len(suf)
+        For j = 0 To Ubound(metric)
+            If Mid(suf, i, 1) = metric(j).key Then
+                If i < Len(suf) And Mid(suf, i + 1, 1) = "I" Then
+                    For k = 0 To Ubound(binary_metric)
+                        If binary_metric(k).key = metric(j).key & "i" Then
+                            result *= binary_metric(k).value
+                            i += 1
+                            Exit For
+                        End If
+                    Next
+                Else
+                    result *= metric(j).value
+                End If
+            End If
+        Next
+    Next
+
+    Return result
+End Function
+
+Function commatize(s As String) As String
+    If Len(s) = 0 Then Return ""
+
+    Dim As Boolean neg = (Left(s, 1) = "-")
+    If neg Then s = Mid(s, 2)
+
+    Dim As String fracci = ""
+    Dim As Integer ix, le, i
+
+    ix = Instr(s, ".")
+    If ix > 0 Then
+        fracci = Mid(s, ix)
+        s = Left(s, ix - 1)
+    End If
+
+    le = Len(s)
+    For i = le - 3 To 1 Step -3
+        s = Left(s, i) & "," & Mid(s, i + 1)
+    Next
+
+    Return Iif(neg, "-", "") & s & fracci
+End Function
+
+Sub process(numbers() As String)
+    Dim As Integer i
+    Print "Numbers = ";
+    For i = 0 To Ubound(numbers)
+        Print numbers(i); "  ";
+    Next
+
+    Print !"\nResults = ";
+    For i = 0 To Ubound(numbers)
+        Dim As Double res = parse(numbers(i))
+        Print commatize(Str(res)); "  ";
+    Next
+    Print Chr(10)
+End Sub
+
+' Main program
+initialize_data()
+
+Dim As String numbers()
+
+Redim numbers(4)
+numbers(0) = "2greatGRo"
+numbers(1) = "24Gros"
+numbers(2) = "288Doz"
+numbers(3) = "1,728pairs"
+numbers(4) = "172.8SCOre"
+process(numbers())
+
+Redim numbers(2)
+numbers(0) = "1,567"
+numbers(1) = "+1.567k"
+numbers(2) = "0.1567e-2m"
+process(numbers())
+
+Redim numbers(2)
+numbers(0) = "25.123kK"
+numbers(1) = "25.123m"
+numbers(2) = "2.5123e-00002G"
+process(numbers())
+
+Redim numbers(3)
+numbers(0) = "25.123kiKI"
+numbers(1) = "25.123Mi"
+numbers(2) = "2.5123e-00002Gi"
+numbers(3) = "+.25123E-7Ei"
+process(numbers())
+
+Redim numbers(1)
+numbers(0) = "-.25123e-34Vikki"
+numbers(1) = "2e-77gooGols"
+process(numbers())
+
+Redim numbers(8)
+numbers(0) = "9!"
+numbers(1) = "9!!"
+numbers(2) = "9!!!"
+numbers(3) = "9!!!!"
+numbers(4) = "9!!!!!"
+numbers(5) = "9!!!!!!"
+numbers(6) = "9!!!!!!!"
+numbers(7) = "9!!!!!!!!"
+numbers(8) = "9!!!!!!!!!"
+process(numbers())
+
+Sleep

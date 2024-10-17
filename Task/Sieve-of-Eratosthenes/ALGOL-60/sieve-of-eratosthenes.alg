@@ -26,7 +26,6 @@
                 K := J*I;
             'END';
             I := I+1;
-            'END'
         'END';
         'FOR' I := 0 'STEP' 1 'UNTIL' 999 'DO'
         'IF' CANDIDATES(/I/) 'NOTEQUAL' 0  'THEN'

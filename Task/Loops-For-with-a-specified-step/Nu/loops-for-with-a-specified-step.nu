@@ -1,1 +1,1 @@
-for i in (0..10 | each {} | every 2) {print $i}
+for i in (0..2..10) { print $i }

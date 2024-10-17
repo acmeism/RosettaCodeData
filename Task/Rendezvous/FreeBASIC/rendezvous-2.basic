@@ -1,0 +1,72 @@
+Const MAX_INK As Integer = 5
+
+Type Printer
+    ID As Integer
+    Ink As Integer
+    Backup As Printer Ptr
+    Mutex As Any Ptr
+End Type
+
+Dim Shared Reserve As Printer
+Dim Shared Main As Printer
+
+Reserve.ID = 2
+Reserve.Ink = MAX_INK
+Reserve.Backup = 0
+Reserve.Mutex = Mutexcreate()
+
+Main.ID = 1
+Main.Ink = MAX_INK
+Main.Backup = @Reserve
+Main.Mutex = Mutexcreate()
+
+Dim Shared As String*44 humpty(3) = { _
+"Humpty Dumpty sat on a wall.", "Humpty Dumpty had a great fall.", _
+"All the king's horses and all the king's men", _
+"Couldn't put Humpty together again." }
+
+Dim Shared As String*26 goose(7) = {"Old Mother Goose", "When she wanted to wander,", _
+"Would ride through the air", "On a very fine gander.", "Jack's mother came in,", _
+"And caught the goose soon,", "And mounting its back,", "Flew up to the moon." }
+
+Sub PrintLine(Byref p As Printer, Byval linea As String)
+    Mutexlock(p.Mutex)
+    If p.Ink = 0 Then
+        If p.Backup = 0 Then
+            Mutexunlock(p.Mutex)
+            If p.ID = 1 Then
+                Print "      Humpty Dumpty out of ink!"
+            Elseif p.ID = 2 Then
+                Print "      Mother Goose out of ink!"
+            End If
+            Mutexunlock(p.Mutex)
+        Else
+            PrintLine(*p.Backup, linea)
+        End If
+    Else
+        Print p.ID; ": "; linea
+        p.Ink -= 1
+    End If
+    Mutexunlock(p.Mutex)
+End Sub
+
+Sub HumptyDumpty(Param As Any Ptr)
+    For i As Integer = 0 To Ubound(humpty)
+        PrintLine(Main, humpty(i))
+    Next
+End Sub
+
+Sub MotherGoose(Param As Any Ptr)
+    For i As Integer = 0 To Ubound(goose)
+        PrintLine(Main, goose(i))
+    Next
+End Sub
+
+' Create threads
+Dim HumptyThread As Any Ptr = Threadcreate(@HumptyDumpty, 0)
+Dim GooseThread As Any Ptr = Threadcreate(@MotherGoose, 0)
+
+' Wait for threads to finish
+Threadwait(HumptyThread)
+
+Sleep

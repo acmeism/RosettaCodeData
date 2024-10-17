@@ -9,10 +9,10 @@ REAL d1 := 3.2;
 print( ( "i  ", "d", newline ) );
 FOR i FROM 2 TO max it DO
      REAL a := a1 + (a1 - a2) / d1;
-     FOR j TO max it j DO
+     TO max it j DO
           REAL x := 0;
           REAL y := 0;
-          FOR k TO 2 ^ i DO
+          TO 2 ^ i DO
                y := 1 - 2 * y * x;
                x := a - x * x
           OD;

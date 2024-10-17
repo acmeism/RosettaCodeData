@@ -1,0 +1,57 @@
+DIM sString AS STRING
+sString = "rosetta code phrase reversal" 'The string
+DIM sNewString AS STRING 'String variables
+DIM sTemp AS STRING 'Temporary string variable
+DIM siCount AS INTEGER 'Counter
+DIM sWord(0 TO 100) AS STRING 'Word store
+DIM i AS INTEGER 'Index variable
+DIM startPos AS INTEGER 'Start position for word extraction
+DIM endPos AS INTEGER 'End position for word extraction
+DIM wordCount AS INTEGER 'Number of words
+
+' Loop backwards through the string
+FOR siCount = LEN(sString) TO 1 STEP -1
+    sNewString = sNewString + MID$(sString, siCount, 1) 'Add each character to the new string
+NEXT
+
+PRINT "Original string => " + sString 'Print the original string
+PRINT "Reversed string => " + sNewString 'Print the reversed string
+
+sNewString = "" 'Reset sNewString
+
+' Manually split the original string by spaces
+startPos = 1
+wordCount = 0
+FOR i = 1 TO LEN(sString)
+    IF MID$(sString, i, 1) = " " OR i = LEN(sString) THEN
+        IF i = LEN(sString) THEN
+            endPos = i
+        ELSE
+            endPos = i - 1
+        END IF
+        sWord(wordCount) = MID$(sString, startPos, endPos - startPos + 1)
+        wordCount = wordCount + 1
+        startPos = i + 1
+    END IF
+NEXT
+
+' Loop backward through each word in sWord
+FOR siCount = wordCount - 1 TO 0 STEP -1
+    sNewString = sNewString + sWord(siCount) + " " 'Add each word to sNewString
+NEXT
+
+PRINT "Reversed order  => " + sNewString 'Print reversed word order
+
+sNewString = "" 'Reset sNewString
+
+' For each word in sWord
+FOR i = 0 TO wordCount - 1
+    sTemp = sWord(i)
+    ' Loop backward through the word
+    FOR siCount = LEN(sTemp) TO 1 STEP -1
+        sNewString = sNewString + MID$(sTemp, siCount, 1) 'Add the characters to sNewString
+    NEXT
+    sNewString = sNewString + " " 'Add a space at the end of each word
+NEXT
+
+PRINT "Reversed words  => " + sNewString 'Print words reversed

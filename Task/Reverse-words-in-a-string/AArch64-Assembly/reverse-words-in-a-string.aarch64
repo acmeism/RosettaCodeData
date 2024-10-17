@@ -1,0 +1,178 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program invword64.s   */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ MAXILINE,  5
+/*******************************************/
+/*   Macros                              */
+/*******************************************/
+//.include "../../ficmacros64.inc"            // for developer debugging
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessDebutPgm:   .asciz "Program 64 bits start. \n"
+szCarriageReturn: .asciz "\n"
+szMessFinOK:      .asciz "Program normal end. \n"
+szMessErreur:     .asciz "Error  !!!\n"
+szSpace1:         .asciz " "
+
+szLine1:          .asciz "---------- Ice and Fire ------------"
+.equ LGLINE1,  . -  szLine1 - 1
+szLine2:          .asciz ""
+.equ LGLINE2,  . -  szLine2 - 1
+szLine3:         .asciz "fire, in end will world the say Some"
+.equ LGLINE3,  . -  szLine3 - 1
+szLine4:         .asciz "ice. in say Some"
+.equ LGLINE4,  . -  szLine4 - 1
+szLine5:         .asciz "desire of tasted I've what From"
+.equ LGLINE5,  . -  szLine5 - 1
+szLine6:         .asciz "fire. favor who those with hold I"
+.equ LGLINE6,  . -  szLine6 - 1
+szLine7:         .asciz "... elided paragraph last ..."
+.equ LGLINE7,  . -  szLine7 - 1
+szLine8:         .asciz "Frost Robert -----------------------"
+.equ LGLINE8,  . -  szLine8 - 1
+.align 4
+tabLines:        .quad szLine1
+                 .quad LGLINE1
+                 .quad szLine2
+                 .quad LGLINE2
+                 .quad szLine3
+                 .quad LGLINE3
+                 .quad szLine4
+                 .quad LGLINE4
+                 .quad szLine5
+                 .quad LGLINE5
+                 .quad szLine6
+                 .quad LGLINE6
+                 .quad szLine2
+                 .quad LGLINE2
+                 .quad szLine7
+                 .quad LGLINE7
+                 .quad szLine2
+                 .quad LGLINE2
+                 .quad szLine8
+                 .quad LGLINE8
+
+     .equ NBLINES,  (. -  tabLines)/16
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr x0,qAdrszMessDebutPgm
+    bl affichageMess               // start message
+    mov x19,#0                     // line counter
+    ldr x20,qAdrtabLines           // lines array
+    mov x21,#16                    // line array size
+1:                                 // start line loop
+    madd x3,x19,x21,x20            // compute line address
+    ldr x0,[x3]                    // load line adress
+    add x1,x3,#8                   // compute size address
+    ldr x1,[x1]                    // load line size
+    bl inverseWord
+    add x19,x19,#1                 // increment counter
+    cmp x19,#NBLINES               // end ?
+    blt 1b
+
+    ldr x0,qAdrszMessFinOK
+    bl affichageMess
+    b 100f
+99:
+    ldr x0,qAdrszMessErreur        // error
+    bl affichageMess
+    mov x0, #1                     // return code error
+    b 100f
+100:
+    mov x8,EXIT
+    svc #0                         // system call
+qAdrszMessDebutPgm:          .quad szMessDebutPgm
+qAdrszMessFinOK:             .quad szMessFinOK
+qAdrszMessErreur:            .quad szMessErreur
+qAdrtabLines:                .quad tabLines
+/***************************************************/
+/*   word inversion                  */
+/***************************************************/
+/* x0 contains line address t  */
+/* x1 contains line length */
+inverseWord:
+    stp x19,lr,[sp,-16]!    // save  registers
+    stp x20,x21,[sp,-16]!   // save  registers
+
+    cmp x1,#0               // empty line ?
+    beq 20f
+    mov x19,x0              // begin line address
+    add x20,x0,x1           // start indice at end line address
+    mov x21,#0              // end word adresse
+1:                          // line analyse loop
+    cmp x20,x19             // end line ?
+    blt 10f
+    ldrb w2,[x20]           // load one char
+    cmp w2,#' '             // space ?
+    bne 3f
+    cmp x21,#0              // word finded ?
+    bne 2f
+    sub x20,x20,#1          // no ->loop
+    b 1b
+2:                          // p.quad the word
+    mov x1,x20              // word address in x1
+    sub x2,x21,x20          // word length
+    add x2,x2,#1
+    mov x0,#STDOUT          // code to write to the standard output Linux
+    mov x8, #WRITE          // code call system "write"
+    svc #0                  // call systeme
+    mov x21,#0              // raz end word
+    sub x20,x20,#1          // decrement line address
+    b 1b                    // and loop
+3:
+    cmp x21,#0              // word ok
+    csel x21,x20,x21,eq     // no -> address end word
+    sub x20,x20,#1          // and loop
+    b 1b
+
+    b 100f
+ 10:                       // line end
+    cmp x21,#0             // word ok
+    beq 20f
+                           // first word do not begin by space
+    ldr x1,qAdrszSpace1    // address space to display
+    mov x2,#1
+    mov x0,#STDOUT         // code to write to the standard output Linux
+    mov x8, #WRITE         // code call system "write"
+    svc #0                 // call systeme
+                           //p.quad the word
+    mov x1,x20             // address word
+    sub x2,x21,x20         // word length
+    add x2,x2,#1
+    mov x0,#STDOUT         // code to write to the standard output Linux
+    mov x8, #WRITE         // code call system "write"
+    svc #0                 // call systeme
+
+ 20:                       // empty line or end line
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+ 100:                      // end function
+    ldp x20,x21,[sp],16    // restaur  registers
+    ldp x19,lr,[sp],16     // restaur  registers
+    ret
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrszSpace1:             .quad szSpace1
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../includeARM64.inc"

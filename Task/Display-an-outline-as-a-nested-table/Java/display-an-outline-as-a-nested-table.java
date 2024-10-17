@@ -84,7 +84,8 @@ public final class DisplayAnOutlineAsANestedTable {
 	    int rowColumn = 0;
 
 	    StringBuilder builder = new StringBuilder();
-	    builder.append("{| class=\"" + "wikitable" + "\"" + " style=\"" + "text-align: center;" + "\"" + "\n");
+	    builder.append(
+            "{| class=\"" + "wikitable" + "\"" + " style=\"" + "text-align: center;" + "\"" + "\n");
 
 	    // Breadth first traversal of 'tree'.
 	    Deque<Node> queue = new ArrayDeque<Node>();

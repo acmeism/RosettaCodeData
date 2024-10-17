@@ -24,8 +24,8 @@ BEGIN # print future palindromic dates                                          
     []INT max dd = ( 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 );
     # current date in local time (Algol 68G extension)                           #
     []INT date   = local time;
-    INT   yy now = local time[ 1 ] MOD  100;
-    INT   cc now = local time[ 1 ] OVER 100;
+    INT   yy now = date[ 1 ] MOD  100;
+    INT   cc now = date[ 1 ] OVER 100;
     INT dates to print := 15; # maximum number of dates to print                 #
     FOR c pos FROM LWB de TO UPB de WHILE dates to print > 0 DO
         INT cc = de[ c pos ];

@@ -1,0 +1,275 @@
+Const nRows As Integer = 8
+Const nCols As Integer = 8
+Const target As Integer = 12
+Const blank As Integer = 12
+
+Dim Shared symbols As String
+symbols = "XYPFTVNLUZWI-"
+Dim Shared grid(nRows - 1, nCols - 1) As Integer
+Dim Shared As Integer pens(63, 7)
+Dim seeds(11) As Integer = {291, 292, 293, 295, 297, 329, 330, 332, 333, 335, 378, 586}
+
+Function Puzzle(a As String, b As String) As String
+    Dim res As String = ""
+    If Len(a) > Len(b) Then b &= Space(Len(a) - Len(b))
+    If Len(a) < Len(b) Then a &= Space(Len(b) - Len(a))
+    For i As Integer = 0 To Len(a) - 2
+        Dim As String cad = " 12"&chr(192)&"4"&chr(217)&chr(196)&chr(193)&"8"&chr(179)&chr(218)&chr(195)&chr(191)&chr(180)&chr(194)&chr(197)
+        res &= Mid(cad, (Iif(Mid(a, i + 1, 1) = Mid(a, i + 2, 1), 0, 1) + _
+        Iif(Mid(b, i + 2, 1) = Mid(a, i + 2, 1), 0, 2) + _
+        Iif(Mid(a, i + 1, 1) = Mid(b, i + 1, 1), 0, 4) + _
+        Iif(Mid(b, i + 1, 1) = Mid(b, i + 2, 1), 0, 8)) + 1, 1)
+    Next
+    Return res
+End Function
+
+Function Cornered(s As String) As String
+    Dim As String lines(100), res, linea, last
+    Dim As Integer lineCount, start, posic, i
+
+    lineCount = 0
+    start = 1
+    posic = Instr(start, s, Chr(10))
+    While posic > 0
+        lines(lineCount) = Mid(s, start, posic - start)
+        lineCount += 1
+        start = posic + 1
+        posic = Instr(start, s, Chr(10))
+    Wend
+    lines(lineCount) = Mid(s, start)
+    lineCount += 1
+
+    res = ""
+    linea = Space(Len(lines(0)) + 1)
+    For i = 0 To lineCount - 1
+        last = linea
+        linea = " " & lines(i)
+        res &= Puzzle(last, linea) & Chr(10)
+    Next
+    Return res & Puzzle(linea, Space(Len(lines(lineCount - 1)) + 1))
+End Function
+
+Function TPO(ori() As Integer, Byval row As Integer, Byval col As Integer, Byval sIdx As Integer) As Boolean
+    Dim As Integer i, x, y
+    For i = 0 To Ubound(ori) Step 2
+        x = col + ori(i + 1)
+        y = row + ori(i)
+        If x < 0 Or x >= nCols Or y < 0 Or y >= nRows Or grid(y, x) <> -1 Then Return False
+    Next
+    grid(row, col) = sIdx
+    For i = 0 To Ubound(ori) Step 2
+        grid(row + ori(i), col + ori(i + 1)) = sIdx
+    Next
+    Return True
+End Function
+
+Sub ShuffleShapes(count As Integer)
+    Dim As Integer i, j, r, k
+    For i = 0 To count
+        For j = 0 To Ubound(pens, 1)
+            Do
+                r = Int(Rnd * (Ubound(pens, 1) + 1))
+            Loop Until r <> j
+            For k = 0 To Ubound(pens, 2)
+                'Dim tmp As Integer = pens(r, k)
+                Swap pens(r, k), pens(j, k)
+                'pens(j, k) = tmp
+            Next
+            Dim ch As String = Mid(symbols, r + 1, 1)
+            Mid(symbols, r + 1, 1) = Mid(symbols, j + 1, 1)
+            Mid(symbols, j + 1, 1) = ch
+        Next
+    Next
+End Sub
+
+Function DW(s As String) As String
+    Dim result As String = ""
+    For i As Integer = 1 To Len(s)
+        Dim ch As String = Mid(s, i, 1)
+        result &= ch & Iif(ch = Chr(10), "", ch)
+    Next
+    Return result
+End Function
+
+Sub PrintResult()
+    Dim res As String = ""
+    For r As Integer = 0 To nRows - 1
+        For c As Integer = 0 To nCols - 1
+            res &= Iif(grid(r, c) < 0, ".", Mid(symbols, grid(r, c) + 1, 1))
+        Next
+        res &= " " & Chr(10)
+    Next
+    Print Cornered(DW(res))
+End Sub
+
+Sub RmvO(ori() As Integer, Byval row As Integer, Byval col As Integer)
+    grid(row, col) = -1
+    For i As Integer = 0 To Ubound(ori) Step 2
+        grid(row + ori(i), col + ori(i + 1)) = -1
+    Next
+End Sub
+
+Sub Expand(i As Integer, result() As Integer)
+    result(0) = 0
+    For j As Integer = 0 To 3
+        result(4 - j) = i And 15
+        i Shr= 4
+    Next
+End Sub
+
+Sub Sort(arr() As Integer)
+    Dim As Integer n, i, j
+    n = Ubound(arr)
+    For i = 0 To n - 1
+        For j = 0 To n - i - 1
+            If arr(j) > arr(j + 1) Then Swap arr(j), arr(j + 1)
+        Next
+    Next
+End Sub
+
+Sub ToP(p() As Integer, res() As Integer)
+    Dim As Integer tmp(4), i, item, adj
+
+    tmp(0) = 0
+    For i = 1 To 4
+        item = p(i)
+        Select Case (item And 3)
+        Case 0
+            tmp(i) = tmp(item \ 4) + 1
+        Case 1
+            tmp(i) = tmp(item \ 4) + 8
+        Case 2
+            tmp(i) = tmp(item \ 4) - 1
+        Case 3
+            tmp(i) = tmp(item \ 4) - 8
+        End Select
+    Next
+    Sort(tmp())
+    For i = 4 To 1 Step -1
+        tmp(i) -= tmp(0)
+    Next
+    For i = 1 To 4
+        item = tmp(i)
+        adj = Iif((item And 7) > 4, 8, 0)
+        res(2 * (i - 1)) = (adj + item) \ 8
+        res(2 * (i - 1) + 1) = (item And 7) - adj
+    Next
+End Sub
+
+Sub Rot(p() As Integer)
+    For i As Integer = 0 To Ubound(p)
+        p(i) = (p(i) And -4) Or ((p(i) + 1) And 3)
+    Next
+End Sub
+
+Sub Mir(p() As Integer)
+    For i As Integer = 0 To Ubound(p)
+        p(i) = (p(i) And -4) Or (((p(i) Xor 1) + 1) And 3)
+    Next
+End Sub
+
+Sub Unpack(sv() As Integer)
+    Dim As Integer idx, item, i, j, k, l
+    Dim As Boolean exists, same
+
+    idx = 0
+    For i = 0 To Ubound(sv)
+        item = sv(i)
+        Dim exi(3) As Integer
+        Expand(item, exi())
+        Dim fx(7) As Integer
+        ToP(exi(), fx())
+        For j  = 0 To 7
+            pens(idx, j) = fx(j)
+        Next
+        idx += 1
+        For j = 1 To 7
+            If j = 4 Then
+                Mir(exi())
+            Else
+                Rot(exi())
+            End If
+            ToP(exi(), fx())
+            exists = False
+            For k = 0 To idx - 1
+                same = True
+                For l = 0 To 7
+                    If pens(k, l) <> fx(l) Then
+                        same = False
+                        Exit For
+                    End If
+                Next
+                If same Then
+                    exists = True
+                    Exit For
+                End If
+            Next
+            If Not exists Then
+                For l = 0 To 7
+                    pens(idx, l) = fx(l)
+                Next
+                idx += 1
+            End If
+        Next
+    Next
+End Sub
+
+Function TheSame(a() As Integer, b() As Integer) As Boolean
+    For i As Integer = 0 To Ubound(a)
+        If a(i) <> b(i) Then Return False
+    Next
+    Return True
+End Function
+
+Function Solve(Byval posic As Integer, Byval numPlaced As Integer) As Boolean
+    Dim placed(target - 1) As Boolean
+    If numPlaced = target Then Return True
+
+    Dim As Integer row, col, i, j, k, orientation(7)
+    row = posic \ nCols
+    col = posic Mod nCols
+    If grid(row, col) <> -1 Then Return Solve(posic + 1, numPlaced)
+
+    For i = 0 To Ubound(pens, 1)
+        If Not placed(i) Then
+            For j = 0 To Ubound(pens, 2)
+                For k = 0 To 7
+                    orientation(k) = pens(i, k)
+                Next
+                If Not TPO(orientation(), row, col, i) Then Continue For
+                placed(i) = True
+                If Solve(posic + 1, numPlaced + 1) Then Return True
+                RmvO(orientation(), row, col)
+                placed(i) = False
+            Next
+        End If
+    Next
+    Return False
+End Function
+
+'--- Main program ---
+Unpack(seeds())
+Randomize Timer
+ShuffleShapes(2)
+Dim As Integer  r, c
+For r = 0 To nRows - 1
+    For c = 0 To nCols - 1
+        grid(r, c) = -1
+    Next
+Next
+Dim As Integer rRow, rCol
+For r = 0 To 3
+    Do
+        rRow = Int(Rnd * nRows)
+        rCol = Int(Rnd * nCols)
+    Loop While grid(rRow, rCol) = blank
+    grid(rRow, rCol) = blank
+Next
+If Solve(0, 0) Then
+    PrintResult()
+Else
+    Print "no solution for this configuration:"
+    PrintResult()
+End If
+
+Sleep

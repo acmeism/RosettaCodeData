@@ -13,7 +13,7 @@ bool leap(uint16_t year) {
 }
 
 const char *weekday(Date date) {
-    static const uint8_t leapdoom[] = {4,1,7,2,4,6,4,1,5,3,7,5};
+    static const uint8_t leapdoom[] = {4,1,7,4,2,6,4,1,5,3,7,5};
     static const uint8_t normdoom[] = {3,7,7,4,2,6,4,1,5,3,7,5};
     static const char *days[] = {
         "Sunday", "Monday", "Tuesday", "Wednesday",

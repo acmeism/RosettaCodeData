@@ -1,0 +1,6 @@
+(let (nums '(1 2 3 4 5 6 7))
+  (for (police 2 (last nums)  2)
+    (dolist (sanitation (difference nums (list police)))
+      (let (fire (- 12 sanitation police))
+        (if (member fire (difference nums (list sanitation police)))
+          (println police '- sanitation '- fire))))))

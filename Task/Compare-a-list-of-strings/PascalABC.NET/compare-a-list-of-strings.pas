@@ -1,5 +1,5 @@
-function IsSorted(lst: sequence of string): boolean
-  := lst.Order.SequenceEqual(lst);
+function AllEqual(lst: sequence of string)
+  := lst.All(x -> lst.First = x);
 
 function IsStrictAscending(lst: sequence of string): boolean
   := lst.Pairwise.All(x -> x[0] < x[1]);

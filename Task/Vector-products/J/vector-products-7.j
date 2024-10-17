@@ -1,8 +1,1 @@
-   dotP a;b
-49
-   crossP a;b
-5 5 _7
-   scTriP a;b;c
-6
-   veTriP a;b;c
-_267 204 _3
+cross=: {{ ((1|.x)*2|.y) - (2|.x)*1|.y }}

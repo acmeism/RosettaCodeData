@@ -1,12 +1,13 @@
 BEGIN # find the mode (most frequent value) of a set of items                #
     PR read "rows.incl.a68" PR               # include row (array) utilities #
+    PR read "sort.incl.a68" PR               # include row sorting utilities #
     # returns the mode(s) of a - similar operators could be defined for      #
     #                            types other than INT                        #
     OP MODEOF = ( []INT a )[]INT:
        IF LWB a > UPB a THEN []INT() # no data                               #
        ELSE                          # have data                             #
            [ LWB a : UPB a ]INT sorted data := a;
-           QUICKSORT sorted data FROMELEMENT LWB sorted data TOELEMENT UPB sorted data;
+           QUICKSORT sorted data;
            INT distinct count = BEGIN  # count the number of distinct values #
                                     INT count := 1;
                                     INT value := sorted data[ LWB sorted data ];
@@ -58,6 +59,5 @@ BEGIN # find the mode (most frequent value) of a set of items                #
     SHOW MODEOF []INT( 7, 13, 5, 13, 7, 2, 7, 10, 13 )     ;print( ( newline ) );
     SHOW MODEOF []INT( 5 )                                 ;print( ( newline ) );
     # additional test case                                                   #
-    SHOW MODEOF []INT( 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 )   ;print( ( newline )
-
+    SHOW MODEOF []INT( 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 )   ;print( ( newline ) )
 END

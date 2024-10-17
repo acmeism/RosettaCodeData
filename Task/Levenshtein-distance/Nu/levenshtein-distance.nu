@@ -1,0 +1,1 @@
+'kitten' | str distance 'sitting'

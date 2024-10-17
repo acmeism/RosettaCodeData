@@ -1,6 +1,6 @@
 col$[] = [ "red" "white" "blue" ]
 for i to 8
-   b[] &= randint 3
+   b[] &= random 3
 .
 for b in b[]
    write col$[b] & " "

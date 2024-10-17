@@ -1,0 +1,103 @@
+Const NULL As Any Ptr = 0
+
+Type Nodo
+    As String valor
+    As Nodo Ptr sgte
+End Type
+
+Type QueueSeguro
+    As Nodo Ptr head, tail
+    As Any Ptr mutex
+    Declare Constructor
+    Declare Destructor
+    Declare Function TryDequeue(Byref resultado As String) As Boolean
+    Declare Sub Enqueue(Byval valor As String)
+End Type
+
+Constructor QueueSeguro
+    head = NULL
+    tail = NULL
+    mutex = Mutexcreate()
+End Constructor
+
+Destructor QueueSeguro
+    Mutexdestroy(mutex)
+End Destructor
+
+Function QueueSeguro.TryDequeue(Byref resultado As String) As Boolean
+    Mutexlock(mutex)
+    If head = NULL Then
+        Mutexunlock(mutex)
+        Return False
+    End If
+
+    resultado = head->valor
+    Dim temp As Nodo Ptr = head
+    head = head->sgte
+    If head = NULL Then tail = NULL
+    Delete temp
+    Mutexunlock(mutex)
+
+    Return True
+End Function
+
+Sub QueueSeguro.Enqueue(Byval valor As String)
+    Dim newNode As Nodo Ptr = New Nodo
+    newNode->valor = valor
+    newNode->sgte = NULL
+    Mutexlock(mutex)
+    If tail = NULL Then
+        head = newNode
+        tail = newNode
+    Else
+        tail->sgte = newNode
+        tail = newNode
+    End If
+    Mutexunlock(mutex)
+End Sub
+
+Dim Shared m_EscribirQueue As QueueSeguro
+Dim Shared m_LeerQueue As QueueSeguro
+
+Sub Leer(Byval userdata As Any Ptr)
+    Dim linea As String
+    Dim f As Integer = Freefile
+    Open "input.txt" For Input As #f
+    While Not Eof(f)
+        Line Input #f, linea
+        m_EscribirQueue.Enqueue(linea)
+    Wend
+    Close #f
+    m_EscribirQueue.Enqueue("")
+
+    Dim resultado As String
+    Do Until m_LeerQueue.TryDequeue(resultado)
+        Sleep(10)
+    Loop
+
+    Print resultado
+End Sub
+
+Sub Escribir(Byval userdata As Any Ptr)
+    Dim cnt As Integer = 0
+    Dim linea As String
+    Do
+        Do Until m_EscribirQueue.TryDequeue(linea)
+            Sleep(10)
+        Loop
+        If linea <> "" Then
+            Print linea
+            cnt += 1
+        Else
+            m_LeerQueue.Enqueue(Str(cnt))
+            Exit Do
+        End If
+    Loop
+End Sub
+
+Dim t1 As Any Ptr = Threadcreate(@Leer, 0)
+Dim t2 As Any Ptr = Threadcreate(@Escribir, 0)
+Threadwait(t1)
+Threadwait(t2)
+
+Sleep

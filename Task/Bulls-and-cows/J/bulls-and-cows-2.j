@@ -1,16 +1,11 @@
-   bullcow''
-Guess my number: 1234
-0 bulls and 1 cow.
-Guess my number: 5678
-3 bulls and 0 cows.
-Guess my number: 2349
-0 bulls and 0 cows.
-Guess my number: 1567
-0 bulls and 3 cows.
-Guess my number: 6178
-3 bulls and 0 cows.
-Guess my number: 6157
-1 bull and 2 cows.
-Guess my number: 5178
-4 bulls and 0 cows.
-you win
+U       =. {{]F.(u[_2:Z:v)}}   NB. apply u until v is true
+input   =. 1!:1@1@echo@'Guess: '
+output  =. [ ('Bulls: ',:'Cows: ')echo@,.":@,.
+isdigits=. *./@e.&'0123456789'
+valid   =. isdigits*.4=#
+guess   =. [:".&>input U(valid@])
+bulls   =. +/@:=
+cows    =. [:+/e.*.~:
+game    =. ([:output [(bulls,cows) guess)U(4 0-:])
+random  =. 1+4?9:
+moo     =. 'You win!'[ random game ]

@@ -1,0 +1,444 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program vigneredecrypt64.s   */
+
+/* REMARK 1 :  to avoid float use, The calculations of the evaluations
+   are made in integer numbers */
+/* REMARK 2 : occurences characters counter  are limited to a byte size */
+/* REMARK 3 : program inspired to C rosetta program */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ LENALPHA,  26
+.equ BUFFERSIZE, 2000
+.equ KEYSIZE,  50
+.equ OCCURSMAXI, 255
+/*******************************************/
+/*   Macros                              */
+/*******************************************/
+//.include "../../ficmacros64.inc"            // for developer debugging
+
+
+/*******************************************/
+/* Initialized data */
+/*******************************************/
+.data
+szMessDebutPgm:   .asciz "Program 64 bits start. \n"
+szCarriageReturn: .asciz "\n"
+szMessFinOK:      .asciz "Program normal end. \n"
+szMessError:      .asciz "\nError  Buffer too small!!!\n"
+szMessPossible:   .asciz "Possible key :"
+szMessDecrip:     .asciz "\nDecrypted :\n"
+szMessCharinv:    .asciz "Error. Character invalid!."
+szMessErrOcc:     .asciz "Maxi occurennces characters!."
+szMessBest:       .asciz " <-------Best key"
+szString1:        .ascii "MOMUD EKAPV TQEFM OEVHP AJMII CDCTI FGYAG JSPXY ALUYM NSMYH"
+                  .ascii "VUXJE LEPXJ FXGCM JHKDZ RYICU HYPUS PGIGM OIYHF WHTCQ KMLRD"
+                  .ascii "ITLXZ LJFVQ GHOLW CUHLO MDSOE KTALU VYLNZ RFGBX PHVGA LWQIS"
+                  .ascii "FGRPH JOOFW GUBYI LAPLA LCAFA AMKLG CETDW VOELJ IKGJB XPHVG"
+                  .ascii "ALWQC SNWBU BYHCU HKOCE XJEYK BQKVY KIIEH GRLGH XEOLW AWFOJ"
+                  .ascii "ILOVV RHPKD WIHKN ATUHN VRYAQ DIVHX FHRZV QWMWV LGSHN NLVZS"
+                  .ascii "JLAKI FHXUF XJLXM TBLQV RXXHR FZXGV LRAJI EXPRV OSMNP KEPDT"
+                  .ascii "LPRWM JAZPK LQUZA ALGZX GVLKL GJTUI ITDSU REZXJ ERXZS HMPST"
+                  .ascii "MTEOE PAPJH SMFNB YVQUZ AALGA YDNMP AQOWT UHDBV TSMUE UIMVH"
+                  .ascii "QGVRW AEFSP EMPVE PKXZY WLKJA GWALT VYYOB YIXOK IHPDS EVLEV"
+                  .ascii "RVSGB JOGYW FHKBL GLXYA MVKIS KIEHY IMAPX UOISK PVAGN MZHPW"
+                  .ascii "TTZPV XFCCD TUHJH WLAPF YULTB UXJLN SIJVV YOVDJ SOLXG TGRVO"
+                  .ascii "SFRII CTMKO JFCQF KTINQ BWVHG TENLH HOGCS PSFPV GJOKM SIFPR"
+                  .ascii "ZPAAS ATPTZ FTPPD PORRF TAXZP KALQA WMIUD BWNCT LEFKO ZQDLX"
+                  .ascii "BUXJL ASIMR PNMBF ZCYLV WAPVF QRHZV ZGZEF KBYIO OFXYE VOWGB"
+                  .ascii "BXVCB XBAWG LQKCM ICRRX MACUO IKHQU AJEGL OIJHH XPVZW JEWBA"
+                  .asciz "FWAML ZZRXJ EKAHV FASMU LVVUT TGK"
+.equ LGSTRING1,  . - szString1
+.align 4
+tabFreq:          .quad 8167, 1492, 2782, 4253, 12702, 2228, 2015
+                  .quad 6094, 6966, 153, 772, 4025, 2406, 6749
+                  .quad 7507, 1929, 95, 5987, 6327, 9056, 2758
+                  .quad  978, 2360, 150, 1974, 74
+.equ NBFREQ,        . - tabFreq
+
+/*******************************************/
+/* UnInitialized data */
+/*******************************************/
+.bss
+sBuffex1:                .skip LGSTRING1
+sBuffex2:                .skip BUFFERSIZE
+sKey:                    .skip KEYSIZE
+sBestKey:                .skip KEYSIZE
+/*******************************************/
+/*  code section */
+/*******************************************/
+.text
+.global main
+main:
+    ldr x0,qAdrszMessDebutPgm
+    bl affichageMess
+
+    ldr x0,qAdrszString1          // string address
+    ldr x1,qAdrsBuffex1           // buffer
+    bl convertText                // string char conversion
+    mov x5,x0                     // result length
+    ldr x0,qAdrsBuffex1           // buffer
+
+    mov x4,#1                     //.quaderval
+    mov x6,#-1                    // evaluation high value
+1:
+    ldr x0,qAdrsBuffex1           // converted buffer
+    mov x1,x5                     // length
+    mov x2,x4                     //.quaderval
+    ldr x3,qAdrsBuffex2           // key
+    bl searchKey
+    mov x7,x0                     // save return result
+    ldr x0,qAdrszMessPossible
+    bl affichageMess
+    ldr x0,qAdrsBuffex2           // display decrypted buffer
+    bl affichageMess
+    cmp x7,x6                     // best evaluation ?
+    bhi 3f
+    mov x6,x7                     // yes -> save new value
+    ldr x0,qAdrszMessBest         // message display
+    bl affichageMess
+    mov x8,#0
+    ldr x9,qAdrsBuffex2
+    ldr x10,qAdrsBestKey
+2:                                 // copy best key loop
+    ldrb w12,[x9,x8]
+    strb w12,[x10,x8]
+    cmp x12,#0
+    beq 3f
+    add x8,x8,#1
+    b 2b
+
+3:
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    add x4,x4,#1
+    cmp x4,#30                    //.quaderval maxi ?
+    blt 1b                        // and loop
+                                  // decrypt with best key
+    ldr x0,qAdrszString1
+    ldr x1,qAdrsBestKey
+    ldr x2,qAdrsBuffex2
+    bl decrypt
+    ldr x0,qAdrszMessDecrip
+    bl affichageMess
+    ldr x0,qAdrsBuffex2           // display decrypted buffer
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+    ldr x0,qAdrszMessFinOK
+    bl affichageMess
+    b 100f
+99:
+    ldr x0,qAdrszMessError        // error
+    bl affichageMess
+    mov x0, #1
+100:                              // standard end of the program
+    mov x0, #0                    // return code
+    mov x8,EXIT
+    svc 0                         // perform system call
+qAdrszMessDecrip:         .quad szMessDecrip
+qAdrszMessPossible:       .quad szMessPossible
+qAdrszMessBest:           .quad szMessBest
+qAdrszString1:            .quad szString1
+qAdrsBuffex1:             .quad sBuffex1
+qAdrsBuffex2:             .quad sBuffex2
+qAdrszMessDebutPgm:       .quad szMessDebutPgm
+qAdrszMessFinOK:          .quad szMessFinOK
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrszMessError:          .quad szMessError
+qAdrsBestKey:             .quad sBestKey
+/******************************************************************/
+/*     convert text in position and supp char non alpha                     */
+/******************************************************************/
+/* x0 contains the address of the string1 */
+/* x1 contains key address of buffer
+/* x0 return buffer lenght  */
+convertText:
+    stp x3,lr,[sp,-16]!          // save  registers
+    stp x4,x5,[sp,-16]!          // save  registers
+    stp x6,x7,[sp,-16]!          // save  registers
+    mov x3,#0                 // counter byte string 1
+    mov x5,#0                 // counter byte buffer
+1:
+    ldrb  w2,[x0,x3]          // load char
+    cmp x2,#0                 // final zero ?
+    beq 10f
+    cmp x2,#65                // < A ?
+    cinc x3,x3,lt
+    blt 1b
+    cmp x2,#90                // > Z
+    cinc x3,x3,gt             // no minuscul
+    bgt 1b
+    sub x2,x2,#'A'            // compute rank
+    cmp x2,#26
+    ble 2f
+    ldr x0,qAdrszMessCharinv
+    bl affichageMess
+    mov x0,#-1
+    b 100f
+ 2:
+    strb w2,[x1,x5]          //
+    add x5,x5,#1
+    add x3,x3,#1
+    b 1b
+10:
+    strb w2,[x1,x5]          // final zero
+    mov x0,x5
+
+100:
+    ldp x6,x7,[sp],16        // restaur  registers
+    ldp x4,x5,[sp],16        // restaur  registers
+    ldp x3,lr,[sp],16            // restaur  registers
+    ret
+ qAdrszMessCharinv:      .quad szMessCharinv
+/******************************************************************/
+/*     decrypt strings                                           */
+/******************************************************************/
+/* x0 contains the address of the converted string1 */
+/* x1 contains converted string1 length  */
+/* x2 contains.quaderval             */
+/* x3 contains address result buffer */
+searchKey:
+    stp x2,lr,[sp,-16]!          // save  registers
+    stp x3,x4,[sp,-16]!          // save  registers
+    stp x5,x6,[sp,-16]!          // save  registers
+    stp x7,x8,[sp,-16]!          // save  registers
+    stp x9,x10,[sp,-16]!         // save  registers
+    stp x11,x12,[sp,-16]!        // save  registers
+    sub sp,sp,#80            // area reserve on stack ( 26 * 2)
+    mov x7,sp                // save stack address occurences counter
+    add x9,x7,#32            // best occurences counter
+    mov x4,#0
+    mov x5,#0
+1:                           // init area best occurences counter
+    strb w5,[x9,x4]
+    add x4,x4,#1
+    cmp x4,#LENALPHA
+    ble 1b
+
+    mov x6,#0                // j
+2:
+    mov x4,#0
+    mov x5,#0
+3:                           // init area  occurences counter
+    strb w5,[x7,x4]
+    add x4,x4,#1
+    cmp x4,#LENALPHA
+    ble 3b
+
+    mov x4,x6                // indice
+4:
+   ldrb w5,[x0,x4]           // load byte
+   ldrb w8,[x7,x5]           // load one occurence counter
+   add x8,x8,#1              // compute occurence char in.quadervall
+   cmp x8,#255               // byte maxi ?
+   ble 41f
+   ldr x0,qAdrszMessErrOcc
+   bl affichageMess
+   mov x0,#-1
+   b 100f
+41:
+   strb w8,[x7,x5]           // store new occurence
+   add x4,x4,x2              // add.quaderval
+   cmp x4,x1                 // compare length string
+   blt 4b
+
+   mov x8,x0                 // save register
+   mov x9,x1                 // save register
+   mov x0,x7                 // occurences area address on stack
+   ldr x1,qAdrtabFreq        // frequence area
+   bl recherche
+   mov x5,x0                 // best rotation for this.quaderval
+   mov x0,x8
+   mov x1,x9
+   add x8,x5,#'A'            // key letter
+   strb w8,[x3,x6]           // store in key result
+   add x9,x7,#32             //
+   mov x4,#0
+5:
+   add x10,x4,x5             // add rotation to indice
+   sub x11,x10,#LENALPHA
+   cmp x10,#LENALPHA
+   csel x10,x11,x10,ge
+   ldrb w10,[x7,x10]         // load result
+   ldrb w11,[x9,x4]
+   add x11,x11,x10           // add to general counter
+   strb w11,[x9,x4]          // store
+   add x4,x4,#1
+   cmp x4,#LENALPHA
+   blt 5b                    // and loop
+
+
+   add x6,x6,#1              // increment indice
+   cmp x6,x2                 //.quaderval ?
+   blt 2b                    // and loop
+   mov x11,#0                // sum
+   mov x4,#0                 // indice
+6:                           // loop compute sum
+   ldrb w5,[x9,x4]
+   add x11,x11,x5
+   add x4,x4,#1
+   cmp x4,#LENALPHA
+   blt 6b
+
+   mov x4,#0
+   ldr x8,qAdrtabFreq
+   mov x0,#0                 // return evaluation value
+7:
+   ldrb w5,[x9,x4]           // load occurence
+   ldr x6,iMulti             // factor to avoid float use
+   mul x5,x6,x5
+   udiv x5,x5,x11            // divide by sum
+   ldr x1,[x8,x4,lsl #3]     // load frequence
+   sub x5,x5,x1
+   mov x10,x5
+   mul x10,x5,x10            // square
+   udiv  x10,x10,x1          // divide by freq
+   add x0,x0,x10             // add to final result
+   add x4,x4,#1
+   cmp x4,#LENALPHA
+   blt 7b
+   mov x4,#0                 // key final zero
+   strb w4,[x3,x2]
+
+   add sp,sp,#80             // free areas on stack
+100:
+    ldp x11,x12,[sp],16      // restaur  registers
+    ldp x9,x10,[sp],16       // restaur  registers
+    ldp x7,x8,[sp],16        // restaur  registers
+    ldp x5,x6,[sp],16        // restaur  registers
+    ldp x3,x4,[sp],16        // restaur  registers
+    ldp x2,lr,[sp],16        // restaur  registers
+    ret
+ qAdrtabFreq:        .quad tabFreq
+ qAdrszMessErrOcc:   .quad szMessErrOcc
+/******************************************************************/
+/*      search best offset                                         */
+/******************************************************************/
+/* x0 contains address array counter occurences */
+/* x1 contains address array frequence  */
+/* x0 return result             */
+recherche:
+    stp x2,lr,[sp,-16]!          // save  registers
+    stp x3,x4,[sp,-16]!          // save  registers
+    stp x5,x6,[sp,-16]!          // save  registers
+    stp x7,x8,[sp,-16]!          // save  registers
+    stp x9,x10,[sp,-16]!         // save  registers
+    stp x11,x12,[sp,-16]!        // save  registers
+    mov x12,#-1          // high value rotation
+    mov x3,#0
+    mov x4,#0
+    mov x8,#0            // sum
+1:                       // loop compute sum
+    ldrb w2,[x0,x4]
+    add x8,x8,x2
+    add x4,x4,#1
+    cmp x4,#LENALPHA
+    blt 1b
+    mov x6,#0            // rotate
+2:
+    mov x5,#0
+    mov x4,#0            // indice
+3:
+    add x7,x4,x6
+    sub x9,x7,#LENALPHA
+    cmp x7,#LENALPHA
+    csel x7,x9,x7,ge
+   // subge x7,#LENALPHA
+
+    ldrb w9,[x0,x7]
+    ldr x10,iMulti        // factor to avoid float use
+    mul x9,x10,x9
+    udiv x9,x9,x8         // divide by sum
+    ldr x10,[x1,x4,lsl #3] // load frequency
+    sub x9,x9,x10
+    mov x11,x9
+    mul x9,x11,x9          // square
+
+    udiv x9,x9,x10         // frequency divide
+    add x5,x5,x9           // add to final result
+    add x4,x4,#1
+    cmp x4,#LENALPHA
+    blt 3b
+    cmp x5,x12             // best evalation ?
+    bhs 4f
+    mov x12,x5
+    mov x3,x6              // save best rotate
+4:
+    add x6,x6,#1
+    cmp x6,#LENALPHA
+    blt 2b
+    mov x0,x3              // return result
+
+
+100:
+    ldp x11,x12,[sp],16            // restaur  registers
+    ldp x9,x10,[sp],16            // restaur  registers
+    ldp x7,x8,[sp],16            // restaur  registers
+    ldp x5,x6,[sp],16            // restaur  registers
+    ldp x3,x4,[sp],16            // restaur  registers
+    ldp x2,lr,[sp],16            // restaur  registers
+    ret
+iMulti:        .quad 100000
+/******************************************************************/
+/*     decrypt strings                                           */
+/******************************************************************/
+/* x0 contains the address of the encrypted string1 */
+/* x1 contains the  key   */
+/* x2 contains the address of the decrypted buffer */
+decrypt:
+    stp x3,lr,[sp,-16]!       // save  registers
+    stp x4,x5,[sp,-16]!       // save  registers
+    stp x6,x7,[sp,-16]!       // save  registers
+    stp x8,x9,[sp,-16]!       // save  registers
+    mov x3,#0                 // counter byte string 1
+    mov x5,#0                 // counter byte buffer
+
+1:
+    mov x4,#0                 // counter byte key
+2:
+    ldrb w6,[x1,x4]           // load byte key
+    cmp w6,#0                 // end key
+    beq 1b
+    sub x6,x6,#'A'
+    add x4,x4,#1
+3:
+    ldrb w7,[x0,x3]           // load byte string 1
+    cmp x7,#0                 // zero final ?
+    bne 4f
+    strb w7,[x2,x5]
+    mov x0,x5
+    b 100f
+4:
+    cmp x7,#65                // < A ?
+    cinc x3,x3,lt
+    blt 3b
+    cmp x7,#90                // > Z
+    cinc x3,x3,gt             // no minuscul
+    bgt 3b
+    sub x7,x7,x6              // add key
+    add x8,x7,26
+    cmp x7,#65                // < A
+    csel x7,x8,x7,lt
+    strb w7,[x2,x5]
+    add x5,x5,#1
+    add x3,x3,#1              // other byte of string
+    b 2b                      // other byte of key
+
+
+100:
+    ldp x8,x9,[sp],16        // restaur  registers
+    ldp x6,x7,[sp],16        // restaur  registers
+    ldp x4,x5,[sp],16        // restaur  registers
+    ldp x3,lr,[sp],16            // restaur  registers
+    ret
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

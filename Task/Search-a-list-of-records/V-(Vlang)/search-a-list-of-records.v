@@ -5,14 +5,14 @@ fn main() {
 	mut result :=""
 	for city, population in cities {
 		count++
-		if city == "Dar Es Salaam" {
-			if !result.contains("Index") {result += "Index of '${city}': ${count - 1}\n"}
+		if city == "Dar Es Salaam" && !result.contains("Index") {
+			result += "Index of '${city}': ${count - 1}\n"
 		}
-		if population < 5 {
-			if !result.contains("million") {result += "First city with less than 5 million: ${city}\n"}
+		if population < 5 && !result.contains("million") {
+			result += "First city with less than 5 million: ${city}\n"
 		}
-		if city[0].ascii_str() == "A" {
-			if !result.contains("letter") {result += "First population that starts with letter 'A': ${population}\n"}
+		if city[0].ascii_str() == "A" && !result.contains("letter") {
+			result += "First population that starts with letter 'A': ${population}\n"
 		}
 	}
 	println(result.all_before_last("\n"))

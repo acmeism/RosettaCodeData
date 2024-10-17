@@ -1,17 +1,11 @@
-main:(
-  PROC remove = (STRING file name)INT:
-  BEGIN
-    FILE actual file;
-    INT errno = open(actual file, file name, stand back channel);
-    IF errno NE 0 THEN stop remove FI;
-    scratch(actual file); # detach the book and burn it #
-    errno
-  EXIT
-  stop remove:
-      errno
-  END;
-  remove("input.txt");
-  remove("/input.txt");
-  remove("docs");
-  remove("/docs")
-)
+BEGIN
+  # note the pathnames and commands are Windows specific - adjust for other systems #
+  STRING root = "\", del  = "del ", rmdir = "rmdir ";
+  PROC remove file = (STRING file name)INT: system( del  + file name );
+  PROC remove dir  = (STRING file name)INT: system(rmdir + file name );
+  PROC report error = ( STRING message )VOID: print( ( message, newline ) );
+  IF remove file("input.txt")        NE 0 THEN report error( "Unable to remove input.txt"  ) FI;
+  IF remove file(root + "input.txt") NE 0 THEN report error( "Unable to remove " + root + "input.txt" ) FI;
+  IF remove dir("docs")              NE 0 THEN report error( "Unable to remove docs" ) FI;
+  IF remove dir(root + "docs")       NE 0 THEN report error( "Unable to remove " + root + "docs" ) FI
+END

@@ -1,5 +1,4 @@
-proc decompose num . primes[] .
-   primes[] = [ ]
+func[] decompose num .
    t = 2
    while t * t <= num
       if num mod t = 0
@@ -10,6 +9,8 @@ proc decompose num . primes[] .
       .
    .
    primes[] &= num
+   return primes[]
 .
-decompose 9007199254740991 r[]
-print r[]
+for v in [ 27 1232125 9007199254740991 ]
+   print decompose v
+.

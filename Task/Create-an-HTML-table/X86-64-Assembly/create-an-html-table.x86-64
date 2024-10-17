@@ -1,0 +1,323 @@
+; creating html table
+; assembly X86 window
+; download and install visual studio 2022 free site microsoft
+; search and open  X64 native tools command prompt
+; compil and link program with this command :
+; ml64  <pgmmame>.asm  /link /ENTRY:main /SUBSYSTEM:console kernel32.lib user32.lib Shell32.lib
+; this program respects the 64-bit calling convention :
+; registers arguments : rcx rdx r8 r9 and stack
+; registers saved : rbx,rbp,rdi,rsi, r12-r15
+; ATTENTION les registres rax,rcx,rdx,r8-r11 peuvent être
+; perdus lors d'un appel de fonction
+;*********************************
+; constantes
+;*********************************
+STD_OUTPUT_HANDLE equ -11
+
+NBLIGNES   equ 5
+BUFFERSIZE equ 200
+
+;*********************************
+; MACROS
+;*********************************
+afficherLib MACRO messa
+local mess1,LGMESS1C
+.data
+ mess1  db messa,10,0
+ LGMESS1C equ $ - mess1
+.code
+   push rax
+   push rcx
+   push rdx
+   push r8
+   push r9
+   push r10
+   push r11
+   mov rcx, offset  mess1
+   mov rdx,LGMESS1C
+   call afficherConsole
+   pop r11
+   pop r10
+   pop r9
+   pop r8
+   pop rdx
+   pop rcx
+   pop rax
+
+ENDM
+
+;*********************************
+; user data
+;*********************************
+.data
+szarrayheader   db "<html><table> ",10,0
+LGSZARRAYHEADER equ  $ - szarrayheader -1
+szarrayend      db "</table></html>",10,0
+LGSZARRAYEND    equ  $ - szarrayend -1
+szLine1         db "<tr><th></th><th>X</th><th>Y</th><th>Z</th></tr>",10,0
+LGSZLINE1       equ $ - szLine1 - 1
+szDebLine       db "<TR><TD align=",34,"right",34,">",0
+LGSZDEBLINE     equ $ - szDebLine - 1
+szEndLine       db "</TD></TR>",10,0
+LGSZENDLINE     equ $ - szEndLine - 1
+szEndCol        db "</TD><TD align=",34,"right",34,">",0
+LGSZENDCOL      equ $ - szEndCol - 1
+
+sBuffer         db BUFFERSIZE dup (' ')
+
+szRetourLigne   db 10,0
+sZoneConv       db 24 dup (' ')
+sZoneConv1      db 24 dup (' ')
+sZoneConv2      db 24 dup (' ')
+sZoneConv3      db 24 dup (' ')
+
+align 8
+qgraine     dq 123456789
+qNbDep1     dq 0019660dh
+qNbDep2     dq 3c6ef35fh
+hConsole    dq 0
+
+;*********************************
+; user code fonction principale
+;*********************************
+.code
+
+extern WriteFile : proc, GetStdHandle : proc, ExitProcess : proc
+extern GetLastError : proc
+
+main PROC public
+    afficherLib "Program start."
+    mov rcx, offset szarrayheader
+    mov rdx,LGSZARRAYHEADER
+    call afficherConsole
+
+    mov rcx, offset szLine1
+    mov rdx,LGSZLINE1
+    call afficherConsole
+
+    mov rbx,1               ; indice loop
+lineLoop:                   ; line loop begin
+    mov rcx,rbx
+    mov rdx,offset sZoneConv
+    call conversion10
+    mov rax, offset szDebLine
+    push rax
+    mov rax,LGSZDEBLINE
+    push rax
+    mov rax,offset sZoneConv
+    push rax
+    push 1
+    mov rax,offset szEndCol
+    push rax
+    mov rax,LGSZENDCOL
+    push rax
+    mov rcx,10000
+    call randomNumber
+    mov rcx,rax
+    mov rdx,offset sZoneConv1
+    call conversion10
+    mov rcx,offset sZoneConv1
+    push rcx
+    push rax
+    mov rax,offset szEndCol
+    push rax
+    mov rax,LGSZENDCOL
+    push rax
+    mov rcx,10000
+    call randomNumber
+    mov rcx,rax
+    mov rdx,offset sZoneConv2
+    call conversion10
+    mov rcx,offset sZoneConv2
+    push rcx
+    push rax
+
+    mov rax,offset szEndCol
+    push rax
+    mov rax,LGSZENDCOL
+    push rax
+    mov rcx,10000
+    call randomNumber
+    mov rcx,rax
+    mov rdx,offset sZoneConv3
+    call conversion10
+    mov rcx,offset sZoneConv3
+    push rcx
+    push rax
+
+    mov rax, offset szEndLine
+    push rax
+    mov rax,LGSZENDLINE
+    push rax
+    mov rcx, offset sBuffer
+    mov rdx,BUFFERSIZE
+    mov r8,9
+    call grouperChaines
+    add rsp,8 * 2 * 9
+
+    mov rcx, offset sBuffer
+    mov rdx,rax
+    call afficherConsole
+
+    inc rbx
+    cmp rbx,NBLIGNES
+    jle lineLoop
+
+    mov rcx, offset szarrayend
+    mov rdx,LGSZARRAYEND
+    call afficherConsole
+
+
+    mov rcx, offset szRetourLigne
+    mov rdx,1
+    call afficherConsole
+
+
+finProgramme:
+    afficherLib "Programm end."
+    sub rsp,28h
+    mov rcx,0                ; return code
+    call ExitProcess
+main ENDP
+
+;**************************************
+;  console display
+;**************************************
+; rcx : string address
+; rdx  : length string
+afficherConsole:
+    push rbx
+    push r12
+    sub rsp,28h              ; 40 bytes on stack (shadow variables)
+    mov rbx,rcx              ; string address
+    mov r12,rdx              ; size string
+
+    cmp QWORD ptr hConsole,0 ; console handle ?
+    jne @B3
+    mov rcx,STD_OUTPUT_HANDLE
+    call    GetStdHandle     ; load console handle
+    mov hConsole, rax        ; save in data
+@B3:
+    mov rcx,hconsole         ; handle
+    mov rdx,rbx              ; string address
+    mov r8,r12               ; string length
+    mov r9,0                 ;
+
+    sub rsp,8                ; stack alignement (one push)
+    push    0
+    sub rsp,20h              ; stack for shadow variable
+    call    WriteFile        ; winapi function
+    add rsp,20h
+    add rsp,10h              ; 1 push and alignement
+    add rsp,28h              ; stack alignement
+    pop r12
+    pop rbx
+    ret
+;***************************************************
+;conversion to unsigned base 10
+;with removal of unnecessary zeros
+;and left shift
+;****************************************************
+; rcx  : value to convert
+; rdx  : conversion area address length > 22
+LONGUEUR equ 24
+conversion10:
+    push rbx
+    push rdi
+    mov rdi,rdx                    ; conversion area address
+    mov BYTE ptr [rdi+LONGUEUR],0  ; 0 final conversion area
+    mov rax,rcx                    ; value
+    mov rcx,LONGUEUR-1
+    mov rbx ,10
+CA1:                               ; loop begin
+    mov rdx,0                      ; division rax by 10
+    div rbx
+    add rdx,'0'                    ; remainder conversion ascii
+    mov byte ptr [rdi+rcx],dl
+    dec rcx
+    cmp rax,0                      ; end ?
+    jne  CA1
+    xor rax,rax
+    inc rcx
+CA5:                               ; copy loop
+    mov dl,[rdi+rcx]               ; load a result character
+    mov byte ptr [rdi+rax],dl      ; and store at conversion area begin
+    inc rcx
+    inc rax
+    cmp rcx,LONGUEUR               ; loop if not zero final
+    jle CA5
+    pop rdi
+    pop rbx
+    ret
+;**************************************
+;     generate random number
+;**************************************
+; rcx  number limit
+randomNumber:
+    mov rax,0
+    cmp rcx,0
+    je randfin
+    mov rax, qGraine  ; load seed
+    mov r8,qNbDep1
+    mov rdx,qNbDep2
+    mul r8
+    add rax,rdx
+    mov qGraine,rax   ; store new seed
+    inc rcx
+    mov rdx,0
+    div rcx
+    mov rax,rdx       ; result = remainder
+randfin:
+   ret
+;***************************************************
+;  string concatenation
+;**************************************************
+; rcx destination area address
+; rdx destination area length
+; r8  strings number
+; r9  0
+; on stack address and length of each string
+; in order of insertion
+grouperChaines:
+    enter 0,0
+    push rbx
+    push r12
+    push r13
+    cmp r8,0
+    je fingrp
+    mov r12,rdx
+    mov r9,0                  ; indice strings
+    mov r10,0                 ; number of characters inserted
+bouclezone:
+    mov r13,r8
+    shl r13,1
+    mov rbx,[rbp+8+(r13 * 8)]  ; string address
+    mov rax,[rbp+(r13 * 8)]    ; sring length
+    mov r11,0
+bouclecopie:                   ; loop string copy
+    mov dl,byte ptr[rbx+r11]
+    mov byte ptr[rcx+r10],dl
+    inc r11
+    cmp r11,rax
+    jg finbouclecopie
+    inc r10                     ;number of characters inserted
+    cmp r10,r12                 ; max?
+    jge erreur
+    jmp bouclecopie
+finbouclecopie:
+    dec r8                       ; other string
+    jnz bouclezone
+
+    mov rax,r10                  ; return size final string
+    jmp fingrp
+erreur:
+    afficherLib "reception area too small"
+    mov rax,0
+fingrp:
+    pop r13
+    pop r12
+    pop rbx
+    leave
+    ret
+
+end

@@ -1,4 +1,4 @@
-i = randint 10
+i = random 10
 if i mod 2 = 0
    print i & " is divisible by 2"
 elif i mod 3 = 0

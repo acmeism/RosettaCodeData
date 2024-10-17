@@ -1,0 +1,52 @@
+#include once "windows.bi"
+#include once "win/wininet.bi"
+
+' Function to check the host certificate for validity
+Function CheckCertificate(hRequest As HINTERNET) As Boolean
+    Dim As DWORD dwFlags, dwBuffLen = Sizeof(DWORD)
+    If InternetQueryOption(hRequest, INTERNET_OPTION_SECURITY_FLAGS, @dwFlags, @dwBuffLen) Then
+        If (dwFlags And SECURITY_FLAG_IGNORE_UNKNOWN_CA) = 0 Then Return True
+    End If
+    Return False
+End Function
+
+' Main program
+Dim As HINTERNET hInternet, hConnect, hRequest
+Dim As String url = "https://www.w3.org/"
+Dim As String buffer
+Dim As DWORD bytesRead
+
+hInternet = InternetOpen("FreeBASIC HTTP Request", INTERNET_OPEN_TYPE_DIRECT, null, null, 0)
+If hInternet Then
+    hConnect = InternetConnect(hInternet, "www.w3.org", INTERNET_DEFAULT_HTTPS_PORT, null, null, INTERNET_SERVICE_HTTP, 0, 0)
+    If hConnect Then
+        hRequest = HttpOpenRequest(hConnect, "GET", "/", null, null, null, INTERNET_FLAG_SECURE, 0)
+        If hRequest Then
+            If HttpSendRequest(hRequest, null, 0, null, 0) Then
+                If CheckCertificate(hRequest) Then
+                    Do
+                        buffer = Space(1024)
+                        If InternetReadFile(hRequest, Strptr(buffer), Len(buffer), @bytesRead) = 0 Then Exit Do
+                        If bytesRead = 0 Then Exit Do
+                        Print Left(buffer, bytesRead);
+                    Loop
+                Else
+                    Print "Invalid certificate."
+                End If
+            Else
+                Print "Failed to send request."
+            End If
+            InternetCloseHandle(hRequest)
+        Else
+            Print "Failed to open request."
+        End If
+        InternetCloseHandle(hConnect)
+    Else
+        Print "Failed to connect."
+    End If
+    InternetCloseHandle(hInternet)
+Else
+    Print "Failed to open internet."
+End If
+
+Sleep

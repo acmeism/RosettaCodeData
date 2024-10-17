@@ -19,4 +19,4 @@ def feigenbaum_delta(imax; jmax):
          | .d1 = .d | .a2 = .a1 | .a1 = .a;
 	    pp($i; .d) ) ) ;
 
-Feigenbaum_delta(13; 10)
+feigenbaum_delta(13; 10)

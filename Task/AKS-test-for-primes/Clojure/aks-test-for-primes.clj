@@ -3,7 +3,7 @@
   [n k]
   (/ (apply *' (range n (- n k) -1))
      (apply *' (range k 0 -1))
-     (if (and (even? k) (< k n)) -1 1)))
+     (if (even? k) 1 -1)))
 
 (defn cs
   "coefficient series for (x - 1)^n, k=[0..n]"

@@ -3,9 +3,9 @@ func hypo a b .
 .
 nsites = 25
 for i to nsites
-   nx[] &= randint 1001 - 1
-   ny[] &= randint 1001 - 1
-   nc[] &= randint 1000 - 1
+   nx[] &= random 1001 - 1
+   ny[] &= random 1001 - 1
+   nc[] &= random 1000 - 1
 .
 for y = 0 to 1000
    for x = 0 to 1000

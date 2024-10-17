@@ -70,4 +70,11 @@ UNCERTAIN y2 = UNCERTAIN( 100, 2.3 );
 
 UNCERTAIN d  = ( ( ( x1 - x2 ) ^ 2 ) + ( y1 - y2 ) ^ 2 ) ^ 0.5;
 
-print( ( "distance: ", fixed( v OF d, 0, 2 ), " +/- ", fixed( uncertainty OF d, 0, 2 ), newline ) )
+print( ( "distance: ", fixed( v OF d, 0, 2 ), " +/- ", fixed( uncertainty OF d, 0, 2 ), newline ) );
+
+# force the additional operators to be used, to suppress warnings from ALGOL 68 Genie #
+UNCERTAIN e  = ( ( ( x1 / x2 ) / 2 ) + ( y1 - y2 ) * 2 ) + ( x1 / 2 ) + ( 2 / y1 ) + ( 2.0 / y1 )
+             + ( ( ( x1 / x2 ) / 2.0 ) + ( y1 / y2 ) * 2.0 ) + ( x1 / 2.0 ) + ( 2 - x1 )
+             + ( 2.0 - d ) - 3 - 4.0
+             ;
+print( ( "test    : ", fixed( v OF e, 0, 2 ), " +/- ", fixed( uncertainty OF e, 0, 2 ), newline ) )

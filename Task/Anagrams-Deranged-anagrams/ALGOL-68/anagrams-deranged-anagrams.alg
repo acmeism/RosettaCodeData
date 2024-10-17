@@ -70,7 +70,6 @@ ELSE
                                      END
                        );
     REF AARRAY words := INIT LOC AARRAY;
-    STRING word;
     INT    longest derangement := 0;
     STRING longest word        := "<none>";
     STRING longest anagram     := "<none>";

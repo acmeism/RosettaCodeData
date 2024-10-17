@@ -10,7 +10,7 @@ begin
              , year
              , " is "
              , if isLeapYear( year ) then "" else "not "
-             , " a leap year"
+             , "a leap year"
              )
     end for_year
 end.

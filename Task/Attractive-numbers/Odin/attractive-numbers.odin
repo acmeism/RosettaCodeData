@@ -1,4 +1,7 @@
+package main
+
 import "core:fmt"
+
 main :: proc() {
 	const_max :: 120
 	fmt.println("\nAttractive numbers up to and including", const_max, "are: ")

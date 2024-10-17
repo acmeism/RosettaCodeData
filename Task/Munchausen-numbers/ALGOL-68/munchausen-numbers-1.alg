@@ -31,7 +31,7 @@ WHILE d1 < 6 DO
                 d2       := 0;
                 d2 part  := 0;
                 d1      +:= 1;
-                d1 part +:= 1000;
+                d1 part +:= 1000
             FI
         FI
     FI

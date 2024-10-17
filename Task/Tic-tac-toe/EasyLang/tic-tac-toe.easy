@@ -82,7 +82,7 @@ proc minmax player alpha beta . rval rmov .
       .
    else
       rval = alpha
-      start = randint 9
+      start = random 9
       mov = start
       repeat
          if f[mov] = 0

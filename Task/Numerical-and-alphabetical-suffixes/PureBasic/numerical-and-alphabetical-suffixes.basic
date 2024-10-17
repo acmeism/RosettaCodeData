@@ -1,0 +1,227 @@
+Structure minmult
+  min.i
+  mult.d
+EndStructure
+
+Structure suffix_entry
+  key.s
+  value.minmult
+EndStructure
+
+Structure metric_entry
+  key.s
+  value.d
+EndStructure
+
+Global Dim abbrevs.suffix_entry(5)
+Global Dim metric.metric_entry(11)
+Global Dim binary_metric.metric_entry(11)
+
+Procedure initialize_data()
+  ; Initialize abbrevs
+  abbrevs(0)\key = "PAIRs" : abbrevs(0)\value\min = 4 : abbrevs(0)\value\mult = 2
+  abbrevs(1)\key = "SCOres" : abbrevs(1)\value\min = 3 : abbrevs(1)\value\mult = 20
+  abbrevs(2)\key = "DOZens" : abbrevs(2)\value\min = 3 : abbrevs(2)\value\mult = 12
+  abbrevs(3)\key = "GRoss" : abbrevs(3)\value\min = 2 : abbrevs(3)\value\mult = 144
+  abbrevs(4)\key = "GREATGRoss" : abbrevs(4)\value\min = 7 : abbrevs(4)\value\mult = 1728
+  abbrevs(5)\key = "GOOGOLs" : abbrevs(5)\value\min = 6 : abbrevs(5)\value\mult = 1e100
+
+  ; Initialize metric
+  metric(0)\key = "K" : metric(0)\value = 1e3
+  metric(1)\key = "M" : metric(1)\value = 1e6
+  metric(2)\key = "G" : metric(2)\value = 1e9
+  metric(3)\key = "T" : metric(3)\value = 1e12
+  metric(4)\key = "P" : metric(4)\value = 1e15
+  metric(5)\key = "E" : metric(5)\value = 1e18
+  metric(6)\key = "Z" : metric(6)\value = 1e21
+  metric(7)\key = "Y" : metric(7)\value = 1e24
+  metric(8)\key = "X" : metric(8)\value = 1e27
+  metric(9)\key = "W" : metric(9)\value = 1e30
+  metric(10)\key = "V" : metric(10)\value = 1e33
+  metric(11)\key = "U" : metric(11)\value = 1e36
+
+  ; Initialize binary_metric
+  binary_metric(0)\key = "Ki" : binary_metric(0)\value = Pow(2, 10)
+  binary_metric(1)\key = "Mi" : binary_metric(1)\value = Pow(2, 20)
+  binary_metric(2)\key = "Gi" : binary_metric(2)\value = Pow(2, 30)
+  binary_metric(3)\key = "Ti" : binary_metric(3)\value = Pow(2, 40)
+  binary_metric(4)\key = "Pi" : binary_metric(4)\value = Pow(2, 50)
+  binary_metric(5)\key = "Ei" : binary_metric(5)\value = Pow(2, 60)
+  binary_metric(6)\key = "Zi" : binary_metric(6)\value = Pow(2, 70)
+  binary_metric(7)\key = "Yi" : binary_metric(7)\value = Pow(2, 80)
+  binary_metric(8)\key = "Xi" : binary_metric(8)\value = Pow(2, 90)
+  binary_metric(9)\key = "Wi" : binary_metric(9)\value = Pow(2, 100)
+  binary_metric(10)\key = "Vi" : binary_metric(10)\value = Pow(2, 110)
+  binary_metric(11)\key = "Ui" : binary_metric(11)\value = Pow(2, 120)
+EndProcedure
+
+Procedure.q fact(num.s, d.i)
+  Protected prod.q = 1
+  Protected n.i = Val(num), i.i
+
+  Select d
+    Case 1
+      For i = n To 1 Step -1
+        prod * i
+      Next
+    Case 2
+      For i = n To 1 Step -2
+        prod * i
+      Next
+    Case 3
+      For i = n To 1 Step -3
+        prod * i
+      Next
+    Default
+      i = n
+      While i > 0
+        prod * i
+        i - d
+      Wend
+  EndSelect
+
+  ProcedureReturn prod
+EndProcedure
+
+Procedure.s remove_commas(s.s)
+  Protected result.s = ""
+  Protected i.i
+  For i = 1 To Len(s)
+    If Mid(s, i, 1) <> "," : result + Mid(s, i, 1) : EndIf
+  Next
+  ProcedureReturn result
+EndProcedure
+
+Procedure.d parse(number.s)
+  Protected.i i, j, k
+  Protected.s num, suf, key
+  Protected.d result
+
+  ; find index of last digit
+  For i = Len(number) - 1 To 0 Step -1
+    If Asc(Mid(number, i + 1, 1)) >= Asc("0") And Asc(Mid(number, i + 1, 1)) <= Asc("9") : Break : EndIf
+  Next
+
+  num = Left(number, i + 1)
+  num = ReplaceString(num, ",", "")
+  suf = UCase(Mid(number, i + 2))
+
+  If suf = "" : ProcedureReturn ValD(num) : EndIf
+
+  If Left(suf, 1) = "!" : ProcedureReturn fact(num, Len(suf)) : EndIf
+
+  For i = 0 To ArraySize(abbrevs())
+    key = UCase(abbrevs(i)\key)
+    If Left(key, Len(suf)) = suf And Len(suf) >= abbrevs(i)\value\min
+      ProcedureReturn ValD(num) * abbrevs(i)\value\mult
+    EndIf
+  Next
+
+  result = ValD(num)
+  For i = 1 To Len(suf)
+    For j = 0 To ArraySize(metric())
+      If Mid(suf, i, 1) = metric(j)\key
+        If i < Len(suf) And Mid(suf, i + 1, 1) = "I"
+          For k = 0 To ArraySize(binary_metric())
+            If binary_metric(k)\key = metric(j)\key + "i"
+              result * binary_metric(k)\value
+              i + 1
+              Break
+            EndIf
+          Next
+        Else
+          result * metric(j)\value
+        EndIf
+        Break
+      EndIf
+    Next
+  Next
+
+  ProcedureReturn result
+EndProcedure
+
+Procedure.s commatize(s.s)
+  Protected.s result = s
+  Protected.i dotPos = FindString(s, ".")
+  Protected.i i, startPos
+
+  ; Limit to 6 decimal places
+  If dotPos : result = Left(s, dotPos + 7) : EndIf
+
+  dotPos = FindString(result, ".")
+  If dotPos = 0 : dotPos = Len(result) + 1 : EndIf
+
+  startPos = 1
+  If Left(result, 1) = "-" : startPos = 2 : EndIf
+
+  For i = dotPos - 3 To startPos Step -3
+    If i > startPos
+      result = InsertString(result, ",", i)
+    EndIf
+  Next
+
+  ProcedureReturn result
+EndProcedure
+
+Procedure process(Array numbers.s(1))
+  Protected i.i, res.d
+
+  Print("Numbers = ")
+  For i = 0 To ArraySize(numbers())
+    Print(numbers(i) + "  ")
+  Next
+
+  Print(#CRLF$ + "Results = ")
+  For i = 0 To ArraySize(numbers())
+    res = parse(numbers(i))
+    Print(commatize(StrD(res)) + "  ")
+  Next
+  PrintN(#CRLF$)
+EndProcedure
+
+If OpenConsole()
+  Dim numbers.s(4)
+
+  initialize_data()
+
+  numbers(0) = "2greatGRo"
+  numbers(1) = "24Gros"
+  numbers(2) = "288Doz"
+  numbers(3) = "1,728pairs"
+  numbers(4) = "172.8SCOre"
+  process(numbers())
+
+  Dim numbers.s(2)
+  numbers(0) = "1,567" : numbers(1) = "+1.567k" : numbers(2) = "0.1567e-2m"
+  process(numbers())
+
+  Dim numbers.s(2)
+  numbers(0) = "25.123kK" : numbers(1) = "25.123m" : numbers(2) = "2.5123e-00002G"
+  process(numbers())
+
+  Dim numbers.s(3)
+  numbers(0) = "25.123kiKI"
+  numbers(1) = "25.123Mi"
+  numbers(2) = "2.5123e-00002Gi"
+  numbers(3) = "+.25123E-7Ei"
+  process(numbers())
+
+  Dim numbers.s(1)
+  numbers(0) = "-.25123e-34Vikki" : numbers(1) = "2e-77gooGols"
+  process(numbers())
+
+  Dim numbers.s(8)
+  numbers(0) = "9!"
+  numbers(1) = "9!!"
+  numbers(2) = "9!!!"
+  numbers(3) = "9!!!!"
+  numbers(4) = "9!!!!!"
+  numbers(5) = "9!!!!!!"
+  numbers(6) = "9!!!!!!!"
+  numbers(7) = "9!!!!!!!!"
+  numbers(8) = "9!!!!!!!!!"
+  process(numbers())
+
+  PrintN(#CRLF$ + "Press ENTER to exit"): Input()
+  CloseConsole()
+EndIf

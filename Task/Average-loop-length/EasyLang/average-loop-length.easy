@@ -2,7 +2,7 @@ func average n reps .
    for r to reps
       f[] = [ ]
       for i to n
-         f[] &= randint n
+         f[] &= random n
       .
       seen[] = [ ]
       len seen[] n

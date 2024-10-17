@@ -1,0 +1,193 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program fibseries64.s   */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ NBSERIES,     10
+.equ NBNUMBER,     15
+
+/*******************************************/
+/* macros                             */
+/*******************************************/
+//.include "../../ficmacros64.inc"            // for developper debugging
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessDebutPgm:    .asciz "Program 64 bits start. \n"
+szCarriageReturn:  .asciz "\n"
+szMessFinOK:       .asciz "Program normal end. \n"
+szMessErreur:      .asciz "Error  !!!\n"
+szMessVinci:       .asciz "Leonardo numbers :\n"
+szMessFibo:        .asciz "\nFibonaci series :\n"
+szSpace:           .asciz " "
+szSpaceMul:        .asciz "     "
+
+.align 4
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:               .skip 24
+.align 4
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr x0,qAdrszMessDebutPgm
+    bl affichageMess            // start message
+
+
+    ldr x0,qAdrszMessFibo
+    bl affichageMess
+
+    mov x4,#2                   // series counter
+1:                              // loop series
+    mov x0,x4
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrsZoneConv        // display series
+    bl affichageMess
+    ldr x0,qAdrszSpaceMul
+    bl affichageMess
+
+    mov x0,#0                   // rank
+    mov x1,x4                   // serie number
+    mov x2,#NBNUMBER            // maxi counter
+    bl genererFibo
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    add x4,x4,#1                // increment series counter
+    cmp x4,#NBSERIES            // maxi ?
+    blt 1b
+
+    ldr x0,qAdrszMessFinOK
+    bl affichageMess
+    b 100f
+99:
+    ldr x0,qAdrszMessErreur     // error
+    bl affichageMess
+    mov x0, #1                  // return code error
+    b 100f
+100:
+    mov x8,EXIT
+    svc #0                      // system call
+qAdrszMessDebutPgm:          .quad szMessDebutPgm
+qAdrszMessFinOK:             .quad szMessFinOK
+qAdrszMessErreur:            .quad szMessErreur
+qAdrsZoneConv:               .quad sZoneConv
+qAdrszMessVinci:             .quad szMessVinci
+qAdrszMessFibo:              .quad szMessFibo
+qAdrszSpaceMul:              .quad szSpaceMul
+/***************************************************/
+/*   Generation Fibonacci numbers                  */
+/***************************************************/
+/* x0 contains n     */
+/* x1 contains series number  */
+/* x2 contains limit number */
+genererFibo:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    stp x8,x9,[sp,-16]!
+    stp x10,x11,[sp,-16]!
+    ands x3,x1,1
+    mov x3,x1
+    cinc x3,x3,ne
+
+    lsl x10,x3,#3
+    sub sp,sp,x10                  // reserve area on stack
+    mov x7,sp
+    mov x4,#0
+    mov x5,#0
+1:                              // init area loop
+    str x4,[x7,x5,lsl #3]
+    add x5,x5,#1
+    cmp x5,x1
+    blt 1b
+    mov x4,#1
+    str x4,[x7]                 // store value 1 in first item
+    mov x4,#0
+2:
+    mov x5,#0
+    mov x6,x0
+    cmp x6,#0                    // L(0) ?
+    bne 3f
+    bl displayNumber
+    b 7f
+
+3:
+    cmp x6,#1                   // L(1) ?
+    bne 4f
+    mov x0,#1
+    bl displayNumber
+    b 7f
+4:
+    sub x3,x1,#1
+5:
+    ldr x8,[x7,x3,lsl #3]      // load ancien result
+    add x5,x5,x8               // add result
+    subs x3,x3,#1              // decrement counter
+    bge 5b
+    mov x0,x5
+    bl displayNumber
+
+    mov x3,x1
+    sub x8,x3,#1
+6:                             // results shift loop
+    ldr x9,[x7,x8,lsl #3]      // load result n-1
+    str x9,[x7,x3,lsl #3]      // store in n result
+    sub x3,x3,#1               // and loop
+    subs x8,x8,#1
+    bge 6b
+    str x5,[x7]                // store new result in first item
+7:
+    add x0,x6,#1               // increment rank
+    add x4,x4,#1               // increment counter
+    cmp x4,x2                  // end compute ?
+    blt 2b
+100:
+    add sp,sp,x10               // free reserved area
+    ldp x10,x11,[sp],16
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+/***************************************************/
+/*   display number                  */
+/***************************************************/
+/* x0 contains number  */
+displayNumber:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x2,#0
+    add x1,x1,x0
+    strb w2,[x1]
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+    ldr x0,qAdrszSpace
+    bl affichageMess
+100:
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+qAdrszCarriageReturn:         .quad szCarriageReturn
+qAdrszSpace:                  .quad szSpace
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

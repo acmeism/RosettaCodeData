@@ -11,12 +11,12 @@ PROC is prime = ( ISPRIMEINT p )BOOL:
   FI;
 # end of code from the primality by trial division task #
 
-# returns an array of n primes >= start #
-PROC prime sequence = ( INT start, INT n )[]INT:
+# returns an array of n primes >= start value #
+PROC prime sequence = ( INT start value, INT n )[]INT:
      BEGIN
         [ n ]INT seq;
         INT      prime count := 0;
-        FOR p FROM start WHILE prime count < n DO
+        FOR p FROM start value WHILE prime count < n DO
             IF is prime( p ) THEN
                 prime count +:= 1;
                 seq[ prime count ] := p

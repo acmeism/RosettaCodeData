@@ -1,35 +1,24 @@
 #!/bin/bash
 
-roman_to_dec() {
-  local rnum=$1
-  local n=0
-  local prev=0
+roman-to-decimal() {
+  local rnum="$1"
+  local -i n prev
+  local -riA R=(
+    [M]=1000 [D]=500 [C]=100
+    [L]=50 [X]=10 [V]=5 [I]=1
+  )
 
   for ((i=${#rnum}-1;i>=0;i--))
-  do
-    case "${rnum:$i:1}" in
-    M)  a=1000 ;;
-    D)  a=500 ;;
-    C)  a=100 ;;
-    L)  a=50 ;;
-    X)  a=10 ;;
-    V)  a=5 ;;
-    I)  a=1 ;;
-    esac
-
-    if [[ $a -lt $prev ]]
-    then
-       let n-=a
-    else
-       let n+=a
-    fi
-
-    prev=$a
+  do ((
+    a=R[${rnum:i:1}],
+    n += a < prev ? -a : +a,
+    prev=a
+  ))
   done
 
   echo "$rnum = $n"
 }
 
-roman_to_dec MCMXC
-roman_to_dec MMVIII
-roman_to_dec MDCLXVI
+roman-to-decimal MCMXC
+roman-to-decimal MMVIII
+roman-to-decimal MDCLXVI

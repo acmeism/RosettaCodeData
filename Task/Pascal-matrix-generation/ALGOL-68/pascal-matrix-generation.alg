@@ -44,18 +44,16 @@ BEGIN
          END # symmetric pascal matrix # ;
 
     # print the matrix m with the specified field width #
-    PROC print matrix = ( [,]INT m, INT field width )VOID:
-         BEGIN
-             FOR i FROM 1 LWB m TO 1 UPB m DO
-                 FOR j FROM 2 LWB m TO 2 UPB m DO
-                     print( ( " ", whole( m[ i, j ], - field width ) ) )
-                 OD;
-                 print( ( newline ) )
-             OD
-         END # print matrix # ;
+    PROC show matrix = ( [,]INT m, INT field width )VOID:
+         FOR i FROM 1 LWB m TO 1 UPB m DO
+            FOR j FROM 2 LWB m TO 2 UPB m DO
+                print( ( " ", whole( m[ i, j ], - field width ) ) )
+            OD;
+            print( ( newline ) )
+         OD # SHOWMATRIX # ;
 
-    print( ( "upper:",     newline ) ); print matrix( upper pascal matrix(     5 ), 2 );
-    print( ( "lower:",     newline ) ); print matrix( lower pascal matrix(     5 ), 2 );
-    print( ( "symmetric:", newline ) ); print matrix( symmetric pascal matrix( 5 ), 2 )
+    print( ( "upper:",     newline ) ); show matrix( upper pascal matrix(     5 ), 2 );
+    print( ( "lower:",     newline ) ); show matrix( lower pascal matrix(     5 ), 2 );
+    print( ( "symmetric:", newline ) ); show matrix( symmetric pascal matrix( 5 ), 2 )
 
 END

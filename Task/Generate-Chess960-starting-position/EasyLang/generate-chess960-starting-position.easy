@@ -1,7 +1,7 @@
 len t$[] 8
 proc randins c$ l r . pos .
    repeat
-      pos = randint (r - l + 1) + l - 1
+      pos = random (r - l + 1) + l - 1
       until t$[pos] = ""
    .
    t$[pos] = c$

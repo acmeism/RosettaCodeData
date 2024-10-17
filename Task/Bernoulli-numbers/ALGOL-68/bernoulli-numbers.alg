@@ -33,14 +33,7 @@ BEGIN
        num OF result//den OF result
     );
 
-    OP - = (FRAC a, b)FRAC: a + -b,
-       * = (FRAC a, b)FRAC: (
-           LONG LONG INT num = num OF a * num OF b,
-           den = den OF a * den OF b;
-           LONG LONG INT common = gcd(num, den);
-           (num OVER common) // (den OVER common)
-         );
-
+    OP - = (FRAC a, b)FRAC: a + -b;
     OP - = (FRAC frac)FRAC: (-num OF frac, den OF frac);
 
     # ============================================================== #
@@ -71,7 +64,8 @@ BEGIN
         FRAC bn := bernoulli( n );
         IF num OF bn /= 0 THEN
             # have a non-0 Bn #
-            print( ( "B(", whole( n, -2 ), ") ", whole( num OF bn, -50 ), " / ", whole( den OF bn, 0 ), newline ) )
+            print( ( "B(", whole( n, -2 ), ") ", whole( num OF bn, -50 ) ) );
+            print( ( " / ", whole( den OF bn, 0 ), newline ) )
         FI
     OD
 END

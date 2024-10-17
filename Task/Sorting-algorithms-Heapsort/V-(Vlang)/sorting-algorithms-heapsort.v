@@ -1,11 +1,11 @@
 fn main() {
 	mut test_arr := [4, 65, 2, -31, 0, 99, 2, 83, 782, 1]	
-	println('Before : $test_arr')
+	println("Before : $test_arr")
 	heap_sort(mut test_arr)  // Heap Sort
-	println('After : $test_arr')
+	println("After : $test_arr")
 }
 
-[direct_array_access]
+@[direct_array_access]
 fn heap_sort(mut array []int) {
 	n := array.len
 	for i := n/2; i > -1; i-- {
@@ -17,7 +17,7 @@ fn heap_sort(mut array []int) {
 	}
 }
 
-[direct_array_access]
+@[direct_array_access]
 fn heapify(mut array []int, n int, i int) {
 	mut largest := i
 	left := 2 * i + 1

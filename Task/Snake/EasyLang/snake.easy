@@ -1,13 +1,13 @@
 subr fruit
-   rx = (randint 20 - 1) * 5 + 2.5
-   ry = (randint 20 - 1) * 5 + 2.5
+   rx = (random 20 - 1) * 5 + 2.5
+   ry = (random 20 - 1) * 5 + 2.5
 .
 subr start
    fruit
    game = 1
    sx[] = [ 52.5 0 0 0 0 ]
    sy[] = [ 52.5 0 0 0 0 ]
-   dir = randint 4
+   dir = random 4
    timer 0
 .
 background 242

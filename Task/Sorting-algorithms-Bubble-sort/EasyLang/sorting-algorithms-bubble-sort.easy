@@ -1,15 +1,12 @@
-proc bubbleSort . a[] .
-   repeat
-      changed = 0
-      for i = 1 to len a[] - 1
-         if a[i] > a[i + 1]
-            swap a[i] a[i + 1]
-            changed = 1
+proc bubble_sort . d[] .
+   for i = len d[] - 1 downto 1
+      for j = 1 to i
+         if d[j] > d[j + 1]
+            swap d[j] d[j + 1]
          .
       .
-      until changed = 0
    .
 .
-array[] = [ 5 1 19 25 12 1 14 7 ]
-bubbleSort array[]
-print array[]
+arr[] = [ 5 1 19 25 12 1 14 7 ]
+bubble_sort arr[]
+print arr[]

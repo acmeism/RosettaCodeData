@@ -1,0 +1,383 @@
+; test miller rabin
+; assembly X86 window
+; download and install visual studio 2022 free site mtcrosoft
+; search and open  X64 native tools command prompt
+; compil and link program with this command :
+; ml64  <pgmname>.asm  /link /ENTRY:main /SUBSYSTEM:console kernel32.lib user32.lib Shell32.lib
+; this program respects the 64-bit calling convention :
+; registers arguments : rcx rdx r8 r9 and stack
+; registers saved : rbx,rbp,rdi,rsi, r12-r15
+; ATTENTION les registres rax,rcx,rdx,r8-r11 peuvent être
+; perdus lors d'un appel de fonction
+;*********************************
+; constantes
+;*********************************
+STD_OUTPUT_HANDLE equ -11
+
+NBLIGNES   equ 5
+BUFFERSIZE equ 200
+NBLOOP     equ 5         ; loop number change this if necessary
+;*********************************
+; MACROS
+;*********************************
+afficherLib MACRO messa
+local mess1,LGMESS1C
+.data
+ mess1  db messa,10,0
+ LGMESS1C equ $ - mess1
+.code
+   push rax
+   push rcx
+   push rdx
+   push r8
+   push r9
+   push r10
+   push r11
+   mov rcx, offset  mess1
+   mov rdx,LGMESS1C
+   call afficherConsole
+   pop r11
+   pop r10
+   pop r9
+   pop r8
+   pop rdx
+   pop rcx
+   pop rax
+ENDM
+
+;*********************************
+; user data
+;*********************************
+.data
+sBuffer         db BUFFERSIZE dup (' ')
+szRetourLigne   db 10,0
+sZoneConv       db 24 dup (' ')
+
+
+align 8
+qgraine     dq 123456789
+qNbDep1     dq 0019660dh
+qNbDep2     dq 3c6ef35fh
+hConsole    dq 0
+
+;*********************************
+; user code fonction principale
+;*********************************
+.code
+extern WriteFile : proc, GetStdHandle : proc, ExitProcess : proc
+extern GetLastError : proc
+
+main PROC public
+    afficherLib "Program start."
+
+    ;mov rcx,5107
+    ;mov rcx,199
+    ;mov rcx, 1707               ; compose
+    ;mov rcx,-1                  ; composé
+    mov rcx,2305843009213693951  ; prime
+    mov rdx,NBLOOP
+    call isPrimeMiller
+    afficherLib "Resultat ="
+    mov rcx,rax
+    mov rdx, offset sZoneConv
+    call conversion10
+    mov rdx,rax                ; result length
+    mov rcx, offset sZoneConv
+    call afficherConsole
+    mov rcx, offset szRetourLigne
+    mov rdx,1
+    call afficherConsole
+
+
+finProgramme:
+    afficherLib "Programm end."
+    sub rsp,28h              ; stack alignement
+    mov rcx,0                ; return code
+    call ExitProcess
+main ENDP
+
+;***************************************************/
+;*   test miller rabin  algorithme wikipedia       */
+;*   unsigned                                      */
+;***************************************************/
+;* rcx contains number   */
+;* rdx contains parameter loop number   */
+;* rax return 1 if prime 0 if composite    */
+isPrimeMiller:
+    push rbx
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    cmp rcx,0
+    je composite
+    cmp rcx,3
+    jbe primeok
+prime1:
+    bt rcx,0
+    jc prime2
+    afficherLib "pair"
+    mov rax,0
+    jmp finprime
+prime2:
+    afficherLib "impair"
+    mov rdi,rdx     ; loop number maxi
+    mov r11,rcx     ; number
+    mov r9,rcx
+    dec r9          ; D
+    mov r10,0       ; S
+prime3:
+    shr r9,1        ; D/2
+    inc r10
+    bt r9,0
+    jnc prime3
+    mov rbx ,0        ; loop counter
+    mov r12,r11       ; number
+    sub r12,3
+    mov r13,3
+prime4:
+    mov rcx,r13
+    mov rdx,r9          ; exposant = d
+    mov r8,r11          ; modulo
+    call moduloPui64
+    cmp rax,1
+    je prime8
+    mov r15,r11
+    dec r15           ; N - 1
+    cmp r15,rax
+    je prime8
+    mov r15,r10
+    dec r15           ; s - 1
+prime5:
+    mov rdx,0
+    mul rax           ; compute square
+    div r11
+    cmp rdx,1         ; remainder = 1 ?
+    je composite
+    mov r14,r11
+    dec r14
+    cmp r14,rdx
+    je prime8
+    dec r15            ; S - 1
+    jge prime5
+    jmp composite
+
+
+
+prime8:
+    add r13,2
+    cmp r13,r11       ; pour les petits nombres
+    je primeok
+    inc rbx
+    cmp rbx,rdi       ; loop maxi ?
+    jl prime4
+primeok:
+    mov rax,1          ; prime
+    jmp finprime
+composite:
+    mov rax,0
+finprime:
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rdi
+    pop rbx
+    ret
+
+;********************************************************/
+;*   Calcul modulo de b puissance e modulo m  */
+;*    Exemple 4 puissance 13 modulo 497 = 445         */
+;********************************************************/
+;* rcx  nombre  */
+;* rdx exposant */
+;* r8 modulo   */
+moduloPui64:
+    push r12
+    push r11
+    push r10
+    push r9
+    mov rax,0
+    cmp rcx,0
+    je finmod
+    cmp rdx,0
+    je finmod
+    cmp r8,0
+    je finmod
+    mov r10,r8        ; modulo
+    mov r8,rdx        ;exposant
+    mov rax,rcx       ; number
+    mov r9,1          ; result
+    mov rdx,0
+    div r10
+    mov rax,rdx        ; remainder
+    mov r12,rdx
+boucleexp:
+    mov r11,r8
+    shr r11,1
+    jnc expnonnul
+    mov rdx,0
+    mul r9            ; ltiplie par resultat
+    div r10
+    mov r9,rdx        ; resultat = reste
+
+expnonnul:
+    mov rax,r12
+    mul r12
+    div r10
+    mov r12,rdx
+    mov rax,rdx
+    shr r8,1
+    cmp r8,0
+    jne boucleexp
+    mov rax,r9
+
+finmod:
+    pop r9
+    pop r10
+    pop r11
+    pop r12
+    ret
+;**************************************
+;  console display
+;**************************************
+; rcx : string address
+; rdx  : length string
+afficherConsole PROC public
+    push rbx
+    push r12
+    sub rsp,28h              ; 40 bytes on stack (shadow variables)
+    mov rbx,rcx              ; string address
+    mov r12,rdx              ; size string
+
+    cmp QWORD ptr hConsole,0 ; console handle ?
+    jne @B3
+    mov rcx,STD_OUTPUT_HANDLE
+    call    GetStdHandle     ; load console handle
+    mov hConsole, rax        ; save in data
+@B3:
+    mov rcx,hconsole         ; handle
+    mov rdx,rbx              ; string address
+    mov r8,r12               ; string length
+    mov r9,0                 ;
+
+    sub rsp,8                ; stack alignement (one push)
+    push    0
+    sub rsp,20h              ; stack for shadow variable
+    call    WriteFile        ; winapi function
+    add rsp,20h
+    add rsp,10h              ; 1 push and alignement
+    add rsp,28h              ; stack alignement
+    pop r12
+    pop rbx
+    ret
+afficherConsole ENDP
+;***************************************************
+;conversion to unsigned base 10
+;with removal of unnecessary zeros
+;and left shift
+;****************************************************
+; rcx  : value to convert
+; rdx  : conversion area address length > 22
+LONGUEUR equ 24
+conversion10:
+    push rbx
+    push rdi
+    mov rdi,rdx                    ; conversion area address
+    mov BYTE ptr [rdi+LONGUEUR],0  ; 0 final conversion area
+    mov rax,rcx                    ; value
+    mov rcx,LONGUEUR-1
+    mov rbx ,10
+CA1:                               ; loop begin
+    mov rdx,0                      ; division rax by 10
+    div rbx
+    add rdx,'0'                    ; remainder conversion ascii
+    mov byte ptr [rdi+rcx],dl
+    dec rcx
+    cmp rax,0                      ; end ?
+    jne  CA1
+    xor rax,rax
+    inc rcx
+CA5:                               ; copy loop
+    mov dl,[rdi+rcx]               ; load a result character
+    mov byte ptr [rdi+rax],dl      ; and store at conversion area begin
+    inc rcx
+    inc rax
+    cmp rcx,LONGUEUR               ; loop if not zero final
+    jle CA5
+    pop rdi
+    pop rbx
+    ret
+;**************************************
+;     generate random number
+;**************************************
+; rcx  number limit
+randomNumber:
+    mov rax,0
+    cmp rcx,0
+    je randfin
+    mov rax, qGraine  ; load seed
+    mov r8,qNbDep1
+    mov rdx,qNbDep2
+    mul r8
+    add rax,rdx
+    mov qGraine,rax   ; store new seed
+    inc rcx
+    mov rdx,0
+    div rcx
+    mov rax,rdx       ; result = remainder
+randfin:
+   ret
+;***************************************************
+;  string concatenation
+;**************************************************
+; rcx destination area address
+; rdx destination area length
+; r8  strings number
+; r9  0
+; on stack address and length of each string
+; in order of insertion
+grouperChaines:
+    enter 0,0
+    push rbx
+    push r12
+    push r13
+    cmp r8,0
+    je fingrp
+    mov r12,rdx
+    mov r9,0                  ; indice strings
+    mov r10,0                 ; number of characters inserted
+bouclezone:
+    mov r13,r8
+    shl r13,1
+    mov rbx,[rbp+8+(r13 * 8)]  ; string address
+    mov rax,[rbp+(r13 * 8)]    ; sring length
+    mov r11,0
+bouclecopie:                   ; loop string copy
+    mov dl,byte ptr[rbx+r11]
+    mov byte ptr[rcx+r10],dl
+    inc r11
+    cmp r11,rax
+    jg finbouclecopie
+    inc r10                     ;number of characters inserted
+    cmp r10,r12                 ; max?
+    jge erreur
+    jmp bouclecopie
+finbouclecopie:
+    dec r8                       ; other string
+    jnz bouclezone
+
+    mov rax,r10                  ; return size final string
+    jmp fingrp
+erreur:
+    afficherLib "reception area too small"
+    mov rax,0
+fingrp:
+    pop r13
+    pop r12
+    pop rbx
+    leave
+    ret
+
+end

@@ -24,7 +24,8 @@ BEGIN # find members of the yellowstone sequence: starting from 1, 2, 3 the   #
                     IF n > 2 THEN
                         result[ 3 ] := 3;
                         # guess the maximum element will be n, if it is larger, used will be enlarged #
-                        REF[]BOOL used := HEAP[ 1 : n ]BOOL;
+                        HEAP[ 1 : n ]BOOL initial used;
+                        REF[]BOOL used := initial used;
                         used[ 1 ] := used[ 2 ] := used[ 3 ] := TRUE;
                         FOR i FROM 4 TO UPB used DO used[ i ] := FALSE OD;
                         FOR i FROM 4 TO UPB result DO
@@ -34,7 +35,7 @@ BEGIN # find members of the yellowstone sequence: starting from 1, 2, 3 the   #
                             FOR j WHILE NOT found DO
                                 IF j > UPB used THEN
                                     # not enough elements in used - enlarge it #
-                                    REF[]BOOL new used := HEAP[ 1 : 2 * UPB used ]BOOL;
+                                    HEAP[ 1 : 2 * UPB used ]BOOL new used;
                                     new used[ 1 : UPB used ] := used;
                                     FOR k FROM UPB used + 1 TO UPB new used DO new used[ k ] := FALSE OD;
                                     used := new used
@@ -56,5 +57,6 @@ BEGIN # find members of the yellowstone sequence: starting from 1, 2, 3 the   #
     []INT ys = YELLOWSTONE 30;
     FOR i TO UPB ys DO
         print( ( " ", whole( ys[ i ], 0 ) ) )
-    OD
+    OD;
+    print( ( newline ) )
 END

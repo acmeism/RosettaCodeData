@@ -31,10 +31,10 @@ BEGIN
     STRING align = "align="""
                  + CASE column alignment OF t IN "left", "right" OUT "center" ESAC
                  + """";
-    PROC th element = ( REF FILE f, HTMLTABLE t, STRING content )VOID:
-        put( f, ( "<th " + align + ">" + content + "</th>", newline ) );
-    PROC td element = ( REF FILE f, HTMLTABLE t, HTMLTABLEDATA content )VOID:
-        put( f, ( "<td " + align + ">" + TOSTRING content + "</td>", newline ) );
+    PROC th element = ( REF FILE hf, STRING content )VOID:
+        put( hf, ( "<th " + align + ">" + content + "</th>", newline ) );
+    PROC td element = ( REF FILE hf, HTMLTABLEDATA content )VOID:
+        put( hf, ( "<td " + align + ">" + TOSTRING content + "</td>", newline ) );
 
     # table element #
     put( f, ( "<table"
@@ -47,32 +47,42 @@ BEGIN
        );
     # table headings                                                       #
     put( f, ( "<tr>", newline ) );
-    IF row numbering OF t =  numbered left THEN th element( f, t, "" ) FI;
+    IF row numbering OF t =  numbered left THEN th element( f, "" ) FI;
     FOR col FROM LWB headings OF t TO UPB headings OF t DO
-        th element( f, t, ( headings OF t )[ col ] )
+        th element( f, ( headings OF t )[ col ] )
     OD;
-    IF row numbering OF t = numbered right THEN th element( f, t, "" ) FI;
+    IF row numbering OF t = numbered right THEN th element( f, "" ) FI;
     put( f, ( "</tr>", newline ) );
     # table rows                                                           #
     FOR row FROM 1 LWB data OF t TO 1 UPB data OF t DO
         put( f, ( "<tr>", newline ) );
-        IF row numbering OF t =  numbered left THEN th element( f, t, whole( row, 0 ) ) FI;
+        IF row numbering OF t =  numbered left THEN th element( f, whole( row, 0 ) ) FI;
         FOR col FROM 2 LWB data OF t TO 2 UPB data OF t DO
-            td element( f, t, ( data OF t )[ row, col ] )
+            td element( f, ( data OF t )[ row, col ] )
         OD;
-        IF row numbering OF t = numbered right THEN th element( f, t, whole( row, 0 ) ) FI;
+        IF row numbering OF t = numbered right THEN th element( f, whole( row, 0 ) ) FI;
         put( f, ( "</tr>", newline ) )
     OD;
     # end of table                                                         #
     put( f, ( "</table>", newline ) )
 END # write html table # ;
 
-# create an HTMLTABLE and print it to standard output                      #
-HTMLTABLE t;
-cell spacing     OF t := col spacing OF t := 0;
-border           OF t := 1;
-column alignment OF t := align right;
-row numbering    OF t := numbered left;
-headings         OF t := ( "A", "B", "C" );
-data             OF t := ( ( 1001, 1002, 1003 ), ( 21, 22, 23 ), ( 201, 202, 203 ) );
-write html table( stand out, t )
+BEGIN # tests                                                              #
+    # create an HTMLTABLE and print it to standard output                  #
+    HTMLTABLE t;
+    cell spacing     OF t := col spacing OF t := 0;
+    border           OF t := 1;
+    column alignment OF t := align right;
+    row numbering    OF t := numbered left;
+    headings         OF t := ( "A", "B", "C" );
+    data             OF t := ( ( 1001, 1002, 1003 ), ( 21, 22, 23 ), ( 201, 202, 203 ) );
+    write html table( stand out, t );
+
+    # show the effect of the other alignment and numering options          #
+    column alignment OF t := align left;
+    row numbering    OF t := numbered right;
+    write html table( stand out, t );
+    column alignment OF t := align centre;
+    row numbering    OF t := not numbered;
+    write html table( stand out, t )
+END

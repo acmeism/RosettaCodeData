@@ -51,18 +51,18 @@ BEGIN # Cartesian Product                                                    #
     PROC print product = ( [,]INT p )VOID:
          BEGIN
             print( ( "[" ) );
-            STRING close := "]";
-            STRING open  := "(";
+            STRING close text := "]";
+            STRING open text  := "(";
             FOR i FROM 1 LWB p TO 1 UPB p DO
-                STRING separator := open;
+                STRING separator := open text;
                 FOR j FROM 2 LWB p TO 2 UPB p DO
                     print( ( separator, whole( p[ i, j ], 0 ) ) );
                     separator := ","
                 OD;
-                open  := "),(";
-                close := ")]"
+                open text  := "),(";
+                close text := ")]"
             OD;
-            print( ( close ) )
+            print( ( close text ) )
          END # print product # ;
     # print a list                                                           #
     PROC print list = ( []INT t )VOID:

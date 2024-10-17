@@ -1,0 +1,404 @@
+/* ARM assembly Raspberry PI  */
+/*  program vigneredecrypt.s   */
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* REMARK 2 :  to avoid float use, The calculations of the evaluations
+   are made in integer numbers */
+/* REMARK 3 : occurences characters counter  are limited to a byte size */
+/* REMARK 4 : program inspired to C rosetta program */
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.include "../constantes.inc"
+
+.equ LENALPHA,  26
+.equ BUFFERSIZE, 2000
+.equ KEYSIZE,  50
+.equ OCCURSMAXI, 255
+/*******************************************/
+/*   Macros                              */
+/*******************************************/
+//.include "../../ficmacros32.inc"            @ for developer debugging
+
+
+/*******************************************/
+/* Initialized data */
+/*******************************************/
+.data
+szMessDebutPgm:   .asciz "Program 32 bits start. \n"
+szCarriageReturn: .asciz "\n"
+szMessFinOK:      .asciz "Program normal end. \n"
+szMessError:      .asciz "\nError  Buffer too small!!!\n"
+szMessPossible:   .asciz "Possible key :"
+szMessDecrip:     .asciz "\nDecrypted :\n"
+szMessCharinv:    .asciz "Error. Character invalid!."
+szMessErrOcc:     .asciz "Maxi occurennces characters!."
+szMessBest:       .asciz " <-------Best key"
+szString1:        .ascii "MOMUD EKAPV TQEFM OEVHP AJMII CDCTI FGYAG JSPXY ALUYM NSMYH"
+                  .ascii "VUXJE LEPXJ FXGCM JHKDZ RYICU HYPUS PGIGM OIYHF WHTCQ KMLRD"
+                  .ascii "ITLXZ LJFVQ GHOLW CUHLO MDSOE KTALU VYLNZ RFGBX PHVGA LWQIS"
+                  .ascii "FGRPH JOOFW GUBYI LAPLA LCAFA AMKLG CETDW VOELJ IKGJB XPHVG"
+                  .ascii "ALWQC SNWBU BYHCU HKOCE XJEYK BQKVY KIIEH GRLGH XEOLW AWFOJ"
+                  .ascii "ILOVV RHPKD WIHKN ATUHN VRYAQ DIVHX FHRZV QWMWV LGSHN NLVZS"
+                  .ascii "JLAKI FHXUF XJLXM TBLQV RXXHR FZXGV LRAJI EXPRV OSMNP KEPDT"
+                  .ascii "LPRWM JAZPK LQUZA ALGZX GVLKL GJTUI ITDSU REZXJ ERXZS HMPST"
+                  .ascii "MTEOE PAPJH SMFNB YVQUZ AALGA YDNMP AQOWT UHDBV TSMUE UIMVH"
+                  .ascii "QGVRW AEFSP EMPVE PKXZY WLKJA GWALT VYYOB YIXOK IHPDS EVLEV"
+                  .ascii "RVSGB JOGYW FHKBL GLXYA MVKIS KIEHY IMAPX UOISK PVAGN MZHPW"
+                  .ascii "TTZPV XFCCD TUHJH WLAPF YULTB UXJLN SIJVV YOVDJ SOLXG TGRVO"
+                  .ascii "SFRII CTMKO JFCQF KTINQ BWVHG TENLH HOGCS PSFPV GJOKM SIFPR"
+                  .ascii "ZPAAS ATPTZ FTPPD PORRF TAXZP KALQA WMIUD BWNCT LEFKO ZQDLX"
+                  .ascii "BUXJL ASIMR PNMBF ZCYLV WAPVF QRHZV ZGZEF KBYIO OFXYE VOWGB"
+                  .ascii "BXVCB XBAWG LQKCM ICRRX MACUO IKHQU AJEGL OIJHH XPVZW JEWBA"
+                  .asciz "FWAML ZZRXJ EKAHV FASMU LVVUT TGK"
+.equ LGSTRING1,  . - szString1
+.align 4
+tabFreq:          .int 8167, 1492, 2782, 4253, 12702, 2228, 2015
+                  .int 6094, 6966, 153, 772, 4025, 2406, 6749
+                  .int 7507, 1929, 95, 5987, 6327, 9056, 2758
+                  .int  978, 2360, 150, 1974, 74
+.equ NBFREQ,        . - tabFreq
+
+/*******************************************/
+/* UnInitialized data */
+/*******************************************/
+.bss
+sBuffer1:                .skip LGSTRING1
+sBuffer2:                .skip BUFFERSIZE
+sKey:                    .skip KEYSIZE
+sBestKey:                .skip KEYSIZE
+/*******************************************/
+/*  code section */
+/*******************************************/
+.text
+.global main
+main:
+    ldr r0,iAdrszMessDebutPgm
+    bl affichageMess
+
+    ldr r0,iAdrszString1          @ string address
+    ldr r1,iAdrsBuffer1           @ buffer
+    bl convertText                @ string char conversion
+    mov r5,r0                     @ result length
+    ldr r0,iAdrsBuffer1           @ buffer
+
+    mov r4,#1                     @ interval
+    mov r6,#-1                    @ evaluation high value
+1:
+    ldr r0,iAdrsBuffer1           @ converted buffer
+    mov r1,r5                     @ length
+    mov r2,r4                     @ interval
+    ldr r3,iAdrsBuffer2           @ key
+    bl searchKey
+    mov r7,r0                     @ save return result
+
+    ldr r0,iAdrszMessPossible
+    bl affichageMess
+    ldr r0,iAdrsBuffer2           @ display decrypted buffer
+    bl affichageMess
+    cmp r7,r6                     @ best evaluation ?
+    bhi 3f
+    mov r6,r7                     @ yes -> save new value
+    ldr r0,iAdrszMessBest         @ message display
+    bl affichageMess
+    mov r8,#0
+    ldr r9,iAdrsBuffer2
+    ldr r10,iAdrsBestKey
+2:                                 @ copy best key loop
+    ldrb r12,[r9,r8]
+    strb r12,[r10,r8]
+    cmp r12,#0
+    beq 3f
+    add r8,r8,#1
+    b 2b
+
+3:
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    add r4,r4,#1
+    cmp r4,#30                    @ interval maxi ?
+    blt 1b                        @ and loop
+                                  @ decrypt with best key
+    ldr r0,iAdrszString1
+    ldr r1,iAdrsBestKey
+    ldr r2,iAdrsBuffer2
+    bl decrypt
+    ldr r0,iAdrszMessDecrip
+    bl affichageMess
+    ldr r0,iAdrsBuffer2           @ display decrypted buffer
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+
+    ldr r0,iAdrszMessFinOK
+    bl affichageMess
+    b 100f
+99:
+    ldr r0,iAdrszMessError        @ error
+    bl affichageMess
+    mov r0, #1
+100:                              @ standard end of the program
+    mov r0, #0                    @ return code
+    mov r7, #EXIT                 @ request to exit program
+    svc 0                         @ perform system call
+iAdrszMessDecrip:         .int szMessDecrip
+iAdrszMessPossible:       .int szMessPossible
+iAdrszMessBest:           .int szMessBest
+iAdrszString1:            .int szString1
+iAdrsBuffer1:             .int sBuffer1
+iAdrsBuffer2:             .int sBuffer2
+iAdrszMessDebutPgm:       .int szMessDebutPgm
+iAdrszMessFinOK:          .int szMessFinOK
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszMessError:          .int szMessError
+iAdrsBestKey:             .int sBestKey
+/******************************************************************/
+/*     convert text in position and supp char non alpha                     */
+/******************************************************************/
+/* r0 contains the address of the string1 */
+/* r1 contains key address of buffer
+/* r0 return buffer lenght  */
+convertText:
+    push {r3-r7,lr}           @ save  registers
+    mov r3,#0                 @ counter byte string 1
+    mov r5,#0                 @ counter byte buffer
+1:
+    ldrb  r2,[r0,r3]          @ load char
+    cmp r2,#0                 @ final zero ?
+    beq 10f
+    cmp r2,#65                @ < A ?
+    addlt r3,#1
+    blt 1b
+    cmp r2,#90                @ > Z
+    addgt r3,#1               @ no minuscul
+    bgt 1b
+    sub r2,r2,#'A'            @ compute rank
+    cmp r2,#26
+    ble 2f
+    ldr r0,iAdrszMessCharinv
+    bl affichageMess
+    mov r0,#-1
+    b 100f
+ 2:
+    strb r2,[r1,r5]          @
+    add r5,r5,#1
+    add r3,r3,#1
+    b 1b
+10:
+    strb r2,[r1,r5]          @ final zero
+    mov r0,r5
+
+100:
+    pop {r3-r7,lr}            @ restaur registers
+    bx lr                     @ return
+ iAdrszMessCharinv:      .int szMessCharinv
+/******************************************************************/
+/*     decrypt strings                                           */
+/******************************************************************/
+/* r0 contains the address of the converted string1 */
+/* r1 contains converted string1 length  */
+/* r2 contains interval             */
+/* r3 contains address result buffer */
+searchKey:
+    push {r2-r11,lr}         @ save  registers
+    sub sp,sp,#64            @ area reserve on stack ( 26 * 2)
+    mov r7,sp                @ save stack address occurences counter
+    add r9,r7,#28            @ best occurences counter
+    mov r4,#0
+    mov r5,#0
+1:                           @ init area best occurences counter
+    strb r5,[r9,r4]
+    add r4,r4,#1
+    cmp r4,#LENALPHA
+    ble 1b
+
+    mov r6,#0                @ j
+2:
+    mov r4,#0
+    mov r5,#0
+3:                           @ init area  occurences counter
+    strb r5,[r7,r4]
+    add r4,r4,#1
+    cmp r4,#LENALPHA
+    ble 3b
+
+    mov r4,r6                @ indice
+4:
+   ldrb r5,[r0,r4]           @ load byte
+   ldrb r8,[r7,r5]           @ load one occurence counter
+   add r8,r8,#1              @ compute occurence char in intervall
+   cmp r8,#255               @ byte maxi ?
+   ble 41f
+   ldr r0,iAdrszMessErrOcc
+   bl affichageMess
+   mov r0,#-1
+   b 100f
+41:
+   strb r8,[r7,r5]           @ store new occurence
+   add r4,r4,r2              @ add interval
+   cmp r4,r1                 @ compare length string
+   blt 4b
+
+   mov r8,r0                 @ save register
+   mov r9,r1                 @ save register
+   mov r0,r7                 @ occurences area address on stack
+   ldr r1,iAdrtabFreq        @ frequence area
+   bl recherche
+   mov r5,r0                 @ best rotation for this interval
+   mov r0,r8
+   mov r1,r9
+   add r8,r5,#'A'            @ key letter
+   strb r8,[r3,r6]           @ store in key result
+   add r9,r7,#28             @
+   mov r4,#0
+5:
+   add r10,r4,r5             @ add rotation to indice
+   cmp r10,#LENALPHA
+   subge r10,r10,#LENALPHA
+   ldrb r10,[r7,r10]         @ load result
+   ldrb r11,[r9,r4]
+   add r11,r11,r10           @ add to general counter
+   strb r11,[r9,r4]          @ store
+   add r4,r4,#1
+   cmp r4,#LENALPHA
+   blt 5b                    @ and loop
+
+
+   add r6,r6,#1              @ increment indice
+   cmp r6,r2                 @ interval ?
+   blt 2b                    @ and loop
+   mov r11,#0                @ sum
+   mov r4,#0                 @ indice
+6:                           @ loop compute sum
+   ldrb r5,[r9,r4]
+   add r11,r5
+   add r4,r4,#1
+   cmp r4,#LENALPHA
+   blt 6b
+
+   mov r4,#0
+   ldr r8,iAdrtabFreq
+   mov r0,#0                 @ return evaluation value
+7:
+   ldrb r5,[r9,r4]           @ load occurence
+   ldr r6,iMulti             @ factor to avoid float use
+   mul r5,r6,r5
+   udiv r5,r5,r11            @ divide by sum
+   ldr r1,[r8,r4,lsl #2]     @ load frequence
+   sub r5,r5,r1
+   mov r10,r5
+   mul r10,r5,r10            @ square
+   udiv  r10,r10,r1          @ divide by freq
+   add r0,r0,r10             @ add to final result
+   add r4,r4,#1
+   cmp r4,#LENALPHA
+   blt 7b
+   mov r4,#0                 @ key final zero
+   strb r4,[r3,r2]
+
+   add sp,sp,#64             @ free areas on stack
+100:
+    pop {r2-r11,pc}          @ restaur registers
+ iAdrtabFreq:        .int tabFreq
+ iAdrszMessErrOcc:   .int szMessErrOcc
+/******************************************************************/
+/*      search best offset                                         */
+/******************************************************************/
+/* r0 contains address array counter occurences */
+/* r1 contains address array frequence  */
+/* r0 return result             */
+recherche:
+    push {r2-r12,lr}     @ save  registers
+    mov r12,#-1          @ high value rotation
+    mov r3,#0
+    mov r4,#0
+    mov r8,#0            @ sum
+1:                       @ loop compute sum
+    ldrb r2,[r0,r4]
+    add r8,r8,r2
+    add r4,r4,#1
+    cmp r4,#LENALPHA
+    blt 1b
+    mov r6,#0            @ rotate
+2:
+    mov r5,#0
+    mov r4,#0            @ indice
+3:
+    add r7,r4,r6
+    cmp r7,#LENALPHA
+    subge r7,#LENALPHA
+    ldrb r9,[r0,r7]
+    ldr r10,iMulti        @ factor to avoid float use
+    mul r9,r10,r9
+    udiv r9,r9,r8         @ divide by sum
+    ldr r10,[r1,r4,lsl #2] @ load frequency
+    sub r9,r9,r10
+    mov r11,r9
+    mul r9,r11,r9          @ square
+
+    udiv r9,r9,r10         @ frequency divide
+    add r5,r5,r9           @ add to final result
+    add r4,r4,#1
+    cmp r4,#LENALPHA
+    blt 3b
+    cmp r5,r12             @ best evalation ?
+    movlo r12,r5
+    movlo r3,r6            @ save best rotate
+    add r6,r6,#1
+    cmp r6,#LENALPHA
+    blt 2b
+    mov r0,r3              @ return result
+
+
+100:
+    pop {r2-r12,pc}        @ restaur registers and return
+iMulti:        .int 100000
+/******************************************************************/
+/*     decrypt strings  (see vignere program)                     */
+/******************************************************************/
+/* r0 contains the address of the encrypted string1 */
+/* r1 contains the  key   */
+/* r2 contains the address of the decrypted buffer */
+decrypt:
+    push {r3-r7,lr}           @ save  registers
+    mov r3,#0                 @ counter byte string 1
+    mov r5,#0                 @ counter byte buffer
+
+1:
+    mov r4,#0                 @ counter byte key
+2:
+    ldrb r6,[r1,r4]           @ load byte key
+    cmp r6,#0                 @ end key
+    beq 1b
+    sub r6,r6,#'A'
+    add r4,r4,#1
+3:
+    ldrb r7,[r0,r3]           @ load byte string 1
+    cmp r7,#0                 @ zero final ?
+    streqb r7,[r2,r5]
+    moveq r0,r5
+    beq 100f
+    cmp r7,#65                @ < A ?
+    addlt r3,#1
+    blt 3b
+    cmp r7,#90                @ > Z
+    addgt r3,#1               @ no minuscul
+    bgt 3b
+    sub r7,r6                 @ add key
+    cmp r7,#65                @ < A
+    addlt r7,#26              @
+    strb r7,[r2,r5]
+    add r5,r5,#1
+    add r3,r3,#1              @ other byte of string
+    b 2b                      @ other byte of key
+
+
+100:
+    pop {r3-r7,lr}           @ restaur registers
+    bx lr                    @ return
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

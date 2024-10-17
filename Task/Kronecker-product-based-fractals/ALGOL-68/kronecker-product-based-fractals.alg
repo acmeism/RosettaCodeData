@@ -25,11 +25,11 @@ BEGIN # Kronecker product based fractals - translated from the Kotlin sample #
     PROC kronecker power = ( MATRIX a, INT n )MATRIX:
          BEGIN
              MATRIX pow := a;
-             FOR i TO n - 1 DO pow := kronecker product( pow, a ) OD;
+             TO n - 1 DO pow := kronecker product( pow, a ) OD;
              pow
          END # kronecker power # ;
 
-    PROC print matrix = ( STRING text, MATRIX m )VOID:
+    PROC show matrix = ( STRING text, MATRIX m )VOID:
          BEGIN
              print( ( text, " fractal :", newline ) );
              FOR i FROM 1 LWB m TO 1 UPB m DO
@@ -39,17 +39,19 @@ BEGIN # Kronecker product based fractals - translated from the Kotlin sample #
                  print( ( newline ) )
              OD;
              print( ( newline ) )
-         END # print matrix # ;
+         END # show matrix # ;
 
-    MATRIX a := MATRIX( ( 0, 1, 0 )
-                      , ( 1, 1, 1 )
-                      , ( 0, 1, 0 )
-                      );
-    print matrix( "Vicsek", kronecker power( a, 4 ) );
+    BEGIN
+        MATRIX a := MATRIX( ( 0, 1, 0 )
+                          , ( 1, 1, 1 )
+                          , ( 0, 1, 0 )
+                          );
+        show matrix( "Vicsek", kronecker power( a, 4 ) );
 
-    a := MATRIX( ( 1, 1, 1 )
-               , ( 1, 0, 1 )
-               , ( 1, 1, 1 )
-               );
-    print matrix( "Sierpinski carpet", kronecker power( a, 4 ) )
+        a := MATRIX( ( 1, 1, 1 )
+                   , ( 1, 0, 1 )
+                   , ( 1, 1, 1 )
+                   );
+        show matrix( "Sierpinski carpet", kronecker power( a, 4 ) )
+    END
 END

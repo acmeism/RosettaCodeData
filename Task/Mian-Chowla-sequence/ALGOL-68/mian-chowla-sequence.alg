@@ -8,7 +8,8 @@ BEGIN
     [ max mc ]INT mc;
     INT curr size       :=      0; # initial size of the array     #
     INT size increment   = 10 000; # size to increase the array by #
-    REF[]BOOL is sum    := HEAP[ 1 : 0 ]BOOL;
+    HEAP[ 1 : 0 ]BOOL empty sum;
+    REF[]BOOL is sum    := empty sum;
     INT mc count        := 1;
     FOR i WHILE mc count <= max mc DO
         # assume i will be part of the sequence                    #

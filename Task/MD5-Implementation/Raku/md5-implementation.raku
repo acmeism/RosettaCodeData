@@ -1,9 +1,8 @@
 proto md5($msg) returns Blob is export {*}
 multi md5(Str $msg) { md5 $msg.encode }
 multi md5(Blob $msg) {
-  my buf8 $buf .= new;
-  $buf.write-uint32: $buf.elems, $_, LittleEndian for
-    reduce -> Blob $blob, blob32 $X {
+  [~] map { buf8.new.write-uint32: 0, $_, LittleEndian },
+    |reduce -> Blob $blob, blob32 $X {
       blob32.new: $blob Z+
         reduce -> $b, $i {
           blob32.new:
@@ -34,7 +33,6 @@ multi md5(Blob $msg) {
         $b;
       }(buf32.new)
     .rotor(16);
-    $buf;
 }
 
 CHECK {

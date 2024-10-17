@@ -112,8 +112,7 @@ VirtualMachineInfo load_code(const std::string& file_path) {
 		switch ( op_code ) {
 			case Op_code::FETCH :
 			case Op_code::STORE :
-								  add_to_codes(std::stoi(sections[2]
-									  .substr(1, sections[2].length() - 2)), codes); break;
+			    add_to_codes(std::stoi(sections[2].substr(1, sections[2].length() - 2)), codes); break;
 			case Op_code::PUSH  : add_to_codes(std::stoi(sections[2]), codes); break;
 			case Op_code::JMP   :
 			case Op_code::JZ    : add_to_codes(std::stoi(sections[3]) - offset - 1, codes); break;
@@ -124,8 +123,8 @@ VirtualMachineInfo load_code(const std::string& file_path) {
 	return VirtualMachineInfo(data_size, vm_strings, codes);
 }
 
-void runVirtualMachine(
-		const uint32_t& data_size, const std::vector<std::string>& vm_strings, const std::vector<uint8_t>& codes) {
+void runVirtualMachine(const uint32_t& data_size, const std::vector<std::string>& vm_strings,
+					   const std::vector<uint8_t>& codes) {
 	const uint32_t word_size = 4;
 	std::vector<int32_t> stack(data_size, 0);
 	uint32_t index = 0;
@@ -142,36 +141,46 @@ void runVirtualMachine(
 			case Op_code::MUL   : stack[stack.size() - 2] *= stack.back(); stack.pop_back(); break;
 			case Op_code::DIV   : stack[stack.size() - 2] /= stack.back(); stack.pop_back(); break;
 			case Op_code::MOD   : stack[stack.size() - 2] %= stack.back(); stack.pop_back(); break;
-			case Op_code::LT    : { stack[stack.size() - 2] = ( stack[stack.size() - 2] < stack.back() ) ? 1 : 0;
-									stack.pop_back(); break;
-								  }
-			case Op_code::GT    : { stack[stack.size() - 2] = ( stack[stack.size() - 2] > stack.back() ) ? 1 : 0;
-								    stack.pop_back(); break;
-								  }
-			case Op_code::LE    : { stack[stack.size() - 2] = ( stack[stack.size() - 2] <= stack.back() ) ? 1 : 0;
-									stack.pop_back(); break;
-								  }
-			case Op_code::GE    : { stack[stack.size() - 2] = ( stack[stack.size() - 2] >= stack.back() ) ? 1 : 0;
-									stack.pop_back(); break;
-								  }
-			case Op_code::EQ    : { stack[stack.size() - 2] = ( stack[stack.size() - 2] == stack.back() ) ? 1 : 0;
-									stack.pop_back(); break;
-								  }
-			case Op_code::NE    : { stack[stack.size() - 2] = ( stack[stack.size() - 2] != stack.back() ) ? 1 : 0;
-									stack.pop_back(); break;
-								  }
-			case Op_code::AND   : { uint32_t value = ( stack[stack.size() - 2] != 0 && stack.back() != 0 ) ? 1 : 0;
-									stack[stack.size() - 2] = value; stack.pop_back(); break;
-								  }
-			case Op_code::OR    : { uint32_t value = ( stack[stack.size() - 2] != 0 || stack.back() != 0 ) ? 1 : 0;
-									stack[stack.size() - 2] = value; stack.pop_back(); break;
-								  }
+			case Op_code::LT    :
+				{ stack[stack.size() - 2] = ( stack[stack.size() - 2] < stack.back() ) ? 1 : 0;
+				  stack.pop_back(); break;
+				}
+			case Op_code::GT    :
+				{ stack[stack.size() - 2] = ( stack[stack.size() - 2] > stack.back() ) ? 1 : 0;
+				  stack.pop_back(); break;
+				}
+			case Op_code::LE    :
+			    { stack[stack.size() - 2] = ( stack[stack.size() - 2] <= stack.back() ) ? 1 : 0;
+			      stack.pop_back(); break;
+			    }
+			case Op_code::GE    :
+				{ stack[stack.size() - 2] = ( stack[stack.size() - 2] >= stack.back() ) ? 1 : 0;
+				  stack.pop_back(); break;
+				}
+			case Op_code::EQ    :
+				{ stack[stack.size() - 2] = ( stack[stack.size() - 2] == stack.back() ) ? 1 : 0;
+				  stack.pop_back(); break;
+				}
+			case Op_code::NE    :
+				{ stack[stack.size() - 2] = ( stack[stack.size() - 2] != stack.back() ) ? 1 : 0;
+			      stack.pop_back(); break;
+				}
+			case Op_code::AND   :
+				{ uint32_t value = ( stack[stack.size() - 2] != 0 && stack.back() != 0 ) ? 1 : 0;
+				  stack[stack.size() - 2] = value; stack.pop_back(); break;
+				}
+			case Op_code::OR    :
+				{ uint32_t value = ( stack[stack.size() - 2] != 0 || stack.back() != 0 ) ? 1 : 0;
+				  stack[stack.size() - 2] = value; stack.pop_back(); break;
+				}
 			case Op_code::NEG   : stack.back() = -stack.back(); break;
 			case Op_code::NOT   : stack.back() = ( stack.back() == 0 ) ? 1 : 0; break;
 			case Op_code::PRTC  : std::cout << static_cast<char>(stack.back()); stack.pop_back(); break;
 			case Op_code::PRTI  : std::cout << stack.back(); stack.pop_back(); break;
 			case Op_code::PRTS  : std::cout << vm_strings[stack.back()]; stack.pop_back(); break;
-			case Op_code::FETCH : stack.emplace_back(stack[operand(index, codes)]); index += word_size; break;
+			case Op_code::FETCH : { stack.emplace_back(stack[operand(index, codes)]);
+									index += word_size; break;
+								  }
 			case Op_code::STORE : { stack[operand(index, codes)] = stack.back(); index += word_size;
 									stack.pop_back(); break;
 								  }

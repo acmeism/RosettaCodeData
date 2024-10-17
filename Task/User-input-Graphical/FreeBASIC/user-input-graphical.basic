@@ -1,0 +1,83 @@
+#include once "windows.bi"
+#include once "/win/commctrl.bi"
+
+Dim Shared As zString * 255 textMessage = ""
+Dim Shared As zString * 255 valueMessage = ""
+Dim Shared As HWND MainWindow
+Dim Shared As HWND EditBox, ValueBox, Button, Cancel, LabelBox
+
+Function CreateToolTip(X As hwnd, msg As String = "") As hwnd
+    Dim As hwnd TT = CreateWindowEx(0, "ToolTips_Class32", "", 64, 0, 0, 0, 0, X, 0, GetModuleHandle(0), 0)
+    SendMessage(TT, TTM_SETMAXTIPWIDTH, 0, 180)
+    SendMessage(TT, TTM_SETDELAYTIME, TTDT_INITIAL, 10)
+    SendMessage(TT, TTM_SETDELAYTIME, TTDT_RESHOW, 60)
+    Dim bubble As TOOLINFO
+    bubble.cbSize = Len(TOOLINFO)
+    bubble.uFlags = TTF_IDISHWND Or TTF_SUBCLASS
+    bubble.uId = Cast(Uinteger, X)
+    bubble.lpszText = Strptr(msg)
+    SendMessage(TT, TTM_ADDTOOL, 0, Cast(LPARAM, @bubble))
+    Return TT
+End Function
+
+Sub CreateMainWindow
+    MainWindow = CreateWindowEx(NULL, "WindowClass", "User input/Graphical", WS_OVERLAPPEDWINDOW Or WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, 300, 180, NULL, NULL, NULL, NULL)
+    EditBox = CreateWindowEx(WS_EX_CLIENTEDGE, "Edit", textMessage, WS_VISIBLE Or WS_CHILD, 10, 10, 250, 24, MainWindow, NULL, NULL, NULL)
+    ValueBox = CreateWindowEx(WS_EX_CLIENTEDGE, "Edit", valueMessage, WS_VISIBLE Or WS_CHILD Or ES_NUMBER, 10, 40, 250, 24, MainWindow, NULL, NULL, NULL)
+    Button = CreateWindowEx(NULL, "Button", "Aceptar", WS_VISIBLE Or WS_CHILD, 10, 70, 250, 24, MainWindow, NULL, NULL, NULL)
+    LabelBox = CreateWindowEx(NULL, "static", "", WS_VISIBLE Or WS_CHILD, 10, 100, 250, 24, MainWindow, NULL, NULL, NULL)
+    CreateToolTip(EditBox, "Type something in the box")
+    CreateToolTip(ValueBox, "Type a number in the box")
+End Sub
+
+Function WndProc(hWnd As HWND, msg As UINT, wParam As WPARAM, lParam As LPARAM) As LRESULT
+    Select Case hWnd
+    Case MainWindow
+        Select Case msg
+        Case WM_PAINT
+            Dim As PAINTSTRUCT ps
+            BeginPaint(hWnd, @ps)
+            FillRect(ps.hdc, @ps.rcPaint, CreateSolidBrush(BGR(238, 238, 238)))
+            EndPaint(hWnd, @ps)
+
+        Case WM_CLOSE
+            DestroyWindow(hWnd)
+
+        Case WM_COMMAND
+            Select Case lParam
+            Case Button
+                GetWindowText(EditBox, @textMessage, 255)
+                GetWindowText(ValueBox, @valueMessage, 255)
+                SetWindowText(LabelBox, textMessage & " - " & valueMessage)
+            End Select
+        End Select
+    End Select
+
+    Return DefWindowProc(hWnd, msg, wParam, lParam)
+End Function
+
+Dim As WNDCLASS wcls
+
+With wcls
+    .style = CS_HREDRAW Or CS_VREDRAW
+    .lpfnWndProc = Cast(WNDPROC, @WndProc)
+    .hInstance = GetModuleHandle(NULL)
+    .hIcon = LoadIcon(NULL, IDI_APPLICATION)
+    .hCursor = LoadCursor(NULL, IDC_ARROW)
+    .hbrBackground = GetStockObject(WHITE_BRUSH)
+    .lpszMenuName = NULL
+    .lpszClassName = Strptr("WindowClass")
+End With
+
+If RegisterClass(@wcls) = False Then
+    MessageBox(NULL, "RegisterClass('WindowClass') FALLO!", "Error!", MB_OK Or MB_ICONERROR)
+    End
+End If
+
+CreateMainWindow
+
+Dim As MSG uMsg
+While GetMessage(@uMsg, NULL, NULL, NULL) <> False
+    TranslateMessage(@uMsg)
+    DispatchMessage(@uMsg)
+Wend

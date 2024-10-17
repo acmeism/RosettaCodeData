@@ -113,8 +113,6 @@ BEGIN
         # main parsing #
         WHILE str pos <= UPB s
         DO
-            CHAR c = curr char;
-
             IF have minus OR have digit
             THEN
                 # have the start of a number #
@@ -135,7 +133,6 @@ BEGIN
                 next
             FI
         OD;
-
     # RESULT #
         result
     END; # parse range string #
@@ -164,6 +161,5 @@ BEGIN
 END; # TOSTRING #
 
 
-test:(
-    print( ( TOSTRING range expand( TORANGE "-6,-3--1,3-5,7-11,14,15,17-20" ), newline ) )
-)
+# test #
+print( ( TOSTRING range expand( TORANGE "-6,-3--1,3-5,7-11,14,15,17-20" ), newline ) )

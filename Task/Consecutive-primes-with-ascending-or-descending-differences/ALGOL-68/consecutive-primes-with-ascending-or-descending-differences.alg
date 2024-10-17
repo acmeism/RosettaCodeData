@@ -33,7 +33,8 @@ BEGIN # find sequences of primes where the gaps between the elements #
                  );
             print( ( whole( primes[ seq start ], 0 ) ) );
             FOR p FROM seq start + 1 TO seq start + ( seq length - 1 ) DO
-                print( ( " (", whole( ABS( primes[ p ] - primes[ p - 1 ] ), 0 ), ") ", whole( primes[ p ], 0 ) ) )
+                print( ( " (", whole( ABS( primes[ p ] - primes[ p - 1 ] ), 0 ), ") " ) );
+                print( ( whole( primes[ p ], 0 ) ) )
             OD;
             print( ( newline ) )
          END # show seuence # ;
@@ -59,16 +60,18 @@ BEGIN # find sequences of primes where the gaps between the elements #
                 FI
             OD
          END # find sequence #;
-    INT max number   = 1 000 000;
-    []INT primes     = prime list( max number );
-    INT asc length  := 0;
-    INT asc start   := 0;
-    INT desc length := 0;
-    INT desc start  := 0;
-    find sequence( primes, TRUE,   asc start,  asc length );
-    find sequence( primes, FALSE, desc start, desc length );
-    # show the sequences #
-    print( ( "For primes up to ", whole( max number, 0 ), newline ) );
-    show sequence( primes, "ascending",   asc start,  asc length );
-    show sequence( primes, "descending", desc start, desc length )
+    BEGIN
+        INT max number   = 1 000 000;
+        []INT primes     = prime list( max number );
+        INT asc length  := 0;
+        INT asc start   := 0;
+        INT desc length := 0;
+        INT desc start  := 0;
+        find sequence( primes, TRUE,   asc start,  asc length );
+        find sequence( primes, FALSE, desc start, desc length );
+        # show the sequences #
+        print( ( "For primes up to ", whole( max number, 0 ), newline ) );
+        show sequence( primes, "ascending",   asc start,  asc length );
+        show sequence( primes, "descending", desc start, desc length )
+    END
 END

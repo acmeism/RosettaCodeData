@@ -14,16 +14,14 @@ BEGIN
             REAL x := h / 200;
             REAL y := v / 100;
             CHAR plot char := "#";
-            FOR i TO 50
-            WHILE
-                REAL z real      = ( x * x ) - ( y * y ) + c real;
-                REAL z imaginary = ( x * y * 2 ) + c imaginary;
-                IF z real * z real <= 10000
-                THEN TRUE
-                ELSE
-                    plot char := " ";
-                    FALSE
-                FI
+            TO 50 WHILE
+                    REAL z real      = ( x * x ) - ( y * y ) + c real;
+                    REAL z imaginary = ( x * y * 2 ) + c imaginary;
+                    IF z real * z real <= 10000
+                    THEN TRUE
+                    ELSE plot char := " ";
+                         FALSE
+                    FI
             DO
                 x := z real;
                 y := z imaginary

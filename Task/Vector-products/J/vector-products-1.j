@@ -1,1 +1,4 @@
-cross=: (1&|.@[ * 2&|.@]) - 2&|.@[ * 1&|.@]
+cross=: 1 _1 1*1-/ .*\. ,.
+dot=: +/ .*
+stp=: dot`cross/    NB. scalar triple product
+vtp=: cross/        NB. vector triple product

@@ -1,6 +1,5 @@
-isPalin1=: 0:`($:@(}.@}:))@.({.={:)`1:@.(1>:#)
-
-isPalin2=: monad define
- if. 1>:#y do. 1 return. end.
- if. ({.={:)y do. isPalin2 }.}:y else. 0 end.
-)
+   inexact=: [: (-:|.)@tolower [ ([-.-.) a. {~ 65 97 +"0 _ i.@26
+   inexact 'A man, a plan, a canal: Panama!'
+1
+   inexact 'Not palindrome...'
+0

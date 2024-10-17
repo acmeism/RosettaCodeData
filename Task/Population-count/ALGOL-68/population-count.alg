@@ -14,7 +14,7 @@ PROC population count = ( LONG INT n )INT:
 # population count of 3^0, 3^1, 3*2, ..., 3^29                               #
 LONG INT  power of three := 1;
 print( ( "3^x pop counts:" ) );
-FOR power FROM 0 TO 29 DO
+FROM 0 TO 29 DO
     print( ( " ", whole( population count( power of three ), 0 ) ) );
     power of three *:= 3
 OD;

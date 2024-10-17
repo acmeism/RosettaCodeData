@@ -1,4 +1,4 @@
-import std/[Algorithm, httpclient, json, re, strformat, strutils]
+import std/[algorithm, httpclient, json, re, strformat, strutils]
 
 const
   LangSite = "http://www.rosettacode.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:Programming_Languages&cmlimit=500&format=json"

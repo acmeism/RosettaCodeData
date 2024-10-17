@@ -41,7 +41,7 @@ BEGIN
                 OD
             OD;
             print( ( newline, "        " ) );
-            FOR i TO n DO print( ( " ", whole( NEXT wheels, 0 ) ) ) OD;
+            TO n DO print( ( " ", whole( NEXT wheels, 0 ) ) ) OD;
             print( ( newline, newline ) )
          END # show # ;
     # show some wheels in action                                              #

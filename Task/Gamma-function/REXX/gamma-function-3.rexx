@@ -1,57 +1,55 @@
-parse version version; say version; glob. = ''
-say 'Gamma function in arbitrary precision'
-say
+include Settings
+
+say version; say 'Gamma'; say
+arg n; if n = '' then n = 100; numeric digits n
 say '(Half)integers formulas'
 w = '-99.5 -10.5 -5.5 -2.5 -1.5 -0.5 0.5 1 1.5 2 2.5 5 5.5 10 10.5 99 99.5'
-numeric digits 100
-do i = 1 to words(w)
-   x = word(w,i); call time('r'); r = Gamma(x); e = format(time('e'),,3)
-   say 'Formulas' format(x,4,1) r '('e 'seconds)'
+numeric digits n
+do i = 1 to Words(w)
+   x = Word(w,i); call Time('r'); r = Gamma(x); e = Format(Time('e'),,3)
+   say 'Formulas' Format(x,4,1) r '('e 'seconds)'
 end
 say
-say 'Lanczos (max 60 digits) vs Spouge (no limit) vs Stirling (no limit) approximation'
+say 'Lanczos (max 60 decimals) vs Spouge (no limit) vs Stirling (no limit) approximation'
 w = '-12.8 -6.4 -3.2 -1.6 -0.8 -0.4 -0.2 -0.1 0.1 0.2 0.4 0.8 1.6 3.2 6.4 12.8'
-do i = 1 to words(w)
-   x = word(w,i)
-   numeric digits 60
-   call time('r'); r = Gamma(x); e = format(time('e'),,3)
-   say 'Lanczos ' format(x,4,1) r '('e 'seconds)'
-   numeric digits 61
-   call time('r'); r = Gamma(x); e = format(time('e'),,3)
-   say 'Spouge  ' format(x,4,1) r '('e 'seconds)'
+do i = 1 to Words(w)
+   x = Word(w,i)
+   numeric digits Min(60,n)
+   call Time('r'); r = Gamma(x); e = Format(Time('e'),,3)
+   say 'Lanczos ' Format(x,4,1) r '('e 'seconds)'
+   numeric digits n
+   call Time('r'); r = Gamma(x); e = Format(Time('e'),,3)
+   say 'Spouge  ' Format(x,4,1) r '('e 'seconds)'
    if x > 0 then do
-      call time('r'); r = Stirling(x); e = format(time('e'),,3)
-      say 'Stirling' format(x,4,1) r '('e 'seconds)'
+      call Time('r'); r = Stirling(x); e = Format(Time('e'),,3)
+      say 'Stirling' Format(x,4,1) r '('e 'seconds)'
    end
 end
 say
 say 'Same for a bigger number'
 w = '-99.9 99.9'
-do i = 1 to words(w)
-   x = word(w,i)
-   numeric digits 60
-   call time('r'); r = Gamma(x); e = format(time('e'),,3)
-   say 'Lanczos ' format(x,4,1) r '('e 'seconds)'
-   numeric digits 100
-   call time('r'); r = Gamma(x); e = format(time('e'),,3)
-   say 'Spouge  ' format(x,4,1) r '('e 'seconds)'
+do i = 1 to Words(w)
+   x = Word(w,i)
+   numeric digits Min(60,n)
+   call Time('r'); r = Gamma(x); e = Format(Time('e'),,3)
+   say 'Lanczos ' Format(x,4,1) r '('e 'seconds)'
+   numeric digits n
+   call Time('r'); r = Gamma(x); e = Format(Time('e'),,3)
+   say 'Spouge  ' Format(x,4,1) r '('e 'seconds)'
    if x > 0 then do
-      call time('r'); r = Stirling(x); e = format(time('e'),,3)
-      say 'Stirling' format(x,4,1) r '('e 'seconds)'
+      call Time('r'); r = Stirling(x); e = Format(Time('e'),,3)
+      say 'Stirling' Format(x,4,1) r '('e 'seconds)'
    end
 end
 exit
 
 Gamma:
 /* Gamma */
-procedure expose glob.
+procedure expose glob. fact.
 arg x
-/* Validity */
-if x < 1 & Whole(x) then
-   return 'X'
 /* Formulas for negative and positive (half)integers */
 if x < 0 then do
-   if Half(x) then do
+   if IsHalf(x) then do
       numeric digits Digits()+2
       i = Abs(Floor(x)); y = (-1)**i*2**(2*i)*Fact(i)*Sqrt(Pi())/Fact(2*i)
       numeric digits Digits()-2
@@ -59,9 +57,9 @@ if x < 0 then do
    end
 end
 if x > 0 then do
-   if Whole(x) then
+   if IsWhole(x) then
       return Fact(x-1)
-   if Half(x) then do
+   if IsHalf(x) then do
       numeric digits Digits()+2
       i = Floor(x); y = Fact(2*i)*Sqrt(Pi())/(2**(2*i)*Fact(i))
       numeric digits Digits()-2
@@ -167,351 +165,11 @@ return y+0
 
 Stirling:
 /* Sterling */
-procedure expose glob.
+procedure expose glob. fact.
 arg x
-return sqrt(2*pi()/x) * power(x/e(),x)
+return Sqrt(2*Pi()/x) * Power(x/e(),x)
 
-E:
-/* Euler number */
-procedure expose glob.
-p = Digits()
-/* In memory? */
-if glob.e.p <> '' then
-   return glob.e.p
-if p < 101 then
-/* Fast value */
-   glob.e.p = 2.71828182845904523536028747135266249775724709369995957496696762772407663035354759457138217852516643+0
-else do
-   numeric digits Digits()+2
-/* Taylor series */
-   y = 2; t = 1; v = y
-   do n = 2
-      t = t/n; y = y+t
-      if y = v then
-         leave
-      v = y
-   end
-   numeric digits Digits()-2
-   glob.e.p = y+0
-end
-return glob.e.p
-
-Exp:
-/* Exponential e^x */
-procedure expose glob.
-arg x
-numeric digits Digits()+2
-/* Fast values */
-if Whole(x) then
-   return E()**x
-/* Argument reduction */
-i = x%1
-if Abs(x-i) > 0.5 then
-   i = i+Sign(x)
-/* Taylor series */
-x = x-i; y = 1; t = 1; v = y
-do n = 1
-   t = (t*x)/n; y = y+t
-   if y = v then
-      leave
-   v = y
-end
-/* Inverse reduction */
-y = y*e()**i
-numeric digits Digits()-2
-return y+0
-
-Fact:
-/* Factorial n! */
-procedure expose glob.
-arg x
-/* Validity */
-if \ Whole(x) then
-   return 'X'
-if x < 0 then
-   return 'X'
-/* Current in memory? */
-if glob.fact.x <> '' then
-   return glob.fact.x
-w = x-1
-/* Previous in memory? */
-if glob.fact.w = '' then do
-/* Loop cf definition */
-   y = 1
-   do n = 2 to x
-      y = y*n
-   end
-   glob.fact.x = y
-end
-else
-/* Multiply */
-   glob.fact.x = glob.fact.w*x
-return glob.fact.x
-
-Floor:
-/* Floor */
-procedure expose glob.
-arg x
-/* Formula */
-if Whole(x) then
-   return x
-else
-   return Trunc(x)-(x<0)
-
-Frac:
-/* Fractional part */
-procedure expose glob.
-arg x
-/* Formula */
-return x-x%1
-
-Half:
-/* Is a number half integer? */
-procedure expose glob.
-arg x
-/* Formula */
-return (Frac(Abs(x))=0.5)
-
-Ln:
-/* Natural logarithm base e */
-procedure expose glob.
-arg x
-/* Validity */
-if x <= 0 then
-   return 'X'
-/* Fast values */
-if x = 1 then
-   return 0
-p = Digits()
-/* In memory? */
-if glob.ln.x.p <> '' then
-   return glob.ln.x.p
-/* Precalculated values */
-if x = 2 & p < 101 then do
-   glob.ln.x.p = Ln2()
-   return glob.ln.x.p
-end
-if x = 4 & p < 101 then do
-   glob.ln.x.p = Ln4()
-   return glob.ln.x.p
-end
-if x = 8 & p < 101 then do
-   glob.ln.x.p = Ln8()
-   return glob.ln.x.p
-end
-if x = 10 & p < 101 then do
-   glob.ln.x.p = Ln10()
-   return glob.ln.x.p
-end
-numeric digits p+2
-/* Argument reduction */
-z = x; i = 0; e = 1/E()
-if z < 0.5 then do
-   y = 1/z
-   do while y > 1.5
-      y = y*e; i = i-1
-   end
-   z = 1/y
-end
-if z > 1.5 then do
-   do while z > 1.5
-      z = z*e; i = i+1
-   end
-end
-/* Taylor series */
-q = (z-1)/(z+1); f = q; y = q; v = q; q = q*q
-do n = 3 by 2
-   f = f*q; y = y+f/n
-   if y = v then
-      leave
-   v = y
-end
-numeric digits p
-/* Inverse reduction */
-glob.ln.x.p = 2*y+i
-return glob.ln.x.p
-
-Power:
-/* Power function x^y */
-procedure expose glob.
-arg x,y
-/* Validity */
-if x < 0 then
-   return 'X'
-/* Fast values */
-if x = 0 then
-   return 0
-if y = 0 then
-   return 1
-/* Fast formula */
-if Whole(y) then
-   return x**y
-/* Formulas */
-if Abs(y//1) = 0.5 then
-   return Sqrt(x)**Sign(y)*x**(y%1)
-else
-   return Exp(y*Ln(x))
-
-Sin:
-/* Sine */
-procedure expose glob.
-arg x
-numeric digits Digits()+2
-/* Argument reduction */
-u = Pi(); x = x//(2*u)
-if Abs(x) > u then
-   x = x-Sign(x)*2*u
-/* Taylor series */
-t = x; y = x; x = x*x; v = y
-do n = 2 by 2
-   t = -t*x/(n*(n+1)); y = y+t
-   if y = v then
-      leave
-   v = y
-end
-numeric digits Digits()-2
-return y+0
-
-Sqrt:
-/* Square root x^(1/2) */
-procedure expose glob.
-arg x
-/* Validity */
-if x < 0 then
-   return 'X'
-/* Fast values */
-if x = 0 then
-   return 0
-if x = 1 then
-   return 1
-p = Digits()
-/* Predefined values */
-if x = 2 & p < 101 then
-   return Sqrt2()
-if x = 3 & p < 101 then
-   return Sqrt3()
-if x = 5 & p < 101 then
-   return Sqrt5()
-numeric digits p+2
-/* Argument reduction to [0,100) */
-i = Xpon(x); i = (i-(i<0))%2; x = x/100**i
-/* First guess 1 digit accurate */
-t = '2.5 6.5 12.5 20.5 30.5 42.5 56.5 72.5 90.5 100'
-do y = 1 until word(t,y) > x
-end
-/* Dynamic precision */
-d = Digits()
-do n = 1 while d > 2
-   d.n = d; d = d%2+1
-end
-d.n = 2
-/* Method Heron */
-do k = n to 1 by -1
-   numeric digits d.k
-   y = (y+x/y)*0.5
-end
-numeric digits p
-return y*10**i
-
-Whole:
-/* Is a number integer? */
-procedure expose glob.
-arg x
-/* Formula */
-return Datatype(x,'w')
-
-Xpon:
-/* Exponent */
-procedure expose glob.
-arg x
-/* Formula */
-if x = 0 then
-   return 0
-else
-   return Right(x*1E+99999,6)-99999
-
-Ln2:
-/* Natural log of 2 */
-procedure expose glob.
-/* Fast value */
-y = 0.6931471805599453094172321214581765680755001343602552541206800094933936219696947156058633269964186875
-return y+0
-
-Ln4:
-/* Natural log of 4 */
-procedure expose glob.
-/* Fast value */
-y = 1.386294361119890618834464242916353136151000268720510508241360018986787243939389431211726653992837375
-return y+0
-
-Ln8:
-/* Natural log of 8 */
-procedure expose glob.
-/* Fast value */
-y = 2.079441541679835928251696364374529704226500403080765762362040028480180865909084146817589980989256063
-return y+0
-
-Ln10:
-/* Natural log of 10 */
-procedure expose glob.
-/* Fast value */
-y = 2.30258509299404568401799145468436420760110148862877297603332790096757260967735248023599720508959830
-return y+0
-
-Pi:
-/* Pi */
-procedure expose glob.
-p = Digits()
-/* In memory? */
-if glob.pi.p <> '' then
-   return glob.pi.p
-if p < 101 then
-/* Fast value */
-   glob.pi.p = 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211707+0
-else do
-   numeric digits Digits()+2
-   if p < 201 then do
-/* Method Chudnovsky series */
-      y = 0
-      do n = 0
-         v = y; y = y + Fact(6*n)*(13591409+545140134*n)/(Fact(3*n)*Fact(n)**3*-640320**(3*n))
-         if y = v then
-            leave
-      end
-      y = 4270934400/(Sqrt(10005)*y)
-   end
-   else do
-/* Method Agmean series */
-      y = 0.25; a = 1; g = Sqrt(0.5); n = 1
-      do until a = v
-         v = a
-         x = (a+g)*0.5; g = Sqrt(a*g)
-         y = y-n*(x-a)**2; n = n+n; a = x
-      end
-      y = a*a/y
-   end
-   numeric digits Digits()-2
-   glob.pi.p = y+0
-end
-return glob.pi.p
-
-Sqrt2:
-/* Square root of 2 */
-procedure expose glob.
-/* Fast value */
-y = 1.414213562373095048801688724209698078569671875376948073176679737990732478462107038850387534327641573
-return y+0
-
-Sqrt3:
-/* Square root of 3 */
-procedure expose glob.
-/* Fast value */
-y = 1.732050807568877293527446341505872366942805253810380628055806979451933016908800037081146186757248576
-return y+0
-
-Sqrt5:
-/* Square root of 5 */
-procedure expose glob.
-/* Fast value */
-y = 2.236067977499789696409173668731276235440618359611525724270897245410520925637804899414414408378782275
-return y+0
+include Constants
+include Functions
+include Numbers
+include Abend

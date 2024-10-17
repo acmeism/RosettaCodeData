@@ -79,9 +79,9 @@ COMMENT
 
     # Using the bind function, we can nest applications of safe functions,                     #
     # without the compiler choking on unexpectedly wrapped values returned from                #
-    # other functions of the same kind.                                                        #
-    REAL root one over four = value OF ( MAYBE( TRUE, 4 ) BIND safe reciprocal BIND safe root );
-
+    # other functions of the same kind. E.g.:                                                  #
+#   REAL root one over four                                                                    #
+#      = value OF ( MAYBE( TRUE, 4 ) BIND safe reciprocal BIND safe root );                    #
 #   print( ( root one over four, newline ) ); #
     # -> 0.5 #
 

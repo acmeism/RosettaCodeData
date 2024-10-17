@@ -17,7 +17,7 @@ repeat
   else
     sleep 1
     if sum mod 4 = 1
-      n = randint 3
+      n = random 3
     else
       n = 4 - (sum + 3) mod 4
     .

@@ -15,11 +15,9 @@ PROC jaro sim = ( STRING sp1, sp2 )REAL:
         INT matches  := 0;
         INT transpos := 0;
         FOR i FROM LWB s1 TO UPB s1 DO
-            INT start := i - dist;
-            IF  start < 0 THEN start := 0 FI;
-            INT end   := i + dist + 1;
+            INT end := i + dist + 1;
             IF  end > le2 THEN end := le2 FI;
-            FOR k FROM start TO end - 1
+            FOR k FROM IF dist > i THEN 0 ELSE i - dist FI TO end - 1
             WHILE IF matches2[ k ]
                   THEN TRUE
                   ELIF s1[ i ] /= s2[ k ]
@@ -67,7 +65,8 @@ PROC jaro winkler dist = ( STRING sp, tp )REAL:
 # include the Associative Array code #
 PR read "aArray.a68" PR
 # test cases #
-[]STRING misspelt = ( "accomodate", "definately", "goverment", "occured", "publically", "recieve", "seperate", "untill", "wich" );
+[]STRING misspelt = ( "accomodate", "definately", "goverment", "occured", "publically"
+                    , "recieve", "seperate", "untill", "wich" );
 IF  FILE input file;
     STRING file name = "unixdict.txt";
     open( input file, file name, stand in channel ) /= 0
@@ -78,17 +77,10 @@ ELSE
     # file opened OK #
     BOOL at eof := FALSE;
     # set the EOF handler for the file #
-    on logical file end( input file, ( REF FILE f )BOOL:
-                                     BEGIN
-                                         # note that we reached EOF on the #
-                                         # latest read #
-                                         at eof := TRUE;
-                                         # return TRUE so processing can continue #
-                                         TRUE
-                                     END
-                       );
+    # notes that we reached EOF on the latest read and #
+    # returns TRUE so processing can continue #
+    on logical file end( input file, ( REF FILE f )BOOL: at eof := TRUE );
     REF AARRAY words := INIT LOC AARRAY;
-    STRING word;
     WHILE NOT at eof
     DO
         STRING word;

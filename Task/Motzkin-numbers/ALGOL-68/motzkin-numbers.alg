@@ -36,16 +36,17 @@ BEGIN # find some Motzkin numbers #
     PROC pad left = ( STRING s, INT n )STRING:
          IF INT len = ( UPB s - LWB s ) + 1; len >= n THEN s ELSE ( ( n - len ) * " " ) + s FI;
 
-    # show the Motzkin numbers #
-    print( ( " n                      M[n] Prime?", newline ) );
-    print( ( "-----------------------------------", newline ) );
-    []LONG LONG INT m = MOTZKIN 41;
-    FOR i FROM LWB m TO UPB m DO
-        print( ( whole( i, -2 )
-               , pad left( commatise( m[ i ] ), 26 )
-               , IF is probably prime( m[ i ] ) THEN "  prime" ELSE "" FI
-               , newline
-               )
-             )
-    OD
+    BEGIN # show the Motzkin numbers                                         #
+        print( ( " n                      M[n] Prime?", newline ) );
+        print( ( "-----------------------------------", newline ) );
+        []LONG LONG INT m = MOTZKIN 41;
+        FOR i FROM LWB m TO UPB m DO
+            print( ( whole( i, -2 )
+                   , pad left( commatise( m[ i ] ), 26 )
+                   , IF is probably prime( m[ i ] ) THEN "  prime" ELSE "" FI
+                   , newline
+                   )
+                 )
+        OD
+    END
 END

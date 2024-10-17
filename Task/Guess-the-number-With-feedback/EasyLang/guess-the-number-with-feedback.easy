@@ -1,5 +1,5 @@
 print "Guess a number between 1 and 100!"
-n = randint 100
+n = random 100
 repeat
    g = number input
    write g

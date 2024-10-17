@@ -4,19 +4,6 @@
 # mode to hold the city/population info #
 MODE CITYINFO = STRUCT( STRING name, REAL population in millions );
 
-# array of cities and populations #
-[ 1 : 10 ]CITYINFO cities := ( ( "Lagos",                21.0 )
-                             , ( "Cairo",                15.2 )
-                             , ( "Kinshasa-Brazzaville", 11.3 )
-                             , ( "Greater Johannesburg", 7.55 )
-                             , ( "Mogadishu",            5.85 )
-                             , ( "Khartoum-Omdurman",    4.98 )
-                             , ( "Dar Es Salaam",        4.7  )
-                             , ( "Alexandria",           4.58 )
-                             , ( "Abidjan",              4.4  )
-                             , ( "Casablanca",           3.98 )
-                             );
-
 # operator to find the first city with the specified criteria, expressed as a procedure #
 # returns the index of the CITYINFO. We can also overload FIND so it can be applied to  #
 # arrays of other types                                                                 #
@@ -45,27 +32,36 @@ OP   STARTSWITH = ( STRING s, CHAR c )BOOL:
      ELSE s[ LWB s ] = c
      FI # STARTSWITH # ;
 
-# find the 0-based index of Dar Es Salaam #
-# ( if we remove the "[ @ 0 ]", it would find the 1-based index ) #
-# NB - this assumes there is one - would get a subscript bound error if there isn't #
-print( ( "index of Dar Es Salaam (from 0): "
-       , whole( cities[ @ 0 ] FIND ( ( REF CITYINFO city )BOOL: name OF city = "Dar Es Salaam" ), 0 )
-       , newline
-       )
-     );
+BEGIN # tests                                                                           #
 
-# find the first city with population under 5M #
-# NB - this assumes there is one - would get a subscript bound error if there isn't #
-print( ( name OF cities[ cities FIND ( ( REF CITYINFO city )BOOL: population in millions OF city < 5.0 ) ]
-       , " has a population under 5M"
-       , newline
-       )
-     );
+    # array of cities and populations #
+    [ 1 : 10 ]CITYINFO cities := ( ( "Lagos",                21.0 )
+                                 , ( "Cairo",                15.2 )
+                                 , ( "Kinshasa-Brazzaville", 11.3 )
+                                 , ( "Greater Johannesburg", 7.55 )
+                                 , ( "Mogadishu",            5.85 )
+                                 , ( "Khartoum-Omdurman",    4.98 )
+                                 , ( "Dar Es Salaam",        4.7  )
+                                 , ( "Alexandria",           4.58 )
+                                 , ( "Abidjan",              4.4  )
+                                 , ( "Casablanca",           3.98 )
+                                 );
+    INT city index := 0;
 
-# find the population of the first city whose name starts with "A" #
-# NB - this assumes there is one - would get a subscript bound error if there isn't #
-print( ( "The population of a city named ""A..."" is: "
-       , fixed( population in millions OF cities[ cities FIND ( ( REF CITYINFO city )BOOL: name OF city STARTSWITH "A" ) ], 0, 2 )
-       , newline
-       )
-     )
+    # find the 0-based index of Dar Es Salaam #
+    # ( if we remove the "[ @ 0 ]", it would find the 1-based index ) #
+    # NB - this assumes there is one - would get a subscript bound error if there isn't #
+    city index := cities[ @ 0 ] FIND ( ( REF CITYINFO city )BOOL: name OF city = "Dar Es Salaam" );
+    print( ( "index of Dar Es Salaam (from 0): ", whole( city index, 0 ), newline ) );
+
+    # find the first city with population under 5M #
+    # NB - this assumes there is one - would get a subscript bound error if there isn't #
+    city index := cities FIND ( ( REF CITYINFO city )BOOL: population in millions OF city < 5.0 );
+    print( ( name OF cities[ city index ], " has a population under 5M", newline ) );
+
+    # find the population of the first city whose name starts with "A" #
+    # NB - this assumes there is one - would get a subscript bound error if there isn't #
+    city index := cities FIND ( ( REF CITYINFO city )BOOL: name OF city STARTSWITH "A" );
+    print( ( "The population of a city named ""A..."" is: " ) );
+    print( ( fixed( population in millions OF cities[ city index ], 0, 2 ), newline ) )
+END

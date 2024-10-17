@@ -1,0 +1,106 @@
+#include "windows.bi"
+
+Function FNhtml(h As String) As String
+    If Left(h, 2) = "&#" Then Return Chr(Val(Mid(h, 3)))
+    Select Case h
+    Case "&quot;": Return """"
+    End Select
+    Return h
+End Function
+
+Dim As Any Ptr urlmon = Dylibload("URLMON.DLL")
+If urlmon = 0 Then
+    Print "DLL not available in your OS"
+    End 100
+End If
+
+Dim As Function(Byval As Any Ptr, Byval As ZString Ptr, Byval As ZString Ptr, Byval As Any Ptr, Byval As Any Ptr) As Integer UDTF
+UDTF = Dylibsymbol(urlmon, "URLDownloadToFileA")
+
+Const As String special = "+()'"
+Dim As String url = "http://www.rosettacode.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:Programming_Tasks&cmlimit=500&format=xml"
+Dim As String file = Curdir & "/tasks.xml"
+Dim As Integer fail = UDTF(0, url, file, 0, 0)
+If fail Then
+    Print "File download failed (tasks)"
+    End 100
+End If
+
+Dim As Integer fileHandle  = Freefile
+Open file For Input As #fileHandle
+
+Dim As Integer i, k, j, l, s, examples, taskHandle, total
+Dim As String a, title, t, sChar, linea
+
+total = 0
+While Not Eof(fileHandle )
+    Line Input #fileHandle , a
+    i = 0
+    Do
+        i = Instr(i + 1, a, "title=")
+        If i Then
+            j = Instr(i, a, ">")
+            title = Mid(a, i + 7, j - i - 10)
+            ' Reemplazar códigos HTML
+            Do
+                k = Instr(title, "&")
+                If k Then
+                    l = Instr(k, title, ";")
+                    title = Left(title, k - 1) & FNhtml(Mid(title, k, l - k + 1)) & Mid(title, l + 1)
+                End If
+            Loop Until k = 0
+
+            t = title
+            ' Replace characters not allowed in a URL
+            For s = 1 To Len(special)
+                Do
+                    sChar = Mid(special, s, 1)
+                    k = Instr(t, sChar)
+                    If k Then t = Left(t, k - 1) & "%" & Hex(Asc(sChar)) & Mid(t, k + 1)
+                Loop Until k = 0
+            Next
+            url = "http://www.rosettacode.org/w/index.php?title=" & t & "&action=raw"
+            file = Curdir & "/title.htm"
+            fail = UDTF(0, url, file, 0, 0)
+            If fail Then
+                Print "File download failed " & t
+                End 100
+            End If
+
+            examples = 0
+            taskHandle = Freefile
+            Open file For Input As #taskHandle
+            While Not Eof(taskHandle)
+                Line Input #taskHandle, linea
+                If Instr(linea, "=={{header|") Then examples += 1
+            Wend
+            Close #taskHandle
+            total += examples
+            Print title & ": " & Str(examples) & " examples."
+        End If
+    Loop Until i = 0
+
+    i = Instr(a, "cmcontinue=")
+    If i Then
+        Close #fileHandle
+        j = Instr(i + 1, a, """")
+        k = Instr(j + 1, a, """")
+        url = "http://www.rosettacode.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:Programming_Tasks&cmlimit=500&format=xml&cmcontinue=" & Mid(a, j + 1, k - j - 1)
+        Do
+            i = Instr(url, "|")
+            If i Then url = Left(url, i - 1) & "%7C" & Mid(url, i + 1)
+        Loop Until i = 0
+        file = Curdir & "/tasks.xml"
+        fail = UDTF(0, url, file, 0, 0)
+        If fail Then
+            Print "File download failed (continue)"
+            End
+        End If
+        Open file For Input As #fileHandle
+    End If
+Wend
+Close #fileHandle
+
+Print !"\nTotal: " & Str(total) & " examples."
+
+Sleep

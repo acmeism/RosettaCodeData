@@ -39,30 +39,25 @@ OP   LONGERTHAN      = ( STRING x, STRING y )BOOL: x ATLEASTASLONGAS y AND NOT (
 # additional LONGERTHAN operators to handle single chatracter #
 # STRINGs which are actually CHAR values in Algol 68          #
 # Not needed for the task, but useful for testing LONGERTHAN  #
-OP   LONGERTHAN      = ( CHAR   x, CHAR   y )BOOL: FALSE;
-OP   LONGERTHAN      = ( CHAR   x, STRING y )BOOL: STRING( x ) LONGERTHAN y;
-OP   LONGERTHAN      = ( STRING x, CHAR   y )BOOL: x LONGERTHAN STRING( y );
+CO OP   LONGERTHAN      = ( CHAR   x, CHAR   y )BOOL: FALSE;
+   OP   LONGERTHAN      = ( CHAR   x, STRING y )BOOL: STRING( x ) LONGERTHAN y;
+   OP   LONGERTHAN      = ( STRING x, CHAR   y )BOOL: x LONGERTHAN STRING( y );
+CO
 
 COMMENT # basic test of LONGERTHAN: # C-MMENT
 print( ( "abc" LONGERTHAN "bbcd", "ABC" LONGERTHAN "", "" LONGERTHAN "abc", "DEF" LONGERTHAN "DEF", "abcd" LONGERTHAN "a", newline ) );
 C-MMENT COMMENT
 
-PROC read line = ( REF FILE f )STRING:
+PROC read a line = ( REF FILE f )STRING:
      BEGIN
          STRING line;
          get( f, ( line, newline ) );
          IF at eof THEN "" ELSE line FI
-     END # read line # ;
+     END # read a line # ;
 
 # EOF handler for standard input                              #
 BOOL at eof := FALSE;
-on logical file end( stand in, ( REF FILE f )BOOL:
-                               BEGIN
-                                   at eof := TRUE;
-                                   TRUE
-                               END
-                   );
-
+on logical file end( stand in, ( REF FILE f )BOOL: at eof := TRUE );
 
 # recursively find the longest line(s) in the specified file  #
 # and print them                                              #
@@ -71,7 +66,7 @@ PROC print longest lines = ( REF FILE f, STRING longest so far )STRING:
         IF at eof THEN
             longest so far
         ELSE
-            STRING s = read line( f );
+            STRING s = read a line( f );
             STRING t = IF s LONGERTHAN longest so far
                        THEN
                            print longest lines( f, s )
@@ -91,4 +86,4 @@ PROC print longest lines = ( REF FILE f, STRING longest so far )STRING:
     END # print longest lines # ;
 
 # find the logest lines from standard inoout                   #
-VOID( print longest lines( stand in, read line( stand in ) ) )
+VOID( print longest lines( stand in, read a line( stand in ) ) )

@@ -27,7 +27,8 @@ public final class MainStepGOST28147_89 {
 		String encryptedBinary = gost.gostAlgorithm(plainTextBinary, Cryptation.ENCRYPT);
 		
 		// Display the encrypted text bytes and the encrypted text
-		List<Character> encryptedChars = displayBytesFromBinary("The encrypted text bytes are: ", encryptedBinary);
+		List<Character> encryptedChars =
+			displayBytesFromBinary("The encrypted text bytes are: ", encryptedBinary);
 		String encryptedText = encryptedChars.stream().map(String::valueOf).collect(Collectors.joining());
 		System.out.println("The encrypted text is: \"" + encryptedText + "\"" + System.lineSeparator());
 			
@@ -35,9 +36,11 @@ public final class MainStepGOST28147_89 {
 		String decryptedBinary = gost.gostAlgorithm(encryptedBinary, Cryptation.DECRYPT);
 		
 		// Display the decrypted text bytes and the decrypted text
-		List<Character> decryptedChars = displayBytesFromBinary("The decrypted text bytes are: ", decryptedBinary);
+		List<Character> decryptedChars =
+			displayBytesFromBinary("The decrypted text bytes are: ", decryptedBinary);
 		byte[] bytes = new byte[decryptedChars.size()];
-		IntStream.range(0, decryptedChars.size()).forEach( i -> bytes[i] = (byte) decryptedChars.get(i).charValue() );
+		IntStream.range(0, decryptedChars.size())
+			.forEach( i -> bytes[i] = (byte) decryptedChars.get(i).charValue() );
 		System.out.println("The decrypted text is: \"" + new String(bytes) + "\"" + System.lineSeparator());
 	}
 	

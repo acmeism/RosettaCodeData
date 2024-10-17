@@ -1,0 +1,734 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program modifconf64.s   */
+/* This programm use a instruction file (conf2mod.txt) to modify a
+   configuration file (conf2.txt).
+   Instruction file example  :
+
+# This is a instruction file in standard configuration file format
+#
+
+# This is a favourite fruit  add parameter
+FAVOURITEFRUIT banana apple
+
+# This is a boolean that should be unset
+;NEEDSPEELING
+
+# This boolean is now commented
+  SEEDSREMOVED
+
+# How many bananas we have  change parameter
+NUMBEROFBANANAS 1024
+
+# numberoffrefraberries  new option
+NUMBEROFFREFRABERRIES  62000
+
+*/
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ BUFFERSIZE, 10000
+.equ NBPARAM,  20
+
+.equ O_RDWR,  0x0002         // open for reading and writing
+.equ O_RDONLY, 0
+.equ O_APPEND, 0x400
+.equ O_CREAT,  0x40
+/*******************************************/
+/*   Macros                              */
+/*******************************************/
+//.include "../../ficmacros64.inc"            // for developer debugging
+
+/************************************/
+/* structure   */
+/************************************/
+
+/* structure instruction linkedlist*/
+    .struct  0
+llistOpt_next:                             // next element
+    .struct  llistOpt_next + 8
+llistOpt_address:                            // element value
+    .struct  llistOpt_address + 8
+llistOpt_value:                            // element value
+    .struct  llistOpt_value + 8
+llistOpt_end:
+
+/*******************************************/
+/* Initialized data */
+/*******************************************/
+.data
+szMessDebutPgm:    .asciz "Program 64 bits start. \n"
+szCarriageReturn:  .asciz "\n"
+szMessFinOK:       .asciz "Program normal end. \n"
+szMessOpen:        .asciz "File open error.\n"
+szMessRead:        .asciz "File read error.\n"
+szMessWrite:        .asciz "File write error.\n"
+szMessClose:       .asciz "File close error.\n"
+szFileName1:       .asciz "conf2.txt"
+szFileInstr:       .asciz "conf2mod.txt"
+szFileNameWrite:   .asciz "conf2new.txt"
+
+/*******************************************/
+/* UnInitialized data */
+/*******************************************/
+.bss
+sBuffer:           .skip BUFFERSIZE
+sBufferInst:       .skip BUFFERSIZE
+sBufferWrite:      .skip BUFFERSIZE
+.align 4
+sZoneConv:         .skip 24
+iPtrRead:          .skip 8
+iPtrReadInstr:     .skip 8
+iPtrWrite:         .skip 8
+llistLineInstr:    .skip llistOpt_end * NBPARAM
+/*******************************************/
+/*  code section */
+/*******************************************/
+.text
+.global main
+main:                             // INFO; main
+    ldr x0,qAdrszMessDebutPgm
+    bl affichageMess
+    ldr x0,qAdrszMessDebutPgm
+    ldr x0,qAdrszFilename1
+    ldr x1,qAdrsBuffer            // read configuration file
+    mov x2,#BUFFERSIZE
+    bl readFile
+    cmp x0,#-1
+    beq 100f
+    mov x4,x0                     // buffer size
+    ldr x0,qAdrszFileInstr
+    ldr x1,qAdrsBufferInst        // read instruction file
+    mov x2,#BUFFERSIZE
+    bl readFile
+    cmp x0,#-1
+    beq 100f
+    mov x11,x0                    // buffer instrc size
+1:                                // loop line instructions file
+    ldr x0,qAdrsBufferInst
+    mov x1,x11
+    ldr x2,qAdriPtrReadInstr
+    bl readLine
+    cmp x0,#-1                     // end line ?
+    beq 2f
+    mov x2,x0                      // line pointer
+    ldr x0,qAdrsBufferInst         // instruction parser
+    add x0,x0,x2
+    ldr x2,qAdrllistLineInstr
+    bl lineInstrParser
+    b 1b
+
+2:
+    //ldr x0,qAdrllistLineInstr    // for control llist
+    // bl displayListInst
+
+3:                                 // loop line reading
+    ldr x0,qAdrsBuffer             // read line of buffer
+    mov x1,x4
+    ldr x2,qAdriPtrRead
+    bl readLine
+    cmp x0,#-1                     // end line ?
+    beq 4f
+    mov x2,x0
+    ldr x0,qAdrsBuffer             // line parser
+    add x0,x0,x2
+    ldr x2,qAdrsBufferWrite
+    bl lineParser
+    b 3b
+4:
+    ldr x0,qAdrllistLineInstr       // write new options in end ofbuffer
+    ldr x1,qAdrsBufferWrite
+    bl insertNewOptions
+
+    ldr x0,qAdrszFileNameWrite      // write file name
+    ldr x1,qAdrsBufferWrite         // write buffer
+    ldr x2,qAdriPtrWrite            // load buffer size to write
+    ldr x2,[x2]
+    bl writeFile
+
+    ldr x0,qAdrszMessFinOK
+    bl affichageMess
+
+100:                              // standard end of the program
+    mov x0, #0                    // return code
+    mov x8,EXIT
+    svc 0                         // perform system call
+qAdrszMessDebutPgm:       .quad szMessDebutPgm
+qAdrszMessFinOK:          .quad szMessFinOK
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrsBuffer:              .quad sBuffer
+qAdrszFilename1:          .quad szFileName1
+qAdriPtrWrite:            .quad iPtrWrite
+qAdrszFileInstr:          .quad szFileInstr
+qAdrsBufferInst:          .quad sBufferInst
+qAdriPtrReadInstr:        .quad iPtrReadInstr
+qAdrllistLineInstr:       .quad llistLineInstr
+qAdrsBufferWrite:         .quad sBufferWrite
+/*******************************************/	
+/*          Parser line instruction file        */
+/*******************************************/	
+/* x0  line address */
+/* x1  line size */
+/* x2 address line list   */
+lineInstrParser:              //  INFO: lineInstrParser
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    mov x5,x0
+    mov x6,#0
+    cmp x1,#0                 // empty line ?
+    beq 100f
+1:
+    ldrb  w4,[x5,x6]
+    cmp x4,#'#'               // comment line ?
+    beq 100f
+    cmp x4,#' '
+    cinc x6,x6,eq
+    beq 1b
+    cmp x6,x1                 // space line
+    bge 100f
+    mov x4,#0
+    strb  w4,[x0,x1]          // final zero on line instruction
+    mov x0,x5
+    mov x0,x2
+    mov x1,x5                 // begin line address
+    mov x2,#0                 // mark use key word
+    bl insertElementParam
+
+100:
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+/*******************************************/
+/*          Parser line configuration file      */
+/*******************************************/
+/* x0  address line */
+/* x1   line size */
+/* x2  Address buffer  */
+lineParser:                         // INFO: lineParser
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    stp x8,x9,[sp,-16]!
+    cmp x1,#0                       // empty line ?
+    bne 1f
+    mov x0,x2
+    bl writeEndLine
+    b 100f
+1:
+    mov x6,x0
+    mov x7,x1                       // line size
+    mov x8,x2                       // buffer address
+    mov x4,#0
+    ldrb w5,[x0,x4]                 // load first character
+    cmp x5,#'#'                     //  comment ?
+    bne 2f
+    mov x1,x8
+    mov x2,x7
+    bl copyLine
+    mov x0,x8
+    bl writeEndLine
+    b 100f
+2:
+    mov x4,#0
+3:                                  // supp spaces
+    ldrb w3,[x6,x4]
+    cmp x3,#' '
+    cinc x4,x4,eq
+    beq 3b
+    cmp x3,#0                        // spaces line
+    beq 100f
+    cmp x3,#';'                      //  unmark
+    bne 5f
+    add x4,x4,#1
+4:                                   // supp space after ;
+    ldrb w3,[x6,x4]
+    cmp x3,#' '
+    cinc x4,x4,eq
+    beq 4b
+    cmp x3,#0                        // spaces line
+    beq 100f
+5:
+    add x0,x0,x4                     // word key address
+    mov x1,x7                        // line size
+    bl traitwordkey
+    cmp x0,#0
+    bne 6f
+    mov x0,x6
+    mov x1,x8                        // word key not modified
+    mov x2,x7                        // copy line
+    bl copyLine
+    mov x0,x8
+    bl writeEndLine
+    b 100f
+6:
+    mov x0,x1                        // line instruction address
+    mov x1,x8                        // line conf
+    bl copyLineInst
+    mov x0,x8
+    bl writeEndLine
+    b 100f
+
+100:
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+/***************************************************/
+/*   word key analyser                  */
+/***************************************************/
+/* x0 contains address begin word key */
+/* x1   line size */
+/* x0 return list element address */
+/* x1 return new line pointer    */
+traitwordkey:            // INFO: traitwordkey
+    stp x2,lr,[sp,-16]!
+    stp x3,x4,[sp,-16]!
+    mov x5,x0
+    mov x4,#0
+1:                       // loop size compute
+    ldrb w3,[x0,x4]
+    cmp x3,#' '          // end key
+    beq 2f
+    cmp x3,#'='          // end key
+    beq 2f
+    cmp x3,#0x0D         // end key
+    beq 2f
+    add x4,x4,#1         // increment indice and loop
+    cmp x4,x1
+    blt 1b
+2:
+    mov x0,x5             // addresse begin key
+    mov x1,x4             // key size
+    ldr x2,qAdrllistLineInstr
+    bl searchKeyWord
+    cmp x0,#0
+    beq 100f
+
+    mov x0,#1
+
+100:
+    ldp x3,x4,[sp],16
+    ldp x2,lr,[sp],16
+    ret
+/***************************************************/
+/*   search word key in instructions llist                   */
+/***************************************************/
+/* x0 contains address key word */
+/* x1   key word size */
+/* x2 contains list instrction address */
+/* x0 return 0 if not found 1 is found    */
+/* x1 return line instructions address */
+searchKeyWord:                       // INFO: searchKeyWord
+    stp x2,lr,[sp,-16]!
+    stp x3,x4,[sp,-16]!
+    stp x5,x6,[sp,-16]!
+    stp x7,x8,[sp,-16]!
+    stp x9,x10,[sp,-16]!
+    mov x6,x0
+    mov x7,x1
+    mov x8,x2
+1:
+    ldr x2,[x8,#llistOpt_next]        // end list ?
+    cmp x2,#0
+    beq 6f                            // yes
+    ldr x1,[x8,#llistOpt_address]     // load line address
+    mov x4,#0
+    mov x0,x1
+2:
+    ldrb w5,[x1,x4]
+    cmp x5,#';'
+    cinc x4,x4,eq
+    beq 2b
+    cmp x5,#' '
+    cinc x4,x4,eq
+    beq 2b
+    mov x9,#0
+
+3:
+    ldrb w3,[x6,x9]
+    cmp x3,x5
+    bne 4f
+    add x9,x9,#1
+    cmp x9,x7
+    bge 5f
+    add x4,x4,#1
+    ldrb w5,[x1,x4]
+    cmp x5,#' '
+    beq 5f
+    cmp x5,#0
+    beq 5f
+    b 3b
+4:
+    mov x8,x2
+    b 1b
+5:
+    mov x0,#1                       // found !
+    str x0,[x8,#llistOpt_value]
+    b 100f
+6:
+    mov x0,#0                       // not found
+
+100:
+    ldp x9,x10,[sp],16
+    ldp x7,x8,[sp],16
+    ldp x5,x6,[sp],16
+    ldp x3,x4,[sp],16
+    ldp x2,lr,[sp],16
+    ret
+/***************************************************/
+/*   write end line                  */
+/***************************************************/
+/* x0 contains buffer address */
+writeEndLine:                // INFO: writeEndLine
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    ldr x2,qAdriPtrWrite
+    ldr x3,[x2]
+    mov x1,#0x0D
+    strb w1,[x0,x3]
+    add x3,x3,#1
+    mov x1,#0x0A
+    strb w1,[x0,x3]
+    add x3,x3,#1
+    str x3,[x2]
+100:
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+/***************************************************/
+/*   read file                   */
+/***************************************************/
+/* x0 contains file name */
+/* x1 contains a file buffer */
+/* x2 contains buffer size */
+/* x0 return buffer size */
+readFile:                    // INFO: readFile
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    stp x8,x9,[sp,-16]!
+    mov x7,x0
+    mov x9,x1                // file buffer
+    mov x6,x2
+    mov x10,x3
+    mov x0,AT_FDCWD
+    mov x1,x7                // file name
+    mov x2,#O_RDWR           // flags
+    mov x3,#0                // mode
+    mov x8,OPEN
+    svc 0
+    cmp x0,#0                // error ?
+    ble 99f
+    mov x7,x0                // FD save
+
+    mov x0,x7
+    mov x1,x9                // read buffer address
+    mov x2,x6
+    mov x8,READ             // call system read file
+    svc 0
+    cmp x0,#0                // error read ?
+    blt 97f
+    mov x6,x0                // save file size
+    mov x0,x7               // FD
+    mov x8,CLOSE            // call system close file
+    svc 0
+    cmp x0,#0                // error close ?
+    blt 96f
+
+    mov x0,x6                // return buffer size
+    b 100f
+96:                          // display error messages
+    ldr x0,qAdrszMessClose
+    bl affichageMess
+    mov x0,#-1               // error
+    b 100f
+97:
+    ldr x0,qAdrszMessRead
+    bl affichageMess
+    mov x0,#-1               // error
+    b 100f
+99:
+    ldr x0,qAdrszMessOpen
+    bl  affichageMess
+    mov x0,#-1               // error
+
+ 100:
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+qAdrszMessOpen:     .quad szMessOpen
+qAdrszMessRead:     .quad szMessRead
+qAdrszMessClose:    .quad szMessClose
+/***************************************************/
+/*   write file                   */
+/***************************************************/
+/* x0 contains file name */
+/* x1 contains a file buffer */
+/* x2 contains buffer size */
+/* x0 return -1 if error */
+writeFile:                   // INFO: writeFile
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    stp x8,x9,[sp,-16]!
+    mov x4,x1
+    mov x5,x2
+    mov x7,x0
+    mov x0,AT_FDCWD
+    mov x1,x7
+    ldr x2,iFlag             // flags
+    mov x3,#0644             // mode in octal
+    mov x8,OPEN
+    svc 0
+    cmp x0,#0                // error open
+    ble 99f
+    mov x9,x0
+    mov x0,x9                // file FD
+    mov x1,x4                // write buffer
+    mov x2,x5                // buffer size
+    mov x8,#WRITE
+    svc 0
+    cmp x0,#0                // error open
+    ble 97f
+    mov x0,x9                // FD
+    mov x8,#CLOSE            // call system close file
+    svc 0
+    cmp x0,#0                // error close ?
+    blt 96f
+
+    b 100f
+
+96:                          // display error messages
+    ldr x0,qAdrszMessClose
+    bl affichageMess
+    mov x0,#-1               // error
+    b 100f
+
+97:
+    ldr x0,qAdrszMessWrite
+    bl affichageMess
+    mov x0,#-1               // error
+    b 100f
+99:
+    ldr x0,qAdrszMessOpen
+    bl  affichageMess
+    mov x0,#-1               // error
+100:
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+qAdrszMessWrite:      .quad szMessWrite
+qAdrszFileNameWrite:  .quad szFileNameWrite
+iFlag:                .quad O_RDWR|O_CREAT
+/***************************************************/
+/*   read line                   */
+/***************************************************/
+/* x0 contains a file buffer */
+/* x1 contains text buffer size */
+/* x2 contains read pointer   */
+/* x0 return pointer address line or -1 if end */
+/* x1 return line size  */
+readLine:                    // INFO: readLine
+    stp x2,lr,[sp,-16]!
+    stp x3,x4,[sp,-16]!
+    stp x5,x6,[sp,-16]!
+    ldr x3,[x2]
+    cmp x3,x1                // end buffer ?
+    bge 99f
+    mov x4,x3
+    mov x6,#0                // line size
+1:
+    ldrb w5,[x0,x4]
+    cmp x5,#0x0D
+    beq 3f
+    add x4,x4,#1
+    cmp x4,x1                // end buffer ?
+    blt 2f
+    str x4,[x2]              // new begin line pointeur
+    mov x0,x3                // line begin
+    mov x1,x6                // return size
+    b 100f                   // end
+ 2:
+    add x6,x6,#1
+    b 1b                     // and loop
+3:
+    add x4,x4,#2             // supp 0D0A
+    str x4,[x2]              // new begin line pointeur
+    mov x0,x3                // line begin
+    mov x1,x6                // return size
+    b 100f
+99:
+    mov x0,-1
+100:
+    ldp x5,x6,[sp],16
+    ldp x3,x4,[sp],16
+    ldp x2,lr,[sp],16
+    ret
+qAdriPtrRead:    .quad iPtrRead
+/******************************************************************/
+/*     copy new options line                         */
+/******************************************************************/
+/* x0 contains line address  */
+/* x1 contains address buffer */
+copyLineInst:             // INFO: copyLineInst
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    ldr x2,qAdriPtrWrite
+    ldr x3,[x2]           // load pointer write buffer
+    mov x4,#0
+1:
+    ldrb w5,[x0,x4]       // load byte
+    cmp x5,#0             // final zero
+    beq 2f
+    strb w5,[x1,x3]       // store byte in buffer
+    add x3,x3,#1
+    add x4,x4,#1
+    b 1b
+2:
+    str x3,[x2]           // save pointer write buffer
+100:
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+/******************************************************************/
+/*     copy file line                         */
+/******************************************************************/
+/* x0 contains line address  */
+/* x1 contains address buffer
+/* x2 contains characters number to copy */
+copyLine:                 // INFO: copyLine
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    mov x6,x2
+    ldr x2,qAdriPtrWrite
+    ldr x3,[x2]
+    mov x4,#0
+1:
+    ldrb w5,[x0,x4]       // load byte
+    strb w5,[x1,x3]       // store byte in buffer
+    add x3,x3,#1
+    add x4,x4,#1
+    cmp x4,x6
+    blt 1b
+2:
+    str x3,[x2]
+100:
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+/******************************************************************/
+/*     insertion nex options in configuration                     */
+/******************************************************************/
+/* x0 contains the address of the list */
+/* x1 write buffer address */
+insertNewOptions:                       // INFO: insertNewOptions
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    mov x4,x0
+1:                                      // display loop param
+    ldr x2,[x4,#llistOpt_next]          // end list ?
+    cmp x2,#0
+    beq 100f                            // yes
+    ldr x3,[x4,#llistOpt_value]
+    cmp x3,#1
+    beq 2f
+    ldr x0,[x4,#llistOpt_address]       // load line address
+    bl copyLineInst
+2:
+    mov x4,x2                           // and loop new item
+    b 1b
+
+100:
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+/******************************************************************/
+/*     display list instruction                       */
+/******************************************************************/
+/* x0 contains the address of the list */
+displayListInst:                        // INFO: displayListInst
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    mov x1,x0
+1:                                      // display loop param
+    ldr x2,[x1,#llistOpt_next]          // end list ?
+    cmp x2,#0
+    beq 100f                            // yes
+    ldr x0,[x1,#llistOpt_address]       // load line address
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    mov x1,x2
+    b 1b
+
+100:
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+
+/******************************************************************/
+/*     insert element at end of list                          */
+/******************************************************************/
+/* x0 contains the address of the list */
+/* x1 contains key string address  */
+/* x2 contains option list address
+/* x0 returns address of element or - 1 if error */
+insertElementParam:                       // INFO: insertElementParam
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    mov x4,#llistOpt_end * NBPARAM
+    add x4,x4,x0                          // compute address end list
+1:                                        // start loop
+    ldr x3,[x0,#llistOpt_next]            // load next pointer
+    cmp x3,#0                             // = zero
+    csel x0,x3,x0,ne                      // no -> loop with pointer
+    //movne x0,x3                         // no -> loop with pointer
+    bne 1b
+    add x3,x0,#llistOpt_end               // yes -> compute next free address
+    cmp x3,x4                             // > list end
+    bge 99f                               // yes -> error
+    str x3,[x0,#llistOpt_next]            // store next address in current pointer
+    str x1,[x0,#llistOpt_address]         // store element value
+    str x2,[x0,#llistOpt_value]
+    mov x1,#0
+    str x1,[x3,#llistOpt_next]            // init next pointer in next address
+    b 100f
+99:
+    mov x0,-1
+100:
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

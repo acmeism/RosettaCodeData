@@ -29,7 +29,6 @@ PROC is kaprekar = ( INT n )BOOL:
 # printing all those below 10 000                         #
 INT max number           = 1 000 000;
 INT k count             := 0;
-[ 1 : 2 ]LONG INT split := ( 0, 0 );
 print( ( "Kaprekar numbers below 10 000: ", newline ) );
 FOR n TO max number DO
     IF is kaprekar( n ) THEN

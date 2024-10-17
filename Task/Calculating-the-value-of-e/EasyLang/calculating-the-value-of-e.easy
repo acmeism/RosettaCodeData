@@ -1,11 +1,11 @@
-numfmt 5 0
+numfmt 15 0
 fact = 1
 n = 2
 e = 2
-while abs (e - e0) > 0.0001
-  e0 = e
-  fact = fact * n
-  n += 1
-  e += 1 / fact
+while e - e0 > 1e-15
+   e0 = e
+   fact = fact * n
+   e += 1 / fact
+   n += 1
 .
 print e

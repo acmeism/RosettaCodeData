@@ -6,32 +6,34 @@ COMMENT
         ilasm /opt /out:rcsample.exe rcsample.il
     (Note ilasm may not be in the PATH by default(
 
-    Note: The generated IL is *very* naive
+    Note: The generated IL is *very* naiive
 COMMENT
 
 # parse tree nodes #
 MODE NODE = STRUCT( INT type, REF NODE left, right, INT value );
-INT nidentifier   =  1, nstring    =  2, ninteger  =  3, nsequence  =  4, nif        =  5, nprtc     =  6, nprts   =  7
-  , nprti         =  8, nwhile     =  9, nassign   = 10, nnegate    = 11, nnot       = 12, nmultiply = 13, ndivide = 14
-  , nmod          = 15, nadd       = 16, nsubtract = 17, nless      = 18, nlessequal = 19, ngreater  = 20
-  , ngreaterequal = 21, nequal     = 22, nnotequal = 23, nand       = 24, nor        = 25
+INT nidentifier =  1, nstring       =  2, ninteger  =  3, nsequence  =  4, nif =  5, nprtc =  6, nprts  =  7
+  , nprti       =  8, nwhile        =  9, nassign   = 10, nnot       = 12
+  , nlessequal  = 19, ngreaterequal = 21, nnotequal = 23
+    # unused nnegate = 11, , nmultiply = 13, ndivide = 14, nmod = 15, nadd = 16, nsubtract = 17 #
+    # unused nless   = 18, , ngreater  = 20, nequal  = 22, nand = 24, nor  = 25 #
   ;
 # op codes #
-INT ofetch =  1, ostore =  2, opush =  3, oadd =  4, osub  =  5, omul  =  6, odiv  =  7, omod     =  8
-  , olt    =  9, ogt    = 10, ole   = 11, oge  = 12, oeq   = 13, one   = 14, oand  = 15, oor      = 16
-  , oneg   = 17, onot   = 18, ojmp  = 19, ojz  = 20, oprtc = 21, oprts = 22, oprti = 23, opushstr = 24
+INT ofetch   =  1, ostore =  2, opush =  3, oadd =  4,  osub =  5, omul  =  6, odiv  =  7, omod =  8
+  , olt      =  9, ogt    = 10, oeq   = 13, oand  = 15, oor  = 16, oneg  = 17, ojmp  = 19, ojz  = 20
+  , opushstr = 24
+    # unused: oge = 12, one = 14, onot = 18, oprtc = 21, oprts = 22, oprti = 23, #
   ;
 []INT    ndop
-= ( -1               , -1             , -1            , -1             , -1             , -1            , -1
-  , -1               , -1             , -1            , oneg           , -1             , omul          , odiv
-  , omod             , oadd           , osub          , olt            , -1             , ogt
-  , -1               , oeq            , -1            , oand           , oor
+= ( -1   , -1             , -1            , -1             , -1             , -1            , -1
+  , -1   , -1             , -1            , oneg           , -1             , omul          , odiv
+  , omod , oadd           , osub          , olt            , -1             , ogt
+  , -1   , oeq            , -1            , oand           , oor
   ) ;
 []STRING ndname
-= ( "Identifier"     , "String"       , "Integer"     , "Sequence"     , "If"           , "Prtc"        , "Prts"
-  , "Prti"           , "While"        , "Assign"      , "Negate"       , "Not"          , "Multiply"    , "Divide"
-  , "Mod"            , "Add"          , "Subtract"    , "Less"         , "LessEqual"    , "Greater"
-  , "GreaterEqual"   , "Equal"        , "NotEqual"    , "And"          , "Or"
+= ( "Identifier"  , "String", "Integer"     , "Sequence", "If"       , "Prtc"    , "Prts"
+  , "Prti"        , "While" , "Assign"      , "Negate"  , "Not"      , "Multiply", "Divide"
+  , "Mod"         , "Add"   , "Subtract"    , "Less"    , "LessEqual", "Greater"
+  , "GreaterEqual", "Equal" , "NotEqual"    , "And"     , "Or"
   ) ;
 []STRING opname
 = ( "ldloc  ",  "stloc  ",   "ldc.i4 ",  "add    ",  "sub    ", "mul    ",  "div    ",  "rem    "
@@ -51,7 +53,8 @@ INT next label number := 0;
 PROC new label = INT: next label number +:= 1;
 
 # returns a new node with left and right branches #
-PROC op node      = ( INT op type, REF NODE left, right )REF NODE: HEAP NODE := NODE( op type, left, right, 0 );
+PROC op node      = ( INT op type, REF NODE left, right )REF NODE:
+     HEAP NODE := NODE( op type, left, right, 0 );
 # returns a new operand node #
 PROC operand node = ( INT op type, value )REF NODE: HEAP NODE := NODE( op type, NIL, NIL, value );
 
@@ -70,7 +73,7 @@ PROC read node = REF NODE:
         # parses a string from line and stores it in a string in the text array #
         # - if it is not already present in the specified textElement list.     #
         # returns the position of the string in the text array                  #
-        PROC read string = ( REF[]STRING text list, CHAR terminator )INT:
+        PROC read text = ( REF[]STRING text list, CHAR terminator )INT:
              BEGIN
                 # get the text of the string #
                 STRING str := line[ l pos ];
@@ -81,23 +84,22 @@ PROC read node = REF NODE:
                 OD;
                 IF l pos > UPB line THEN gen error( "Unterminated String in node file: (" + line + ")." ) FI;
                 # attempt to find the text in the list of strings/identifiers #
-                INT  t pos  := LWB text list;
-                BOOL found  := FALSE;
-                INT  result := LWB text list - 1;
+                BOOL found    := FALSE;
+                INT  text loc := LWB text list - 1;
                 FOR t pos FROM LWB text list TO UPB text list WHILE NOT found DO
                     IF found := text list[ t pos ] = str THEN
                         # found the string #
-                        result := t pos
+                        text loc := t pos
                     ELIF text list[ t pos ] = "" THEN
                         # have an empty slot for ther string #
                         found := TRUE;
                         text list[ t pos ] := str;
-                        result := t pos
+                        text loc := t pos
                     FI
                 OD;
                 IF NOT found THEN gen error( "Out of string space." ) FI;
-                result
-             END # read string # ;
+                text loc
+             END # read text # ;
         # gets an integer from the line - no checks for valid digits #
         PROC read integer = INT:
              BEGIN
@@ -124,14 +126,22 @@ PROC read node = REF NODE:
         nd type := LWB nd name;
         IF name /= ";" THEN
             # not a null node #
-            WHILE IF nd type <= UPB nd name THEN name /= nd name[ nd type ] ELSE FALSE FI DO nd type +:= 1 OD;
+            WHILE IF   nd type <= UPB nd name
+                  THEN name /= nd name[ nd type ]
+                  ELSE FALSE
+                  FI
+            DO nd type +:= 1 OD;
             IF nd type > UPB nd name THEN gen error( "Malformed node: (" + line + ")." ) FI;
-            # handle the additional parameter for identifier/string/integer, or sub-nodes for operator nodes #
+            # handle the additional parameter for identifier/string/integer, or sub-nodes #
+            # for operator nodes #
             IF nd type = ninteger OR nd type = nidentifier OR nd type = nstring THEN
                 WHILE line[ l pos ] = " " DO l pos +:= 1 OD;
-                IF     nd type = ninteger    THEN result := operand node( nd type, read integer )
-                ELIF   nd type = nidentifier THEN result := operand node( nd type, read string( identifiers, " "  ) )
-                ELSE # nd type = nString     #    result := operand node( nd type, read string( strings,     """" ) )
+                IF     nd type = ninteger
+                THEN   result := operand node( nd type, read integer )
+                ELIF   nd type = nidentifier
+                THEN   result := operand node( nd type, read text( identifiers, " "  ) )
+                ELSE # nd type = nString     #
+                       result := operand node( nd type, read text( strings,     """" ) )
                 FI
             ELSE
                 # operator node #
@@ -152,9 +162,11 @@ PROC gen load string   = ( INT value )VOID:
         print( ( operation( opushstr ), "  ", strings[ value ], """", newline ) )
      END # push string # ;
 # generates code to load a constant value #
-PROC gen load constant = ( INT value )VOID: print( ( operation( opush ), "  ", whole( value, 0 ), newline ) );
+PROC gen load constant = ( INT value )VOID:
+     print( ( operation( opush ), "  ", whole( value, 0 ), newline ) );
 # generates an operation acting on an address #
-PROC gen data op = ( INT op, address )VOID: print( ( operation( op ), "  l_", identifiers[ address ], newline ) );
+PROC gen data op = ( INT op, address )VOID:
+     print( ( operation( op ), "  l_", identifiers[ address ], newline ) );
 # generates a nullary operation #
 PROC gen op 0    = ( INT op )VOID:          print( ( operation( op ), newline ) );
 # generates a "not" instruction sequence #

@@ -1,6 +1,6 @@
 BEGIN # find all primes with strictly increasing digits                      #
     PR read "primes.incl.a68" PR                   # include prime utilities #
-    PR read "rows.incl.a68"   PR                   # include array utilities #
+    PR read "sort.incl.a68"   PR                   # include  sort utilities #
     [ 1 : 512 ]INT primes;         # there will be at most 512 (2^9) primes  #
     INT p count := 0;                        # number of primes found so far #
     FOR d1 FROM 0 TO 1 DO
@@ -36,7 +36,7 @@ BEGIN # find all primes with strictly increasing digits                      #
             OD
         OD
     OD;
-    QUICKSORT primes FROMELEMENT 1 TOELEMENT p count;     # sort the primes #
+    primes QUICKSORT ELEMENTS( 1, p count );              # sort the primes #
     FOR i TO p count DO                                # display the primes #
         print( ( "  ", whole( primes[ i ], -8 ) ) );
         IF i MOD 10 = 0 THEN print( ( newline ) ) FI

@@ -1,4 +1,3 @@
-main:
 (
         []INT a = (-1 , -2 , 3 , 5 , 6 , -2 , -1 , 4 , -4 , 2 , -1);
 
@@ -23,7 +22,7 @@ main:
         OD;
 
         FOR i FROM begin max TO end max DO
-                print(a[i])
+                print((" ",whole(a[i],0)))
         OD
 
 )

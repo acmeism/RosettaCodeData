@@ -51,10 +51,11 @@ PROC count commands = ( STRING commands )INT:
         result
      END # count commands # ;
 
+# build a table of the commands and their minimum lengths                #
 # list of "commands" -  the words are optionally followed by the minimum #
 #                       length of abbreviation - if there isn't a number #
 #                       the command can only appear in full              #
-STRING commands
+STRING command list
    = "add 1  alter 3  backup 2  bottom 1  Cappend 2  change 1  Schange  Cinsert 2  Clast 3 "
    + "compress 4 copy 2 count 3 Coverlay 3 cursor 3  delete 3 Cdelete 2  down 1  duplicate "
    + "3 xEdit 1 expand 3 extract 3  find 1 Nfind 2 Nfindup 6 NfUP 3 Cfind 2 findUP 3 fUP 2 "
@@ -64,7 +65,6 @@ STRING commands
    + "refresh renum 3 repeat 3 replace 1 Creplace 2 reset 3 restore 4 rgtLEFT right 2 left "
    + "2  save  set  shift 2  si  sort  sos  stack 3 status 4 top  transfer 3  type 1  up 1 "
    ;
-# build the tables of the commands and their minimum lengths             #
 PROC load commands = ( STRING commands )VOID:
      BEGIN
         INT    cmd pos        := 0;
@@ -82,6 +82,7 @@ PROC load commands = ( STRING commands )VOID:
             FI
         OD
      END # load commands # ;
+
 # searches for word in command table and returns the full command      #
 # matching the possible abbreviation or *error* if there is no match   #
 OP   EXPAND  = ( STRING word )STRING:
@@ -122,9 +123,9 @@ PROC test expand = ( STRING words )VOID:
      END # test expand # ;
 
 # build the command table                                              #
-[ 1 : count commands( commands ) ]STRING command table;
-[ 1 : UPB command table          ]INT    min abbreviation;
-load commands( commands );
+[ 1 : count commands( command list ) ]STRING command table;
+[ 1 : UPB command table              ]INT    min abbreviation;
+load commands( commandlist );
 
 # task test cases                                                      #
 test expand( "riG   rePEAT copies  put mo   rest    types   fup.    6       poweRin" )

@@ -1,4 +1,6 @@
-import Data.Array (listArray, elems)
+import Data.Array
 
-main :: IO ()
-main = mapM_ print $ [sum, product] <*> [elems $ listArray (1, 10) [11 .. 20]]
+values = listArray (1,10) [1..10]
+
+s = sum . elems $ values
+p = product . elems $ values

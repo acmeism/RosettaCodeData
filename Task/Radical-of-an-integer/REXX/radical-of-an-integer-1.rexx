@@ -1,16 +1,19 @@
 /* REXX */
-parse version version; say version 'Intel i7 5GHz'
-say 'Radicals for an integer = product of distinct prime factors'
-say 'Version 1: tailor-made procedures'
+arg n
+if n = '' then
+   n = 1000000
+Numeric Digits 100
+parse version version; say version digits() 'Digits'
+say 'Radical of an integer = product of distinct prime factors'
+say 'Version 1: tailor-made routines'
 say
 call setp
-Numeric Digits 100
 /* 1. Radicals from 1 to 50 */
 Say 'Radicals of 1..50:'
 ol=''
-Do n=1 To 50
-  ol=ol||right(rad(n),5)
-  If n//10=0 then Do
+Do i=1 To 50
+  ol=ol||right(rad(i),5)
+  If i//10=0 then Do
     Say ol
     ol=''
     End
@@ -20,34 +23,32 @@ Say ''
 Call radt 99999
 Call radt 499999
 Call radt 999999
-
 Say ''
 Say 'Distribution of radicals:'
-Call time 'R'
 cnt.=0
-Do v=1 To 1000000
-  If v//100000=1 Then Do
-    ti=v%100000
-    etime.ti=format(time('E'),4,1)
-    End
+m = n/10
+Say ''
+Say 'Getting distribution list...'
+Call time 'R'
+Do v=1 To n
   p=rad(v,'cnt')
   cnt.p+=1
+  If v//m=0 Then Do
+    ti=(v%m)*10
+    say format(ti,3)'%' format(time('E'),4,3) 'seconds'
+    End
   /**************************************
   If p=7 Then
     Say v':' rad(v,'lstx') '=' rad(v)
   **************************************/
   End
-etime.10=format(time('E'),4,1)
+Say ''
+Say 'Results'
 Do d=0 To 20
   If cnt.d>0 Then
     Say d':' right(cnt.d,8)
   End
-Say ''
-Say 'Timings:'
-Do ti=1 To 10
-  Say right(ti,2) etime.ti 'seconds'
-  End
-Exit
+exit
 
 radt:
   Parse Arg u

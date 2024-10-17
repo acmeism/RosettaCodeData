@@ -20,23 +20,24 @@ BEGIN
             print( ( whole( l0, 0 ), " " ) );
             IF n > 1 THEN
                 print( ( whole( l1, 0 ), " " ) );
-                INT lp := l0;
-                INT ln := l1;
+                INT prev ln := l0;
+                INT curr ln := l1;
                 FROM 2 TO n - 1 DO
-                    INT next = ln + lp + add number;
-                    lp := ln;
-                    ln := next;
-                    print( ( whole( ln, 0 ), " " ) )
+                    INT next = curr ln + prev ln + add number;
+                    prev ln := curr ln;
+                    curr ln := next;
+                    print( ( whole( curr ln, 0 ), " " ) )
                 OD
             FI
          FI # show # ;
 
     # first series #
     print( ( "First 25 Leonardo numbers", newline ) );
-    show( 25, leonardo numbers );
-    print( ( newline ) );
+    show( 25, leonardo numbers ); print( ( newline ) );
     # second series #
     print( ( "First 25 Leonardo numbers from 0, 1 with add number = 0", newline ) );
-    show( 25, leonardo numbers WITHLZERO 0 WITHADDNUMBER 0 );
-    print( ( newline ) )
+    show( 25, leonardo numbers WITHLZERO 0 WITHADDNUMBER 0 ); print( ( newline ) );
+    # additional test to ensure WITHLONE is used #
+    print( ( "First 25 Leonardo numbers from 0, 2 with add number = 2", newline ) );
+    show( 25, leonardo numbers WITHLONE 2 WITHADDNUMBER 2 ); print( ( newline ) )
 END

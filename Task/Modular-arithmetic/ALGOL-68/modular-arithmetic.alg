@@ -19,4 +19,6 @@ PROC f = ( UNION( LONG LONG INT, MODULARINT ) x )LONG LONG INT:
        , ( MODULARINT    mx ): v OF ( mx**100 + mx + 1 )
     ESAC;
 
-print( ( whole( f( MODULARINT( 10, 13 ) ), 0 ), newline ) )
+print( ( whole( f( MODULARINT( 10, 13 ) ), 0 ), newline ) );
+# additional test to avoid a warning that the * operator isn't used... #
+print( ( whole( f( MODULARINT( 10, 13 ) * MODULARINT( 10, 13 ) ), 0 ), newline ) )

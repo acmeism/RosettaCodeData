@@ -1,14 +1,12 @@
-# directions for moves #
-INT nne = 1, ne  = 2, se = 3, sse = 4;
-INT ssw = 5, sw  = 6, nw = 7, nnw = 8;
-
-INT lowest move  = nne;
-INT highest move = nnw;
-
 # the vertical position changes of the moves                             #
+#                 nne  ne  se sse ssw  sw  nw nnw                        #
 []INT offset v = ( -2, -1,  1,  2,  2,  1, -1, -2 );
 # the horizontal position changes of the moves                           #
+#                 nne  ne  se sse ssw  sw  nw nnw                        #
 []INT offset h = (  1,  2,  2,  1, -1, -2, -2, -1 );
+
+INT lowest move  = LWB offset v;
+INT highest move = UPB offset v;
 
 MODE SQUARE = STRUCT( INT move      # the number of the move that caused #
                                     # the knight to reach this square    #
@@ -154,7 +152,7 @@ BEGIN
     result
 END; # find tour #
 
-main:(
+BEGIN # calculate the tour from the start position, if possible #
     initialise board( ( "-000----"
                       , "-0-00---"
                       , "-0000000"
@@ -174,4 +172,4 @@ main:(
         print( ( "Solution not found", newline ) )
     FI;
     print( ( iterations, " iterations, ", backtracks, " backtracks", newline ) )
-)
+END

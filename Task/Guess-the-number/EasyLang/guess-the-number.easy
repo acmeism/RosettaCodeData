@@ -1,4 +1,4 @@
-n = randint 10
+n = random 10
 write "Guess a number between 1 and 10: "
 repeat
   g = number input

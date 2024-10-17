@@ -16,7 +16,8 @@ public final class RuthAaronNumbers {
 	    System.out.println("First Ruth-Aaron triple (factors): " + firstRuthAaronTriple(NumberType.FACTOR));
 		System.out.println();
 	
-		System.out.println("First Ruth-Aaron triple (divisors): " + firstRuthAaronTriple(NumberType.DIVISOR));
+		System.out.println("First Ruth-Aaron triple (divisors): "
+            + firstRuthAaronTriple(NumberType.DIVISOR));
 		System.out.println();		
 	}
 	

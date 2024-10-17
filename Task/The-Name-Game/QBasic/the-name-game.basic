@@ -1,0 +1,48 @@
+DECLARE SUB TheGameName (nombre AS STRING)
+
+DIM listanombres(5) AS STRING
+listanombres(0) = "Gary"
+listanombres(1) = "EARL"
+listanombres(2) = "billy"
+listanombres(3) = "FeLiX"
+listanombres(4) = "Mary"
+listanombres(5) = "ShirlEY"
+
+FOR i = 0 TO UBOUND(listanombres)
+    TheGameName (listanombres(i))
+NEXT i
+
+SUB TheGameName (nombre AS STRING)
+    DIM x AS STRING
+    x = LCASE$(nombre)
+    x = UCASE$(MID$(x, 1, 1)) + (MID$(x, 2, LEN(x) - 1))
+    DIM x0 AS STRING
+    x0 = UCASE$(MID$(x, 1, 1))
+
+    DIM y AS STRING
+    IF x0 = "A" OR x0 = "E" OR x0 = "I" OR x0 = "O" OR x0 = "U" THEN
+	y = LCASE$(x)
+    ELSE
+	y = MID$(x, 2)
+    END IF
+
+    DIM b AS STRING
+    b = "b" + y
+	DIM f  AS STRING
+	f = "f" + y
+	DIM m   AS STRING
+	m = "m" + y
+
+    IF x0 = "B" THEN
+	b = y
+    ELSEIF x0 = "F" THEN
+	f = y
+    ELSEIF x0 = "M" THEN
+	m = y
+    END IF
+
+    PRINT x + ", " + x + ", bo-" + b
+    PRINT "Banana-fana fo-" + f
+    PRINT "Fee-fi-mo-" + m
+    PRINT x + "!" + CHR$(10)
+END SUB

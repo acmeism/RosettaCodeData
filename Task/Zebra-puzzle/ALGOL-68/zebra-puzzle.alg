@@ -22,20 +22,21 @@ BEGIN
          AND can set( smoke       OF h, smoke       OF s )
          ) # XOR # ;
     # sets a field in a house to value if it is unknown                         #
-    PROC set     = ( REF INT field, INT value )VOID: IF field = unknown AND value /= same THEN field := value FI;
+    PROC setf    = ( REF INT field, INT value )VOID:
+         IF field = unknown AND value /= same THEN field := value FI;
     # sets the unknown fields in house h to the non-same fields of suggestion s #
     OP   +:=     = ( REF HOUSE h, HOUSE s )VOID:
-         ( set( nationality OF h, nationality OF s ); set( animal OF h, animal OF s )
-         ; set( colour      OF h, colour      OF s ); set( drink  OF h, drink  OF s )
-         ; set( smoke       OF h, smoke       OF s )
+         ( setf( nationality OF h, nationality OF s ); setf( animal OF h, animal OF s )
+         ; setf( colour      OF h, colour      OF s ); setf( drink  OF h, drink  OF s )
+         ; setf( smoke       OF h, smoke       OF s )
          ) # +:= # ;
     # sets a field in a house to unknown if the value is not same               #
-    PROC reset   = ( REF INT field, INT value )VOID: IF value /= same THEN field := unknown FI;
+    PROC resetf  = ( REF INT field, INT value )VOID: IF value /= same THEN field := unknown FI;
     # sets fields in house h to unknown if the suggestion s is not same         #
     OP   -:=     = ( REF HOUSE h, HOUSE s )VOID:
-         ( reset( nationality OF h, nationality OF s ); reset( animal OF h, animal OF s )
-         ; reset( colour      OF h, colour      OF s ); reset( drink  OF h, drink  OF s )
-         ; reset( smoke       OF h, smoke       OF s )
+         ( resetf( nationality OF h, nationality OF s ); resetf( animal OF h, animal OF s )
+         ; resetf( colour      OF h, colour      OF s ); resetf( drink  OF h, drink  OF s )
+         ; resetf( smoke       OF h, smoke       OF s )
          ) # -:= # ;
     # attempts a partial solution for the house at pos                          #
     PROC try = ( INT pos, HOUSE suggestion, PROC VOID continue )VOID:

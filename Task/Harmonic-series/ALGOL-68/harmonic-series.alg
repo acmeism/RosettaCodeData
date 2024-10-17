@@ -1,4 +1,4 @@
-BEGIN # find some harmonic numbers, Hn is the sum if the reciprocals of 1..n #
+BEGIN # find some harmonic numbers, Hn is the sum of the reciprocals of 1..n #
     # returns the first n Harmonic numbers #
     OP   HARMONIC = ( INT n )[]REAL:
          BEGIN
@@ -21,7 +21,8 @@ BEGIN # find some harmonic numbers, Hn is the sum if the reciprocals of 1..n #
     FOR i TO UPB h DO
         IF h[ i ] > rqd real THEN
             # found the first harmonic number greater than rqd real #
-            print( ( "Position of the first harmonic number > ", whole( rqd int, -2 ), ": ", whole( i, 0 ), newline ) );
+            print( ( "Position of the first harmonic number > ", whole( rqd int, -2 ) ) );
+            print( ( ": ", whole( i, 0 ), newline ) );
             rqd int  +:= 1;
             rqd real +:= 1
         FI

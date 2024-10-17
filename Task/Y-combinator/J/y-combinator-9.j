@@ -1,12 +1,7 @@
-   fac f. Y NB. Factorial...
-'1:`(] * [ ([ 128!:2 ,&<) ] - 1:)@.(0 < ])&>/'&([ 128!:2 ,&<)
+   arb=. ':'<@;(1;~":0)<@;<@((":0)&;)                     NB. AR of an explicit adverb from its body
 
-   fac f.   NB. Factorial step...
-1:`(] * [ ([ 128!:2 ,&<) ] - 1:)@.(0 < ])
+   ara=. 1 :'arb u'                                       NB. The verb arb as an adverb
+   srt=. 1 :'arb ''u u`:6('' , (5!:5<''u'') , '')`:6 y''' NB. AR of the self-replication and transformation adverb
+   gab=. 1 :'u u`:6'                                      NB. The AR of the adverb and the adverb itself as a train
 
-
-   Fib f. Y NB. Fibonacci...
-'(([ ([ 128!:2 ,&<) ] - 2:) + [ ([ 128!:2 ,&<) ] - 1:)^:(1 < ])&>/'&([ 128!:2 ,&<)
-
-   Fib f.   NB. Fibonacci step...
-(([ ([ 128!:2 ,&<) ] - 2:) + [ ([ 128!:2 ,&<) ] - 1:)^:(1 < ])
+   Y=. ara srt gab                                        NB. Train of adverbs

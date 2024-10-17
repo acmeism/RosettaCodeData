@@ -15,7 +15,7 @@
 (defun classify-multiple-sentences (str)
   "Classify each sentence as Q, S, E, or N."
   ;; sentence boundary is defined as:
-  ;;   a period (full stop), comma, or question mark
+  ;;   a period (full stop), exclamation point/mark, or question mark
   ;;   followed by one space
   ;;   followed by a capital letter
   ;; while the above will work for this exercise, it won't

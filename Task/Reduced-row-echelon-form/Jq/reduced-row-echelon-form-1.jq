@@ -1,9 +1,10 @@
 # swap .[$i] and .[$j]
 def array_swap($i; $j):
   if $i == $j then .
-  elif $i < $j then array_swap($j; $i)
-  else .[$i] as $t | .[:$j] + [$t] + .[$j:$i] + .[$i + 1:]
-  end ;
+  else .[$i] as $t
+  | .[$i] = .[$j]
+  | .[$j] = $t
+  end;
 
 # element-wise subtraction: $a - $b
 def array_subtract($a; $b):

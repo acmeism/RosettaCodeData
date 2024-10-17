@@ -7,29 +7,21 @@ PROC move to front = ( STRING text, INT text pos )STRING:
         text
     ELSE
         # the character isn't already at the front - construct the new string #
-
         INT    char pos = LWB text + text pos;
-
         ( text[ char pos     : char pos     ]
         + text[              : char pos - 1 ]
         + text[ char pos + 1 :              ]
         )
-
     FI;
-
 
 # encode the string "text", using "initial table" as the starting symbol table#
 PROC encode = ( STRING text, STRING initial table )[]INT:
 BEGIN
-
     [ 1 : ( UPB text - LWB text ) + 1 ]INT result;
-
     STRING symbol table := initial table;
-
     FOR text pos FROM LWB text TO UPB text
     DO
         INT    symbol pos := 0;
-
         result[ text pos ]
             := IF char in string( text[ text pos ], symbol pos, symbol table )
                THEN
@@ -41,24 +33,17 @@ BEGIN
                    # the character isn't in the symbol table                  #
                    -1
                FI;
-
         # modify the symbol table so the latest character is at the front     #
         symbol table := move to front( symbol table, result[ text pos ] )
-
     OD;
-
     result
 END; # encode #
-
-
 
 # decode "encoded", using "initial table" as the starting symbol table        #
 PROC decode = ( []INT encoded, STRING initial table )STRING:
 BEGIN
-
     STRING result       := "";
     STRING symbol table := initial table;
-
     FOR text pos FROM LWB encoded TO UPB encoded
     DO
         result
@@ -70,24 +55,17 @@ BEGIN
                   # the character is in the symbol table                      #
                   symbol table[ encoded[ text pos ] + LWB symbol table ]
                 FI;
-
         # modify the symbol table so the latest character is at the front     #
         symbol table := move to front( symbol table, encoded[ text pos ] )
-
     OD;
-
     result
 END; # decode #
-
-
 
 # routine to test the encode and decode routines                              #
 PROC test encode and decode = ( STRING text )VOID:
 BEGIN
-
     # initial value for the symbol table                                      #
     []CHAR initial table = "abcdefghijklmnopqrstuvwxyz";
-
     # procedure to format the encoded value                                   #
     PROC format encoded value = ( []INT values )STRING:
     BEGIN
@@ -96,13 +74,10 @@ BEGIN
         DO
             result +:= ( " " + whole( values[ value pos ], 0 ) )
         OD;
-
         result
     END; # format encoded value #
-
     []INT  encoded = encode( text,    initial table );
     STRING decoded = decode( encoded, initial table );
-
     print( ( ( text
              + " encodes to ["
              + format encoded value( encoded )
@@ -120,12 +95,7 @@ BEGIN
            , newline
            )
          )
-
 END; # test encode and decode #
-
-
-
-main: (
 
      test encode and decode( "broood" )
   ;  test encode and decode( "bananaaa" )
@@ -133,5 +103,3 @@ main: (
 
 # ;  test encode and decode( "abcdefghijklmnopqrstuvwxyz" ) #
 # ;  test encode and decode( "zyxwvutsrqponmlkjihgfedcba" ) #
-
-)

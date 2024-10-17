@@ -5,12 +5,12 @@ call time 'Reset'                      /*only the 1st character is examined.  */
 junk = silly(reps)                     /*invoke the  SILLY  function (below). */
                                        /*───►   CALL SILLY REPS    also works.*/
 
-             /*                          The   J   is for the CPU time used   */
-             /*                                │   by the REXX program since  */
-             /*                        ┌───────┘   since the time was  RESET. */
-             /*                        │           This is a Regina extension.*/
+             /*                          The    E   is for    elapsed    time.*/
+             /*                                 │             ─               */
+             /*                        ┌────◄───┘                             */
+             /*                        │                                      */
              /*                        ↓                                      */
-say 'function SILLY took' format(time("J"),,2)  'seconds for' reps "iterations."
+say 'function SILLY took' format(time("E"),,2)  'seconds for' reps "iterations."
              /*                             ↑                                 */
              /*                             │                                 */
              /*            ┌────────►───────┘                                 */

@@ -1,15 +1,15 @@
 color 700
+d = 0.2
+t0 = systime
 on animate
    clear
-   rad += 0.2
+   rad += d
    move 50 50
    circle rad
-   if rad > 50
-      rad = 0
+   if rad > 50 or rad < 0
+      d = -d
    .
    t = systime
-   if t0 > 0
-      print 1000 * (t - t0) & " ms"
-   .
+   print 1000 * (t - t0) & " ms"
    t0 = t
-end
+.

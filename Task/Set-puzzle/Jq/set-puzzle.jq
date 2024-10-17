@@ -6,11 +6,9 @@ include "MRG32k3a" {search: "."}; # see above
 def lpad($len): tostring | ($len - length) as $l | (" " * $l) + .;
 
 def array_swap($i; $j):
-  if $i < $j then array_swap($j;$i)
+  if $j < $i then array_swap($j;$i)
   elif $i == $j then .
-  else .[$i] as $t
-  | .[:$j] + [$t] + .[$j:$i] + .[$i + 1:]
-  end ;
+  else .[:$i] + [.[$j]] + .[$i+1:$j] + [.[$i]] + .[$j+1:]
 
 # input: array of length $n
 def shuffle:

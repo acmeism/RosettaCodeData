@@ -1,0 +1,103 @@
+#include "windows.bi"
+#include "file.bi"
+
+Dim As Any Ptr urlmon = Dylibload("URLMON.DLL")
+If urlmon = 0 Then
+    Print "DLL not available in your OS"
+    End 100
+End If
+
+Dim Shared As Function(Byval As Any Ptr, Byval As ZString Ptr, Byval As ZString Ptr, Byval As Any Ptr, Byval As Any Ptr) As Integer UDTF
+UDTF = Dylibsymbol(urlmon, "URLDownloadToFileA")
+
+Const As String Q = Chr(34) ' The quote
+Dim Shared As Integer BlkSize = 256 * 1024 ' 256k must be enough
+Dim Shared As Ubyte Ptr Blk
+Blk = Allocate(BlkSize)
+Dim Shared As Integer Tasks
+Dim Shared As String TaskK()
+
+Function Value(Byref p As Ubyte Ptr, nombre As String) As String
+    Dim As String nameStr = Q & nombre & Q & ":"
+    Dim As Integer s = Instr(*Cast(ZString Ptr, p), nameStr)
+    If s = 0 Then Return ""
+    p += s + Len(nameStr)
+    Return Left(*Cast(ZString Ptr, p), Instr(*Cast(ZString Ptr, p), Q) - 1)
+End Function
+
+Sub FetchData(category As String)
+    Dim As String tempfile = Curdir & "/result.json"
+    Dim As String url
+    Dim As Integer e, f
+    Dim As String continuar = ""
+    Dim As Ubyte Ptr mem = Blk
+
+    Do
+        url = "http://www.rosettacode.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:" & category & "&cmlimit=500&format=json&cmcontinue=" & continuar
+        e = UDTF(0, url, tempfile, 0, 0)
+        If e Then
+            Print "Can't get data from Rosetta API"
+            End 100
+        End If
+
+        f = Filelen(tempfile)
+        If mem - Blk + f > BlkSize Then
+            Print "Insufficient memory to load data"
+            End 100
+        End If
+
+        Dim As Integer ff = Freefile
+        Open tempfile For Binary As #ff
+        Get #ff, , *mem, f
+        Close #ff
+
+        mem[f] = 0
+        continuar = Value(mem, "cmcontinue")
+        mem += f
+    Loop Until continuar = ""
+End Sub
+
+Sub ShowUnimplemented(language As String)
+    Dim As Integer i, j, n
+    Dim As Ubyte Ptr mem
+
+    FetchData(language)
+    mem = Blk
+    Print !"\nUnimplemented tasks for the '" & language & "' programming language:"
+    For i = 0 To Tasks - 1
+        j = Instr(*Cast(ZString Ptr, mem), TaskK(i))
+        If j Then
+            mem += j
+        Else
+            n += 1
+            Print " -" & TaskK(i)
+        End If
+    Next
+    Print "Total is: " & n
+End Sub
+
+FetchData("Programming_Tasks")
+
+Tasks = 0
+Dim As Ubyte Ptr p = Blk
+Dim As Integer i
+
+Do
+    i = Instr(*Cast(ZString Ptr, p), "title")
+    If i Then
+        Tasks += 1
+        p += i
+    End If
+Loop Until i = 0
+
+Redim TaskK(Tasks - 1)
+p = Blk
+
+For i = 0 To Tasks - 1
+    TaskK(i) = Value(p, "title")
+Next
+
+ShowUnimplemented("FreeBASIC")
+ShowUnimplemented("C++")
+
+Sleep

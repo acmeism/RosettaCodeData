@@ -84,7 +84,7 @@ on timer
          rect 13 13
          color 000
          move 27 37
-         dice = randint 6
+         dice = random 6
          text dice
          tmcnt -= 1
          if tmcnt = 0

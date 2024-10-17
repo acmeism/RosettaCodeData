@@ -1,11 +1,12 @@
 BEGIN # construct an R-style fivenum function #
     PR read "rows.incl.a68" PR
+    PR read "sort.incl.a68" PR
 
     PROC fivenum = ( []REAL array )[]REAL:
          BEGIN
             INT n = ( UPB array + 1 ) - LWB array;
             [ 1 : n ]REAL x := array[ AT 1 ];
-            QUICKSORT x FROMELEMENT LWB x TOELEMENT UPB x;
+            QUICKSORT x;
             REAL   n4 = ( ( ( n + IF ODD n THEN 3 ELSE 2 FI ) / 2 ) / 2 ) ;
             []REAL d  = ( 1, n4, ( n + 1 ) / 2, n + 1 - n4, n );
             [ 1 : 5 ]REAL sum_array;

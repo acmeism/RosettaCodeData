@@ -64,7 +64,7 @@ fn waitForMove() !Move {
 }
 
 fn shuffle(moves: u8) !void {
-    var random = std.rand.DefaultPrng.init(@intCast(std.time.microTimestamp()));
+    var random = std.Random.DefaultPrng.init(@intCast(std.time.microTimestamp()));
     const rand = random.random();
     var n: u8 = 0;
     while (n < moves) {

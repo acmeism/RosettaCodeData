@@ -16,24 +16,24 @@ BEGIN
             FOR n FROM 1 WHILE ABS diff > 1e-15 DO
                 divisor *:= n;
                 t       *:= x;
-                LONG REAL term := t / divisor;
+                LONG REAL e term := t / divisor;
                 IF even power THEN
                     # this term is real #
                     subtract := NOT subtract;
                     LONG REAL prev := real part;
                     IF subtract THEN
-                        real part -:= term
+                        real part -:= e term
                     ELSE
-                        real part +:= term
+                        real part +:= e term
                     FI;
                     diff := prev - real part
                 ELSE
                     # this term is imaginary #
                     LONG REAL prev := imaginary part;
                     IF subtract THEN
-                        imaginary part -:= term
+                        imaginary part -:= e term
                     ELSE
-                        imaginary part +:= term
+                        imaginary part +:= e term
                     FI;
                     diff := prev - imaginary part
                 FI;

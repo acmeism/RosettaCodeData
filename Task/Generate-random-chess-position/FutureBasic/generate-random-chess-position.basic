@@ -1,117 +1,145 @@
-begin globals
-short grid(8, 8)  // 1-8
-end globals
+_window = 1
+begin enum 1
+  _view
+  _label
+end enum
 
+void local fn BuildWindow
+  window _window, @"Generate random chess position", (0,0,360,400), NSWindowStyleMaskTitled
+  subclass view _view, (20,60,320,320)
+  textlabel _label,, (20,20,320,16)
+  ControlSetSize( _label, NSControlSizeSmall )
+end fn
 
-local fn PlaceKings
+void local fn ToFen
+  short       ch, r, c, countEmpty = 0
+  CFStringRef pieceStr = NULL, fen = @""
+  long        x = 0, y = 280
+
+  for r = 1 to 8
+    for c = 1 to 8
+      ch = mda(r,c)
+      select (ch)
+        case _"k" : pieceStr = @"♚" // Black King
+        case _"K" : pieceStr = @"♔" // White King
+
+        case _"p" : pieceStr = @"♟" // Black Pawn
+        case _"P" : pieceStr = @"♙" // White Pawn
+
+        case _"r" : pieceStr = @"♜" // Black Rook
+        case _"R" : pieceStr = @"♖" // White Rook
+
+        case _"n" : pieceStr = @"♞" // Black Knight
+        case _"N" : pieceStr = @"♘" // White Knight
+
+        case _"b" : pieceStr = @"♝" // Black Bishop
+        case _"B" : pieceStr = @"♗" // White Bishop
+
+        case _"q" : pieceStr = @"♛" // Black Queen
+        case _"Q" : pieceStr = @"♕" // White Queen
+      end select
+
+      if ( ch )
+        x = (c-1) * 40
+        y = 280 - ((r-1) * 40)
+        CFMutableAttributedStringRef aString = fn MutableAttributedStringWithString( pieceStr )
+        MutableAttributedStringSetFontWithName( aString, @"Menlo", 36 )
+        MutableAttributedStringSetAlignment( aString, NSTextAlignmentCenter )
+        AttributedStringDrawInRect( aString, fn CGRectMake(x,y,40,40) )
+      end if
+
+      if ( ch == 0 )
+        countEmpty++
+      else
+        if ( countEmpty > 0 )
+          fen = concat( fen, @(countEmpty) )
+
+          countEmpty = 0
+        end if
+        fen = concat( fen, ucs(ch) )
+      end if
+    next
+
+    if ( countEmpty > 0 )
+      fen = concat( fen, @(countEmpty) )
+      countEmpty = 0
+    end if
+    fen = concat( fen, @"/" )
+  next
+
+  fen = concat( fen, @" w - - 0 1" )
+  textlabel _label, fen
+end fn
+
+void local fn DrawBoard( tag as long )
+  CGRect r = fn ViewBounds(tag)
+  BezierPathFillRect( r, fn ColorWhite )
+  CGFloat x = 0, y = 0
+  long i, j
+  for j = 1 to 8
+    for i = 1 to 8 step 2
+      BezierPathFillRect( fn CGRectMake( x, y, 40, 40 ), fn ColorLightGray )
+      x += 80
+    next
+    y += 40
+    if ( j % 2 == 0 )
+      x = 0
+    else
+      x = 40
+    end if
+  next
+  BezierPathStrokeRect( r, 3.0, fn ColorGray )
+  fn ToFen
+end fn
+
+void local fn PlaceKings
   short r1, r2, c1, c2
-
   while (YES)
     r1 = rnd(8)
     c1 = rnd(8)
     r2 = rnd(8)
     c2 = rnd(8)
-    if ( abs( r1 - r2 ) > 1 or abs( c1 - c2) > 1 )
-      grid(r1, c1) = asc("K")
-      grid(r2, c2) = asc("k")
-      exit fn
+    if ( abs( r1 - r2 ) > 1 || abs( c1 - c2) > 1 )
+      mda(r1,c2) = _"K"
+      mda(r2,c2) = _"k"
+      return
     end if
   wend
 end fn
 
-
-local fn  PlacePieces( pieces$ as Str255, isPawn as BOOL )
+void local fn  PlacePieces( pieces as CFStringRef, isPawn as BOOL )
   short n, r, c, numToPlace
-
-  numToPlace = rnd( len$(pieces$) )
+  numToPlace = rnd( len(pieces) )
   for n = 1 to numToPlace
     do
       r = rnd(8)
       c = rnd(8)
-      if isPawn == YES and mid$( pieces$, n, 1 ) == "p" and r = 8 then exit fn
-      if isPawn == YES and mid$( pieces$, n, 1 ) == "P" and r = 1 then exit fn
-    until not( ( grid(r, c) != 0 ) or ( isPawn and ( r == 8 or r == 1 ) ) )
-    grid(r, c) = asc( mid$( pieces$, n, 1 ) )
+      if ( isPawn == YES && fn StringIsEqual( mid(pieces,n-1,1), @"p" ) && r == 8 ) then return
+      if ( isPawn == YES && fn StringIsEqual( mid(pieces,n-1,1), @"P" ) && r == 1 ) then return
+    until !( ( mda(r,c) != 0 ) || ( isPawn && ( r == 8 || r == 1 ) ) )
+    mda(r,c) = ucc( mid(pieces,n-1,1) )
   next
 end fn
 
-
-local fn ToFen
-  Str255      fen$
-  short        ch, r, c, countEmpty = 0
-  CFStringRef pieceStr
-
-  for r = 1 to 8
-    for c = 1 to 8
-      ch = grid(r, c)
-
-      select (ch)
-
-        case 107 : pieceStr = @" ♚" // Black King
-        case  75 : pieceStr = @" ♔" // White King
-
-        case 112 : pieceStr = @" ♟" // Black Pawn
-        case  80 : pieceStr = @" ♙" // White Pawn
-
-        case 114 : pieceStr = @" ♜" // Black Rook
-        case  82 : pieceStr = @" ♖" // White Rook
-
-        case 110 : pieceStr = @" ♞" // Black Knight
-        case  78 : pieceStr = @" ♘" // White Knight
-
-        case  98 : pieceStr = @" ♝" // Black Bishop
-        case  66 : pieceStr = @" ♗" // White Bishop
-
-        case 113 : pieceStr = @" ♛" // Black Queen
-        case  81 : pieceStr = @" ♕" // White Queen
-
-      end select
-
-      if ( ch   )
-        print pieceStr,
-      else
-        print @" .",
-      end if
-      if ( ch == 0 )
-        countEmpty++
-      else
-        if ( countEmpty > 0 )
-          fen$ = fen$ + chr$(countEmpty + 48)
-          countEmpty = 0
-        end if
-        fen$ = fen$ + chr$(ch)
-      end if
-    next
-    if ( countEmpty > 0 )
-      fen$ = fen$ + chr$(countEmpty + 48)
-      countEmpty = 0
-    end if
-    fen$ = fen$ + "/"
-    print
-  next
-  fen$ = fen$ + " w - - 0 1"
-  fen$ = mid$( fen$, 8, len$(fen$) )
-  print
-  text @"Menlo", 14, fn ColorText, fn ColorClear, NSTextAlignmentLeft, 10
-  print fen$
-end fn
-
-local fn CreateFen
+void local fn CreateFen
   fn PlaceKings
-  fn PlacePieces( "PPPPPPPP", YES )
-  fn PlacePieces( "pppppppp", YES )
-  fn PlacePieces( "RNBQBNR",   NO )
-  fn PlacePieces( "rnbqbnr",   NO )
-  fn ToFen
+  fn PlacePieces( @"PPPPPPPP", YES )
+  fn PlacePieces( @"pppppppp", YES )
+  fn PlacePieces( @"RNBQBNR",   NO )
+  fn PlacePieces( @"rnbqbnr",   NO )
 end fn
 
+void local fn DoDialog( ev as long, tag as long )
+  select ( ev )
+    case _viewDrawRect : fn DrawBoard( tag )
+  end select
+end fn
 
 randomize
 
-window 1, @"Random Chess Position", ( 0, 0, 700, 400 )
-
-text @"Menlo", 32, fn ColorText, fn ColorClear, NSTextAlignmentLeft, 10
-
+fn BuildWindow
 fn CreateFen
+
+on dialog fn DoDialog
 
 HandleEvents

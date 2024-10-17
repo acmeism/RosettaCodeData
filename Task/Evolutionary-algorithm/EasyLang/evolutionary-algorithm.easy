@@ -11,7 +11,7 @@ func fitness trial$ .
 func$ mutate parent$ .
    for c$ in strchars parent$
       if randomf < P
-         res$ &= abc$[randint len abc$[]]
+         res$ &= abc$[random len abc$[]]
       else
          res$ &= c$
       .
@@ -19,7 +19,7 @@ func$ mutate parent$ .
    return res$
 .
 for i to len target$
-   parent$ &= abc$[randint len abc$[]]
+   parent$ &= abc$[random len abc$[]]
 .
 while fitness parent$ > 0
    copies$[] = [ ]

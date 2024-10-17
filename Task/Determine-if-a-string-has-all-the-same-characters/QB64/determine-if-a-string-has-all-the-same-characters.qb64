@@ -1,0 +1,23 @@
+DECLARE Sub CaracteresUnicos (cad$)
+
+CaracteresUnicos ("")
+CaracteresUnicos (".")
+CaracteresUnicos ("abcABC")
+CaracteresUnicos ("XYZ ZYX")
+CaracteresUnicos ("1234567890ABCDEFGHIJKLMN0PQRSTUVWXYZ")
+End
+
+Sub CaracteresUnicos (cad$)
+    lngt = Len(cad$)
+    Print "String = '"; cad$; "' length = "; lngt
+    For i = 1 To lngt
+        For j = i + 1 To lngt
+            If Mid$(cad$, i, 1) = Mid$(cad$, j, 1) Then
+                Print " First difference at position "; i; " and "; j; ", character = '"; Mid$(cad$, i, 1); "', hex value = "; Hex$(Asc(Mid$(cad$, i, 1)))
+                Print
+                Exit Sub
+            End If
+        Next j
+    Next i
+    Print " All characters are the same."; Chr$(10)
+End Sub

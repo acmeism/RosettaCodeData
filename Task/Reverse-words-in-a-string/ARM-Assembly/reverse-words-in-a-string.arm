@@ -1,0 +1,179 @@
+/* ARM assembly Raspberry PI  */
+/*  program invword.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.include "../constantes.inc"
+
+.equ MAXILINE,  5
+/*******************************************/
+/*   Macros                              */
+/*******************************************/
+//.include "../../ficmacros32.inc"            @ for developer debugging
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessDebutPgm:   .asciz "Program 32 bits start. \n"
+szCarriageReturn: .asciz "\n"
+szMessFinOK:      .asciz "Program normal end. \n"
+szMessErreur:     .asciz "Error  !!!\n"
+szSpace1:         .asciz " "
+
+szLine1:          .asciz "---------- Ice and Fire ------------"
+.equ LGLINE1,  . -  szLine1 - 1
+szLine2:          .asciz ""
+.equ LGLINE2,  . -  szLine2 - 1
+szLine3:         .asciz "fire, in end will world the say Some"
+.equ LGLINE3,  . -  szLine3 - 1
+szLine4:         .asciz "ice. in say Some"
+.equ LGLINE4,  . -  szLine4 - 1
+szLine5:         .asciz "desire of tasted I've what From"
+.equ LGLINE5,  . -  szLine5 - 1
+szLine6:         .asciz "fire. favor who those with hold I"
+.equ LGLINE6,  . -  szLine6 - 1
+szLine7:         .asciz "... elided paragraph last ..."
+.equ LGLINE7,  . -  szLine7 - 1
+szLine8:         .asciz "Frost Robert -----------------------"
+.equ LGLINE8,  . -  szLine8 - 1
+.align 4
+tabLines:        .int szLine1
+                 .int LGLINE1
+                 .int szLine2
+                 .int LGLINE2
+                 .int szLine3
+                 .int LGLINE3
+                 .int szLine4
+                 .int LGLINE4
+                 .int szLine5
+                 .int LGLINE5
+                 .int szLine6
+                 .int LGLINE6
+                 .int szLine2
+                 .int LGLINE2
+                 .int szLine7
+                 .int LGLINE7
+                 .int szLine2
+                 .int LGLINE2
+                 .int szLine8
+                 .int LGLINE8
+
+     .equ NBLINES,  (. -  tabLines)/8
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr r0,iAdrszMessDebutPgm
+    bl affichageMess               @ start message
+    mov r6,#0                      @ line counter
+    ldr r4,iAdrtabLines            @ lines array
+    mov r5,#8                      @ line array size
+1:                                 @ start line loop
+    mla r3,r6,r5,r4                @ compute line address
+    ldr r0,[r3]                    @ load line adress
+    add r1,r3,#4                   @ compute size address
+    ldr r1,[r1]                    @ load line size
+    bl inverseWord
+    add r6,r6,#1                   @ increment counter
+    cmp r6,#NBLINES                @ end ?
+    blt 1b
+
+    ldr r0,iAdrszMessFinOK
+    bl affichageMess
+    b 100f
+99:
+    ldr r0,iAdrszMessErreur        @ error
+    bl affichageMess
+    mov r0, #1                     @ return code error
+    b 100f
+100:
+    mov r7,#EXIT                   @ program end
+    svc #0                         @ system call
+iAdrszMessDebutPgm:          .int szMessDebutPgm
+iAdrszMessFinOK:             .int szMessFinOK
+iAdrszMessErreur:            .int szMessErreur
+iAdrtabLines:                .int tabLines
+/***************************************************/
+/*   word inversion                  */
+/***************************************************/
+/* r0 contains line address t  */
+/* r1 contains line length */
+inverseWord:
+    push {r1-r6,lr}                   @ save registers
+    cmp r1,#0              @ empty line ?
+    beq 20f
+    mov r4,r0              @ begin line address
+    add r5,r0,r1           @ end line address
+    mov r8,r5              @ start indice at line end
+    mov r6,#0              @ end word adresse
+1:                         @ line analyse loop
+    cmp r8,r4              @ end line ?
+    blt 10f
+    ldrb r2,[r8]           @ load one char
+    cmp r2,#' '            @ space ?
+    bne 3f
+    cmp r6,#0              @ word finded ?
+    bne 2f
+    sub r8,r8,#1           @ no ->loop
+    b 1b
+2:                         @ print the word
+    mov r1,r8              @ word address in r1
+    sub r2,r6,r8           @ word length
+    add r2,r2,#1
+    mov r0,#STDOUT         @ code to write to the standard output Linux
+    mov r7, #WRITE         @ code call system "write"
+    svc #0                 @ call systeme
+    mov r6,#0              @ raz end word
+    sub r8,r8,#1           @ decrement line address
+    b 1b                   @ and loop
+3:
+    cmp r6,#0              @ word ok
+    moveq r6,r8            @ no -> address end word
+    sub r8,r8,#1           @ and loop
+    b 1b
+
+    b 100f
+ 10:                       @ line end
+    cmp r6,#0              @ word ok
+    beq 20f
+                           @ first word do not begin by space
+    ldr r1,iAdrszSpace1    @ address space to display
+    mov r2,#1
+    mov r0,#STDOUT         @ code to write to the standard output Linux
+    mov r7, #WRITE         @ code call system "write"
+    svc #0                 @ call systeme
+                           @print the word
+    mov r1,r8              @ address word
+    sub r2,r6,r8           @ word length
+    add r2,r2,#1
+    mov r0,#STDOUT         @ code to write to the standard output Linux
+    mov r7, #WRITE         @ code call system "write"
+    svc #0                 @ call systeme
+
+ 20:                       @ empty line or end line
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+ 100:                                  @ end function
+    pop {r1-r6,pc}                    @ restaur registers
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszSpace1:             .int szSpace1
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

@@ -7,7 +7,7 @@ print ""
 for r to 3
    write "<tr align=right><td>" & r
    for c to 3
-      write "<td>" & randint 200
+      write "<td>" & random 200
    .
    print ""
 .

@@ -1,6 +1,6 @@
 proc shuffle . l[] .
    for i = len l[] downto 2
-      r = randint i
+      r = random i
       swap l[i] l[r]
    .
 .

@@ -1,0 +1,5 @@
+(let (xs (sequence 1 10)
+      x)
+  (while (set 'x (pop xs))
+    (print x)
+    (when xs (print ", "))))

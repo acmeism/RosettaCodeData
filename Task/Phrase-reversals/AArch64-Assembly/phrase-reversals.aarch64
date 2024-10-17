@@ -1,0 +1,259 @@
+ /* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program invphrase64.s   */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ BUFFERSIZE,    160
+/*******************************************/
+/*   Macros                              */
+/*******************************************/
+//.include "../../ficmacros64.inc"            // for developer debugging
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessDebutPgm:   .asciz "Program 64 bits start. \n"
+szCarriageReturn: .asciz "\n"
+szMessFinOK:      .asciz "Program normal end. \n"
+szMessErreur:     .asciz "Error  !!!\n"
+szSpace1:         .asciz " "
+
+szPhrase1:          .asciz "rosetta code phrase reversal"
+.equ LGPHRASE1,  . -  szPhrase1 - 1
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr x0,qAdrszMessDebutPgm
+    bl affichageMess               // start message
+
+    ldr x0,qAdrszPhrase1           // load phrase adress
+    mov x1,#LGPHRASE1
+    bl inverseChar
+
+    ldr x0,qAdrszPhrase1           // load phrase adress
+    mov x1,#LGPHRASE1
+    bl inverseWord
+
+    ldr x0,qAdrszPhrase1           // load phrase adress
+    mov x1,#LGPHRASE1              // phrase size
+    bl inverseWordString
+
+
+    ldr x0,qAdrszMessFinOK
+    bl affichageMess
+    b 100f
+99:
+    ldr x0,qAdrszMessErreur        // error
+    bl affichageMess
+    mov x0, #1                     // return code error
+    b 100f
+100:
+    mov x8,EXIT
+    svc #0                         // system call
+qAdrszMessDebutPgm:          .quad szMessDebutPgm
+qAdrszMessFinOK:             .quad szMessFinOK
+qAdrszMessErreur:            .quad szMessErreur
+qAdrszPhrase1:               .quad szPhrase1
+/***************************************************/
+/*   word inversion                  */
+/***************************************************/
+/* x0 contains line address t  */
+/* x1 contains line length */
+inverseChar:
+    stp x1,lr,[sp,-16]!    // save  registers
+    stp x2,x3,[sp,-16]!    // save  registers
+    stp x4,x5,[sp,-16]!    // save  registers
+    stp x6,x7,[sp,-16]!    // save  registers
+    stp x8,x9,[sp,-16]!    // save  registers
+    sub sp,sp,#BUFFERSIZE  // reserve place on the stack
+    mov x7,sp              //
+    mov x4,x0              // begin line address
+    add x8,x0,x1           // end line address indice at line end
+    sub x8,x8,#1
+    mov x6,#0              // store indice
+1:                         // line analyse loop
+    cmp x8,x4              // end line ?
+    blt 2f
+    ldrb w2,[x8]           // load one char
+    strb w2,[x7,x6]
+    add x6,x6,#1
+    sub x8,x8,#1           // and loop
+    b 1b
+2:
+    mov x2,#0x0A
+    strb w2,[x7,x6]
+    add x6,x6,#1
+    mov x2,#0
+    strb w2,[x7,x6]        // final zero
+    mov x0,x7
+    bl affichageMess
+    add sp,sp,#BUFFERSIZE  // free reserved place
+
+ 100:                      // end function
+    ldp x8,x9,[sp],16      // restaur  registers
+    ldp x6,x7,[sp],16      // restaur  registers
+    ldp x4,x5,[sp],16      // restaur  registers
+    ldp x2,x3,[sp],16      // restaur  registers
+    ldp x1,lr,[sp],16      // restaur  registers
+    ret
+/***************************************************/
+/*   word string inversion                  */
+/***************************************************/
+/* x0 contains line address t  */
+/* x1 contains line length */
+inverseWordString:
+    stp x1,lr,[sp,-16]!    // save  registers
+    stp x2,x3,[sp,-16]!    // save  registers
+    stp x4,x5,[sp,-16]!    // save  registers
+    stp x6,x7,[sp,-16]!    // save  registers
+    sub sp,sp,#BUFFERSIZE  // reserve place on the stack
+    mov x7,sp              // and save address
+    sub x5,x1,#1           // phrase length start indice at line end
+    mov x6,#0              // word length
+    mov x3,#0              // inverted phrase indice
+1:                         // line analyse loop
+    cmp x5,#0              // end line ?
+    blt 10f
+    ldrb w2,[x0,x5]        // load one char
+    cmp w2,#' '            // space ?
+    bne 3f
+    mov x4,#0              // indice word
+    add x1,x5,#1
+2:                         // loop copy word to buffer
+    ldrb w2,[x0,x1]        // load one char
+    strb w2,[x7,x3]        // store in buffer
+    add x3,x3,#1           // increment indice
+    add x1,x1,#1
+    add x4,x4,#1
+    cmp x4,x6
+    blt 2b
+    mov x2,#' '
+    strb w2,[x7,x3]        // store in buffer
+    add x3,x3,#1
+    mov x6,#0
+    sub x5,x5,#1           // no ->loop
+    b 1b
+
+3:
+    add x6,x6,#1           // increment word length
+    sub x5,x5,#1           // and loop
+    b 1b
+
+ 10:                       // line end
+    mov x4,#0              // indice word
+    add x1,x5,#1
+ 11:                       // loop copy word to buffer
+    ldrb w2,[x0,x1]        // load one char
+    strb w2,[x7,x3]        // store in buffer
+    add x3,x3,#1
+    add x1,x1,#1
+    add x4,x4,#1
+    cmp x4,x6
+    blt 11b
+    mov x2,#0x0A           // add return line
+    strb w2,[x7,x3]        // store in buffer
+    add x3,x3,#1
+    mov x2,#0              // final zero
+    strb w2,[x7,x3]        // store in buffer
+    add x3,x3,#1
+    mov x0,x7              // buffer display
+    bl affichageMess
+
+    add sp,sp,#BUFFERSIZE  // free reserved place
+ 100:                      // end function
+    ldp x6,x7,[sp],16      // restaur  registers
+    ldp x4,x5,[sp],16      // restaur  registers
+    ldp x2,x3,[sp],16      // restaur  registers
+    ldp x1,lr,[sp],16      // restaur  registers
+    ret
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrszSpace1:             .quad szSpace1
+/***************************************************/
+/*   word string inversion                  */
+/***************************************************/
+/* x0 contains phrase address  */
+/* x1 containsphrase length */
+inverseWord:
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!          // save  registers
+    stp x4,x5,[sp,-16]!          // save  registers
+    stp x6,x7,[sp,-16]!          // save  registers
+    stp x8,x9,[sp,-16]!          // save  registers
+    sub sp,sp,#BUFFERSIZE     // reserve place on the stack
+    mov x7,sp
+    mov x8,#0              // phrase indice
+    mov x6,#0              // word length
+    mov x3,#0              // inverted phrase indice
+1:                         // phrase analyse loop
+    cmp x8,x1              // end phrase ?
+    bgt 4f
+    ldrb w2,[x0,x8]        // load one char
+    cmp x2,#' '            // space ?
+    bne 3f
+    mov x5,#0              // indice inverted word
+    sub x4,x8,#1           // hparse word indice
+2:                         // inversion word loop
+    ldrb w2,[x0,x4]        // load one char of word end
+    strb w2,[x7,x3]        // store in begin position
+    add x3,x3,#1           // increment indice inverted phrase
+    add x5,x5,#1           // increment word length counter
+    sub x4,x4,#1           // decrement indice phrase
+    cmp x5,x6              // length equal ?
+    blt 2b                 // no ->loop
+    mov x2,#' '            // store one space
+    strb w2,[x7,x3]
+    mov x6,#0              // raz word length
+    add x3,x3,#1           // increment indice inverted phrase
+    add x8,x8,#1           //  and loop
+    b 1b
+3:                         // word character
+    add x6,x6,#1           // increment word length
+    add x8,x8,#1           // loop
+    b 1b
+4:
+    mov x5,#0              //
+    sub x4,x8,#2           // 0 final in phrase
+5:                         // inversion last word
+    ldrb w2,[x0,x4]
+    strb w2,[x7,x3]
+    add x3,x3,#1
+    add x5,x5,#1
+    sub x4,x4,#1
+    cmp x5,x6
+    blt 5b
+    mov x2,#0x0A           // add return line
+    strb w2,[x7,x3]
+    add x3,x3,#1
+    mov x2,#0              // zero final
+    strb w2,[x7,x3]
+
+    mov x0,x7              // buffer display
+    bl affichageMess
+    add sp,sp,#BUFFERSIZE
+100:                         // end function
+    ldp x8,x9,[sp],16        // restaur  registers
+    ldp x6,x7,[sp],16        // restaur  registers
+    ldp x4,x5,[sp],16        // restaur  registers
+    ldp x2,x3,[sp],16        // restaur  registers
+    ldp x1,lr,[sp],16        // restaur  registers
+    ret
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

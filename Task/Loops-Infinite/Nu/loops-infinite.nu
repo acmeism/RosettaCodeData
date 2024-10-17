@@ -1,1 +1,1 @@
-while true {print SPAM}
+loop { print SPAM }

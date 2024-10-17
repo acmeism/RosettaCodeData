@@ -5,24 +5,24 @@ PROC print truth table = ( STRING expr )VOID:
      BEGIN
 
         # recursively prints the truth table #
-        PROC print line = ( INT v )VOID:
-             IF v > UPB bv
+        PROC print line = ( INT lv )VOID:
+             IF lv > UPB bv
              THEN
                  # at the end of the variables - print the line #
-                 FOR e TO UPB bv DO
-                     IF used[ e ] THEN print( ( " ", bv[ e ], " " ) ) FI
+                 FOR le TO UPB bv DO
+                     IF used[ le ] THEN print( ( " ", bv[ le ], " " ) ) FI
                  OD;
                  print( ( "     ", evaluate( expr ), newline ) )
-             ELIF used[ v ]
+             ELIF used[ lv ]
              THEN
                  # have another variable #
-                 bv[ v ] := TRUE;
-                 print line( v + 1 );
-                 bv[ v ] := FALSE;
-                 print line( v + 1 )
+                 bv[ lv ] := TRUE;
+                 print line( lv + 1 );
+                 bv[ lv ] := FALSE;
+                 print line( lv + 1 )
              ELSE
                  # this variable is not used #
-                 print line( v + 1 )
+                 print line( lv + 1 )
              FI # print line # ;
 
         # returns the name of the variable number #
@@ -41,25 +41,25 @@ PROC print truth table = ( STRING expr )VOID:
         [ 26 ]BOOL used;
         BOOL at least one variable := FALSE;
         # determine which variables are used in the expression #
-        FOR v TO UPB bv DO
-            used[ v ] := char in string( variable name( v ), NIL, expr );
-            IF used[ v ]THEN at least one variable := TRUE FI
+        FOR iv TO UPB bv DO
+            used[ iv ] := char in string( variable name( iv ), NIL, expr );
+            IF used[ iv ]THEN at least one variable := TRUE FI
         OD;
         # print truth table headings #
         print( ( expr, ":", newline ) );
-        FOR v TO UPB bv DO
-            IF used[ v ] THEN print( ( " ", variable name( v ), " " ) ) FI
+        FOR iv TO UPB bv DO
+            IF used[ iv ] THEN print( ( " ", variable name( iv ), " " ) ) FI
         OD;
         print( ( " value", newline ) );
-        FOR v TO UPB bv DO
-            IF used[ v ] THEN print( ( " - " ) ) FI
+        FOR iv TO UPB bv DO
+            IF used[ iv ] THEN print( ( " - " ) ) FI
         OD;
         print( ( " -----", newline ) );
         # evaluate the expression for each cobination of variables #
         IF at least one variable
         THEN
              # the expression does not consist of literals only #
-             FOR v TO UPB bv DO bv[ v ] := FALSE OD;
+             FOR iv TO UPB bv DO bv[ iv ] := FALSE OD;
              print line( LWB bv )
         ELSE
              # the expression is constant #

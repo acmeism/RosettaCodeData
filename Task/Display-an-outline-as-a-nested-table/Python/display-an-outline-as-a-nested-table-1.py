@@ -1,4 +1,4 @@
-"""Display an outline as a nested table. Requires Python >=3.6."""
+"""Display an outline as a nested table. Requires Python >= 3.6."""
 
 import itertools
 import re
@@ -144,20 +144,17 @@ def color_tree(node):
 
 def table_data(node):
     """Return an HTML table data element for the given node."""
-    indent = "    "
+    attrs = {}
 
     if node.colspan() > 1:
-        colspan = f'colspan="{node.colspan()}"'
-    else:
-        colspan = ""
+        attrs["colspan"] = f'"{node.colspan()}"'
 
     if node.color:
-        style = f'style="background-color: {node.color};"'
-    else:
-        style = ""
+        attrs["style"] = f'"background-color: {node.color};"'
 
-    attrs = " ".join([colspan, style])
-    return f"{indent}<td{attrs}>{node.value}</td>"
+    indent = "    "
+    attrs_s = " ".join(f"{k}={v}" for k, v in attrs.items())
+    return f"{indent}<td {attrs_s}>{node.value}</td>"
 
 
 def html_table(tree):

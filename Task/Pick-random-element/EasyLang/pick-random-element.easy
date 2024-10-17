@@ -1,2 +1,2 @@
 ar$[] = [ "spring" "summer" "autumn" "winter" ]
-print ar$[randint len ar$[]]
+print ar$[random len ar$[]]

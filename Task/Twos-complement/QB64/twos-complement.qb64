@@ -1,0 +1,17 @@
+Dim d As Long
+d = 1234567
+
+Dim b(8) As Long
+b(0) = -d
+b(1) = -d + 1
+b(2) = -2
+b(3) = -1
+b(4) = 0
+b(5) = 1
+b(6) = 2
+b(7) = d - 2
+b(8) = d - 1
+
+For i = 0 To UBound(b)
+    Print b(i); " -> "; -b(i) ' * -1
+Next i

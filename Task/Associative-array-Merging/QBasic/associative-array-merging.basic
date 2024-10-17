@@ -1,0 +1,47 @@
+DECLARE SUB merge (original() AS ANY, update() AS ANY, result() AS ANY)
+
+TYPE Dictionary
+    keyy AS STRING * 5
+    value AS STRING * 13
+END TYPE
+
+DIM original(2) AS Dictionary
+original(0).keyy = "name": original(0).value = "Rocket Skates"
+original(1).keyy = "price": original(1).value = "12.75"
+original(2).keyy = "color": original(2).value = "yellow"
+
+DIM update(2) AS Dictionary
+update(0).keyy = "price": update(0).value = "15.25"
+update(1).keyy = "color": update(1).value = "red"
+update(2).keyy = "year": update(2).value = "1974"
+
+DIM merged(UBOUND(update) + UBOUND(original) - 1) AS Dictionary
+CALL merge(original(), update(), merged())
+
+FOR i = 0 TO UBOUND(merged)
+    PRINT "keyy: "; merged(i).keyy; ", value: "; merged(i).value
+NEXT i
+END
+
+SUB merge (original() AS Dictionary, update() AS Dictionary, result() AS Dictionary)
+    DIM i AS INTEGER, j AS INTEGER, index AS INTEGER, found AS INTEGER
+
+    FOR i = 0 TO UBOUND(update)
+        result(i) = update(i)
+    NEXT i
+
+    index = i
+    FOR i = 0 TO UBOUND(original)
+        found = 0
+        FOR j = 0 TO UBOUND(update)
+            IF original(i).keyy = update(j).keyy THEN
+                found = 1
+                EXIT FOR
+            END IF
+        NEXT j
+        IF found = 0 THEN
+            result(index) = original(i)
+            index = index + 1
+        END IF
+    NEXT i
+END SUB

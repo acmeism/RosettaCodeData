@@ -15,6 +15,7 @@ proc hashSet ind$ val$ . ar$[][] .
          return
       .
    .
+   ar$[][] &= [ ind$ val$ ]
 .
 clothing$[][] = [ [ "type" "t-shirt" ] [ "color" "red" ] ]
 clothing$[][] &= [ "size" "xl" ]

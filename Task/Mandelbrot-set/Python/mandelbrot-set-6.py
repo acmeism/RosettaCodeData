@@ -23,7 +23,7 @@ for k in range(n):
 
 N = abs(Z) >= r  # basic normal map effect and stripe average coloring (potential function)
 P, Q = S[N] / T[N], (S[N] + np.sin(density * np.angle(Z[N]))) / (T[N] + 1)
-U, V = Z[N] / dZ[N], 1 + (np.log2(np.log(np.abs(Z[N])) / np.log(r)) * (P - Q) + Q) * intensity
+U, V = Z[N] / dZ[N], 1 + (np.log2(np.log(abs(Z[N])) / np.log(r)) * (P - Q) + Q) * intensity
 U, v = U / abs(U), np.exp(direction / 180 * np.pi * 1j)  # unit normal vectors and light vector
 D[N] = np.maximum((U.real * v.real + U.imag * v.imag + V * height) / (1 + height), 0)
 
@@ -31,7 +31,8 @@ plt.imshow(D ** 1.0, cmap=plt.cm.bone, origin="lower")
 plt.savefig("Mandelbrot_normal_map_1.png", dpi=200)
 
 N = abs(Z) > 2  # advanced normal map effect using higher derivatives (distance estimation)
-U = Z[N] * dZ[N] * ((1 + np.log(abs(Z[N]))) * np.conj(dZ[N] ** 2) - np.log(abs(Z[N])) * np.conj(Z[N] * ddZ[N]))
+H, K, L = abs(Z[N] / dZ[N]), abs(dZ[N] / ddZ[N]), np.log(abs(Z[N]))
+U = Z[N] / dZ[N] - (H / K) ** 2 * L / (1 + L) * dZ[N] / ddZ[N]
 U, v = U / abs(U), np.exp(direction / 180 * np.pi * 1j)  # unit normal vectors and light vector
 D[N] = np.maximum((U.real * v.real + U.imag * v.imag + height) / (1 + height), 0)
 

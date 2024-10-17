@@ -22,31 +22,33 @@ BEGIN
     a
 END # UPDATE # ;
 
-# construct the associative arrays for the task                   #
-REF AARRAY a := INIT LOC AARRAY;
-REF AARRAY b := INIT LOC AARRAY;
-a // "name"  := "Rocket Skates";
-a // "price" := 12.75;
-a // "color" := "yellow";
-b // "price" := 15.25;
-b // "color" := "red";
-b // "year"  := 1974;
-# merge the arrays                                                #
-REF AARRAY c := INIT LOC AARRAY;
-c UPDATE a UPDATE b;
-# show the merged array                                           #
-REF AAELEMENT e := FIRST c;
-WHILE e ISNT nil element DO
-    print( ( key OF e
-           , ": "
-           , CASE value OF e
-               IN (STRING s): s
-                , (INT    i): whole( i, 0 )
-                , (REAL   r): fixed( r, -12, 2 )
-              OUT "????"
-             ESAC
-           , newline
-           )
-         );
-    e := NEXT c
-OD
+BEGIN # tests                                                     #
+    # construct the associative arrays for the task               #
+    REF AARRAY a := INIT LOC AARRAY;
+    REF AARRAY b := INIT LOC AARRAY;
+    a // "name"  := "Rocket Skates";
+    a // "price" := 12.75;
+    a // "color" := "yellow";
+    b // "price" := 15.25;
+    b // "color" := "red";
+    b // "year"  := 1974;
+    # merge the arrays                                            #
+    REF AARRAY c := INIT LOC AARRAY;
+    c UPDATE a UPDATE b;
+    # show the merged array                                       #
+    REF AAELEMENT e := FIRST c;
+    WHILE e ISNT nil element DO
+        print( ( key OF e
+               , ": "
+               , CASE value OF e
+                   IN (STRING s): s
+                    , (INT    i): whole( i, 0 )
+                    , (REAL   r): fixed( r, -12, 2 )
+                  OUT "????"
+                 ESAC
+               , newline
+               )
+             );
+        e := NEXT c
+    OD
+END

@@ -13,7 +13,7 @@ proc countsort min max . d[] .
    .
 .
 for i = 1 to 100
-   d[] &= randint 1000
+   d[] &= random 1000
 .
 countsort 1 1000 d[]
 print d[]

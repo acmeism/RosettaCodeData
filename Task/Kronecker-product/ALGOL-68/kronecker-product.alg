@@ -32,31 +32,31 @@ BEGIN
         k
     END # X # ;
     # prints matrix a with the specified field width #
-    PROC print matrix = ( [,]INT a, INT field width )VOID:
+    PROC show matrix = ( [,]INT a, INT field width )VOID:
     FOR i FROM 1 LWB a TO 1 UPB a DO
         FOR j FROM 2 LWB a TO 2 UPB a DO
             print( ( " ", whole( a[ i, j ], field width ) ) )
         OD;
         print( ( newline ) )
-    OD # print matrix # ;
+    OD # show matrix # ;
     # task test cases #
-    print matrix( [,]INT( ( 1, 2 )
-                        , ( 3, 4 )
-                        )
-                X [,]INT( ( 0, 5 )
-                        , ( 6, 7 )
-                        )
-                , -2
-                );
+    show matrix( [,]INT( ( 1, 2 )
+                       , ( 3, 4 )
+                       )
+               X [,]INT( ( 0, 5 )
+                       , ( 6, 7 )
+                       )
+               , -2
+               );
     print( ( newline ) );
-    print matrix( [,]INT( ( 0, 1, 0 )
-                        , ( 1, 1, 1 )
-                        , ( 0, 1, 0 )
-                        )
-                X [,]INT( ( 1, 1, 1, 1 )
-                        , ( 1, 0, 0, 1 )
-                        , ( 1, 1, 1, 1 )
-                        )
-                , -1
-                )
+    show matrix( [,]INT( ( 0, 1, 0 )
+                       , ( 1, 1, 1 )
+                       , ( 0, 1, 0 )
+                       )
+               X [,]INT( ( 1, 1, 1, 1 )
+                       , ( 1, 0, 0, 1 )
+                       , ( 1, 1, 1, 1 )
+                       )
+               , -1
+               )
 END

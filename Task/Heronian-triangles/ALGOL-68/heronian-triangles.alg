@@ -33,10 +33,12 @@ BEGIN
     FOR c TO 200 DO
         FOR b TO c DO
             FOR a TO b DO
-                IF gcd( gcd( a, b ), c ) = 1 THEN
-                    t := try ht( a, b, c );
-                    IF REF HERONIAN(t) ISNT REF HERONIAN(NIL) THEN
-                        ht[ ht count +:= 1 ] := t
+                IF NOT ODD ( a + b + c ) THEN
+                    IF gcd( gcd( a, b ), c ) = 1 THEN
+                        t := try ht( a, b, c );
+                        IF REF HERONIAN(t) ISNT REF HERONIAN(NIL) THEN
+                            ht[ ht count +:= 1 ] := t
+                        FI
                     FI
                 FI
             OD
@@ -46,7 +48,7 @@ BEGIN
     # sort the table on ascending area, perimeter and max side length #
     # note we constructed the triangles with c as the longest side    #
     BEGIN
-        INT          lower := 1, upper := ht count;
+        INT   lower := 1, upper := ht count;
         WHILE upper        := upper - 1;
               BOOL swapped := FALSE;
               FOR i FROM lower TO upper DO
@@ -76,8 +78,8 @@ BEGIN
         print( ( "Heronian triangles with area 210:", newline ) );
         ht title;
         FOR ht pos TO ht count DO
-            REF HERONIAN t := ht[ ht pos ];
-            IF area OF t = 210 THEN ht print( t ) FI
+            REF HERONIAN tr := ht[ ht pos ];
+            IF area OF tr = 210 THEN ht print( tr ) FI
         OD
     END
 END

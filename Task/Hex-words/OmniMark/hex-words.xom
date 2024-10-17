@@ -1,0 +1,87 @@
+global integer word-root variable
+global integer word-dec variable
+global stream dec-word variable
+
+define integer function digroot (value stream vs) as
+  local integer d initial {vs base 16}
+  local integer r initial {0}
+  set new word-dec key vs to d
+  repeat
+    repeat scan '%d(d)'
+      match digit => add
+        set r to r + add
+    again
+    exit when r < 10
+    set d to r
+    set r to 0
+  again
+  return r
+
+define switch function isword4-bool (value stream vs) as
+  local stream s variable
+  repeat scan vs
+    match letter => char
+      set new s key char to char unless s has key char
+  again
+  return true when number of s > 3
+  return false
+
+process
+  submit file 'unixdict.txt'
+
+find line-start (['a' to 'f']{4}['a' to 'f']*) => word line-end
+  set new word-root key word to digroot(word)
+
+find any
+
+process-end
+  local integer c initial {1}
+  output '====== REPORT 1 ======%n' ||
+  'Hex words with:%n(1) 4+ letters%n(2) Ascending (digit root)%n' ||
+  '======================%nRoot  Word    Decimal%n----------------------%n'
+  repeat
+    exit when c = 10
+    repeat over word-root
+      do when word-root = c
+        output '%6fd(word-root)' || '8fg' % key of word-root ||
+               'd' % word-dec key (key of word-root) || '%n'
+      done
+    again
+    increment c
+  again
+  set c to number of word-root
+  output '%nTotal word count: ' || 'd' % c || '%n'
+  output '%n%n====== REPORT 2 ======%n' ||
+  'Hex words with:%n(1) 4+ distinct letters%n(2) Descending (decimal)%n' ||
+  '======================%nDecimal   Word    Root%n----------------------%n'
+  set c to 1
+  repeat over word-dec
+    do when number of dec-word = 0
+      set new dec-word key '%d(word-dec)' to key of word-dec
+    else when number of dec-word = 1
+      do when word-dec < key of dec-word[1]
+        set new dec-word key '%d(word-dec)' after [1] to key of word-dec
+      else
+        set new dec-word key '%d(word-dec)' before [1] to key of word-dec
+      done
+    else when number of dec-word > 1
+      repeat over dec-word
+        do when word-dec < key of dec-word
+          increment c
+        else
+          exit
+        done
+      again
+      set new dec-word key '%d(word-dec)' before [c] to key of word-dec
+      set c to 1
+    done
+  again
+  set c to 0
+  repeat over dec-word
+    do when isword4-bool(dec-word)
+      increment c
+      output '10fd' % key of dec-word || '%8fg(dec-word)' ||
+             'd' % word-root key dec-word || '%n'
+    done
+  again
+  output '%nTotal word count: ' || 'd' % c || '%n'

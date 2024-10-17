@@ -22,7 +22,7 @@ plt.imshow(S ** 0.1, cmap=plt.cm.twilight_shifted, origin="lower")
 plt.savefig("Mandelbrot_set_1.png", dpi=200)
 
 N = abs(Z) >= r  # normalized iteration count
-T[N] = T[N] - np.log2(np.log(np.abs(Z[N])) / np.log(r))
+T[N] = T[N] - np.log2(np.log(abs(Z[N])) / np.log(r))
 
 plt.imshow(T ** 0.1, cmap=plt.cm.twilight_shifted, origin="lower")
 plt.savefig("Mandelbrot_set_2.png", dpi=200)

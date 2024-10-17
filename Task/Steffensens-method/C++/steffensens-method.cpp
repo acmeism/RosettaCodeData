@@ -56,7 +56,7 @@ int main() {
         cout << "t0 = " << setprecision(1) << t0 << " : ";
         t = steffensenAitken(f, t0, 0.00000001, 1000);
         if (isnan(t)) {
-            cout << "no answer << endl;
+            cout << "no answer" << endl;
         } else {
             x = xConvexLeftParabola(t);
             y = yConvexRightParabola(t);

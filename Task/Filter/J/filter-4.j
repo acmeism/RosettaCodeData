@@ -1,4 +1,4 @@
-   select=: adverb def '(#~ u)'
+   select=: {{#~ u}}
    isPrime=: 1&p:
 
    isEven select v

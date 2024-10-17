@@ -24,12 +24,18 @@ BEGIN
     # do the sort .... #
 END # configurable sort # ;
 
-# example calls #
-[ 1 : 2, 1 : 3 ]STRING data := ( ( "a", "bb", "cde" ), ( "x", "abcdef", "Q" ) );
+BEGIN # example calls #
+    [ 1 : 2, 1 : 3 ]STRING data := ( ( "a", "bb", "cde" ), ( "x", "abcdef", "Q" ) );
 
-# sort data, default comparison, first column, reverse order #
-configurable sort( data, ( TRUE ) );
-# sort data, second column, ignore first chaacter when sorting, normal order #
-configurable sort( data, ( 2, ( STRING a, STRING b )INT: default compare( a[ LWB a + 1 : ], b[ LWB b + 1 : ] ) ) );
-# default sort #
-configurable sort( data, () )
+    # sort data, default comparison, first column, reverse order #
+    configurable sort( data, ( TRUE ) );
+    # sort data, second column, ignore first chaacter when sorting, normal order #
+    configurable sort( data, ( 2
+                             , ( STRING a, STRING b )INT: default compare( a[ LWB a + 1 : ]
+                                                                         , b[ LWB b + 1 : ]
+                                                                         )
+                             )
+                     );
+    # default sort #
+    configurable sort( data, () )
+END

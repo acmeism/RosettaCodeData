@@ -1,0 +1,189 @@
+/* ARM assembly Raspberry PI  */
+/*  program Strip block comments   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.include "../constantes.inc"
+.equ BUFFERSIZE,    200
+
+/*******************************************/
+/* macros                             */
+/*******************************************/
+//.include "../../ficmacros32.inc"            @ for developper debugging
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessDebutPgm:       .asciz "Program 32 bits start. \n"
+szCarriageReturn:     .asciz "\n"
+szMessFinOK:          .asciz "Program normal end. \n"
+szMessBufferError:    .asciz "Error : Buffer too small !!\n"
+
+szStartComm:          .asciz "/*"
+szEndComm:            .asciz "*/"
+szString1:            .asciz "/**
+   * Some comments
+   * longer comments here that we can parse.
+   *
+   * Rahoo
+   */
+   function subroutine() {
+    a = /* inline comment */ b + c ;
+   }
+   /*/ <-- tricky comments */
+
+   /**
+    * Another comment.
+    */
+    function something() {
+    }"
+
+szString2:            .asciz "/* toto */tutu/*truc*/etc"
+.align 4
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sBuffer:          .skip BUFFERSIZE
+.align 4
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr r0,iAdrszMessDebutPgm
+    bl affichageMess            @ start message
+
+    ldr r0,iAdrszString1
+    ldr r1,iAdrszStartComm
+    ldr r2,iAdrszEndComm
+    ldr r3,iAdrsBuffer
+    mov r4,#BUFFERSIZE
+    bl suppComment
+    ldr r0,iAdrsBuffer
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+
+    ldr r0,iAdrszMessFinOK
+    bl affichageMess
+
+100:
+    mov r7,#EXIT                @ program end
+    svc #0                      @ system call
+iAdrszMessDebutPgm:          .int szMessDebutPgm
+iAdrszMessFinOK:             .int szMessFinOK
+iAdrszCarriageReturn:        .int szCarriageReturn
+iAdrszMessBufferError:       .int szMessBufferError
+iAdrszString1:               .int szString1
+iAdrszString2:               .int szString2
+iAdrszStartComm:             .int szStartComm
+iAdrszEndComm:               .int szEndComm
+iAdrsBuffer:                 .int sBuffer
+/******************************************************************/
+/*            test execution                                        */
+/******************************************************************/
+/* r0 contains string address  */
+/* r1 contains start comment address */
+/* r2 contains end comment address */
+/* r3 contains buffer address */
+/* r4 contains buffer length */
+suppComment:
+    push {r1-r10,lr}        @ save registers
+    mov r5,#0              @ indice string
+    mov r6,#0              @ indice start comment
+    mov r7,#0              @ comment
+    mov r8,#0              @ indice write buffer
+1:
+    ldrb r9,[r1,r6]        @ load first byte of comment start
+2:
+    ldrb r10,[r0,r5]       @ load byte string
+    cmp r10,#0             @ end string ?
+    beq 20f
+    cmp r7,#1              @ comment
+    beq 6f
+    cmp r10,r9             @ compare first byte and byte string
+    bne 5f
+3:
+    add r6,r6,#1
+    ldrb r9,[r1,r6]        @ load oher byte of comment start
+    cmp r9,#0
+    beq 4f                 @ end comment ?
+    strb r10,[r3,r8]       @ store byte in buffer
+    add r8,r8,#1
+    cmp r8,r4              @ error size buffer ?
+    bge 99f
+    add r5,r5,#1           @ load byte string
+    ldrb r10,[r0,r5]
+    cmp r10,#0             @ end string ?
+    beq 20f
+    cmp r10,r9             @ compare byte
+    beq 3b                 @ loop other char start comment
+    strb r10,[r3,r8]       @ else store char string
+    add r8,r8,#1
+    cmp r8,r4              @ end buffer ?
+    bge 99f
+    add r5,r5,#1          @ increment indice string
+    mov r6,#0             @ raz indice start comment
+    b 1b
+4:                        @ start comment found
+    sub r6,r6,#1
+    sub r8,r8,r6          @ supp write byte buffer
+    mov r7,#1             @ comment
+    add r5,r5,#1          @ increment indice string
+    b 2b                  @ and loop
+5:                        @ bytes inequals
+    strb r10,[r3,r8]      @ store char string
+    add r8,r8,#1
+    cmp r8,r4             @ end buffer ?
+    bge 99f
+    add r5,r5,#1          @ increment indice string
+    b 2b                  @ and loop
+6:                        @ is comment
+    mov r6,#0
+8:
+    ldrb r9,[r2,r6]       @ load end comment first char
+9:
+    cmp r10,r9            @ equal byte string ?
+    bne 10f
+    add r5,r5,#1
+    ldrb r10,[r0,r5]      @ load other byte
+    cmp r10,#0            @ end string
+    beq 20f
+    add r6,r6,#1
+    ldrb r9,[r2,r6]       @ load other byte end comment
+    cmp r9,#0             @ end end comment ?
+    bne 9b                @ no -> loop
+                          @ comment end
+    mov r7,#0             @ raz comment
+    mov r6,#0             @ raz indice start comment
+    b 1b
+10:                       @ comment not end
+    add r5,r5,#1
+    b 2b
+
+20:
+    mov r10,#0            @ final zero
+    strb r10,[r3,r8]      @ store char string
+    b 100f
+
+99:                        @ error
+    ldr r0,iAdrszMessBufferError
+    bl affichageMess
+    mov r0,#-1
+100:
+    pop {r1-r10,pc}
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

@@ -1,33 +1,18 @@
-func leap year .
-   return if year mod 4 = 0 and (year mod 100 <> 0 or year mod 400 = 0)
-.
-func weekday year month day .
-   normdoom[] = [ 3 7 7 4 2 6 4 1 5 3 7 5 ]
-   c = year div 100
-   r = year mod 100
-   s = r div 12
-   t = r mod 12
-   c_anchor = (5 * (c mod 4) + 2) mod 7
-   doom = (s + t + (t div 4) + c_anchor) mod 7
-   anchor = normdoom[month]
-   if leap year = 1 and month <= 2
-      anchor = (anchor + 1) mod1 7
-   .
-   return (doom + day - anchor + 7) mod 7 + 1
-.
-mdays[] = [ 31 28 31 30 31 30 31 31 30 31 30 31 ]
-proc last_fridays year . .
-   for m to 12
-      d = mdays[m]
-      if m = 2 and leap year = 1
-         d = 29
-      .
-      d -= (weekday year m d - 6) mod 7
+proc show y . .
+   days[] = [ 31 28 31 30 31 30 31 31 30 31 30 31 ]
+   days[2] += if y mod 4 = 0 and (y mod 100 <> 0 or y mod 400 = 0)
+   w = y * 365 + (y - 1) div 4 - (y - 1) div 100 + (y - 1) div 400 + 6
+   for m = 1 to 12
+      w = (w + days[m]) mod 7
       m$ = m
       if m < 10
-         m$ = "0" & m
+         m$ = 0 & m
       .
-      print year & "-" & m$ & "-" & d
+      h = 5
+      if w < 5
+         h = -2
+      .
+      print y & "-" & m$ & "-" & days[m] + h - w
    .
 .
-last_fridays 2023
+show 2012

@@ -1,0 +1,166 @@
+[Water collected between towers - Rosetta Code
+ For EDSAC, Initial Orders 2.]
+
+      [Arrange the storage]
+          T45K P100F      [H parameter: library subroutine R4 to read integer]
+          T46K P200F      [N parameter: modified library s/r P7 to print integer]
+          T47K P300F      [M parameter: main routine]
+          T48K P900F      [& (delta) parameter: store for array of heights]
+          T49K P400F      [L parameter: subroutine to calculate amount of water]
+[-----------------------------------------------------------------------
+ Subroutine to calculate amount of water as a 35-bit integer.
+ Heights are in an array of 35-bit integers, preceded by a count of heights.
+ For convenience, the count is also a 35-bit integer, though with the small
+   amount of storage on EDSAC it can't be more than a few hundred.
+ Input: Address of count follows subroutine call.
+ Output: 0D = result.
+ Workspace: 4D]
+          E25K TL GK
+          A89@ U88@       [plant return link, allowing for A parameter after call]
+          S90@ T4@        [form and plant order to read address of count]
+    [4]   AF              [(planted) read address of count]
+          A91@ U15@       [form and plant order to read count as 35-bit]
+          A92@ U26@       [form and plant order to read h{0}]
+          U32@ U43@ U93@  [plant in 3 more places]
+          A92@ T49@       [form and plant order to read h{1}]
+          TD              [build result in 0D; initialize to 0]
+   [15]   AD              [(planted) acc := 35-bit count of towers]
+          T4D A4F         [convert count to 17-bit]
+          L1F             [shift 2 left, to get 2*count in address field]
+          A15@ U65@       [form and plant order to read h{n-1}]
+          S92@ U71@       [same for h{n-2}]
+          S49@            [acc := 2*(n - 3) in address field]
+          G87@            [if < 3 towers, exit with result = 0]
+          T4F             [clear acc]
+   [26]   AD              [acc := h{0}]
+          T94#@           [initialize maximum height]
+[Find height and position of highest tower (position in terms of A order).
+ Note: Since EDSAC had only 2 conditional jumps (acc < 0 and acc >= 0),
+   it's simplest to update the maximum when h{i} >= max (not h{i} > max).]
+   [28]   T4F             [clear acc]
+          A32@ A92@ T32@  [inc array index: first time 0 --> 1]
+   [32]   AD S94#@        [acc := h{i} - (current maximum)]
+          G39@            [skip if h{i} < max]
+          A94#@           [restore acc after test]
+          T94#@           [update value of maximum]
+          A32@ T93@       [update A order for maximum]
+   [39]   T4F             [clear acc]
+          A32@ S65@       [have we just done h{n-1}?]
+          G28@            [loop back if not]
+[Fill troughs from the left. Here with acc = 0.]
+   [43]   AD              [(planted) read h{0}]
+          T94#@           [initialize level to h{0}]
+          A49@            [acc := A order for h{1}]
+          S93@            [subtract A order for maximum]
+          E64@            [skip if maximum is at h{0} or h{1}]
+  [Start of loop]
+   [48]   T4F             [clear acc]
+   [49]   AD              [read h{i}; initially i = 1]
+          S94#@           [subtract current level]
+          G55@            [skip if h{i} < level]
+          A94#@           [restore acc after test]
+          T94#@           [update level]
+          E59@            [join common code]
+   [55]   T4D             [temp store h{i} - h_max, which is < 0]
+          AD              [acc := result so far]
+          S4D             [add h_max - h{i} to result]
+          TD              [update result]
+   [59]   A49@ A92@ U49@  [make A order for h{i+1}]
+          S93@            [have we reached the highest tower yet?]
+          G48@            [if not, loop back]
+[Fill troughs from the right.
+ Similar to filling from the left, so given in condensed form to save space.]
+   [64]   T4F
+   [65]   AF T94#@ A93@ S71@ E87@
+   [70]   T4F
+   [71]   AF S94#@ G77@ A94#@ T94#@ E81@
+   [77]   T4D AD S4D TD
+   [81]   A71@ S92@ T71@ A93@ S71@ G70@
+[Exit from suubroutine]
+   [87]   T4F             [clear acc on exit, as usual]
+   [88]   ZF              [(planted) jump back to caller]
+[Constants]
+   [89]   U3F
+   [90]   U1F             [subtract to convert E order to A order]
+   [91]   AD
+   [92]   P2F             [2 in address field]
+[Variables: Swap if necessary to get 35-bit variable at even address]
+   [93]   AF              [order to read h_max]
+   [94]   PF PF           [current maximum height]
+[-----------------------------------------------------------------------]
+[Main routine: must be at even address]
+          E25K TM GK
+    [0]   PF PF           [store for 35-bit height]
+    [2]   PF              [data count]
+    [3]   P2F             [to change address by 2]
+    [4]   #F              [figure shift]
+    [5]   K2048F          [letter shift]
+    [6]   DF[7] IF[8] YF
+    [9]   NF              [comma (in figures mode)]
+   [10]   @F              [carriage return]
+   [11]   &F              [line feed]
+   [12]   !F              [space]
+   [13]   K4096F          [teleprinter null]
+[Entry]
+   [14]   O4@             [set figures]
+[Loop over datasets]
+   [15]   A15@ GH         [call library subroutine R4, sets 0D := data count N]
+          SD E63@         [exit if N = 0]
+          T4F             [clear acc]
+          A23@ T40@       [initialize T order to store data]
+          AD              [load data count, 35-bit but with high half = 0]
+   [23]   T#&             [store at start of data]
+   [24]   S&              [acc := 17-bit negative count of data]
+   [25]   LD              [shift to address field *** or use k1 to inc ?? ***]
+          G28@            [don't print comma before first height]
+[Loop over heights in current dataset]
+   [27]   O9@             [print comma]
+   [28]   T2@             [update negative loop counter]
+          A40@ A3@ T40@   [inc address for next 35-bit height]
+          A32@ GH         [read next height to 0D (clears acc)]
+          AD T#@          [acc := height, save locally]
+          A36@ GN !1F     [print height, min width = 1]
+          A#@             [retrieve height]
+   [40]   TD              [(planted) store height in array]
+          A2@ A2F         [inc negative loop counter]
+          G27@            [if not yet 0, loop back]
+          A44@ GL P&      [call subroutine returns amount of water in 0D]
+       [Print ' YIELDS ' (requires temporary change to letters shift)]
+          O5@ O12@ O8@ O7@ O62@
+          O25@ O6@ O24@ O12@ O4@
+          A57@ GN !1F     [print result, min width = 1; leaves acc = 0]
+          O10@ O11@       [print CR, LF]
+   [62]   E15@            [loop back for next data set (also letter E)]
+[Jump to here if data count = 0, means end of data]
+   [63]   O13@            [print null to flush teleprinter buffer]
+          ZF              [stop the machine]
+[-------------------------------------------------------------------------------
+ Library subroutine R4.
+ Input of one signed integer, returned in 0D.]
+          E25K TH
+          GK A3F T21@ T4D H6@ E11@ P5D JF T6F VD L4F A4D TD I4F A4F S5@ G7@ S5@ G20@ SD TD T6F EF
+[-------------------------------------------------------------------------------
+ Modification of library subroutine P7; prints integer N in range 0 <= N < 10^10.
+ Prints 0 correctly, and allows caller to specify a minimum width.
+ Input : 0D = integer (not preserved)
+         17-bit print control word follows subroutine call,
+         e.g. !5F means minimum width 5, pad on left with space.
+ 49 locations; even address; workspace: 0F, 1F, 4D, 6F, 7F]
+          E25K TN
+          GK A48@ U4@ A27@ T35@ AF U4@ L256F S45@ T7F H46#@ ND YF LD T4D S45@ T1F H21@ S21@ A45@ G21@ U4@ TF V4D A1F G36@ S1F LD U1F O1F F1F S1F L4F T4D AF G18@ ZF S1F L8F T4D AF A7F G43@ O4@ T6F E33@ T46#Z PF T45Z P1024F P610D @524D P2F
+[--------------------------------------------------------------------------------]
+[M parameter (main routine) again]
+          E25K TM GK
+          E14Z            [define entry point]
+          PF              [acc = 0 on entry]
+[--------------------------------------------------------------------------------]
+[Counts and data values to be read by library subroutine R4.
+ Note sign comes _after_ value.]
+5+ 1+5+3+7+2+
+10+ 5+3+7+2+6+4+5+9+1+2+
+16+ 2+6+3+5+2+8+1+4+2+2+5+3+5+7+4+1+
+4+ 5+5+5+5+
+4+ 5+6+7+8+
+4+ 8+7+7+6+
+5+ 6+7+10+7+6+
+0+

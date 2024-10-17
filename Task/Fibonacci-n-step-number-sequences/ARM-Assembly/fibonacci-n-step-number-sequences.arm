@@ -1,0 +1,174 @@
+/* ARM assembly Raspberry PI  */
+/*  program fibseries.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.include "../constantes.inc"
+.equ NBSERIES,     10
+.equ NBNUMBER,     15
+
+/*******************************************/
+/* macros                             */
+/*******************************************/
+//.include "../../ficmacros32.inc"            @ for developper debugging
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessDebutPgm:    .asciz "Program 32 bits start. \n"
+szCarriageReturn:  .asciz "\n"
+szMessFinOK:       .asciz "Program normal end. \n"
+szMessErreur:      .asciz "Error  !!!\n"
+szMessVinci:       .asciz "Leonardo numbers :\n"
+szMessFibo:        .asciz "\nFibonaci series :\n"
+szSpace:           .asciz " "
+
+.align 4
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:               .skip 24
+.align 4
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr r0,iAdrszMessDebutPgm
+    bl affichageMess            @ start message
+
+
+    ldr r0,iAdrszMessFibo
+    bl affichageMess
+
+    mov r4,#2                   @ series counter
+1:                              @ loop series
+    mov r0,r4
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    ldr r0,iAdrsZoneConv        @ display series
+    bl affichageMess
+
+    mov r0,#0                   @ rank
+    mov r1,r4                   @ serie number
+    mov r2,#NBNUMBER            @ maxi counter
+    bl genererFibo
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    add r4,r4,#1                @ increment series counter
+    cmp r4,#NBSERIES            @ maxi ?
+    blt 1b
+
+    ldr r0,iAdrszMessFinOK
+    bl affichageMess
+    b 100f
+99:
+    ldr r0,iAdrszMessErreur     @ error
+    bl affichageMess
+    mov r0, #1                  @ return code error
+    b 100f
+100:
+    mov r7,#EXIT                @ program end
+    svc #0                      @ system call
+iAdrszMessDebutPgm:          .int szMessDebutPgm
+iAdrszMessFinOK:             .int szMessFinOK
+iAdrszMessErreur:            .int szMessErreur
+iAdrsZoneConv:               .int sZoneConv
+iAdrszMessVinci:             .int szMessVinci
+iAdrszMessFibo:              .int szMessFibo
+/***************************************************/
+/*   Generation Fibonacci numbers                  */
+/***************************************************/
+/* r0 contains n     */
+/* r1 contains series number  */
+/* r2 contains limit number */
+genererFibo:
+    push {r3-r10,lr}            @ save registers
+    lsl r10,r1,#2
+    sub sp,r10                  @ reserve area on stack
+    mov r7,sp
+    mov r4,#0
+    mov r5,#0
+1:                              @ init area loop
+    str r4,[r7,r5,lsl #2]
+    add r5,r5,#1
+    cmp r5,r1
+    blt 1b
+    mov r4,#1
+    str r4,[r7]                 @ store value 1 in first item
+    mov r4,#0
+2:
+    mov r5,#0
+    mov r6,r0
+    cmp r6,#0                    @ L(0) ?
+    bne 3f
+    bl displayNumber
+    b 7f
+
+3:
+    cmp r6,#1                   @ L(1) ?
+    bne 4f
+    mov r0,#1
+    bl displayNumber
+    b 7f
+4:
+    sub r3,r1,#1
+5:
+    ldr r8,[r7,r3,lsl #2]      @ load ancien result
+    add r5,r5,r8               @ add result
+    subs r3,r3,#1              @ decrement counter
+    bge 5b
+    mov r0,r5
+    bl displayNumber
+
+    mov r3,r1
+    sub r8,r3,#1
+6:                             @ results shift loop
+    ldr r9,[r7,r8,lsl #2]      @ load result n-1
+    str r9,[r7,r3,lsl #2]      @ store in n result
+    sub r3,r3,#1               @ and loop
+    subs r8,r8,#1
+    bge 6b
+    str r5,[r7]       @ store new result in first item
+7:
+    add r0,r6,#1                @ increment rank
+    add r4,r4,#1                @ increment counter
+    cmp r4,r2                   @ end compute ?
+    blt 2b
+100:
+    add sp,r10                  @ free reserved area
+    pop {r3-r10,pc}             @ restaur registers
+/***************************************************/
+/*   display number                  */
+/***************************************************/
+/* r0 contains number  */
+displayNumber:
+    push {r1,r2,lr}                   @ save registers
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r2,#0
+    add r1,r0
+    strb r2,[r1]
+    ldr r0,iAdrsZoneConv
+    bl affichageMess
+    ldr r0,iAdrszSpace
+    bl affichageMess
+100:
+    pop {r1,r2,pc}                    @ restaur registers
+iAdrszCarriageReturn:         .int szCarriageReturn
+iAdrszSpace:                  .int szSpace
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

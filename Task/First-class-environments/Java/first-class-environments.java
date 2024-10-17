@@ -1,21 +1,20 @@
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public final class FirstClassEnvironments {
 
-	public static void main(String[] aArgs) {
+	public static void main(String[] args) {
 		code();
 	}
 	
 	private static void code() {
-		do {
+		while ( ! allDone() ) {
 	        for ( int job = 0; job < JOBS; job++ ) {
 	            switchTo(job);
 	            hailstone();
 	        }
 	        System.out.println();	
-	    } while ( ! allDone() );
+	    }
 
 	    System.out.println(System.lineSeparator() + "Counts:");
 	    for ( int job = 0; job < JOBS; job++ ) {
@@ -45,30 +44,30 @@ public final class FirstClassEnvironments {
 	    sequence = ( sequence % 2 == 1 ) ? 3 * sequence + 1 : sequence / 2;
 	}
 	
-	private static void switchTo(int aID) {
-	    if ( aID != currentId ) {
-	        environments.get(currentId).seq = sequence;
+	private static void switchTo(int id) {
+	    if ( id != currentId ) {
+	        environments.get(currentId).sequence = sequence;
 	        environments.get(currentId).count = count;
-	        currentId = aID;
+	        currentId = id;
 	    }
 	
-	    sequence = environments.get(aID).seq;
-	    count = environments.get(aID).count;
+	    sequence = environments.get(id).sequence;
+	    count = environments.get(id).count;
 	}	
 	
 	private static class Environment {
 		
-		public Environment(int aSeq, int aCount) {
-			seq = aSeq; count = aCount;
+		public Environment(int aSequence, int aCount) {
+			sequence = aSequence; count = aCount;
 		}
 		
-		private int seq, count;
+		private int sequence, count;
 		
 	}
 	
 	private static int sequence, count, currentId;	
 	private static List<Environment> environments =
-		IntStream.rangeClosed(1, 12).mapToObj( i -> new Environment(i, 0 ) ).collect(Collectors.toList());
+		IntStream.rangeClosed(1, 12).mapToObj( i -> new Environment(i, 0) ).toList();
 	
 	private static final int JOBS = 12;
 

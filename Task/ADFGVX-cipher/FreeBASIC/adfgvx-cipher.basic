@@ -1,0 +1,169 @@
+Const ADFGVX As String = "ADFGVX"
+Const ALPHABET As String = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+Function InitialisePolybiusSquare() As String
+    Dim As Integer i, j
+    Dim As String letters(35)
+    For i = 0 To 35
+        letters(i) = Mid(ALPHABET, i + 1, 1)
+    Next
+    Randomize Timer
+    For i = 0 To 35
+        j = Int(Rnd * 36)
+        Swap letters(i), letters(j)
+    Next
+
+    Dim As Integer row, column
+    Dim As String result = ""
+    For row = 0 To 5
+        For column = 0 To 5
+            result &= letters(6 * row + column)
+        Next
+    Next
+
+    Return result
+End Function
+
+Function CreateKey(size As Integer) As String
+    If size < 7 Or size > 12 Then
+        Print "Key should contain between 7 and 12 letters, both inclusive."
+        Exit Function
+    End If
+
+    Dim As Integer i, j
+    Dim As String word, candidates()
+    Dim As Integer ff = Freefile
+
+    Open "i:\unixdict.txt" For Input As #ff
+    While Not Eof(ff)
+        Line Input #ff, word
+
+        Dim As String uniqueWord = ""
+        For i = 1 To Len(word)
+            If Instr(uniqueWord, Mid(word, i, 1)) = 0 Then
+                uniqueWord &= Mid(word, i, 1)
+            End If
+        Next
+
+        If Len(word) = size And Len(word) = Len(uniqueWord) Then
+            word = Ucase(word)
+
+            Dim isAlphanum As Boolean = TRue
+            For i = 1 To Len(word)
+                If Not (Mid(word, i, 1) >= "A" And Mid(word, i, 1) <= "Z") And Not (Mid(word, i, 1) >= "0" And Mid(word, i, 1) <= "9") Then
+                    isAlphanum = False
+                    Exit For
+                End If
+            Next
+
+            If isAlphanum Then
+                Redim Preserve candidates(Ubound(candidates) + 1)
+                candidates(Ubound(candidates)) = word
+            End If
+        End If
+    Wend
+    Close #ff
+
+    Randomize Timer
+    For i = 0 To Ubound(candidates)
+        j = Int(Rnd * (Ubound(candidates) + 1))
+        Swap candidates(i), candidates(j)
+    Next
+
+    Return candidates(0)
+End Function
+
+Function Encrypt(plainText As String, polybius As String, key As String) As String
+    Dim As Integer i, j, row, column
+    Dim As String code, ch, encrypted
+
+    code = ""
+    For i = 1 To Len(plainText)
+        ch = Mid(plainText, i, 1)
+        For row = 0 To 5
+            For column = 0 To 5
+                If Mid(polybius, row * 6 + column + 1, 1) = ch Then
+                    code &= Mid(ADFGVX, row + 1, 1)
+                    code &= Mid(ADFGVX, column + 1, 1)
+                End If
+            Next
+        Next
+    Next
+
+    encrypted = ""
+    For i = 1 To Len(key)
+        ch = Mid(key, i, 1)
+        For j = Instr(key, ch) - 1 To Len(code) - 1 Step Len(key)
+            encrypted &= Mid(code, j + 1, 1)
+        Next
+        encrypted &= " "
+    Next
+
+    Return encrypted
+End Function
+
+Function Decrypt(encryptedText As String, polybius As String, key As String) As String
+    Dim As Integer i, j, row, column, spaceCount, codeSize
+    Dim As String result, stream, word, code, plainText
+    Dim As String blocks()
+
+    result = ""
+    i = 1
+    While i <= Len(encryptedText)
+        If Mid(encryptedText, i, 1) = " " Then
+            i += 1
+        Else
+            result += Mid(encryptedText, i, 1)
+            i += 1
+        End If
+    Wend
+    spaceCount = Len(encryptedText) - Len(result)
+    codeSize = Len(encryptedText) - spaceCount
+
+    stream = encryptedText
+    While Len(stream) > 0
+        word = Left(stream, Instr(stream, " ") - 1)
+        Redim Preserve blocks(Ubound(blocks) + 1)
+        blocks(Ubound(blocks)) = word
+        stream = Mid(stream, Instr(stream, " ") + 1)
+    Wend
+
+    code = ""
+    For i = 0 To codeSize - 1
+        For j = 0 To Ubound(blocks)
+            If Len(code) < codeSize Then code &= Mid(blocks(j), i + 1, 1)
+        Next
+    Next
+
+    plainText = ""
+    For i = 1 To codeSize - 1 Step 2
+        row = Instr(ADFGVX, Mid(code, i, 1)) - 1
+        column = Instr(ADFGVX, Mid(code, i + 1, 1)) - 1
+        plainText &= Mid(polybius, row * 6 + column + 1, 1)
+    Next
+
+    Return plainText
+End Function
+
+Dim As String polybius = InitialisePolybiusSquare()
+Print "The 6 x 6 Polybius square:"
+Print " | A D F G V X"
+Print "--------------"
+For row As Integer = 0 To 5
+    Print Mid(ADFGVX, row + 1, 1); "|";
+    For column As Integer = 0 To 5
+        Print " "; Mid(polybius, row * 6 + column + 1, 1);
+    Next
+    Print
+Next
+
+Dim As String key = CreateKey(9)
+Print !"\nThe key is "; key
+Dim As String plainText = "ATTACKAT1200AM"
+Print !"\nPlain text: "; plainText
+Dim As String encryptedText = Encrypt(plainText, polybius, key)
+Print !"\nEncrypted: "; encryptedText
+Dim As String decryptedText = Decrypt(encryptedText, polybius, key)
+Print !"\nDecrypted: "; decryptedText
+
+Sleep

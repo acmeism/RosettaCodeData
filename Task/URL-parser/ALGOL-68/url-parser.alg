@@ -10,13 +10,25 @@ PROC test uri parser = ( STRING uri )VOID:
              print( ( "    ", error OF result, newline ) )
          ELSE
              # parsed OK #
-             print(                                    ( "      scheme: ",      scheme OF result, newline ) );
-             IF   userinfo OF result /= "" THEN print( ( "    userinfo: ",    userinfo OF result, newline ) ) FI;
-             IF       host OF result /= "" THEN print( ( "        host: ",        host OF result, newline ) ) FI;
-             IF       port OF result /= "" THEN print( ( "        port: ",        port OF result, newline ) ) FI;
-             IF       path OF result /= "" THEN print( ( "        path: ",        path OF result, newline ) ) FI;
-             IF      query OF result /= "" THEN print( ( "       query: ",       query OF result, newline ) ) FI;
-             IF fragment id OF result /= "" THEN print( ( " fragment id: ", fragment id OF result, newline ) ) FI
+             print(     ( "      scheme: ",      scheme OF result, newline ) );
+             IF   userinfo OF result /= "" THEN
+                 print( ( "    userinfo: ",    userinfo OF result, newline ) )
+             FI;
+             IF       host OF result /= "" THEN
+                 print( ( "        host: ",        host OF result, newline ) )
+             FI;
+             IF       port OF result /= "" THEN
+                 print( ( "        port: ",        port OF result, newline ) )
+             FI;
+             IF       path OF result /= "" THEN
+                 print( ( "        path: ",        path OF result, newline ) )
+             FI;
+             IF      query OF result /= "" THEN
+                 print( ( "       query: ",       query OF result, newline ) )
+             FI;
+             IF fragment id OF result /= "" THEN
+                 print( ( " fragment id: ", fragment id OF result, newline ) )
+             FI
          FI;
          print( ( newline ) )
      END # test uri parser # ;

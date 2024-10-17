@@ -1,19 +1,36 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+
+void last_sunday(struct tm *res, unsigned year, unsigned mon)
+{
+	time_t sec;
+
+	*res = (struct tm){
+		.tm_year = year + mon / 12,
+		.tm_mon = mon % 12,
+		.tm_hour = 12,
+		.tm_isdst = -1
+	};
+	sec = mktime(res);
+	sec -= res->tm_wday * 86400;
+	*res = *localtime(&sec);
+}
 
 int main(int argc, char *argv[])
 {
-        int days[] = {31,29,31,30,31,30,31,31,30,31,30,31};
-        int m, y, w;
+	struct tm date;
+	char str[12];
+	unsigned m, y;
 
-        if (argc < 2 || (y = atoi(argv[1])) <= 1752) return 1;
-        days[1] -= (y % 4) || (!(y % 100) && (y % 400));
-        w = y * 365 + 97 * (y - 1) / 400 + 4;
+	if (argc < 2)
+		return 1;
+	y = strtoul(argv[1], NULL, 0) - 1900;
+	for (m = 1; m <= 12; ++m) {
+		last_sunday(&date, y, m);
+		strftime(str, sizeof str, "%F", &date);
+		puts(str);
+	}
 
-        for(m = 0; m < 12; m++) {
-                w = (w + days[m]) % 7;
-                printf("%d-%02d-%d\n", y, m + 1,days[m] - w);
-        }
-
-        return 0;
+	return 0;
 }

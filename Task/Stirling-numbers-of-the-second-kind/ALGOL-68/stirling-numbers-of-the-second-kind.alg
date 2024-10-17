@@ -8,7 +8,7 @@ BEGIN # show some Stirling numbers of the second kind                        #
     # returns a triangular matrix of Stirling numbers up to max n, max n #
     PROC make s2 = ( INT max n )REF[,]SINT:
     BEGIN
-        REF[,]SINT s2 := HEAP[ 0 : max n, 0 : max n ]SINT;
+        HEAP[ 0 : max n, 0 : max n ]SINT s2;
         FOR n FROM 0 TO max n DO FOR k FROM 0 TO max n DO s2[ n, k ] := 0 OD OD;
         FOR n FROM 0 TO max n DO s2[ n, n ] := 1 OD;
         FOR n FROM 0 TO max n - 1 DO

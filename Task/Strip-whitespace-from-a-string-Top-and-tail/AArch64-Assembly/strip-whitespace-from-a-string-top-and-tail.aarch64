@@ -1,0 +1,237 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program Strip whitespace from a string   */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ BUFFERSIZE,    200
+
+/*******************************************/
+/* macros                             */
+/*******************************************/
+//.include "../../ficmacros64.inc"            // for developper debugging
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessDebutPgm:       .asciz "Program 64 bits start. \n"
+szCarriageReturn:     .asciz "\n"
+szMessFinOK:          .asciz "Program normal end. \n"
+szMessBufferError:           .asciz "Error : Buffer too small !!\n"
+szEndString:          .asciz "<<<<"
+szString1:            .asciz "  apples, pears # and bananas"
+szString2:            .asciz "apples, pears ; and bananas   "
+.equ LGSTRING2,         . - szString2
+szString3:            .asciz " \tapples, pears ; and bananas   "
+.align 4
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sBuffer:          .skip BUFFERSIZE
+.align 4
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr x0,qAdrszMessDebutPgm
+    bl affichageMess            // start message
+
+    ldr x0,qAdrszString1
+    ldr x1,qAdrsBuffer
+    mov x2,#BUFFERSIZE
+    bl stripTail
+    cmp x0,#-1
+    beq 1f
+    ldr x0,qAdrsBuffer
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+1:
+    ldr x0,qAdrszString2
+    mov x1,#LGSTRING2
+    ldr x2,qAdrsBuffer
+    mov x3,#BUFFERSIZE
+    bl stripTop
+    cmp x0,#-1
+    beq 2f
+    ldr x0,qAdrsBuffer
+    bl affichageMess
+    ldr x0,qAdrszEndString
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+2:
+    ldr x0,qAdrszString3
+    mov x1,#LGSTRING2
+    ldr x2,qAdrsBuffer
+    mov x3,#BUFFERSIZE
+    bl stripSpaces
+    cmp x0,#-1
+    beq 100f
+    ldr x0,qAdrsBuffer
+    bl affichageMess
+    ldr x0,qAdrszEndString
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+    ldr x0,qAdrszMessFinOK
+    bl affichageMess
+
+100:
+   mov x8,EXIT
+    svc #0                      // system call
+qAdrszMessDebutPgm:          .quad szMessDebutPgm
+qAdrszMessFinOK:             .quad szMessFinOK
+qAdrszCarriageReturn:        .quad szCarriageReturn
+qAdrszMessBufferError:       .quad szMessBufferError
+qAdrsBuffer:                 .quad sBuffer
+qAdrszEndString:             .quad szEndString
+qAdrszString1:               .quad szString1
+qAdrszString2:               .quad szString2
+qAdrszString3:               .quad szString3
+
+/******************************************************************/
+/*            strip leading space                                        */
+/******************************************************************/
+/* x0 contains string address  */
+/* x1 contains buffer address */
+/* x2 contains buffer length maxi */
+/* x0 returns buffer length */
+stripTail:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    mov x3,#0              // indice string
+    mov x4,#0              // indice buffer write
+    mov x6,#0              // spaces top
+1:
+    ldrb w5,[x0,x3]
+    cmp x5,#0             // end string
+    beq 3f
+    cmp x6,#1             // end spaces
+    beq 2f
+
+    cmp x5,#' '           // space ?
+    cinc x3,x3,eq         // increment indice
+    beq 1b                // and loop
+    cmp x5,#'\t'          // tabulation ?
+    cinc x3,x3,eq         // increment indice
+    beq 1b
+    mov x6,#1             // end first spaces
+2:
+    strb w5,[x1,x4]       // write byte
+    add x4,x4,#1
+    cmp x4,x2             // error ?
+    bge 99f
+    add x3,x3,#1
+    b 1b                  // loop
+3:
+    strb w5,[x1,x4]       // write byte final zero
+    add x0,x4,#1
+    b 100f
+99:                        // error
+    ldr x0,qAdrszMessBufferError
+    bl affichageMess
+    mov x0,#-1
+100:
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+/******************************************************************/
+/*            strip trailing space                                        */
+/******************************************************************/
+/* x0 contains string address  */
+/* x1 contains length string
+/* x2 contains buffer address */
+/* x3 contains buffer length maxi */
+/* x0 returns buffer length */
+stripTop:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    mov x4,#0              // indice buffer write
+    mov x6,#0              // top last spaces
+    sub x1,x1,#1           // final zero
+1:
+    ldrb w5,[x0,x1]        // load last byte
+    cmp x6,#1              // end  spaces?
+    beq 2f
+    sub x7,x1,1
+    cmp x5,#' '            // space ?
+    csel x1,x7,x1,eq       // decrement indice
+    beq 1b                 // and loop
+    cmp x5,#'\t'
+    csel x1,x7,x1,eq      // decrement indice
+    beq 1b
+    mov x6,#0             // final zero
+    add x4,x1,#1          // increment last position not space
+    cmp x4,x3             // error ?
+    bge 99f
+    strb w6,[x2,x4]       // write zero final
+    mov x7,x4             // save length
+    mov x6,#1             // end last spaces
+2:                        // not space
+    mov x4,x1             // last position
+    strb w5,[x2,x4]       // write byte
+    subs x3,x3,#1
+    bgt 1b                // and loop
+3:
+    mov x0,x7
+    b 100f
+99:                        // error
+    ldr x0,qAdrszMessBufferError
+    bl affichageMess
+    mov x0,#-1
+100:
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16         // TODO: a completer
+    ret
+/******************************************************************/
+/*            strip leading and trailing spaces                                        */
+/******************************************************************/
+/* x0 contains string address  */
+/* x1 contains buffer address */
+/* x2 contains buffer length maxi */
+/* x0 returns buffer length */
+stripSpaces:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    sub sp,sp,x2           // reserve area on stack
+    mov x4,x1              // save buffer address
+    mov x5,x2              // save length
+    mov x1,sp              // address temp buffer
+    mov x2,x5
+    bl stripTail           // strip leading spaces
+    cmp x0,#-1             // error ?
+    beq 100f
+    mov x1,x0              // new length string
+    mov x0,sp              // temp buffer address
+    mov x1,x4              // buffer address
+    mov x2,x5              // maxi length
+    bl stripTop            // stip trailing spaces
+100:
+    add sp,sp,x5           // free area on stack
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16         // TODO: a completer
+    ret
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

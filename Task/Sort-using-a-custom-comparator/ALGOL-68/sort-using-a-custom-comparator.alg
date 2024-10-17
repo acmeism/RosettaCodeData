@@ -44,8 +44,7 @@ PROC quicksort = (REF[]SITEM array, PROC(SITEM,SITEM)INT compare) VOID:
   FI
 );
 #***************************************************************#
-main:
-(
+BEGIN
     OP LENGTH  = (STRING a)INT: ( UPB a + 1 ) - LWB a;
     OP TOLOWER = (STRING a)STRING:
        BEGIN
@@ -87,8 +86,8 @@ main:
              # the strings are equal                   #  0
          FI # compare # ;
     []SITEM orig = ("Here", "are", "some", "sample", "strings", "to", "be", "sorted");
-    [LWB orig : UPB orig]SITEM a := orig;
-    print(("Before:"));FOR i FROM LWB a TO UPB a DO print((" ",a[i])) OD; print((newline));
-    quicksort(a, compare);
-    print(("After :"));FOR i FROM LWB a TO UPB a DO print((" ",a[i])) OD; print((newline))
-)
+    [LWB orig : UPB orig]SITEM data := orig;
+    print(("Before:"));FOR i FROM LWB data TO UPB data DO print((" ",data[i])) OD; print((newline));
+    quicksort(data, compare);
+    print(("After :"));FOR i FROM LWB data TO UPB data DO print((" ",data[i])) OD; print((newline))
+END

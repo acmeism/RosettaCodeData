@@ -102,15 +102,10 @@ OP   WITH      = ( INSPECTTOREPLACE inspected, STRING replace with )REF STRING:
 
 OP   DISPLAY = ( STRING s )VOID: write( ( s, newline ) );
 
-
 PRIO REPLACING = 2, WITH = 1;
 
 
-
-
-main: (
-
-    # test the INSPECT and DISPLAY "verbs" #
+BEGIN # test the INSPECT and DISPLAY "verbs" #
 
     STRING  text := "some text";
     DISPLAY text;
@@ -125,7 +120,15 @@ main: (
     DISPLAY text;
 
     INSPECT text REPLACING LEADING "som"  WITH "k";
+    DISPLAY text;
+
+    text := "another test";
+    DISPLAY text;
+
+    INSPECT text REPLACING FIRST   "anot" WITH "ABC";
+    DISPLAY text;
+
+    INSPECT text REPLACING LEADING "A"    WITH "_";
     DISPLAY text
 
-
-)
+END

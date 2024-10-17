@@ -1,0 +1,103 @@
+operator (candidate overlap clue)
+  ({| $candidate... -> {field: $}|} matching {| $clue... -> {field: $}|}) !
+end overlap
+
+test 'overlap'
+  assert ({nationality: 'English', colour: 'red'} overlap {nationality: 'English', colour: 'red'}) -> $::count <=2> 'identity'
+  assert ({nationality: 'English'} overlap {nationality: 'English', colour: 'red'}) -> $::count <=1> 'partial'
+  assert ({} overlap {nationality: 'English', colour: 'red'}) -> $::count <=0> 'none'
+  assert ({nationality: 'German'} overlap {nationality: 'English', colour: 'red'}) -> $::count <=0> 'contradict'
+end 'overlap'
+
+templates has&{house:}
+  def street: $;
+  $ -> #
+  // when one element already fits
+  when <[<?(($ overlap $house) -> $::count <=2>)>]> do $ !
+  // when two different elements contain the facts required to be together
+  when <[<?(($ overlap $house) -> $::count <=1>)>=2]> do !VOID
+  // when one element contains one fact together with a contradictory fact for the other property
+  when <[<?(($ overlap $house) -> $::count <=1>)?(({|$|} notMatching {|$house|}) -> $::count <=1>)>]> do !VOID
+  // when one element can be augmented
+  when <[<?(($ overlap $house) -> $::count <=1>)>]> do
+    $ -> \[i](when <?(($ overlap $house) -> $::count <=1>)> do [$street(first..~$i)..., {$, $house}, $street($i~..last)...] ! \)... !
+  // otherwise create new solution for each possible element that can contain these facts
+  otherwise $ -> \[i](({|$|} matching {|$house|})... -> [$street(first..~$i)..., {$, $house}, $street($i~..last)...] ! \)... !
+end has
+
+templates follows&{left:, right:}
+  data
+    is-left <?(($ overlap $left) -> $::count <=1>)>,
+    is-right <?(($ overlap $right) -> $::count <=1>)>,
+    can-be-right <?(({|$|} matching {|$right|}) -> $::count <=1>)>,
+    can-be-left <?(({|$|} matching {|$left|}) -> $::count <=1>)>
+  local
+  def street: $;
+  $ -> #
+  // when the right element already follows the left
+  when <[(<is-left>:<is-right>)]> do $ !
+  // when both elements exist (but implicitly not following as required)
+  when <[<is-left>,<is-right>]> do !VOID
+  // when the left element is followed by one that could be augmented with the right fact
+  when <[(<is-left>:<can-be-right>)]> do
+    $ -> \[i](($ overlap $left)... -> [$street(first..$i)..., {$street($i+1), $right}, $street($i+1~..last)...] ! \)... !
+  // when an element that can contain the left fact is followed by an element containing the right fact
+  when <[(<can-be-left>:<is-right>)]> do
+    $ -> \[i](($ overlap $right)... -> [$street(first..~$i-1)..., {$street($i-1), $left}, $street($i..last)...] ! \)... !
+  // when there is an element with either fact (and implicitly cannot be made to match the requirement)
+  when <[<is-left|is-right>]> do !VOID
+  // otherwise add these facts in all possible configurations
+  otherwise
+    $street::first..~$street::last -> \(
+      def i: $;
+      ({|$street($i)|} matching {|$left|})...
+      -> ({|$street($i+1)|} matching {|$right|})...
+      -> [$street(first..~$i)..., {$street($i), $left}, {$street($i+1), $right}, $street($i+1~..last)...] !
+    \) !
+end follows
+
+templates next-to&{a:, b:}
+  $ -> follows&{left: $a, right: $b} !
+  $ -> follows&{left: $b, right: $a} !
+end next-to
+
+// There are five houses.
+[1..5 -> {number: $}]
+// The English man lives in the red house.
+-> has&{house: {nationality: 'English', colour: 'red'}}
+// The Swede has a dog.
+-> has&{house: {nationality: 'Swede', pet: 'dog'}}
+// The Dane drinks tea.
+-> has&{house: {nationality: 'Dane', drink: 'tea'}}
+// The green house is immediately to the left of the white house.
+-> follows&{left: {colour: 'green'}, right: {colour: 'white'}}
+// They drink coffee in the green house.
+-> has&{house: {colour: 'green', drink: 'coffee'}}
+// The man who smokes Pall Mall has a bird.
+-> has&{house: {smoke: 'Pall Mall', pet: 'bird'}}
+// In the yellow house they smoke Dunhill.
+-> has&{house: {colour: 'yellow', smoke: 'Dunhill'}}
+// In the middle house they drink milk.
+-> has&{house: {number: 3, drink: 'milk'}}
+// The Norwegian lives in the first house.
+-> has&{house: {number: 1, nationality: 'Norwegian'}}
+// The Blend-smoker lives in the house next to the house with a cat.
+-> next-to&{a: {smoke: 'Blend'}, b: {pet: 'cat'}}
+// In a house next to the house with a horse, they smoke Dunhill.
+-> next-to&{a: {pet: 'horse'}, b: {smoke: 'Dunhill'}}
+// The man who smokes Blue Master drinks beer.
+-> has&{house: {smoke: 'Blue Master', drink: 'beer'}}
+// The German smokes Prince.
+-> has&{house: {nationality: 'German', smoke: 'Prince'}}
+// The Norwegian lives next to the blue house.
+-> next-to&{a: {nationality: 'Norwegian'}, b: {colour: 'blue'}}
+// They drink water in a house next to the house where they smoke Blend.
+-> next-to&{a: {drink: 'water'}, b: {smoke: 'Blend'}}
+-> \(
+      $... -> #
+      $-> \[i]('$i;: $;' !\)... -> '$;$#10;' -> !OUT::write
+             '$#10;' -> !OUT::write
+
+      when <{pet: VOID}> do 'The $.nationality; owns the zebra.$#10;' -> !OUT::write
+   \)
+-> !VOID

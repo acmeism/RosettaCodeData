@@ -1,0 +1,260 @@
+/* ARM assembly Raspberry PI  */
+/*  program Comma quibbling   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.include "../constantes.inc"
+.equ BUFFERSIZE,    80
+
+/*******************************************/
+/* macros                             */
+/*******************************************/
+//.include "../../ficmacros32.inc"            @ for developper debugging
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessDebutPgm:       .asciz "Program 32 bits start. \n"
+szCarriageReturn:     .asciz "\n"
+szMessFinOK:          .asciz "Program normal end. \n"
+szMessStringError:    .asciz "Error : Empty string !!!\n"
+szMessBufferError:    .asciz "Error : Buffer too small !!\n"
+szMessEndStringError: .asciz "Error: End string, not ].\n"
+szMessWordErr:        .asciz "Error word empty.\n"
+szAnd:                .asciz " and "
+szString1:            .asciz "[]"
+szString2:            .asciz "[\"ABC\"]"
+szString3:            .asciz "[\"ABC\",\"DEF\"]"
+szString4:            .asciz "[\"ABC\",\"DEF\",\"G\",\"H\"]"
+szString5:            .asciz "[\"AB"
+szString6:            .asciz "[\"ABC\",,\"DEF\"]"
+
+.align 4
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sBuffer:          .skip BUFFERSIZE
+.align 4
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr r0,iAdrszMessDebutPgm
+    bl affichageMess            @ start message
+
+    ldr r0,iAdrszString1
+    bl execTest
+    ldr r0,iAdrszString2
+    bl execTest
+    ldr r0,iAdrszString3
+    bl execTest
+    ldr r0,iAdrszString4
+    bl execTest
+    ldr r0,iAdrszString5
+    bl execTest
+    ldr r0,iAdrszString6
+    bl execTest
+
+    ldr r0,iAdrszMessFinOK
+    bl affichageMess
+
+100:
+    mov r7,#EXIT                @ program end
+    svc #0                      @ system call
+iAdrszMessDebutPgm:          .int szMessDebutPgm
+iAdrszMessFinOK:             .int szMessFinOK
+iAdrszCarriageReturn:        .int szCarriageReturn
+iAdrszString1:               .int szString1
+iAdrszString2:               .int szString2
+iAdrszString3:               .int szString3
+iAdrszString4:               .int szString4
+iAdrszString5:               .int szString5
+iAdrszString6:               .int szString6
+iAdrsBuffer:                 .int sBuffer
+/******************************************************************/
+/*            test execution                                        */
+/******************************************************************/
+/* r0 contains string address  */
+execTest:
+    push {r1-r4,lr}        @ save registers
+    mov r4,r0
+    bl affichageMess       @ display start string
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    mov r0,r4              @ string address
+    ldr r1,iAdrsBuffer     @ buffer address
+    mov r2,#BUFFERSIZE
+    bl stringAnalyse
+    cmp r0,#-1             @ error ?
+    beq 100f
+    ldr r0,iAdrsBuffer     @ buffer display
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+100:
+    pop {r1-r4,pc}
+/******************************************************************/
+/*            string conversion                                       */
+/******************************************************************/
+/* r0 contains string address  */
+/* r1 contains buffer address */
+/* r2 contains buffer length */
+stringAnalyse:
+    push {r1-r9,fp,lr}      @ save registers
+    sub sp,sp,#BUFFERSIZE   @ reserve area on stack for temporary buffer
+    mov fp,sp
+    mov r7,#0               @ indice write buffer
+    mov r5,#0               @ word counter
+    mov r6,#0               @ word char count
+
+    mov r3,#0               @ indice string
+1:
+    ldrb r4,[r0,r3]         @ load string char
+    cmp r4,#0               @ end ?
+    bne 2f
+    cmp r3,#0               @ first char ?
+    beq 97f                 @ error empty string
+    b 97f                   @ end string error
+2:
+    cmp r4,#'['             @ first symbol ?
+    bne 3f
+    mov r4,#'{'             @ write symbol
+    strb r4,[r1,r7]
+    add r7,r7,#1
+    cmp r7,r2
+    bge 99f                 @ buffer error
+    add r3,r3,#1            @ increment indice
+    b 1b                    @ and loop
+ 3:
+    cmp r4,#']'             @ end symbol ?
+    bne 8f
+    cmp r5,#0               @ no word ?
+    beq 7f
+    cmp r5,#1
+    beq 5f                 @ last and first word
+
+    mov r9,#0
+    ldr r12,iAdrszAnd
+4:                         @ loop write and
+    ldrb r4,[r12,r9]
+    strb r4,[r1,r7]
+    add r7,r7,#1
+    cmp r7,r2
+    bge 99f                 @ buffer error
+    add r9,r9,#1
+    cmp r9,#5
+    blt 4b
+
+5:                         @ last word
+    mov r9,#0
+6:                         @ loop write temporary buffer
+    ldrb r4,[fp,r9]
+    strb r4,[r1,r7]
+    add r7,r7,#1
+    cmp r7,r2
+    bge 99f                 @ buffer error
+    add r9,r9,#1
+    cmp r9,r6
+    blt 6b
+    mov r6,#0               @ raz indice temporary buffer
+7:
+    mov r4,#'}'
+    strb r4,[r1,r7]
+    add r7,r7,#1
+    cmp r7,r2
+    bge 99f                 @ buffer error
+    mov r4,#0
+    strb r4,[r1,r7]        @ final 0
+    b 100f
+8:
+    cmp r4,#','             @ comma ?
+    beq 9f
+    cmp r6,#0
+    addeq r5,r5,#1          @ new word increment word counter
+    strb r4,[fp,r6]         @ store char in temporary buffer
+    add r6,r6,#1
+    add r3,r3,#1
+    b 1b                    @ loop
+
+9:
+    cmp r6,#0               @ word empty ?
+    beq 96f
+    cmp r5,#1               @ first word ?
+    bne 11f
+                            @ first word, write only the word
+    mov r9,#0
+10:                         @ loop write temporary buffer
+    ldrb r4,[fp,r9]
+    strb r4,[r1,r7]
+    add r7,r7,#1
+    cmp r7,r2
+    bge 99f                 @ buffer error
+    add r9,r9,#1
+    cmp r9,r6
+    blt 10b
+    mov r6,#0               @ raz indice temporary buffer
+    add r3,r3,#1
+    b 1b                    @ loop
+11:
+    mov r4,#','
+    strb r4,[r1,r7]
+    add r7,r7,#1
+    cmp r7,r2
+    bge 99f                 @ buffer error
+
+    mov r9,#0
+12:                          @ loop write temporary buffer
+    ldrb r4,[fp,r9]
+    strb r4,[r1,r7]
+    add r7,r7,#1
+    cmp r7,r2
+    bge 99f                 @ buffer error
+    add r9,r9,#1
+    cmp r9,r6
+    blt 12b
+    mov r6,#0               @ raz indice temporary buffer
+    add r3,r3,#1
+    b 1b                    @ loop
+
+96:                         @ errors messages
+    ldr r0,iAdrszMessWordErr
+    bl affichageMess
+    mov r0,#-1
+    b 100f
+97:
+    ldr r0,iAdrszMessEndStringErr
+    bl affichageMess
+    mov r0,#-1
+    b 100f
+98:
+    ldr r0,iAdrszMessStringError
+    bl affichageMess
+    mov r0,#-1
+    b 100f
+99:
+    ldr r0,iAdrszMessBufferError
+    bl affichageMess
+    mov r0,#-1
+100:
+    add sp,sp,#BUFFERSIZE
+    pop {r1-r9,fp,pc}
+iAdrszMessStringError:    .int szMessStringError
+iAdrszMessBufferError:    .int szMessBufferError
+iAdrszMessEndStringErr:   .int szMessEndStringError
+iAdrszMessWordErr:        .int szMessWordErr
+iAdrszAnd:                .int szAnd
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

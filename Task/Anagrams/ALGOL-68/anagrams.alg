@@ -55,7 +55,6 @@ ELSE
                                      END
                        );
     REF AARRAY words := INIT LOC AARRAY;
-    STRING word;
     WHILE NOT at eof
     DO
         STRING word;

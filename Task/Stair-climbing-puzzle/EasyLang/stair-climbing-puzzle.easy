@@ -1,5 +1,5 @@
 func step .
-   if randint 2 = 2
+   if random 2 = 2
       print "climbed up"
       return 1
    else

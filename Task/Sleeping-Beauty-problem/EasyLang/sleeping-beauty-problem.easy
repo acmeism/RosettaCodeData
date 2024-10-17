@@ -1,6 +1,6 @@
 reps = 1e6
 for i to reps
-   coin = randint 2
+   coin = random 2
    wakings += 1
    if coin = 1
       heads += 1

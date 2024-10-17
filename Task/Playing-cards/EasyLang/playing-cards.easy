@@ -20,7 +20,7 @@ proc show . .
 .
 proc shuffle . .
    for i = 52 downto 2
-      r = randint i
+      r = random i
       swap deck[i] deck[r]
    .
    top = 52

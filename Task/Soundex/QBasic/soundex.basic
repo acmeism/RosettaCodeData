@@ -1,0 +1,37 @@
+DECLARE FUNCTION getCode$ (c$)
+DECLARE FUNCTION Soundex$ (palabra$)
+
+FOR i = 1 TO 20
+    READ nombre$
+    PRINT ""; ""; nombre$; ""; ""; TAB(15); Soundex$(nombre$)
+NEXT i
+
+DATA "Aschraft","Ashcroft","Euler","Gauss","Ghosh","Hilbert","Heilbronn","Lee","Lissajous","Lloyd"
+DATA "Moses","Pfister","Robert","Rupert","Rubin","Tymczak","VanDeusen","Wheaton","Soundex$","Example"
+
+FUNCTION getCode$ (c$)
+    IF INSTR("BFPV", c$) THEN getCode$ = "1"
+    IF INSTR("CGJKQSXZ", c$) THEN getCode$ = "2"
+    IF INSTR("DT", c$) THEN getCode$ = "3"
+    IF "L" = c$ THEN getCode$ = "4"
+    IF INSTR("MN", c$) THEN getCode$ = "5"
+    IF "R" = c$ THEN getCode$ = "6"
+    IF INSTR("HW", c$) THEN getCode$ = "."
+END FUNCTION
+
+FUNCTION Soundex$ (palabra$)
+    palabra$ = UCASE$(palabra$)
+    code$ = MID$(palabra$, 1, 1)
+    previo$ = getCode$(LEFT$(palabra$, 1)) ''""
+
+    FOR i = 2 TO (LEN(palabra$))
+        actual$ = getCode$(MID$(palabra$, i, 1))
+        IF actual$ <> "." THEN
+            IF LEN(actual$) > 0 AND actual$ <> previo$ THEN code$ = code$ + actual$
+            previo$ = actual$
+            IF LEN(code$) = 4 THEN EXIT FOR
+        END IF
+    NEXT i
+    IF LEN(code$) < 4 THEN code$ = code$ + STRING$(4 - LEN(code$), "0")
+    Soundex$ = LEFT$(code$, 4)
+END FUNCTION

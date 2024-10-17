@@ -1,5 +1,4 @@
-const
-(
+const (
 	key = "VIGENERECIPHER"
 	text = "Beware the Jabberwock, my son! The jaws that bite, the claws that catch!"
 )

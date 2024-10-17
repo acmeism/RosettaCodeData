@@ -2,7 +2,7 @@ BEGIN
     # performs Egyptian division of dividend by divisor, setting quotient and remainder #
     # this uses 32 bit numbers, so a table of 32 powers of 2 should be sufficient       #
     # ( divisors > 2^30 will probably overflow - this is not checked here )             #
-    PROC egyptian division = ( INT dividend, divisor, REF INT quotient, remainder )VOID:
+    PROC egyptian division = ( INT dividend, divisor, REF INT ed quotient, ed remainder )VOID:
          BEGIN
             [ 1 : 32 ]INT powers of 2, doublings;
             # initialise the powers of 2 and doublings tables #
@@ -27,12 +27,14 @@ BEGIN
                 FI;
                 table pos -:= 1
             OD;
-            quotient  := answer;
-            remainder := ABS ( accumulator - dividend )
+            ed quotient  := answer;
+            ed remainder := ABS ( accumulator - dividend )
         END # egyptian division # ;
 
-    # task test case #
-    INT quotient, remainder;
-    egyptian division( 580, 34, quotient, remainder );
-    print( ( "580 divided by 34 is: ", whole( quotient, 0 ), " remainder: ", whole( remainder, 0 ), newline ) )
+    BEGIN # task test case #
+        INT ed quotient, ed remainder;
+        egyptian division( 580, 34, ed quotient, ed remainder );
+        print( ( "580 divided by 34 is: ", whole( ed quotient, 0 ) ) );
+        print( ( " remainder: ", whole( ed remainder, 0 ), newline ) )
+    END
 END

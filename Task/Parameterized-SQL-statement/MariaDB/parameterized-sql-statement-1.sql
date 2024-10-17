@@ -1,0 +1,4 @@
+BEGIN NOT ATOMIC
+    DECLARE customer_id TEXT DEFAULT 24;
+    EXECUTE IMMEDIATE 'SELECT * FROM customer WHERE id = ?' USING customer_id;
+END;

@@ -1,0 +1,193 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program Strip block comments   */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ BUFFERSIZE,    200
+
+/*******************************************/
+/* macros                             */
+/*******************************************/
+//.include "../../ficmacros64.inc"            // for developper debugging
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessDebutPgm:       .asciz "Program 64 bits start. \n"
+szCarriageReturn:     .asciz "\n"
+szMessFinOK:          .asciz "Program normal end. \n"
+szMessBufferError:    .asciz "Error : Buffer too small !!\n"
+
+szStartComm:          .asciz "/*"
+szEndComm:            .asciz "*/"
+szString1:            .asciz "/**
+   * Some comments
+   * longer comments here that we can parse.
+   *
+   * Rahoo
+   */
+   function subroutine() {
+    a = /* inline comment */ b + c ;
+   }
+   /*/ <-- tricky comments */
+
+   /**
+    * Another comment.
+    */
+    function something() {
+    }"
+
+szString2:            .asciz "/* toto */tutu/*truc*/etc"
+.align 4
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sBuffer:          .skip BUFFERSIZE
+.align 4
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr x0,qAdrszMessDebutPgm
+    bl affichageMess            // start message
+
+    ldr x0,qAdrszString1
+    ldr x1,qAdrszStartComm
+    ldr x2,qAdrszEndComm
+    ldr x3,qAdrsBuffer
+    mov x4,#BUFFERSIZE
+    bl suppComment
+    ldr x0,qAdrsBuffer
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+    ldr x0,qAdrszMessFinOK
+    bl affichageMess
+
+100:
+   mov x8,EXIT
+    svc #0                      // system call
+qAdrszMessDebutPgm:          .quad szMessDebutPgm
+qAdrszMessFinOK:             .quad szMessFinOK
+qAdrszCarriageReturn:        .quad szCarriageReturn
+qAdrszMessBufferError:       .quad szMessBufferError
+qAdrszString1:               .quad szString1
+qAdrszString2:               .quad szString2
+qAdrszStartComm:             .quad szStartComm
+qAdrszEndComm:               .quad szEndComm
+qAdrsBuffer:                 .quad sBuffer
+/******************************************************************/
+/*            test execution                                        */
+/******************************************************************/
+/* x0 contains string address  */
+/* x1 contains start comment address */
+/* x2 contains end comment address */
+/* x3 contains buffer address */
+/* x4 contains buffer length */
+suppComment:
+    stp x5,lr,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    stp x8,x9,[sp,-16]!
+    stp x10,x11,[sp,-16]!
+    mov x5,#0              // indice string
+    mov x6,#0              // indice start comment
+    mov x7,#0              // comment
+    mov x8,#0              // indice write buffer
+1:
+    ldrb w9,[x1,x6]        // load first byte of comment start
+2:
+    ldrb w10,[x0,x5]       // load byte string
+    cmp x10,#0             // end string ?
+    beq 20f
+    cmp x7,#1              // comment
+    beq 6f
+    cmp x10,x9             // compare first byte and byte string
+    bne 5f
+3:
+    add x6,x6,#1
+    ldrb w9,[x1,x6]        // load oher byte of comment start
+    cmp x9,#0
+    beq 4f                 // end comment ?
+    strb w10,[x3,x8]       // store byte in buffer
+    add x8,x8,#1
+    cmp x8,x4              // error size buffer ?
+    bge 99f
+    add x5,x5,#1           // load byte string
+    ldrb w10,[x0,x5]
+    cmp x10,#0             // end string ?
+    beq 20f
+    cmp x10,x9             // compare byte
+    beq 3b                 // loop other char start comment
+    strb w10,[x3,x8]       // else store char string
+    add x8,x8,#1
+    cmp x8,x4              // end buffer ?
+    bge 99f
+    add x5,x5,#1          // increment indice string
+    mov x6,#0             // raz indice start comment
+    b 1b
+4:                        // start comment found
+    sub x6,x6,#1
+    sub x8,x8,x6          // supp write byte buffer
+    mov x7,#1             // comment
+    add x5,x5,#1          // increment indice string
+    b 2b                  // and loop
+5:                        // bytes inequals
+    strb w10,[x3,x8]      // store char string
+    add x8,x8,#1
+    cmp x8,x4             // end buffer ?
+    bge 99f
+    add x5,x5,#1          // increment indice string
+    b 2b                  // and loop
+6:                        // is comment
+    mov x6,#0
+8:
+    ldrb w9,[x2,x6]       // load end comment first char
+9:
+    cmp x10,x9            // equal byte string ?
+    bne 10f
+    add x5,x5,#1
+    ldrb w10,[x0,x5]      // load other byte
+    cmp x10,#0            // end string
+    beq 20f
+    add x6,x6,#1
+    ldrb w9,[x2,x6]       // load other byte end comment
+    cmp x9,#0             // end end comment ?
+    bne 9b                // no -> loop
+                          // comment end
+    mov x7,#0             // raz comment
+    mov x6,#0             // raz indice start comment
+    b 1b
+10:                       // comment not end
+    add x5,x5,#1
+    b 2b
+
+20:
+    mov x10,#0            // final zero
+    strb w10,[x3,x8]      // store char string
+    b 100f
+
+99:                        // error
+    ldr x0,qAdrszMessBufferError
+    bl affichageMess
+    mov x0,#-1
+100:
+    ldp x10,x11,[sp],16
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x5,lr,[sp],16
+    ret
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

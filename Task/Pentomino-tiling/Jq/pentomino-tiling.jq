@@ -12,10 +12,11 @@ def prn:
 def array($n): . as $in | [range(0;$n)|$in];
 
 def array_swap($i; $j):
-  if $i < $j then array_swap($j;$i)
+  if $j < $i then array_swap($j;$i)
   elif $i == $j then .
-  else .[$i] as $t | .[:$j] + [$t] + .[$j:$i] + .[$i + 1:]
+  else .[:$i] + [.[$j]] + .[$i+1:$j] + [.[$i]] + .[$j+1:]
   end ;
+
 
 ### Pentominos
 

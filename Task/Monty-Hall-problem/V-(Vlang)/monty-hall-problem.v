@@ -12,7 +12,7 @@ fn main() {
         }
         stay_wins += doors[guess]
         switch_wins += doors[3 - guess - shown]
-		for clear in 0..3 {if doors[clear] != 0 {doors[clear] = 0}}
+		for i in 0..3 {doors[i] = 0}
 	}
 	println("Simulating ${games} games:")
 	println("Staying wins ${stay_wins} times at ${(f32(stay_wins) / f32(games) * 100):.2}% of games")

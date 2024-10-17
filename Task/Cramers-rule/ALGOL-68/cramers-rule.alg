@@ -30,18 +30,20 @@ OP   CRAMER = ( [,]REAL a, []REAL b )[]REAL:
      FI; # CRAMER #
 
 # test CRAMER using the matrix and column vector specified in the task  #
-[,]REAL a = ( (  2, -1,  5,  1 )
-            , (  3,  2,  2, -6 )
-            , (  1,  3,  3, -1 )
-            , (  5, -2, -3,  3 )
-            );
-[]REAL  b = (  -3
-            , -32
-            , -47
-            ,  49
-            );
-[]REAL  solution = a CRAMER b;
-FOR c FROM LWB solution TO UPB solution DO
-    print( ( " ", fixed( solution[ c ], -8, 4 ) ) )
-OD;
-print( ( newline ) )
+BEGIN
+    [,]REAL a = ( (  2, -1,  5,  1 )
+                , (  3,  2,  2, -6 )
+                , (  1,  3,  3, -1 )
+                , (  5, -2, -3,  3 )
+                );
+    []REAL  b = (  -3
+                , -32
+                , -47
+                ,  49
+                );
+    []REAL  solution = a CRAMER b;
+    FOR c FROM LWB solution TO UPB solution DO
+        print( ( " ", fixed( solution[ c ], -8, 4 ) ) )
+    OD;
+    print( ( newline ) )
+END

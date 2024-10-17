@@ -95,18 +95,18 @@ PROC s reader = ( STRING s )REF SEXPR:
 PROC s writer = ( REF SEXPR s expr )VOID:
      BEGIN
         # prints an S expression with a suitable indent #
-        PROC print indented s expression = ( REF SEXPR s expr, INT indent )VOID:
+        PROC print indented s expression = ( REF SEXPR s expression, INT indent )VOID:
              BEGIN
-                REF SEXPR s pos := s expr;
+                REF SEXPR s pos := s expression;
                 WHILE REF SEXPR( s pos ) ISNT REF SEXPR( NIL ) DO
-                    FOR i TO indent DO print( ( " " ) ) OD;
+                    TO indent DO print( ( " " ) ) OD;
                     CASE element OF s pos
                     IN  (VOID       ): print( ( "()", newline ) )
                      ,  (STRING    s): print( ( s,    newline ) )
                      ,  (REF SEXPR e): BEGIN
                                           print( ( "(", newline ) );
                                           print indented s expression( e, indent + 4 );
-                                          FOR i TO indent DO print( ( " " ) ) OD;
+                                          TO indent DO print( ( " " ) ) OD;
                                           print( ( ")", newline ) )
                                       END
                     OUT

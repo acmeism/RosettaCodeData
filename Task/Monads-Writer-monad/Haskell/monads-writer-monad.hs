@@ -8,6 +8,4 @@ logRoot = loggingVersion sqrt "obtained square root, "
 logAddOne = loggingVersion (+1) "added 1, "
 logHalf = loggingVersion (/2) "divided by 2, "
 
-halfOfAddOneOfRoot = logRoot >=> logAddOne >=> logHalf
-
-main = print $ runWriter (halfOfAddOneOfRoot 5)
+main = print . runWriter $ (logRoot >=> logAddOne >=> logHalf) 5

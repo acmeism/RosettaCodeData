@@ -1,1 +1,1 @@
-input | parse "{a} {b}" | first | values | into int | math sum
+input | split words | into int | math sum

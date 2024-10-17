@@ -1,3 +1,1 @@
-CT=: C.!.2 @ (#:i.) @ $~
-ip=: +/ .*    NB. inner product
-cross=: ] ip CT@#@[ ip [
+A=:'a',"0'123'  [B=:'b',"0'123'

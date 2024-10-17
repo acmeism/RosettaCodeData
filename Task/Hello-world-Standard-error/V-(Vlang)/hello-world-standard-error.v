@@ -1,0 +1,1 @@
+eprintln("Hello and goodbye!")

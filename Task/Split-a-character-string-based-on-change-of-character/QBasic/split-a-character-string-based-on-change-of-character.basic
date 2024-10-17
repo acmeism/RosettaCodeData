@@ -1,0 +1,14 @@
+DECLARE FUNCTION split$ (instring$)
+
+PRINT split$("gHHH5YY++///\")
+END
+
+FUNCTION split$ (instring$)
+    IF LEN(instring$) < 2 THEN split$ = instring$
+    ret$ = LEFT$(instring$, 1)
+    FOR i = 2 TO LEN(instring$)
+        IF MID$(instring$, i, 1) <> MID$(instring$, i - 1, 1) THEN ret$ = ret$ + ", "
+        ret$ = ret$ + MID$(instring$, i, 1)
+    NEXT i
+    split$ = ret$
+END FUNCTION

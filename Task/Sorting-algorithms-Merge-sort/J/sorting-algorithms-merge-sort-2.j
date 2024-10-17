@@ -1,5 +1,2 @@
-mergesort=: {{  r=. y [  stride=. 1
-  while. stride < #r do. stride=. 2*mid=. stride
-    r=. ;(-stride) (mid&}. <@merge (mid<.#) {.])\ r
-  end.
-}}
+   mergesort 18 2 8 1 5 14 9 19 11 13 16 0 3 10 17 15 12 4 7 6
+0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19

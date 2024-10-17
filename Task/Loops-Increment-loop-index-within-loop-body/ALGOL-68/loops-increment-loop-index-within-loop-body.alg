@@ -16,13 +16,13 @@ BEGIN
             result
          FI # is prime # ;
 
-    LONG INT i := 42;
-    LONG INT n := 0;
-    WHILE n < 42 DO
+    LONG INT count := 0;
+    LONG INT i     := 42;
+    WHILE count < 42 DO
         IF is prime( i ) THEN
-            n +:= 1;
+            count +:= 1;
             print( ( "n = "
-                   , whole( n,  -2 )
+                   , whole( count,  -2 )
                    , "  "
                    , whole( i, -19 )
                    , newline

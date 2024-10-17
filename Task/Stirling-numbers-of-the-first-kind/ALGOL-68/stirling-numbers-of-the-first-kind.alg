@@ -9,7 +9,8 @@ BEGIN # show some (unsigned) Stirling numbers of the first kind          #
     # the numbers are signed if signed is TRUE, unsigned otherwise       #
     PROC make s1 = ( INT max n, BOOL signed )REF[,]SINT:
     BEGIN
-        REF[,]SINT s1 := HEAP[ 0 : max n, 0 : max n ]SINT;
+
+        HEAP[ 0 : max n, 0 : max n ]SINT s1;
         FOR n FROM 0 TO max n DO FOR k FROM 0 TO max n DO s1[ n, k ] := 0 OD OD;
         s1[ 0, 0 ] := 1;
         FOR n FROM 1 TO max n DO s1[ n, 0 ] := 0 OD;

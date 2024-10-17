@@ -36,7 +36,12 @@ BEGIN
                      result := list[ left ];
                      found := TRUE
                  ELSE
-                     INT pivot index = partition( list, left, right, left + ENTIER ( ( random * ( right - left ) + 1 ) ) );
+                     INT pivot index
+                       = partition( list
+                                  , left
+                                  , right
+                                  , left + ENTIER ( ( random * ( right - left ) + 1 ) )
+                                  );
                      IF k = pivot index THEN
                          result := list[ k ];
                          found := TRUE

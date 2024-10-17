@@ -1,1 +1,1 @@
-    quicksort 1 3 5 7 9 8 6 4 2
+quicksort:{p:*x[1?#x];:[0=#x;x;,/(_f x[&x<p];x[&x=p];_f x[&x>p])]}

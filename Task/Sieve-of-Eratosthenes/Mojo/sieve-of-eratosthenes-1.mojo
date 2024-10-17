@@ -16,10 +16,10 @@ struct SoEBasic(Sized):
         self.cmpsts = DTypePointer[DType.bool].alloc(limit - 1)
         memset_zero(self.cmpsts, limit - 1)
         for i in range(limit - 1):
-            let s = i * (i + 4) + 2
+            var s = i * (i + 4) + 2
             if s >= limit - 1: break
             if self.cmpsts[i]: continue
-            let bp = i + 2
+            var bp = i + 2
             for c in range(s, limit - 1, bp):
                 self.cmpsts[c] = True
         for i in range(limit - 1):
@@ -44,18 +44,18 @@ struct SoEBasic(Sized):
         if self.ndx >= self.len: return 0
         while (self.ndx < self.len) and (self.cmpsts[self.ndx]):
             self.ndx += 1
-        let rslt = self.ndx + 2; self.sz -= 1; self.ndx += 1
+        var rslt = self.ndx + 2; self.sz -= 1; self.ndx += 1
         return rslt
 
 fn main():
     print("The primes to 100 are:")
-    for prm in SoEBasic(100): print_no_newline(prm, " ")
+    for prm in SoEBasic(100): print(prm, " ",end="")
     print()
-    let strt0 = now()
-    let answr0 = len(SoEBasic(1_000_000))
-    let elpsd0 = (now() - strt0) / 1000000
+    var strt0 = now()
+    var answr0 = len(SoEBasic(1_000_000))
+    var elpsd0 = (now() - strt0) / 1000000
     print("Found", answr0, "primes up to 1,000,000 in", elpsd0, "milliseconds.")
-    let strt1 = now()
-    let answr1 = len(SoEBasic(cLIMIT))
-    let elpsd1 = (now() - strt1) / 1000000
+    var strt1 = now()
+    var answr1 = len(SoEBasic(cLIMIT))
+    var elpsd1 = (now() - strt1) / 1000000
     print("Found", answr1, "primes up to", cLIMIT, "in", elpsd1, "milliseconds.")

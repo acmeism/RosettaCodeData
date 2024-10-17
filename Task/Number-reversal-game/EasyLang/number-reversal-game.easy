@@ -15,7 +15,7 @@ func$ tostr s[] .
 .
 proc shuffle . s[] .
    for i = len s[] downto 2
-      swap s[i] s[randint i]
+      swap s[i] s[random i]
    .
 .
 proc reverse n . s[] .

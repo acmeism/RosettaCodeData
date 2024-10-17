@@ -1,0 +1,83 @@
+#!/usr/bin/mira -exec
+main :: [sys_message]
+main = (interpret . read . hd . tl) $*
+
+interpret :: [char]->[sys_message]
+interpret prog = msgs where (tape, inp, msgs) = run empty_tape $- (parse prog)
+
+instr ::= Left | Right | Inc | Dec | Read | Write | Loop [instr]
+
+run :: tape->[char]->[instr]->(tape,[char],[sys_message])
+run tape inp [] = (tape, inp, [])
+run tape inp (instr:instrs)
+    = (tape'', inp'', sysmsg ++ sysmsgs)
+      where (tape', inp', sysmsg) = step tape inp instr
+            (tape'', inp'', sysmsgs) = run tape' inp' instrs
+
+step :: tape->[char]->instr->(tape,[char],[sys_message])
+step tape inp Left        = (left tape,        inp,  [])
+step tape inp Right       = (right tape,       inp,  [])
+step tape inp Inc         = (apply (+1) tape,  inp,  [])
+step tape inp Dec         = (apply (+-1) tape, inp,  [])
+step tape inp Read        = (setval ch tape,   inp', [])
+                            where (ch, inp') = getchar inp
+step tape inp Write       = (tape, inp, [Stdout (decode (val tape):[])])
+step tape inp (Loop prog) = (tape, inp, []), if val tape = 0
+                          = (tape'', inp'', sysmsgs ++ sysmsgs'), otherwise
+                            where (tape', inp', sysmsgs) = run tape inp prog
+                                  (tape'', inp'', sysmsgs') = step tape' inp' (Loop prog)
+
+getchar :: [char]->(num,[char])
+getchar []     = (0, [])
+getchar (x:xs) = (code x, xs)
+
+parse :: [char] -> [instr]
+parse [] = []
+parse instrs
+    = Left      : rest, if tok="<"
+    = Right     : rest, if tok=">"
+    = Inc       : rest, if tok="+"
+    = Dec       : rest, if tok="-"
+    = Read      : rest, if tok=","
+    = Write     : rest, if tok="."
+    = Loop loop : rest, if hd tok='['
+    = rest,             otherwise
+      where (tok, next) = token instrs
+            rest = parse next
+            loop = parse (init (tl tok))
+
+token :: [char] -> ([char],[char])
+token [] = ([],[])
+token (']':xs) = error "] without ["
+token ('[':xs) = ('[':l, rs) where (l, rs) = getloop xs
+token (x:xs)   = (x:[], xs)
+
+getloop :: [char] -> ([char],[char])
+getloop = g 0
+          where g 0 (']':xs) = ("]", xs)
+                g n ('[':xs) = ('[':l,rs) where (l,rs) = g (n+1) xs
+                g n (']':xs) = (']':l,rs) where (l,rs) = g (n-1) xs
+                g n (x:xs)   = (x:l,rs) where (l,rs) = g n xs
+                g n []       = error "[ without ]"
+
+tape ::= Tape [num] num [num]
+
+empty_tape :: tape
+empty_tape = Tape [] 0 []
+
+left :: tape->tape
+left (Tape ls c [])      = Tape (c:ls) 0 []
+left (Tape ls c (r:rs))  = Tape (c:ls) r rs
+
+right :: tape->tape
+right (Tape [] c rs)     = Tape [] 0 (c:rs)
+right (Tape (l:ls) c rs) = Tape ls l (c:rs)
+
+apply :: (num->num)->tape->tape
+apply fn (Tape ls c rs)  = Tape ls (fn c mod 256) rs
+
+val :: tape->num
+val (Tape ls c rs) = c
+
+setval :: num->tape->tape
+setval v (Tape ls c rs) = Tape ls v rs

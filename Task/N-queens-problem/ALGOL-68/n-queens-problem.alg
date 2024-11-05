@@ -1,26 +1,24 @@
+# N-queens problem #
 INT ofs = 1, # Algol68 normally uses array offset of 1 #
     dim = 8; # dim X dim chess board #
 [ofs:dim+ofs-1]INT b;
 
 PROC unsafe = (INT y)BOOL:(
-  INT i, t, x;
-  x := b[y];
-  FOR i TO y - LWB b DO
-    t := b[y - i];
-    IF t = x THEN break true
-    ELIF t = x - i THEN break true
-    ELIF t = x + i THEN break true
+  INT x = b[y];
+  BOOL safe := TRUE;
+  FOR i TO y - LWB b WHILE safe DO
+    INT t = b[y - i];
+    IF t = x THEN safe := FALSE
+    ELIF t = x - i THEN safe := FALSE
+    ELIF t = x + i THEN safe := FALSE
     FI
   OD;
-  FALSE EXIT
-break true:
-  TRUE
+  NOT safe
 );
 
 INT s := 0;
 
 PROC print board = VOID:(
-  INT x, y;
   print((new line, "Solution # ", s+:=1, new line));
   FOR y FROM LWB b TO UPB b DO
     FOR x FROM LWB b TO UPB b DO
@@ -30,15 +28,12 @@ PROC print board = VOID:(
   OD
 );
 
-main: (
+# main # (
   INT y := LWB b;
   b[LWB b] := LWB b - 1;
-  FOR i WHILE y >= LWB b DO
-    WHILE
-      b[y]+:=1;
-  # BREAK # IF b[y] <= UPB b THEN unsafe(y) ELSE FALSE FI
-    DO SKIP OD;
-    IF b[y] <= UPB b  THEN
+  WHILE y >= LWB b DO
+    WHILE IF (b[y]+:=1) <= UPB b THEN unsafe(y) ELSE FALSE FI DO SKIP OD;
+    IF b[y] <= UPB b THEN
       IF y < UPB b THEN
         b[y+:=1] := LWB b - 1
       ELSE

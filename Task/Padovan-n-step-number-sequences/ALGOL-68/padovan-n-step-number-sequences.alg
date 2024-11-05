@@ -21,11 +21,11 @@ BEGIN # show some valuies of the Padovan n-step number sequences  #
             r
          END # padovan sequences # ;
     # calculate and show the sequences                            #
-    [,]INT r = padovan sequences( 8, 15 );
+    [,]INT ps = padovan sequences( 8, 15 );
     print( ( "Padovan n-step sequences:", newline ) );
-    FOR n FROM 1 LWB r TO 1 UPB r DO
+    FOR n FROM 1 LWB ps TO 1 UPB ps DO
         print( ( whole( n, 0 ), " |" ) );
-        FOR x FROM 2 LWB r TO 2 UPB r DO print( ( " ", whole( r[ n, x ], -3 ) ) ) OD;
+        FOR x FROM 2 LWB ps TO 2 UPB ps DO print( ( " ", whole( ps[ n, x ], -3 ) ) ) OD;
         print( ( newline ) )
     OD
 END

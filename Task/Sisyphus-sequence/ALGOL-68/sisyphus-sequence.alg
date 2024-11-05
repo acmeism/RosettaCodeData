@@ -16,9 +16,9 @@ BEGIN # generate elements of the Sysiphus Sequence: see OEIS A350877         #
     [ sieve max ]BOOL sieve; FOR i TO UPB sieve DO sieve[ i ] := is odd; is odd := NOT is odd OD;
     sieve[ 1 ] := FALSE;
     sieve[ 2 ] := TRUE;
-    FOR s FROM 3 BY 2 TO ENTIER sqrt( sieve max ) DO
-        IF sieve[ s ] THEN
-            FOR p FROM s * s BY s TO sieve max DO sieve[ p ] := FALSE OD
+    FOR s pos FROM 3 BY 2 TO ENTIER sqrt( sieve max ) DO
+        IF sieve[ s pos ] THEN
+            FOR p FROM s pos * s pos BY s pos TO sieve max DO sieve[ p ] := FALSE OD
         FI
     OD;
     [ 1 : 250 ]INT pos;                # positions of 1..250 in the sequence #
@@ -96,5 +96,6 @@ BEGIN # generate elements of the Sysiphus Sequence: see OEIS A350877         #
     FOR i TO 100 DO
         print( ( IF pos[ i ] = 0 THEN " unknown" ELSE whole( pos[ i ], -8 ) FI ) );
         IF i MOD 8 = 0 THEN print( ( newline ) ) FI
-    OD
+    OD;
+    print( ( newline ) )
 END

@@ -59,7 +59,7 @@ BEGIN # convert camel case to and from snake case #
                     result +:= c
                 ELIF NOT ISBREAK c THEN
                     # not a break - convert to lower case if necessary and move to the next #
-                    result +:= TOLOWER c;
+                    result +:= TOLOWER c
                 ELSE
                     # have a separator - skip all subsequent separators and upcase the follower #
                     BOOL have break := TRUE;
@@ -83,7 +83,7 @@ BEGIN # convert camel case to and from snake case #
          THEN s
          ELSE
              STRING result := s;
-             FOR i FROM s len + 1 TO len DO " " +=: result OD;
+             FROM s len + 1 TO len DO " " +=: result OD;
              result
          FI # PAD # ;
     # returns s with leading and trailing spaces removed #

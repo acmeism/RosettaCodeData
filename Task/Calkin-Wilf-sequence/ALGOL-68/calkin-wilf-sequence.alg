@@ -32,14 +32,7 @@ BEGIN
        num OF result//den OF result
     );
 
-    OP - = (FRAC a, b)FRAC: a + -b,
-       * = (FRAC a, b)FRAC: (
-           INT num = num OF a * num OF b,
-           den = den OF a * den OF b;
-           INT common = gcd(num, den);
-           (num OVER common) // (den OVER common)
-         );
-
+    OP - = (FRAC a, b)FRAC: a + -b;
     OP - = (FRAC frac)FRAC: (-num OF frac, den OF frac);
 
     # ============================================================== #
@@ -65,7 +58,6 @@ BEGIN
     # end code from the Continued fraction/Arithmetic/Construct from rational number task #
 
     # Additional FRACrelated operators                               #
-    OP *     = ( INT a, FRAC b )FRAC: ( num OF b * a ) // den OF b;
     OP /     = ( FRAC a, b )FRAC: ( num OF a * den OF b ) // ( num OF b * den OF a );
     OP FLOOR = ( FRAC a )INT: num OF a OVER den OF a;
     OP +     = ( INT a, FRAC b )FRAC: ( a // 1 ) + b;
@@ -105,7 +97,7 @@ BEGIN
             # continued fraction, starting at the least significant                           #
             INT digit := 1;
             FOR d pos FROM cf length BY -1 TO 1 DO
-                FOR i TO cf[ d pos ] DO
+                TO cf[ d pos ] DO
                     result *:= 2 +:= digit
                 OD;
                 digit := IF digit = 0 THEN 1 ELSE 0 FI
@@ -124,7 +116,7 @@ BEGIN
         print( ( newline ) );
         # show the position of a specific element in the sequence #
         print( ( "Position of 83116/51639 in the sequence: "
-               , whole( position in calkin wilf sequence( 83116//51639 ), 0 )
+               , whole( position in calkin wilf sequence( 83116//51639 ), 0 ), newline
                )
              )
     END

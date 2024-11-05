@@ -39,7 +39,6 @@ BEGIN # polynomial division                                         #
     #         are unchanged, so high order elements are lost         #
     OP   SHR = ( []INT a, INT shift )[]INT:
          BEGIN
-            INT da = DEGREE a;
             [ LWB a : UPB a ]INT result;
             FOR i FROM LWB result TO shift - ( LWB result + 1 ) DO result[ i ] := 0 OD;
             FOR i FROM shift - LWB result TO UPB result DO result[ i ] := a[ i - shift ] OD;
@@ -48,7 +47,7 @@ BEGIN # polynomial division                                         #
 
     # polynomial long disivion of n in by d in, returns q and r      #
     OP   / = ( []INT n in, d in )POLYNOMIALDIVISIONRESULT:
-         IF DEGREE d < 0 THEN
+         IF DEGREE d in < 0 THEN
              print( ( "polynomial division by polynomial with negative degree", newline ) );
              stop
          ELSE
@@ -95,13 +94,16 @@ BEGIN # polynomial division                                         #
             FI
          END # SHOWPOLYNOMIAL # ;
 
-    []INT n = ( []INT( -42, 0, -12, 1 ) )[ AT 0 ];
-    []INT d = ( []INT(  -3, 1,   0, 0 ) )[ AT 0 ];
+    BEGIN
+        []INT n = ( []INT( -42, 0, -12, 1 ) )[ AT 0 ];
+        []INT d = ( []INT(  -3, 1,   0, 0 ) )[ AT 0 ];
 
-    POLYNOMIALDIVISIONRESULT qr = n / d;
+        POLYNOMIALDIVISIONRESULT qr = n / d;
 
-    SHOWPOLYNOMIAL n; print( ( " divided by " ) ); SHOWPOLYNOMIAL d;
-    print( ( newline, " -> Q: " ) ); SHOWPOLYNOMIAL q OF qr;
-    print( ( newline, "    R: " ) ); SHOWPOLYNOMIAL r OF qr
+        SHOWPOLYNOMIAL n; print( ( " divided by " ) ); SHOWPOLYNOMIAL d;
+        print( ( newline, " -> Q: " ) ); SHOWPOLYNOMIAL q OF qr;
+        print( ( newline, "    R: " ) ); SHOWPOLYNOMIAL r OF qr;
+        print( ( newline ) )
+    END
 
 END

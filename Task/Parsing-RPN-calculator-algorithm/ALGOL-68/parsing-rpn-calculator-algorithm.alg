@@ -5,7 +5,7 @@
 CHAR end of expression character = REPR 12;
 
 # evaluates the specified rpn expression #
-PROC evaluate = ( STRING rpn expression )VOID:
+PROC evaluate rpn = ( STRING rpn expression )VOID:
 BEGIN
 
     [ 256 ]REAL   stack;
@@ -123,21 +123,15 @@ BEGIN
 
     print( ( "Result is: ", fixed( stack[ stack pos ], 12, 8 ), newline ) )
 
-END; # evaluate #
+END; # evaluate rpn #
 
-main: (
-
+BEGIN
     # get the RPN expresson from the user #
-
     STRING rpn expression;
-
     print( ( "Enter expression: " ) );
     read( ( rpn expression, newline ) );
-
     # add a space to terminate the final token and an expression terminator #
     rpn expression +:= " " + end of expression character;
-
     # execute the expression #
-    evaluate( rpn expression )
-
-)
+    evaluate rpn( rpn expression )
+END

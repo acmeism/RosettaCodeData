@@ -33,7 +33,7 @@ BEGIN
              PROC get value = ( INT number of bits )BITS:
                   BEGIN
                      BITS value := 2r0;
-                     FOR b TO number of bits WHILE NOT at end DO
+                     TO number of bits WHILE NOT at end DO
                          value := ( value SHL 1 ) OR IF s[ s pos ] = " " THEN 2r0 ELSE 2r1 FI;
                          s pos +:= 1
                      OD;
@@ -182,8 +182,12 @@ BEGIN
                                  OD
                              FI;
                              INT check sum := 0;
-                             FOR d FROM 1 BY 2 TO upc digits DO check sum +:= 3 * ( digits OF result )[ d ] OD;
-                             FOR d FROM 2 BY 2 TO upc digits DO check sum +:=     ( digits OF result )[ d ] OD;
+                             FOR d FROM 1 BY 2 TO upc digits DO
+                                 check sum +:= 3 * ( digits OF result )[ d ]
+                             OD;
+                             FOR d FROM 2 BY 2 TO upc digits DO
+                                 check sum +:=     ( digits OF result )[ d ]
+                             OD;
                              IF check sum MOD 10 /= 0 THEN
                                  # invalid check digit                        #
                                  error message OF result := "incorrect check digit"

@@ -21,7 +21,7 @@ do i = 1 to p
       b = Right(b,l-1)||Left(b,1)
       if b < a then
          iterate i
-      if \ IsPrime(b) then
+      if \ prime(b) then
          iterate i
    end
    call Charout ,a' '
@@ -38,7 +38,7 @@ numeric digits 320
 say 'Next 3 circular primes:'
 do i = 7 to 320
    r = Repunit(i)
-   if IsPrime(r) then
+   if prime(r) then
       call charout ,'R('i') '
 end
 say
@@ -51,7 +51,7 @@ procedure expose glob.
 call Time('r')
 numeric digits 1040
 say 'Primality of R(1031):'
-if IsPrime(Repunit(1031)) then
+if prime(Repunit(1031)) then
    say 'R(1031) is probable prime'
 else
    say 'R(1031) is composite'
@@ -66,6 +66,7 @@ arg x
 /* Formula */
 return Copies('1',x)
 
-include Numbers
 include Functions
+include Numbers
+include Sequences
 include Abend

@@ -16,7 +16,7 @@ PROC string_trim = (STRING str) STRING: (
     str[i:UPB str - j]
 );
 
-test: (
+# test # (
     IF string_trim("   foobar") /= "foobar" THEN
         print(("string_trim('   foobar'): expected 'foobar'; actual: "
               + string_trim("   foobar"), newline)) FI;

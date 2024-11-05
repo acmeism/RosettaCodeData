@@ -1,5 +1,4 @@
-fac = product . enumFromTo 1
-
-binCoef n k = fac n `div` (fac k * fac (n - k))
-
-pascal = ((fmap . binCoef) <*> enumFromTo 0) . pred
+pascal :: [[Integer]]
+pascal =
+  (1 : [ 0 | _ <- head pascal])
+  : [zipWith (+) (0:row) row | row <- pascal]

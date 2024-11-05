@@ -1,4 +1,4 @@
-BEGIN # find some pierpoint primes of the first kind (2^u3^v + 1)             #
+BEGIN # find some pierpont primes of the first kind (2^u3^v + 1)              #
       #                              and second kind (2^u3^v - 1)             #
     # construct a sieve of primes up to 10 000                                #
     PR read "primes.incl.a68" PR
@@ -18,10 +18,10 @@ BEGIN # find some pierpoint primes of the first kind (2^u3^v + 1)             #
             OD;
             probably prime
          FI; # is prime #
-    # sets the elements of pp1 to the first UPB pp1 Pierpoint primes of the   #
-    #       first kind and pp2 to the first UPB pp2 Pierpoint primes of the   #
+    # sets the elements of pp1 to the first UPB pp1 Pierpont primes of the    #
+    #       first kind and pp2 to the first UPB pp2 Pierpont primes of the    #
     #      second kind                                                        #
-    PROC find pierpoint = ( REF[]INT pp1, pp2 )VOID:
+    PROC find pierpont = ( REF[]INT pp1, pp2 )VOID:
          BEGIN
             # saved 3-smooth values                                           #
             # - only the currently active part of the seuence is kept         #
@@ -32,21 +32,21 @@ BEGIN # find some pierpoint primes of the first kind (2^u3^v + 1)             #
             INT pp2 max  = UPB pp2;
             INT p2, p3, last2, last3;
             INT s pos := s3s[ 1 ] := last2 := last3 := p2 := p3 := 1;
-            FOR n FROM 2 WHILE pp1 pos < pp1 max OR pp2 pos < pp2 max DO
+            FROM 2 WHILE pp1 pos < pp1 max OR pp2 pos < pp2 max DO
                 # the next 3-smooth number is the lowest of the next          #
                 #     multiples of 2 and 3                                    #
                 INT m = min( p2, p3 );
                 IF pp1 pos < pp1 max THEN
                     IF  INT first = m + 1;
                         is prime( first )
-                    THEN # have a Pierpoint prime of the first kind           #
+                    THEN # have a Pierpont prime of the first kind            #
                         pp1[ pp1 pos +:= 1 ] := first
                     FI
                 FI;
                 IF pp2 pos < pp2 max THEN
                     IF  INT second = m - 1;
                         is prime( second )
-                    THEN # have a Pierpoint prime of the second kind          #
+                    THEN # have a Pierpont prime of the second kind           #
                         pp2[ pp2 pos +:= 1 ] := second
                     FI
                 FI;
@@ -66,13 +66,13 @@ BEGIN # find some pierpoint primes of the first kind (2^u3^v + 1)             #
                     s pos   -:= diff
                 FI
             OD
-         END; # find pierpoint #
-    # prints a table of Pierpoint primes of the specified kind                #
-    PROC print pierpoint = ( []INT primes, STRING kind )VOID:
+         END; # find pierpont #
+    # prints a table of Pierpont primes of the specified kind                 #
+    PROC print pierpont = ( []INT primes, STRING kind )VOID:
          BEGIN
             print( ( "The first "
                    , whole( ( UPB primes + 1 ) - LWB primes, 0 )
-                   , " Pierpoint primes of the "
+                   , " Pierpont primes of the "
                    , kind
                    , " kind:"
                    , newline
@@ -84,13 +84,13 @@ BEGIN # find some pierpoint primes of the first kind (2^u3^v + 1)             #
                 IF ( p count +:= 1 ) MOD 10 = 0 THEN print( ( newline ) ) FI
             OD;
             print( ( newline ) )
-         END; # print pierpoint #
-    # find the first 50 Pierpoint primes of the first and second kinds        #
-    INT max pierpoint    = 50;
-    [ 1 : max pierpoint ]INT pfirst;
-    [ 1 : max pierpoint ]INT psecond;
-    find pierpoint( pfirst, psecond );
-    # show the Pierpoint primes                                               #
-    print pierpoint( pfirst,  "First"  );
-    print pierpoint( psecond, "Second" )
+         END; # print pierpont #
+    # find the first 50 Pierpont primes of the first and second kinds         #
+    INT max pierpont    = 50;
+    [ 1 : max pierpont ]INT pfirst;
+    [ 1 : max pierpont ]INT psecond;
+    find pierpont( pfirst, psecond );
+    # show the Pierpont primes                                                #
+    print pierpont( pfirst,  "First"  );
+    print pierpont( psecond, "Second" )
 END

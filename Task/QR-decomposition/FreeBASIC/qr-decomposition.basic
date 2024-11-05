@@ -1,0 +1,206 @@
+Type Matriz
+    Dim As Double Ptr dato
+    Dim As Integer fils, cols
+End Type
+
+Function CrearMatriz(fils As Integer, cols As Integer) As Matriz
+    Dim As Matriz m
+    m.fils = fils
+    m.cols = cols
+    m.dato = Allocate(fils * cols * Sizeof(Double))
+    Return m
+End Function
+
+Function ObtenerElemento(m As Matriz, row As Integer, col As Integer) As Double Ptr
+    Return @m.dato[row * m.cols + col]
+End Function
+
+Function Identidad(m As Integer) As Matriz
+    Dim As Matriz resultado = CrearMatriz(m, m)
+    For i As Integer = 0 To m - 1
+        For j As Integer = 0 To m - 1
+            *ObtenerElemento(resultado, i, j) = Iif(i = j, 1.0, 0.0)
+        Next j
+    Next i
+    Return resultado
+End Function
+
+Function MultiplicarMatrizXVector(A As Matriz, b() As Double) As Double Ptr
+    Dim resultado As Double Ptr = Allocate(A.fils * Sizeof(Double))
+    For i As Integer = 0 To A.fils - 1
+        resultado[i] = 0
+        For j As Integer = 0 To A.cols - 1
+            resultado[i] += *ObtenerElemento(A, i, j) * b(j)
+        Next j
+    Next i
+    Return resultado
+End Function
+
+Function Multiplicar2Matrices(A As Matriz, B As Matriz) As Matriz
+    Dim resultado As Matriz = CrearMatriz(A.fils, B.cols)
+    For i As Integer = 0 To A.fils - 1
+        For j As Integer = 0 To B.cols - 1
+            *ObtenerElemento(resultado, i, j) = 0
+            For k As Integer = 0 To A.cols - 1
+                *ObtenerElemento(resultado, i, j) += *ObtenerElemento(A, i, k) * *ObtenerElemento(B, k, j)
+            Next k
+        Next j
+    Next i
+    Return resultado
+End Function
+
+Function TransponerMatriz(M As Matriz) As Matriz
+    Dim resultado As Matriz = CrearMatriz(M.cols, M.fils)
+    For i As Integer = 0 To M.fils - 1
+        For j As Integer = 0 To M.cols - 1
+            *ObtenerElemento(resultado, j, i) = *ObtenerElemento(M, i, j)
+        Next j
+    Next i
+    Return resultado
+End Function
+
+Function Householder(Byref A As Matriz) As Matriz
+    Dim As Integer i, j, k
+    Dim As Integer m = A.fils
+    Dim As Integer n = A.cols
+    Dim As Double v(m - 1)
+    Dim As Matriz Q = Identidad(m)
+
+    For k = 0 To n - 1
+        Dim As Double suma = 0
+        Dim As Double A0 = *ObtenerElemento(A, k, k)
+        Dim As Integer sign = Iif(A0 < 0, -1, 1)
+
+        For i = k To m - 1
+            suma += *ObtenerElemento(A, i, k) * *ObtenerElemento(A, i, k)
+        Next i
+
+        Dim As Double sqr_sum = sign * Sqr(suma)
+        Dim As Double tmp = Sqr(2 * (suma + A0 * sqr_sum))
+        v(k) = (sqr_sum + A0) / tmp
+
+        For i = k + 1 To m - 1
+            v(i) = *ObtenerElemento(A, i, k) / tmp
+        Next i
+
+        For j = 0 To n - 1
+            suma = 0
+            For i = k To m - 1
+                suma += v(i) * *ObtenerElemento(A, i, j)
+            Next i
+            For i = k To m - 1
+                *ObtenerElemento(A, i, j) -= 2 * v(i) * suma
+            Next i
+        Next j
+
+        For j = 0 To m - 1
+            suma = 0
+            For i = k To m - 1
+                suma += v(i) * *ObtenerElemento(Q, i, j)
+            Next i
+            For i = k To m - 1
+                *ObtenerElemento(Q, i, j) -= 2 * v(i) * suma
+            Next i
+        Next j
+    Next k
+
+    Return Q
+End Function
+
+Function ProductoPunto(a() As Double, b() As Double) As Double
+    Dim As Double resultado = 0
+    For i As Integer = 0 To Ubound(a)
+        resultado += a(i) * b(i)
+    Next i
+    Return resultado
+End Function
+
+Function ResolucionSup(U As Matriz, b() As Double, n As Integer) As Double Ptr
+    Dim As Double Ptr y = Allocate(n * Sizeof(Double))
+    y[n - 1] = b(n - 1) / *ObtenerElemento(U, n - 1, n - 1)
+
+    For i As Integer = n - 2 To 0 Step -1
+        Dim As Double suma = 0
+        For j As Integer = i + 1 To n - 1
+            suma += *ObtenerElemento(U, i, j) * y[j]
+        Next j
+        y[i] = (b(i) - suma) / *ObtenerElemento(U, i, i)
+    Next i
+
+    Return y
+End Function
+
+Function PolyFit(x() As Double, y() As Double, n As Integer) As Double Ptr
+    Dim As Integer m = Ubound(x) + 1
+    Dim As Matriz V = CrearMatriz(m, n + 1)
+    Dim As Integer i, j
+
+    For i = 0 To m - 1
+        For j = 0 To n
+            *ObtenerElemento(V, i, j) = x(i) ^ j
+        Next j
+    Next i
+
+    Dim As Matriz Q = Householder(V)
+    Dim As Double Ptr b = MultiplicarMatrizXVector(Q, y())
+
+    Dim As Double Ptr resultado = Allocate((n + 1) * Sizeof(Double))
+    For i = n To 0 Step -1
+        resultado[i] = b[i]
+        For j = i + 1 To n
+            resultado[i] -= *ObtenerElemento(V, i, j) * resultado[j]
+        Next j
+        resultado[i] /= *ObtenerElemento(V, i, i)
+    Next i
+
+    Deallocate(b)
+    Deallocate(Q.dato)
+    Deallocate(V.dato)
+    Return resultado
+End Function
+
+Sub ImprimitMatriz(M As Matriz, nombre As String)
+    Print nombre & ":"
+    For i As Integer = 0 To M.fils - 1
+        For j As Integer = 0 To M.cols - 1
+            Print Using "####.######  "; *ObtenerElemento(M, i, j);
+        Next j
+        Print
+    Next i
+    Print
+End Sub
+
+' Main program
+Dim As Matriz A = CrearMatriz(5, 3)
+*ObtenerElemento(A, 0, 0) = 12 : *ObtenerElemento(A, 0, 1) = -51 : *ObtenerElemento(A, 0, 2) = 4
+*ObtenerElemento(A, 1, 0) = 6  : *ObtenerElemento(A, 1, 1) = 167 : *ObtenerElemento(A, 1, 2) = -68
+*ObtenerElemento(A, 2, 0) = -4 : *ObtenerElemento(A, 2, 1) = 24  : *ObtenerElemento(A, 2, 2) = -41
+*ObtenerElemento(A, 3, 0) = -1 : *ObtenerElemento(A, 3, 1) = 1   : *ObtenerElemento(A, 3, 2) = 0
+*ObtenerElemento(A, 4, 0) = 2  : *ObtenerElemento(A, 4, 1) = 0   : *ObtenerElemento(A, 4, 2) = 3
+
+ImprimitMatriz(A, "A")
+Dim As Matriz Q = Householder(A)
+Q = TransponerMatriz(Q)
+ImprimitMatriz(Q, "Q")
+ImprimitMatriz(A, "R")
+Dim As Matriz QR = Multiplicar2Matrices(Q, A)
+ImprimitMatriz(QR, "check Q x R = A")
+
+
+Dim As Double x(10), y(10)
+For i As Integer = 0 To 10
+    x(i) = i
+    y(i) = 1 + 2*i + 3*i*i
+Next i
+
+Dim As Double Ptr coef = PolyFit(x(), y(), 2)
+
+Print !"polyfit:\n   constant            X          X^2"
+Print Using "  ##.######  "; coef[0]; coef[1]; coef[2]
+
+Deallocate(A.dato)
+Deallocate(Q.dato)
+Deallocate(QR.dato)
+Deallocate(coef)
+
+Sleep

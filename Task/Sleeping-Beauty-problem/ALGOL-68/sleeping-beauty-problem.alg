@@ -2,7 +2,7 @@ BEGIN # sleeping beauty problem - translated from the Wren sample #
     PROC sleeping beauty = ( INT reps )REAL:
          BEGIN
             INT wakings := 0, heads := 0;
-            FOR i TO reps DO
+            TO reps DO
                 wakings +:= 1;
                 IF next random < 0.5 THEN # [0..0.5) = heads, [0.5..1.0) = tails say #
                     heads +:= 1

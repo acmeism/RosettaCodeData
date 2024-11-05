@@ -1,0 +1,128 @@
+#define MIN(a, b) iif((a) < (b), (a), (b))
+
+Type WordDist
+    As String word
+    As Double dist
+End Type
+
+Function jaroSim(str1 As String, str2 As String) As Double
+    If Len(str1) = 0 And Len(str2) = 0 Then Return 1.0
+    If Len(str1) = 0 Or Len(str2) = 0 Then Return 0.0
+
+    Dim As Integer i, k, inicio, final
+    Dim As Integer match_distance = Iif(Len(str1) > Len(str2), Len(str1), Len(str2))
+    match_distance = match_distance\2 - 1
+
+    Dim As Boolean str1_matches(Len(str1))
+    Dim As Boolean str2_matches(Len(str2))
+    Dim As Double matches = 0, transpositions = 0
+
+    For i = 1 To Len(str1)
+        inicio = i - match_distance
+        If inicio < 1 Then inicio = 1
+        final = i + match_distance + 1
+        If final > Len(str2) Then final = Len(str2)
+
+        For k = inicio To final
+            If str2_matches(k) Then Continue For
+            If Mid(str1, i, 1) <> Mid(str2, k, 1) Then Continue For
+            str1_matches(i) = True
+            str2_matches(k) = True
+            matches += 1
+            Exit For
+        Next k
+    Next i
+
+    If matches = 0 Then Return 0
+
+    k = 1
+    For i = 1 To Len(str1)
+        If Not str1_matches(i) Then Continue For
+        While Not str2_matches(k)
+            k += 1
+        Wend
+        If Mid(str1, i, 1) <> Mid(str2, k, 1) Then transpositions += 1
+        k += 1
+    Next i
+
+    transpositions /= 2
+    Return (matches/Len(str1) + matches/Len(str2) + (matches-transpositions)/matches) / 3
+End Function
+
+Function jaroWinklerDist(s As String, t As String) As Double
+    Dim As Integer ls = Len(s), lt = Len(t)
+    Dim As Integer lmax = Iif(ls < lt, ls, lt)
+    If lmax > 4 Then lmax = 4
+
+    Dim As Integer l = 0
+    For i As Integer = 1 To lmax
+        If Mid(s, i, 1) = Mid(t, i, 1) Then l += 1
+    Next i
+
+    Dim As Double js = jaroSim(s, t)
+    Dim As Double p = 0.1
+    Dim As Double ws = js + l * p * (1-js)
+    Return 1 - ws
+End Function
+
+' Main program
+Dim As String misspelt(8) = { _
+"accomodate", "definately", "goverment", "occured", _
+"publically", "recieve", "seperate", "untill", "wich" }
+
+' Read dictionary file line by line
+Dim As Integer ff = Freefile
+Dim As String word, filename = "unixdict.txt"
+Dim As Integer wordCnt = 0
+Redim As String words(1000)
+
+If Open(filename For Input As #ff) <> 0 Then
+    Print "Cannot open file " & filename & "."
+    End
+End If
+
+While Not Eof(ff)
+    Line Input #ff, word
+    If Len(word) > 0 Then
+        words(wordCnt) = word
+        wordCnt += 1
+        If wordCnt Mod 1000 = 0 Then Redim Preserve words(wordCnt + 1000)
+    End If
+Wend
+Close #ff
+
+Dim As Integer i, j, k
+For i = 0 To 8
+    Dim As WordDist closest(100)
+    Dim As Integer closestCnt = 0
+    Dim As String ms = misspelt(i)
+
+    Print "Misspelt word: "; ms; ":"
+
+    For j = 0 To wordCnt - 1
+        If Len(words(j)) = 0 Then Continue For
+
+        Dim As Double jwd = jaroWinklerDist(ms, words(j))
+        If jwd < 0.15 Then
+            closest(closestCnt).word = words(j)
+            closest(closestCnt).dist = jwd
+            closestCnt += 1
+        End If
+    Next j
+
+    ' Simple bubble sort for closest matches
+    For j = 0 To closestCnt - 2
+        For k = 0 To closestCnt - 2 - j
+            If closest(k).dist > closest(k + 1).dist Then Swap closest(k), closest(k + 1)
+        Next k
+    Next j
+
+    ' Print top 6 matches
+    For j = 0 To MIN(5, closestCnt - 1)
+        Print Using "##.#### "; closest(j).dist;
+        Print closest(j).word
+    Next j
+    Print
+Next i
+
+Sleep

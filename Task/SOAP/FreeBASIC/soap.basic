@@ -1,0 +1,88 @@
+#include once "windows.bi"
+#include once "win/wininet.bi"
+
+#define CRLF !"\r\n"
+
+Function sendSoapRequest(endpoint As String, soapAction As String, soapBody As String) As String
+    Dim As HINTERNET hInternet = InternetOpen("SOAP Client", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0)
+    Dim As String response = ""
+
+    If hInternet Then
+        Dim As HINTERNET hConnect = InternetConnect(hInternet, "example.com", INTERNET_DEFAULT_HTTP_PORT, NULL, NULL, INTERNET_SERVICE_HTTP, 0, 0)
+        If hConnect Then
+            Dim As HINTERNET hRequest = HttpOpenRequest(hConnect, "POST", endpoint, NULL, NULL, NULL, INTERNET_FLAG_RELOAD, 0)
+            If hRequest Then
+                ' Set headers
+                Dim As String headers = _
+                "Content-Type: text/xml;charset=UTF-8" & vbCrLf & _
+                "SOAPAction: " & soapAction & CRLF
+
+                HttpAddRequestHeaders(hRequest, headers, Len(headers), HTTP_ADDREQ_FLAG_ADD)
+
+                ' Send request
+                If HttpSendRequest(hRequest, NULL, 0, Strptr(soapBody), Len(soapBody)) Then
+                    ' Read response
+                    Dim As String buffer = Space(1024)
+                    Dim As DWORD bytesRead
+
+                    Do
+                        If InternetReadFile(hRequest, Strptr(buffer), Len(buffer), @bytesRead) Then
+                            If bytesRead = 0 Then Exit Do
+                            response &= Left(buffer, bytesRead)
+                        End If
+                    Loop
+                End If
+                InternetCloseHandle(hRequest)
+            End If
+            InternetCloseHandle(hConnect)
+        End If
+        InternetCloseHandle(hInternet)
+    End If
+
+    Return response
+End Function
+
+Function soapFunc() As String
+    Dim As String endpoint = "http://example.com/soap"
+    Dim As String soapAction = "http://example.com/soap/soapFunc"
+
+    Dim As String soapEnvelope = _
+    "<?xml version='1.0' encoding='UTF-8'?>" & _
+    "<soap:Envelope " & _
+    "xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/' " & _
+    "xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>" & _
+    "<soap:Body>" & _
+    "<soapFunc xmlns='http://example.com/soap'>" & _
+    "</soapFunc>" & _
+    "</soap:Body>" & _
+    "</soap:Envelope>"
+
+    Return sendSoapRequest(endpoint, soapAction, soapEnvelope)
+End Function
+
+Function anotherSoapFunc() As String
+    Dim As String endpoint = "http://example.com/soap"
+    Dim As String soapAction = "http://example.com/soap/anotherSoapFunc"
+
+    Dim As String soapEnvelope = _
+    "<?xml version='1.0' encoding='UTF-8'?>" & _
+    "<soap:Envelope " & _
+    "xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/' " & _
+    "xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>" & _
+    "<soap:Body>" & _
+    "<anotherSoapFunc xmlns='http://example.com/soap'>" & _
+    "</anotherSoapFunc>" & _
+    "</soap:Body>" & _
+    "</soap:Envelope>"
+
+    Return sendSoapRequest(endpoint, soapAction, soapEnvelope)
+End Function
+
+' Main program
+Print "Calling soapFunc..."
+Print soapFunc()
+Print
+Print "Calling anotherSoapFunc..."
+Print anotherSoapFunc()
+
+Sleep

@@ -71,7 +71,6 @@ BEGIN # rank some scores by various methods                                   #
          IF LWB s > UPB s THEN []REAL() # no scores                           #
          ELSE                          # have some scores                     #
             [ LWB s : UPB s ]REAL ranked;
-            REAL position := 1;
             FOR i FROM LWB s TO UPB s DO
                 ranked[ i ]
                     := IF IF   i = LWB s

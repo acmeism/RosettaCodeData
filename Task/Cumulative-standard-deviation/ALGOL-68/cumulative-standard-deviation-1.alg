@@ -38,10 +38,8 @@ PROC stat object = (LONG REAL v, ACTION action)LONG REAL:
   ESAC
 );
 
-[]LONG REAL v = ( 2,4,4,4,5,5,7,9 );
-
-main:
-(
+# main # (
+  []LONG REAL v = ( 2,4,4,4,5,5,7,9 );
   LONG REAL sd;
 
   FOR i FROM LWB v TO UPB v DO

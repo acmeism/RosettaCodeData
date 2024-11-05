@@ -73,17 +73,17 @@ BEGIN
         print( ( whole( n, 0 ), " | ", whole( almkvist giullera( n ), -44 ), newline ) )
     OD;
     FLOAT    epsilon = FLOAT(10) ^ -70;
-    FLOAT    prev   := 0, pi := 0;
+    FLOAT    prev   := 0, pi approx := 0;
     RATIONAL sum    := zero // one;
     FOR n FROM 0
     WHILE
-        RATIONAL term = almkvist giullera( n ) // ( ten ^ ( 6 * n + 3 ) );
-        sum +:= term;
-        pi   := long long sqrt( FLOAT(1) / sum );
-        ABS ( pi - prev ) >= epsilon
+        RATIONAL nth term = almkvist giullera( n ) // ( ten ^ ( 6 * n + 3 ) );
+        sum             +:= nth term;
+        pi approx        := long long sqrt( FLOAT(1) / sum );
+        ABS ( pi approx - prev ) >= epsilon
     DO
-        prev := pi
+        prev := pi approx
     OD;
     print( ( newline, "Pi to 70 decimal places is:", newline ) );
-    print( ( fixed( pi, -72, 70 ), newline ) )
+    print( ( fixed( pi approx, -72, 70 ), newline ) )
 END

@@ -9,11 +9,11 @@ BEGIN # compute values of the Mertens function                      #
     # Print table                                                   #
     print( ( "The first 99 Mertens numbers are:", newline ) );
     print( ( "   " ) );
-    INT k := 9;
+    INT left := 9;
     FOR n TO 99 DO
         print( ( whole( m[ n ], -3 ) ) );
-        IF ( k -:= 1 ) = 0 THEN
-            k := 10;
+        IF ( left -:= 1 ) = 0 THEN
+            left := 10;
             print( ( newline ) )
         FI
     OD;

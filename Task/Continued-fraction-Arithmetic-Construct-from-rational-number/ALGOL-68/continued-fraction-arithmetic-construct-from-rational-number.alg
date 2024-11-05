@@ -10,9 +10,6 @@ BEGIN # construct continued fraction representations of rational numbers #
     PROC gcd = (INT a, b) INT: # greatest common divisor #
        (a = 0 | b |: b = 0 | a |: ABS a > ABS b  | gcd(b, a MOD b) | gcd(a, b MOD a));
 
-    PROC lcm = (INT a, b)INT: # least common multiple #
-       a OVER gcd(a, b) * b;
-
     PRIO // = 9; # higher then the ** operator #
     OP // = (INT num, den)FRAC: ( # initialise and normalise #
        INT common = gcd(num, den);
@@ -23,28 +20,12 @@ BEGIN # construct continued fraction representations of rational numbers #
        FI
      );
 
-    OP + = (FRAC a, b)FRAC: (
-       INT common = lcm(den OF a, den OF b);
-       FRAC result := ( common OVER den OF a * num OF a + common OVER den OF b * num OF b, common );
-       num OF result//den OF result
-    );
-
-    OP - = (FRAC a, b)FRAC: a + -b,
-       * = (FRAC a, b)FRAC: (
-           INT num = num OF a * num OF b,
-           den = den OF a * den OF b;
-           INT common = gcd(num, den);
-           (num OVER common) // (den OVER common)
-         );
-
-    OP - = (FRAC frac)FRAC: (-num OF frac, den OF frac);
-
     # ============================================================== #
     # end code from the Arithmetic/Rational task                     #
 
     []FRAC examples = ( 1//2, 3//1, 23//8, 13//11, 22//7, -151//77 );
     []FRAC sqrt2    = ( 14142//10000, 141421//100000, 1414214//1000000, 14142136//10000000 );
-    []FRAC pi       = ( 31//10, 314//100, 3142//1000, 31428//10000
+    []FRAC pif      = ( 31//10, 314//100, 3142//1000, 31428//10000
                       , 314285//100000, 3142857//1000000, 31428571//10000000, 314285714//100000000
                       );
 
@@ -78,6 +59,7 @@ BEGIN # construct continued fraction representations of rational numbers #
 	print( ( newline, newline ) );
         show r2cf( "Running for root2 :", sqrt2 );
 	print( ( newline, newline ) );
-	show r2cf( "Running for pi :", pi )
+	show r2cf( "Running for pi :", pif );
+        print( ( newline ) )
     END
 END

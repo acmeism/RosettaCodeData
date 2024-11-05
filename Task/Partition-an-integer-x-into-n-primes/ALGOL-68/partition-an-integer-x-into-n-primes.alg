@@ -14,9 +14,9 @@ BEGIN # find the lowest n distinct primes that sum to an integer x           #
     [ 1 : 0 ]INT no partition;       # empty array - used if can't partition #
 
     # returns n partitioned into p primes or an empty array if n can't be    #
-    #         partitioned into p primes, the first prime to try is in start  #
-    PROC partition from = ( INT n, p, start )[]INT:
-         IF   p < 1 OR n < 2 OR start < 2 THEN          # invalid parameters #
+    #         partitioned into p primes, the first prime to try is in pstart #
+    PROC partition from = ( INT n, p, pstart )[]INT:
+         IF   p < 1 OR n < 2 OR pstart < 2 THEN         # invalid parameters #
             no partition
          ELIF p = 1 THEN          # partition into 1 prime - n must be prime #
             IF NOT prime[ n ] THEN no partition ELSE n FI
@@ -24,7 +24,7 @@ BEGIN # find the lowest n distinct primes that sum to an integer x           #
             INT  half n = n OVER 2;
             INT  p1    := 0, p2 := 0;
             BOOL found := FALSE;
-            FOR p pos FROM start TO UPB prime WHILE NOT found AND p pos < half n DO
+            FOR p pos FROM pstart TO UPB prime WHILE NOT found AND p pos < half n DO
                 IF prime[ p pos ] THEN
                     p1    := p pos;
                     p2    := n - p pos;
@@ -37,7 +37,7 @@ BEGIN # find the lowest n distinct primes that sum to an integer x           #
             INT  half n = n OVER 2;
             INT  p1    := 0;
             BOOL found := FALSE;
-            FOR p pos FROM start TO UPB prime WHILE NOT found AND p pos < half n DO
+            FOR p pos FROM pstart TO UPB prime WHILE NOT found AND p pos < half n DO
                 IF prime[ p pos ] THEN
                     p1    := p pos;
                     []INT sub partition = partition from( n - p1, p - 1, p pos + 1 );

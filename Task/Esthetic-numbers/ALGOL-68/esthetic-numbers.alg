@@ -64,32 +64,34 @@ BEGIN # find some esthetic numbers: numbers whose successive digits differ by 1 
                  show esthetic( prefix + ( digit + 1 ), base, length - 1, max, count )
              FI
          FI # show esthetic # ;
-    # task #
-    # esthetic numbers from base * 4 to base * 6 for bases 2 to 16 #
-    FOR base FROM 2 TO 16 DO
-        INT e from = base * 4;
-        INT e to   = base * 6;
-        print( ( "Esthetic numbers ", whole( e from, 0 ), " to ", whole( e to, 0 ), " in base ", whole( base, 0 ), newline ) );
-        []INT e numbers = e to ESTHETIC base;
-        print( ( "  " ) );
-        FOR n FROM e from TO e to DO
-            print( ( " ", e numbers[ n ] TOBASESTRING base ) )
+    BEGIN # task #
+        # esthetic numbers from base * 4 to base * 6 for bases 2 to 16 #
+        FOR base FROM 2 TO 16 DO
+            INT e from = base * 4;
+            INT e to   = base * 6;
+            print( ( "Esthetic numbers ", whole( e from, 0 ), " to ", whole( e to, 0 ) ) );
+            print( ( " in base ", whole( base, 0 ), newline ) );
+            []INT e numbers = e to ESTHETIC base;
+            print( ( "  " ) );
+            FOR n FROM e from TO e to DO
+                print( ( " ", e numbers[ n ] TOBASESTRING base ) )
+            OD;
+            print( ( newline ) )
         OD;
-        print( ( newline ) )
-    OD;
-    # esthetic base 10 numbers between 1000 and 9999 #
-    print( ( "Base 10 eshetic numbers between 1000 and 9999", newline ) );
-    INT e count := 0;
-    FOR i FROM 1000 TO 9999 DO
-        IF i ISESTHETIC 10 THEN
-            print( ( " ", whole( i, 0 ) ) );
-            IF ( e count +:= 1 ) MOD 16 = 0 THEN print( ( newline ) ) FI
-        FI
-    OD;
-    print( ( newline, newline ) );
-    print( ( "Esthetic numbers between 100 000 000 and 130 000 000:", newline ) );
-    e count := 0;
-    show esthetic( 1, 10, 9, 130 000 000, e count );
-    print( ( newline ) );
-    print( ( "Found ", whole( e count, 0 ), " esthetic numbers", newline ) )
+        # esthetic base 10 numbers between 1000 and 9999 #
+        print( ( "Base 10 eshetic numbers between 1000 and 9999", newline ) );
+        INT e count := 0;
+        FOR i FROM 1000 TO 9999 DO
+            IF i ISESTHETIC 10 THEN
+                print( ( " ", whole( i, 0 ) ) );
+                IF ( e count +:= 1 ) MOD 16 = 0 THEN print( ( newline ) ) FI
+            FI
+        OD;
+        print( ( newline, newline ) );
+        print( ( "Esthetic numbers between 100 000 000 and 130 000 000:", newline ) );
+        e count := 0;
+        show esthetic( 1, 10, 9, 130 000 000, e count );
+        print( ( newline ) );
+        print( ( "Found ", whole( e count, 0 ), " esthetic numbers", newline ) )
+    END
 END

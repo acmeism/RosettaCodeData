@@ -23,10 +23,10 @@ BEGIN # find some gapful numbers - numbers divisible by f*10 + b #
             result
          END; # GAPFUL #
     # prints a sequence of gapful numbers                        #
-    PROC print gapful = ( []INT seq, INT start )VOID:
+    PROC print gapful = ( []INT seq, INT nstart )VOID:
          BEGIN
             print( ( "First ", whole( ( UPB seq + 1 ) - LWB seq, 0 )
-                   , " gapful numbers starting from ", whole( start, 0 )
+                   , " gapful numbers starting from ", whole( nstart, 0 )
                    , ":", newline
                    )
                  );

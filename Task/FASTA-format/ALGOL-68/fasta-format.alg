@@ -8,15 +8,16 @@ BEGIN # read FASTA format data from standard input and write the results to  #
           read( ( line, newline ) );
           NOT at eof
     DO
-        IF line /= "" THEN                                  # non-empty line #
-            INT  start     := LWB line;
-            BOOL is heading = line[ start ] = ">";  # check for heading line #
+        IF line /= "" THEN                                      # non-empty line #
+            INT  start pos := LWB line;
+            BOOL is heading = line[ start pos ] = ">";  # check for heading line #
             IF is heading THEN
                 print( ( newline ) );
-                start +:= 1
+                start pos +:= 1
             FI;
-            print( ( line[ start : ] ) );
+            print( ( line[ start pos : ] ) );
             IF is heading THEN print( ( ": " ) ) FI
         FI
-    OD
+    OD;
+    print( ( newline ) )
 END

@@ -2,7 +2,8 @@ BEGIN # Simulate dynamic variables using an array, translation of the FreeBASIC 
 
     MODE DYNAMICVARIABLE = STRUCT( STRING name, value );
 
-    OP   LCASE = ( CHAR c )CHAR: IF c >= "A" AND c <= "Z" THEN REPR( ( ABS c - ABS "A" ) + ABS "a" ) ELSE c FI;
+    OP   LCASE = ( CHAR c )CHAR:
+         IF c >= "A" AND c <= "Z" THEN REPR( ( ABS c - ABS "A" ) + ABS "a" ) ELSE c FI;
     OP   LCASE = ( STRING s )STRING:
          BEGIN
              STRING lc := s;
@@ -17,13 +18,13 @@ BEGIN # Simulate dynamic variables using an array, translation of the FreeBASIC 
              s[ left : right ]
          END # TRIM # ;
 
-    PROC find variable index = ( []DYNAMICVARIABLE a, STRING v, INT n elements )INT:
+    PROC find variable index = ( []DYNAMICVARIABLE dyvar, STRING v, INT n elements )INT:
          BEGIN
             STRING name   = LCASE TRIM v;
-            INT index    := LWB a - 1;
+            INT index    := LWB dyvar - 1;
             INT max index = index + n elements;
-            FOR i FROM LWB a TO max index WHILE index < LWB a DO
-                IF name OF a[ i ] = name THEN index := i FI
+            FOR i FROM LWB dyvar TO max index WHILE index < LWB dyvar DO
+                IF name OF dyvar[ i ] = name THEN index := i FI
             OD;
             index
          END # find variable index # ;

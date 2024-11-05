@@ -40,4 +40,5 @@ return n
 
 include Numbers
 include Functions
+include Sequences
 include Abend

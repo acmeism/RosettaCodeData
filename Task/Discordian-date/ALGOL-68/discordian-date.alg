@@ -1,9 +1,11 @@
 BEGIN #   DISCORDIAN DATE CALCULATION - TRANSLATION OF MAD VIA ALGOL W    #
-    INT      greg, gmonth, gday, gyear;
+    INT      gmonth, gday, gyear;
     []STRING holys  = []STRING( "MUNG", "MOJO",  "SYA",   "ZARA", "MALA" )[ AT 0 ];
     []STRING holys0 = []STRING( "CHAO", "DISCO", "CONFU", "BURE", "AF"   )[ AT 0 ];
-    []STRING disday = []STRING( "SWEETMORN", "BOOMTIME", "PUNGENday", "PRICKLE-PRICKLE", "SETTING ORANGE" )[ AT 0 ];
-    []STRING disssn = []STRING( "CHAOS",     "DISCORD",  "CONFUSION", "BUREAUCRACY",     "THE AFTERMATH"  )[ AT 0 ];
+    []STRING disday =
+        []STRING( "SWEETMORN", "BOOMTIME", "PUNGENDAY", "PRICKLE-PRICKLE", "SETTING ORANGE" )[ AT 0 ];
+    []STRING disssn =
+        []STRING( "CHAOS",     "DISCORD",  "CONFUSION", "BUREAUCRACY",     "THE AFTERMATH"  )[ AT 0 ];
     []INT    mlengt = []INT( 0, 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 )[ AT 0 ];
     CHAR     slash1, slash2;
 

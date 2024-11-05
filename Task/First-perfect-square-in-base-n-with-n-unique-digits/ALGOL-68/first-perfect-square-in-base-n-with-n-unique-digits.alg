@@ -25,9 +25,7 @@ BEGIN # find the first perfect square in base n with n unique digits n=1..16 #
     FOR b FROM 2 TO 16 DO
         all digits    := all digits OR dmask[ b - 1 ];
         LONG INT root := 1;
-        FOR i TO b - 1 DO
-            root *:= b
-        OD;
+        TO b - 1 DO root *:= b OD;
         root       := ENTIER long sqrt( root );
         BOOL found := FALSE;
         WHILE NOT found DO

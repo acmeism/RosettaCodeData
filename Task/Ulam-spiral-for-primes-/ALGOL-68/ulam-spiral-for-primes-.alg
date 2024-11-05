@@ -4,7 +4,9 @@ BEGIN # construct a Ulam spiral for primes                                   #
     #        starting from init. Primes will be indicated by prime char and  #
     #        non-primes by composite char. The center of the spiral will be  #
     #        indicated by center char - unless the center value is prime     #
-    PROC print ulam spiral for primes = ( INT width, init, CHAR prime char, composite char, center char )VOID:
+    PROC print ulam spiral for primes = ( INT width, init
+                                        , CHAR prime char, composite char, center char
+                                        ) VOID:
          IF width >= 1 THEN
              INT n = IF ODD width THEN width ELSE width + 1 FI;
              []BOOL prime = PRIMESIEVE ( init + ( n * n ) );
@@ -18,16 +20,16 @@ BEGIN # construct a Ulam spiral for primes                                   #
                  w +:= 2;
                  x +:= 1;
                  y +:= 1;
-                 FOR i TO w DO                                 #  right edge #
+                 TO w DO                                       #  right edge #
                      spiral[ x, y -:= 1 ] := IF prime[ v +:= 1 ] THEN prime char ELSE composite char FI
                  OD;
-                 FOR i TO w DO                                 #    top edge #
+                 TO w DO                                       #    top edge #
                      spiral[ x -:= 1, y ] := IF prime[ v +:= 1 ] THEN prime char ELSE composite char FI
                  OD;
-                 FOR i TO w DO                                 #   left edge #
+                 TO w DO                                       #   left edge #
                      spiral[ x, y +:= 1 ] := IF prime[ v +:= 1 ] THEN prime char ELSE composite char FI
                  OD;
-                 FOR i TO w DO                                 # bottom edge #
+                 TO w DO                                       # bottom edge #
                      spiral[ x +:= 1, y ] := IF prime[ v +:= 1 ] THEN prime char ELSE composite char FI
                  OD
              OD;

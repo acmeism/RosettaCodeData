@@ -1,4 +1,5 @@
-//version 1.0.1
+#version 1.0.1
+
 import HTTP.URIs: escapeuri
 
 dcd = "http://foo bar/"

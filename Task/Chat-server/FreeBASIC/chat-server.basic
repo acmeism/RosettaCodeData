@@ -1,0 +1,122 @@
+#include once "windows.bi"
+#include once "win/winsock2.bi"
+
+Type SOCKET As Ulongint
+Type ThreadCallback As Sub(Byval As Any Ptr)
+
+Const MAX_CLIENTS = 10
+Const CRLF = Chr(13) & Chr(10)
+Const BUFFER_SIZE = 256
+
+Dim Shared clients(MAX_CLIENTS) As SOCKET
+Dim Shared nicknames(MAX_CLIENTS) As String
+Dim Shared clientCount As Integer = 0
+
+' Initialize Winsock
+Dim As WSADATA wsaData
+If WSAStartup(&h0202, @wsaData) Then
+    Print "Error initializing Winsock"
+    End 1
+End If
+
+' Create server socket
+Dim As SOCKET serverSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0)
+If serverSocket = INVALID_SOCKET Then
+    Print "Error creating socket"
+    WSACleanup()
+    End 1
+End If
+
+' Configure server address
+Dim As sockaddr_in serverAddr
+With serverAddr
+    .sin_family = AF_INET
+    .sin_addr.s_addr = INADDR_ANY
+    .sin_port = htons(8080)
+End With
+
+' Bind socket
+If bind(serverSocket, Cast(sockaddr Ptr, @serverAddr), Sizeof(sockaddr_in)) = SOCKET_ERROR Then
+    Print "Error binding socket"
+    closesocket(serverSocket)
+    WSACleanup()
+    End 1
+End If
+
+' Listen for incoming connections
+If listen(serverSocket, SOMAXCONN) = SOCKET_ERROR Then
+    Print "Error listening on socket"
+    closesocket(serverSocket)
+    WSACleanup()
+    End 1
+End If
+
+Print "Chat server is running on port 8080"
+
+Sub broadcastMessage(message As String)
+    Dim As String fullMsg = message
+    For i As Integer = 0 To clientCount - 1
+        If clients(i) <> 0 Then
+            send(clients(i), Strptr(fullMsg), Len(fullMsg), 0)
+        End If
+    Next i
+End Sub
+
+Sub handleClient(Byval param As Any Ptr)
+    Dim As Integer clientIndex = Cast(Integer, param)
+    Dim As SOCKET clientSocket = clients(clientIndex)
+    Dim As String nickname
+    Dim As ZString * BUFFER_SIZE buffer
+    Dim As Long bytesReceived
+
+    ' Get nickname
+    Dim As String welcomeMsg = "Enter your nickname: "
+    send(clientSocket, Strptr(welcomeMsg), Len(welcomeMsg), 0)
+    bytesReceived = recv(clientSocket, @buffer, BUFFER_SIZE-1, 0)
+    If bytesReceived > 0 Then
+        nickname = Left(buffer, bytesReceived - 2)
+        nicknames(clientIndex) = nickname
+
+        ' Announce new user
+        broadcastMessage(nickname & " has joined the chat." & CRLF)
+
+        ' Message loop
+        Do
+            bytesReceived = recv(clientSocket, @buffer, BUFFER_SIZE-1, 0)
+            If bytesReceived <= 0 Then Exit Do
+            buffer[bytesReceived] = 0
+            broadcastMessage(nickname & ": " & *Cast(ZString Ptr, @buffer) & CRLF)
+        Loop
+
+        ' Announce departure
+        broadcastMessage(nickname & " has left the chat." & CRLF)
+    End If
+
+    ' Cleanup
+    closesocket(clientSocket)
+    clients(clientIndex) = 0
+    nicknames(clientIndex) = ""
+End Sub
+
+' Main server loop
+Do
+    Dim As sockaddr_in clientAddr
+    Dim As Long clientAddrLen = Sizeof(sockaddr_in)
+
+    Dim As SOCKET clientSocket = accept(serverSocket, Cast(sockaddr Ptr, @clientAddr), @clientAddrLen)
+    If clientSocket <> INVALID_SOCKET Then
+        If clientCount < MAX_CLIENTS Then
+            clients(clientCount) = clientSocket
+            clientCount += 1
+            Threadcreate(Cast(ThreadCallback, @handleClient), Cast(Any Ptr, clientCount - 1))
+        Else
+            Dim As String fullMsg = "Server is full." & CRLF
+            send(clientSocket, Strptr(fullMsg), Len(fullMsg), 0)
+            closesocket(clientSocket)
+        End If
+    End If
+Loop
+
+' Final cleaning
+closesocket(serverSocket)
+WSACleanup()

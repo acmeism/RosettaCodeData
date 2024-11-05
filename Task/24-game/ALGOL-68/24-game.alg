@@ -40,7 +40,7 @@ BEGIN # play the 24 game - present the user with 4 digits and invite them to  #
                     error( "Unexpected """ + curr ch + """" );
                     0
                  FI # factor # ;
-            PROC term = REAL:
+            PROC expr term = REAL:
                  BEGIN
                     REAL result := factor;
                     WHILE curr ch = "*" OR curr ch = "/" DO
@@ -49,14 +49,14 @@ BEGIN # play the 24 game - present the user with 4 digits and invite them to  #
                         IF op = "*" THEN result *:= factor ELSE result /:= factor FI
                     OD;
                     result
-                 END # term # ;
+                 END # expr term # ;
             PROC expression = REAL:
                  BEGIN
-                    REAL result := term;
+                    REAL result := expr term;
                     WHILE curr ch = "+" OR curr ch = "-" DO
                         CHAR op = curr ch;
                         next ch;
-                        IF op = "+" THEN result +:= term ELSE result -:= term FI
+                        IF op = "+" THEN result +:= expr term ELSE result -:= expr term FI
                     OD;
                     result
                  END # expression # ;
@@ -80,7 +80,7 @@ BEGIN # play the 24 game - present the user with 4 digits and invite them to  #
             puzzle digits[     i ] := 0
         OD;
         print( ( "Enter an expression using these digits:" ) );
-        FOR i TO 4 DO                                 # pick 4 random digits #
+        TO 4 DO                                       # pick 4 random digits #
             INT digit := 1 + ENTIER ( next random * 9 );
             IF digit > 9 THEN digit := 9 FI;
             puzzle digits[ digit ] +:= 1;

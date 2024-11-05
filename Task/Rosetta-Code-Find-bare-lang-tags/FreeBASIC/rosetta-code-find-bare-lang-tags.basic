@@ -1,0 +1,166 @@
+Type StringSet
+    Dim As String Ptr elements
+    Dim As Integer cnt
+    Dim As Integer capacity
+End Type
+
+Type LanguageInfo
+    As Integer cnt
+    As StringSet files
+End Type
+
+Type LanguageMap
+    Dim As String Ptr keys
+    Dim As LanguageInfo Ptr values
+    Dim As Integer cnt
+    Dim As Integer capacity
+End Type
+
+Sub StringSet_Init(Byref esto As StringSet)
+    esto.cnt = 0
+    esto.capacity = 10
+    esto.elements = Callocate(esto.capacity * Sizeof(String))
+End Sub
+
+Sub StringSet_Add(Byref esto As StringSet, value As String)
+    If esto.cnt >= esto.capacity Then
+        esto.capacity *= 2
+        esto.elements = Reallocate(esto.elements, esto.capacity * Sizeof(String))
+    End If
+    If esto.elements <> 0 Then
+        esto.elements[esto.cnt] = value
+        esto.cnt += 1
+    End If
+End Sub
+
+Function StringSet_Contains(Byref esto As StringSet, value As String) As Boolean
+    If esto.elements = 0 Then Return False
+    For i As Integer = 0 To esto.cnt - 1
+        If esto.elements[i] = value Then Return True
+    Next i
+    Return False
+End Function
+
+Sub StringSet_ToList(Byref esto As StringSet, list() As String)
+    If esto.cnt > 0 Then
+        Redim list(esto.cnt - 1)
+        For i As Integer = 0 To esto.cnt - 1
+            list(i) = esto.elements[i]
+        Next i
+    End If
+End Sub
+
+Sub LanguageMap_Init(Byref esto As LanguageMap)
+    esto.cnt = 0
+    esto.capacity = 10
+    esto.keys = Callocate(esto.capacity * Sizeof(String))
+    esto.values = Callocate(esto.capacity * Sizeof(LanguageInfo))
+End Sub
+
+Sub LanguageMap_Set(Byref esto As LanguageMap, key As String, Byref value As LanguageInfo)
+    If esto.cnt >= esto.capacity Then
+        esto.capacity *= 2
+        esto.keys = Reallocate(esto.keys, esto.capacity * Sizeof(String))
+        esto.values = Reallocate(esto.values, esto.capacity * Sizeof(LanguageInfo))
+    End If
+    If esto.keys <> 0 Andalso esto.values <> 0 Then
+        esto.keys[esto.cnt] = key
+        esto.values[esto.cnt] = value
+        esto.cnt += 1
+    End If
+End Sub
+
+Function LanguageMap_Get(Byref esto As LanguageMap, key As String) As LanguageInfo Ptr
+    If esto.keys = 0 Then Return 0
+    For i As Integer = 0 To esto.cnt - 1
+        If esto.keys[i] = key Then Return @esto.values[i]
+    Next i
+    Return 0
+End Function
+
+Sub SortStr(arr() As String)
+    Dim As Integer i, j
+	Dim As Integer lb = Lbound(arr), ub = Ubound(arr)
+    For i = lb To ub - 1
+        For j = i + 1 To ub
+            If arr(i) > arr(j) Then Swap arr(i), arr(j)
+        Next j
+    Next i
+End Sub
+
+Sub main()
+    Dim As String fileName, lastHeader, linea
+    Dim As Integer i, j, k, bareCnt
+    Dim As LanguageMap bareLang
+
+    LanguageMap_Init(bareLang)
+
+    Dim As String fileNames(2) = {"example.txt", "example2.txt", "example3.txt"}
+
+    bareCnt = 0
+    For i = 0 To 2
+        fileName = fileNames(i)
+        lastHeader = "No language"
+
+        Dim As Integer ff = Freefile
+        If Open(fileName For Input As #ff) = 0 Then
+            While Not Eof(ff)
+                Line Input #ff, linea
+                linea = Rtrim(Ltrim(linea))
+
+                If Len(linea) > 0 Then
+                    Dim As Integer posHeader = Instr(linea, "=={{header|")
+                    If posHeader > 0 Then
+                        Dim As Integer inicio = posHeader + 11
+                        Dim As Integer final = Instr(inicio, linea, "}}")
+                        If final > 0 Then lastHeader = Mid(linea, inicio, final - inicio)
+                    Elseif Instr(linea, "<lang>") > 0 Then
+                        bareCnt += 1
+                        Dim As LanguageInfo Ptr info = LanguageMap_Get(bareLang, lastHeader)
+
+                        If info = 0 Then
+                            Dim As LanguageInfo newInfo
+                            newInfo.cnt = 1
+                            StringSet_Init(newInfo.files)
+                            StringSet_Add(newInfo.files, fileName)
+                            LanguageMap_Set(bareLang, lastHeader, newInfo)
+                        Else
+                            info->cnt += 1
+                            If Not StringSet_Contains(info->files, fileName) Then
+                                StringSet_Add(info->files, fileName)
+                            End If
+                        End If
+                    End If
+                End If
+            Wend
+
+            Close #ff
+        Else
+            Print "Error opening file: " & fileName
+        End If
+    Next i
+
+    Print bareCnt & " bare language tags:"
+
+    For i = 0 To bareLang.cnt - 1
+        Dim As String leng = bareLang.keys[i]
+        Dim As LanguageInfo Ptr info = @bareLang.values[i]
+        Dim As String fileList()
+
+        StringSet_ToList(info->files, fileList())
+
+        SortStr(fileList())
+		
+        Print Using "  ## in & "; info->cnt; leng;
+        Print Space(11 - Len(leng)); "[";
+        For j = 0 To Ubound(fileList)
+            If j > 0 Then Print ", ";
+            Print fileList(j);
+        Next j
+        Print "]"
+    Next i
+End Sub
+
+main()
+
+Sleep

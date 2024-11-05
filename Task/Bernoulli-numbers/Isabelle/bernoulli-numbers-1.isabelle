@@ -1,0 +1,373 @@
+theory Mini_Bernoulli
+imports Complex_Main
+  "HOL-Computational_Algebra.Computational_Algebra"
+  "HOL-Combinatorics.Stirling"
+  "HOL-Library.Stream"
+  "Coinductive.Coinductive_List"
+  "HOL-Library.Code_Target_Numeral"
+  "HOL-Library.Code_Lazy"
+
+begin
+
+subsection ‹Definition of Bernoulli numbers›
+
+(* We define Bernoulli numbers in the standard fashion as those numbers B_n whose exponential
+   generating function function is X / (1 - e^(-X)): *)
+
+definition bernoulli_fps :: "rat fps"
+  where "bernoulli_fps = fps_X / (1 - fps_exp (-1))"
+
+definition bernoulli :: "nat ⇒ rat" where
+  "bernoulli n = fps_nth bernoulli_fps n * fact n"
+
+
+subsection ‹Stirling numbers of the 2nd kind›
+
+(* We use the Stirling numbers from the Isabelle library and prove a few additional things
+   about them. *)
+
+lemma Stirling_n_0: "Stirling n 0 = (if n = 0 then 1 else 0)"
+  by (cases n) simp_all
+
+lemma sum_Stirling_binomial:
+  "Stirling (Suc n) (Suc m) = (∑i=0..n. Stirling i m * (n choose i))"
+proof -
+  have "real (Stirling (Suc n) (Suc m)) = real (∑i = 0..n. Stirling i m * (n choose i))"
+  proof (induction n arbitrary: m)
+    case (Suc n m)
+    have "real (∑i = 0..Suc n. Stirling i m * (Suc n choose i)) =
+            real (∑i = 0..n. Stirling (Suc i) m * (Suc n choose Suc i)) + real (Stirling 0 m)"
+      by (subst sum.atLeast0_atMost_Suc_shift) simp_all
+    also have "real (∑i = 0..n. Stirling (Suc i) m * (Suc n choose Suc i)) =
+                 real (∑i = 0..n. (n choose i) * Stirling (Suc i) m) +
+                 real (∑i = 0..n. (n choose Suc i) * Stirling (Suc i) m)"
+      by (simp add: algebra_simps sum.distrib)
+    also have "(∑i = 0..n. (n choose Suc i) * Stirling (Suc i) m) =
+                 (∑i = Suc 0..Suc n. (n choose i) * Stirling i m)"
+      by (subst sum.shift_bounds_cl_Suc_ivl) simp_all
+    also have "… = (∑i = Suc 0..n. (n choose i) * Stirling i m)"
+      by (intro sum.mono_neutral_right) auto
+    also have "… = real (∑i = 0..n.  Stirling i m * (n choose i)) - real (Stirling 0 m)"
+      by (simp add: sum.atLeast_Suc_atMost mult_ac)
+    also have "real (∑i = 0..n. Stirling i m * (n choose i)) = real (Stirling (Suc n) (Suc m))"
+      by (rule Suc.IH [symmetric])
+    also have "real (∑i = 0..n. (n choose i) * Stirling (Suc i) m) =
+                 real m * real (Stirling (Suc n) (Suc m)) + real (Stirling (Suc n) m)"
+      by (cases m; (simp only: Suc.IH, simp add: algebra_simps sum.distrib
+                      sum_distrib_left sum_distrib_right))
+    also have "… + (real (Stirling (Suc n) (Suc m)) - real (Stirling 0 m)) + real (Stirling 0 m) =
+                 real (Suc m * Stirling (Suc n) (Suc m) + Stirling (Suc n) m)"
+      by (simp add: algebra_simps del: Stirling.simps)
+    also have "Suc m * Stirling (Suc n) (Suc m) + Stirling (Suc n) m =
+                 Stirling (Suc (Suc n)) (Suc m)"
+      by (rule Stirling.simps(4) [symmetric])
+    finally show ?case ..
+  qed simp_all
+  thus ?thesis by (subst (asm) of_nat_eq_iff)
+qed
+
+(* The exponential generating function of the Stirling numbers (of the 2nd kind) with
+   fixed second argument $m$ is S_m(X) = (e^X - 1)^m / m!.
+   We use this fact to derive a closed form for them. *)
+lemma Stirling_fps_aux:
+  "(fps_exp 1 - 1) ^ m $ n * fact n = (fact m * of_nat (Stirling n m) :: 'a :: field_char_0)"
+proof (induction m arbitrary: n)
+  case 0
+  thus ?case by (simp add: Stirling_n_0)
+next
+  case (Suc m n)
+  show ?case
+  proof (cases n)
+    case 0
+    thus ?thesis by simp
+  next
+    case (Suc n')
+    hence "(fps_exp 1 - 1 :: 'a fps) ^ Suc m $ n * fact n =
+              fps_deriv ((fps_exp 1 - 1) ^ Suc m) $ n' * fact n'"
+      by (simp_all add: algebra_simps del: power_Suc)
+    also have "fps_deriv ((fps_exp 1 - 1 :: 'a fps) ^ Suc m) =
+                 fps_const (of_nat (Suc m)) * ((fps_exp 1 - 1) ^ m * fps_exp 1)"
+      by (subst fps_deriv_power) simp_all
+    also have "… $ n' * fact n' =
+      of_nat (Suc m) * ((∑i = 0..n'. (fps_exp 1 - 1) ^ m $ i / fact (n' - i)) * fact n')"
+      unfolding fps_mult_left_const_nth
+      by (simp add: fps_mult_nth Suc.IH sum_distrib_right del: of_nat_Suc)
+    also have "(∑i = 0..n'. (fps_exp 1 - 1 :: 'a fps) ^ m $ i / fact (n' - i)) * fact n' =
+                 (∑i = 0..n'. (fps_exp 1 - 1) ^ m $ i * fact n' / fact (n' - i))"
+      by (subst sum_distrib_right, rule sum.cong) (simp_all add: divide_simps)
+    also have "… = (∑i = 0..n'. (fps_exp 1 - 1) ^ m $ i * fact i * of_nat (n' choose i))"
+      by (intro sum.cong refl) (simp_all add: binomial_fact)
+    also have "… = (∑i = 0..n'. fact m * of_nat (Stirling i m) * of_nat (n' choose i))"
+      by (simp only: Suc.IH)
+    also have "of_nat (Suc m) * … = (fact (Suc m) :: 'a) *
+                 (∑i = 0..n'. of_nat (Stirling i m) * of_nat (n' choose i))" (is "_ = _ * ?S")
+      by (simp add: sum_distrib_left sum_distrib_right mult_ac del: of_nat_Suc)
+    also have "?S = of_nat (Stirling (Suc n') (Suc m))"
+      by (subst sum_Stirling_binomial) simp
+    also have "Suc n' = n" by (simp add: Suc)
+    finally show ?thesis .
+  qed
+qed
+
+theorem Stirling_closed_form:
+  "(of_nat (Stirling n k) :: 'a :: field_char_0) =
+     (∑j≤k. (-1)^(k - j) * of_nat (k choose j) * of_nat j ^ n) / fact k"
+proof -
+  have "(fps_exp 1 - 1 :: 'a fps) = (fps_exp 1 + (-1))" by simp
+  also have "… ^ k = (∑j≤k. of_nat (k choose j) * fps_exp 1 ^ j * (- 1) ^ (k - j))"
+    unfolding binomial_ring ..
+  also have "… = (∑j≤k. fps_const ((-1) ^ (k - j) * of_nat (k choose j)) * fps_exp (of_nat j))"
+    by (simp add: fps_const_mult [symmetric] fps_const_power [symmetric]
+                  fps_const_neg [symmetric] mult_ac fps_of_nat fps_exp_power_mult
+             del: fps_const_mult fps_const_power fps_const_neg)
+  also have "fps_nth … n = (∑j≤k. (- 1) ^ (k - j) * of_nat (k choose j) * of_nat j ^ n) / fact n"
+    by (simp add: fps_sum_nth sum_divide_distrib)
+  also have "… * fact n = (∑j≤k. (- 1) ^ (k - j) * of_nat (k choose j) * of_nat j ^ n)"
+    by simp
+  also note Stirling_fps_aux[of k n]
+  finally show ?thesis by (simp add: atLeast0AtMost field_simps)
+qed
+
+
+(*
+  We now define a somewhat ad-hoc operator formal power series: XD' maps a formal power
+  series A(X) to the series (X - 1) A'(X).
+
+  The relevance of this operator to us is that the n-fold iteration of this operator
+  is related to Stirling numbers.
+*)
+definition fps_XD' :: "'a :: field_char_0 fps ⇒ 'a fps"
+  where "fps_XD' = (λb. (fps_X - 1) * fps_deriv b)"
+
+lemma fps_XD'_0 [simp]: "fps_XD' 0 = 0"
+  and fps_XD'_1 [simp]: "fps_XD' 1 = 0"
+  and fps_XD'_add [simp]: "fps_XD' (b + c) = fps_XD' b + fps_XD' c"
+  and fps_XD'_mult: "fps_XD' (b * c) = fps_XD' b * c + b * fps_XD' c"
+  by (simp_all add: fps_XD'_def algebra_simps)
+
+lemma fps_XD'_power: "fps_XD' (b ^ n) = of_nat n * b ^ (n - 1) * fps_XD' b"
+  by (induction n) (simp_all add: algebra_simps fps_XD'_mult power_eq_if)
+
+lemma fps_XD'_sum: "fps_XD' (sum f A) = sum (λx. fps_XD' (f x)) A"
+  by (induction A rule: infinite_finite_induct) simp_all
+
+lemma fps_XD'_funpow:
+  defines "S ≡ λn i. fps_const (of_nat (Stirling n i))"
+  shows "(fps_XD' ^^ n) H = (∑m≤n. S n m * (fps_X - 1) ^ m * (fps_deriv ^^ m) H)"
+proof (induction n arbitrary: H)
+  case 0
+  thus ?case by (simp add: S_def)
+next
+  case (Suc n H)
+  define G where "G = (fps_X - 1 :: 'a fps)"
+  have "(∑m≤Suc n. S (Suc n) m * G ^ m * (fps_deriv ^^ m) H) =
+        (∑i≤n. of_nat (Suc i) * S n (Suc i) *  G ^ Suc i * (fps_deriv ^^ Suc i) H) +
+        (∑i≤n. S n i * G ^ Suc i * (fps_deriv ^^ Suc i) H)"
+    (is "_ = sum (λi. ?f (Suc i)) … + ?S2")
+    by (subst sum.atMost_Suc_shift) (simp_all add: sum.distrib algebra_simps fps_of_nat S_def
+          fps_const_add [symmetric] fps_const_mult [symmetric] del: fps_const_add fps_const_mult)
+  also have "sum (λi. ?f (Suc i)) {..n} = sum (λi. ?f (Suc i)) {..<n}"
+    by (intro sum.mono_neutral_right) (auto simp: S_def)
+  also have "… = ?f 0 + …" by simp
+  also have "… = sum ?f {..n}" by (subst sum.atMost_shift [symmetric]) simp_all
+  also have "… + ?S2 = (∑x≤n. fps_XD' (S n x * G ^ x * (fps_deriv ^^ x) H))"
+    unfolding sum.distrib [symmetric]
+  proof (rule sum.cong, goal_cases)
+    case (2 i)
+    thus ?case unfolding fps_XD'_mult fps_XD'_power
+      by (cases i) (auto simp: fps_XD'_mult algebra_simps of_nat_diff S_def fps_XD'_def G_def)
+  qed simp_all
+  also have "… = (fps_XD' ^^ Suc n) H" by (simp add: Suc.IH fps_XD'_sum G_def)
+  finally show ?case by (simp add: G_def)
+qed
+
+
+
+subsection ‹The Akiyama–Tanigawa transform›
+
+(* a single step in the Akiyama–Tanigawa matrix, i.e. how to get the next
+   line from the current one *)
+definition AT_step :: "(nat ⇒ 'a :: field_char_0) ⇒ nat ⇒ 'a"
+  where "AT_step f = (λk. of_nat (k+1) * (f k - f (k+1)))"
+
+definition AT_matrix :: "(nat ⇒ 'a :: field_char_0) ⇒ nat ⇒ nat ⇒ 'a" where
+  "AT_matrix f n = (AT_step ^^ n) f"
+
+(* The following describes the ordinary generating function of the n-th row in the AT matrix. *)
+definition AT_fps :: "(nat ⇒ 'a :: field_char_0) ⇒ nat ⇒ 'a fps" where
+  "AT_fps f n = (fps_X - 1) * Abs_fps (AT_matrix f n)"
+
+lemma AT_fps_Suc: "AT_fps f (Suc n) = (fps_X - 1) * fps_deriv (AT_fps f n)"
+proof (rule fps_ext)
+  fix m :: nat
+  show "AT_fps f (Suc n) $ m = ((fps_X - 1) * fps_deriv (AT_fps f n)) $ m"
+    by (cases m) (simp_all add: AT_fps_def AT_matrix_def AT_step_def fps_deriv_def algebra_simps)
+qed
+
+lemma AT_fps_altdef:
+  "AT_fps f n =
+     (∑m≤n. fps_const (of_nat (Stirling n m)) * (fps_X - 1)^m * (fps_deriv ^^ m) (AT_fps f 0))"
+proof -
+  have "AT_fps f n = (fps_XD' ^^ n) (AT_fps f 0)"
+    by (induction n) (simp_all add: AT_fps_Suc fps_XD'_def)
+  also have "… = (∑m≤n. fps_const (of_nat (Stirling n m)) * (fps_X - 1) ^ m *
+                             (fps_deriv ^^ m) (AT_fps f 0))"
+    by (rule fps_XD'_funpow)
+  finally show ?thesis .
+qed
+
+lemma AT_fps_0_nth: "AT_fps f 0 $ n = (if n = 0 then -f 0 else f (n - 1) - f n)"
+  by (simp add: AT_fps_def AT_matrix_def algebra_simps)
+
+
+(* The following gives a closed form for the first column of the AT matrix, i.e. the
+   result of the transform. *)
+lemma AT_matrix_firstcol:
+  "AT_matrix f n 0 = (∑k≤n. (-1) ^ k * fact k * of_nat (Stirling (Suc n) (Suc k)) * f k)"
+proof (cases "n = 0")
+  case False
+  have "AT_matrix f n 0 = -(AT_fps f n $ 0)" by (simp add: AT_fps_def)
+  also have "AT_fps f n $ 0 =
+              (∑k≤n. of_nat (Stirling n k) * (- 1) ^ k * (fact k * AT_fps f 0 $ k))"
+    by (subst AT_fps_altdef) (simp add: fps_sum_nth fps_nth_power_0 fps_0th_higher_deriv)
+  also have "… = (∑k≤n. of_nat (Stirling n k) * (- 1) ^ k * (fact k * (f (k - 1) - f k)))"
+    using False by (intro sum.cong refl) (auto simp: Stirling_n_0 AT_fps_0_nth)
+  also have "… = (∑k≤n. fact k * (of_nat (Stirling n k) * (- 1) ^ k) * f (k - 1)) -
+                    (∑k≤n. fact k * (of_nat (Stirling n k) * (- 1) ^ k) * f k)"
+     (is "_ = sum ?f _ - ?S2") by (simp add: sum_subtractf algebra_simps)
+  also from False have "sum ?f {..n} = sum ?f {0<..n}"
+    by (intro sum.mono_neutral_right) (auto simp: Stirling_n_0)
+  also have "… = sum ?f {0<..Suc n}"
+    by (intro sum.mono_neutral_left) auto
+  also have "{0<..Suc n} = {Suc 0..Suc n}" by auto
+  also have "sum ?f … = sum (λn. ?f (Suc n)) {0..n}"
+    by (subst sum.atLeast_Suc_atMost_Suc_shift) simp_all
+  also have "{0..n} = {..n}" by auto
+  also have "sum (λn. ?f (Suc n)) … - ?S2 =
+               (∑k≤n. -((-1)^k * fact k * of_nat (Stirling (Suc n) (Suc k)) * f k))"
+    by (subst sum_subtractf [symmetric], intro sum.cong) (simp_all add: algebra_simps)
+  also have "-… = (∑k≤n. ((-1)^k * fact k * of_nat (Stirling (Suc n) (Suc k)) * f k))"
+    by (simp add: sum_negf)
+  finally show ?thesis .
+qed (simp_all add: AT_matrix_def)
+
+
+(* The following theorem relates the exponential generating function B(X) of the transformed
+   sequence to the ordinary generating function A(X) of the original sequence.
+   Namely: B(X) = e^X A(1 - e^X). *)
+theorem AT_fps:
+  "Abs_fps (λn. AT_matrix f n 0 / fact n) = fps_exp 1 * fps_compose (Abs_fps f) (1 - fps_exp 1)"
+proof (rule fps_ext)
+  fix n :: nat
+  have "(fps_const (fact n) *
+          (fps_compose (Abs_fps (λn. AT_matrix f 0 n)) (1 - fps_exp 1) * fps_exp 1)) $ n =
+          (∑m≤n. ∑k≤m. (1 - fps_exp 1) ^ k $ m * fact n / fact (n - m) * f k)"
+    unfolding fps_mult_left_const_nth
+    by (simp add: fps_times_def fps_compose_def AT_matrix_firstcol sum_Stirling_binomial
+                  field_simps sum_distrib_left sum_distrib_right atLeast0AtMost AT_matrix_def
+             del: Stirling.simps of_nat_Suc)
+  also have "… = (∑m≤n. ∑k≤m. (-1)^k * fact k * of_nat (Stirling m k * (n choose m)) * f k)"
+  proof (intro sum.cong refl, goal_cases)
+    case (1 m k)
+    have "(1 - fps_exp 1 :: 'a fps) ^ k = (-fps_exp 1 + 1 :: 'a fps) ^ k" by simp
+    also have "… = (∑i≤k. of_nat (k choose i) * (-1) ^ i * fps_exp (of_nat i))"
+      by (subst binomial_ring) (simp add: atLeast0AtMost power_minus' fps_exp_power_mult mult.assoc)
+    also have "… = (∑i≤k. fps_const (of_nat (k choose i) * (-1) ^ i) * fps_exp (of_nat i))"
+      by (simp add: fps_const_mult [symmetric] fps_of_nat fps_const_power [symmetric]
+                    fps_const_neg [symmetric] del: fps_const_mult fps_const_power fps_const_neg)
+    also have "… $ m = (∑i≤k. of_nat (k choose i) * (- 1) ^ i * of_nat i ^ m) / fact m"
+      (is "_ = ?S / _") by (simp add: fps_sum_nth sum_divide_distrib [symmetric])
+    also have "?S = (-1) ^ k * (∑i≤k. (-1) ^ (k - i) * of_nat (k choose i) * of_nat i ^ m)"
+      by (subst sum_distrib_left, intro sum.cong refl) (auto simp: minus_one_power_iff)
+    also have "(∑i≤k. (-1) ^ (k - i) * of_nat (k choose i) * of_nat i ^ m) =
+                 of_nat (Stirling m k) * (fact k :: 'a)"
+      by (subst Stirling_closed_form) (simp_all add: field_simps)
+    finally have *: "(1 - fps_exp 1 :: 'a fps) ^ k $ m * fact n / fact (n - m) =
+                       (- 1) ^ k * fact k * of_nat (Stirling m k) * of_nat (n choose m)"
+      using 1 by (simp add: binomial_fact del: of_nat_Suc)
+    show ?case using 1 by (subst *) simp
+  qed
+  also have "… = (∑m≤n. ∑k≤n. (- 1) ^ k * fact k *
+                      of_nat (Stirling m k * (n choose m)) * f k)"
+    by (rule sum.cong[OF refl], rule sum.mono_neutral_left) auto
+  also have "… = (∑k≤n. ∑m≤n. (- 1) ^ k * fact k *
+                      of_nat (Stirling m k * (n choose m)) * f k)"
+    by (rule sum.swap)
+  also have "… = AT_matrix f n 0"
+    by (simp add: AT_matrix_firstcol sum_Stirling_binomial sum_distrib_left sum_distrib_right
+          mult.assoc atLeast0AtMost del: Stirling.simps)
+  finally show "Abs_fps (λn. AT_matrix f n 0 / fact n) $ n =
+                  (fps_exp 1 * (Abs_fps f oo 1 - fps_exp 1)) $ n"
+    by (subst (asm) fps_mult_left_const_nth) (simp add: field_simps AT_matrix_def del: of_nat_Suc)
+qed
+
+(* If we specialise this to the input sequence a(k) = 1 / (k+1), this has the ordinary
+   generating function -ln(1 - X) / X, so the exponential generating function of the
+   AT transform is e^X (-ln (1 - (1 - e^X)) / (1 - e^X)) = X / (1 - e^(-X)),
+   which is exactly the exponential generating function of the Bernoulli numbers. *)
+corollary bernoulli_conv_AT: "bernoulli n = AT_matrix (λk. 1 / of_nat (k+1)) n 0"
+proof -
+  define f :: "nat ⇒ rat" where "f = (λn. 1 / of_nat (Suc n))"
+  note AT_fps[of f]
+  also {
+    have "fps_ln 1 = fps_X * Abs_fps (λn. (-1)^n / of_nat (Suc n) :: rat)"
+      by (intro fps_ext) (simp del: of_nat_Suc add: fps_ln_def)
+    hence "fps_ln 1 / fps_X = Abs_fps (λn. (-1)^n / of_nat (Suc n) :: rat)"
+      by (metis fps_X_neq_zero nonzero_mult_div_cancel_left)
+    also have "fps_compose … (-fps_X) = Abs_fps f"
+      by (simp add: fps_compose_uminus' fps_eq_iff f_def)
+    finally have "Abs_fps f = fps_compose (fps_ln 1 / fps_X) (-fps_X)" ..
+    also have "fps_ln 1 / fps_X oo - fps_X oo 1 - fps_exp (1::rat) = fps_ln 1 / fps_X oo fps_exp 1 - 1"
+      by (subst fps_compose_assoc [symmetric])
+         (simp_all add: fps_compose_uminus)
+    also have "… = (fps_ln 1 oo fps_exp 1 - 1) / (fps_exp 1 - 1)"
+      by (subst fps_compose_divide_distrib) auto
+    also have "… = fps_X / (fps_exp 1 - 1)" by (simp add: fps_ln_fps_exp_inv fps_inv_fps_exp_compose)
+    finally have "Abs_fps f oo 1 - fps_exp 1 = fps_X / (fps_exp 1 - 1)" .
+  }
+  also have "fps_exp (1::rat) - 1 = (1 - fps_exp (-1)) * fps_exp 1"
+    by (simp add: algebra_simps fps_exp_add_mult [symmetric])
+  also have "fps_exp 1 * (fps_X / …) = bernoulli_fps" unfolding bernoulli_fps_def
+    by (subst dvd_div_mult2_eq) (auto simp: fps_dvd_iff intro!: subdegree_leI)
+  finally have "Abs_fps (λn. AT_matrix f n 0 / fact n) = bernoulli_fps" .
+  hence "fps_nth (Abs_fps (λn. AT_matrix f n 0 / fact n)) n = fps_nth bernoulli_fps n"
+    by (rule arg_cong)
+  thus ?thesis by (simp add: fps_eq_iff f_def bernoulli_def field_simps)
+qed
+
+
+subsection ‹Efficient code›
+
+(* Next, we implement the AT transform using infinite streams. We define the infinite
+   AT matrix as a stream of streams of numbers and then define its leftmost column as the
+   result of the transform. *)
+
+primcorec AT_impl_step :: "nat ⇒ 'a :: field_char_0 stream ⇒ 'a stream" where
+  "AT_impl_step m xs =
+     of_nat m * (xs !! 0 - xs !! 1) ## AT_impl_step (Suc m) (stl xs)"
+
+primcorec AT_matrix_impl :: "'a :: field_char_0 stream ⇒ 'a stream stream" where
+  "AT_matrix_impl xs = xs ## AT_matrix_impl (AT_impl_step 1 xs)"
+
+definition AT_impl :: "'a :: field_char_0 stream ⇒ 'a :: field_char_0 stream" where
+  "AT_impl xs = smap shd (AT_matrix_impl xs)"
+
+lemma snth_AT_impl_step [simp]:
+  "AT_impl_step m xs !! n = of_nat (m + n) * (xs !! n - xs !! (n+1))"
+  by (induction n arbitrary: m xs; subst AT_impl_step.code) auto
+
+lemma snth_AT_matrix_impl [simp]: "AT_matrix_impl xs !! n !! k = AT_matrix (snth xs) n k"
+  by (induction n arbitrary: xs k; subst AT_matrix_impl.code)
+     (auto simp: snth_AT_impl_step [abs_def] AT_matrix_def funpow_Suc_right AT_step_def
+           simp del: funpow.simps of_nat_Suc)
+
+lemma snth_AT_impl [simp]: "AT_impl xs !! n = AT_matrix (snth xs) n 0"
+  by (simp add: AT_impl_def flip: snth.simps(1))
+
+definition bernoulli_stream :: "rat stream" where
+  "bernoulli_stream = AT_impl (smap (λi. 1 / of_nat i) (fromN 1))"
+
+theorem bernoulli_stream_correct: "bernoulli_stream !! n = bernoulli n"
+  by (simp add: bernoulli_stream_def bernoulli_conv_AT snth_smap [abs_def])
+
+end

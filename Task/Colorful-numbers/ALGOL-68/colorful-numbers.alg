@@ -31,7 +31,7 @@ BEGIN # find colourful numbers: numbers where the product of every sub-group #
                    FOR group start TO ( s end + 1 ) - group width WHILE unique DO
                        INT product := 1;
                        INT g pos   := group start - 1;
-                       FOR i TO group width DO product *:= dg[ g pos +:= 1 ] OD;
+                       TO group width DO product *:= dg[ g pos +:= 1 ] OD;
                        dg[ dg pos +:= 1 ] := product;
                        FOR i TO dg pos - 1 WHILE unique DO
                            unique := dg[ i ] /= dg[ dg pos ]

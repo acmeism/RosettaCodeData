@@ -1,25 +1,25 @@
 BEGIN # generalised FizzBuzz                                        #
     # prompts for an integer, reads it and returns it               #
-    PROC read integer = ( STRING prompt )INT:
+    PROC read an integer = ( STRING prompt )INT:
          BEGIN
             print( ( prompt ) );
             INT result;
             read( ( result, newline ) );
             result
-         END; # read integer #
+         END; # read an integer #
     # prompts for a string, reads it and returns it                 #
-    PROC read string = ( STRING prompt )STRING:
+    PROC read a string = ( STRING prompt )STRING:
          BEGIN
             print( ( prompt ) );
             STRING result;
             read( ( result, newline ) );
             result
-         END; # read string #
+         END; # read a string #
     # mode to hold a factor and associated text                     #
     MODE FBFACTOR = STRUCT( INT factor, STRING text );
     #===============================================================#
-    # quicksort routine for the factors, from the Algol 68 uicksort #
-    # task sample                                                   #
+    # quicksort routine for the factors                             #
+    # - from the Algol 68 task sample                               #
     #---------------------------------------------------------------#
     #--- Swap function ---#
     PROC swap = (REF[]FBFACTOR array, INT first, INT second) VOID:
@@ -51,14 +51,14 @@ BEGIN # generalised FizzBuzz                                        #
     OP > = ( FBFACTOR a, b )BOOL: factor OF a > factor OF b;
     #===============================================================#
     # get the maximum number to consider                            #
-    INT max number = read integer( "Numbers reuired: " );
-    # number of factors reuired                                     #
+    INT max number = read an integer( "Numbers required: " );
+    # number of factors required                                    #
     INT max factor = 3;
     # get the factors and associated words                          #
     [ max factor ]FBFACTOR factors;
     FOR i TO max factor DO
-        factor OF factors[ i ] := read integer( "Factor " + whole( i, 0 ) + ": " );
-        text OF factors  [ i ] := read string( "Text for " + whole( factor OF factors[ i ], 0 ) + ": " )
+        factor OF factors[ i ] := read an integer( "Factor " + whole( i, 0 ) + ": " );
+        text OF factors  [ i ] := read a string( "Text for " + whole( factor OF factors[ i ], 0 ) + ": " )
     OD;
     # sort the factors into order                                   #
     quick( factors, 1, UPB factors );

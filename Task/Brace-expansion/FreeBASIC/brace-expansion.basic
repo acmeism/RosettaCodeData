@@ -1,0 +1,134 @@
+Type StringArray
+    elements(Any) As String
+    length As Integer
+End Type
+
+Type ItemResult
+    items As StringArray
+    remaining As String
+End Type
+
+Type GroupResult
+    items As StringArray
+    remaining As String
+    success As Boolean
+End Type
+
+Declare Function GetGroup(s As String, depth As Integer) As GroupResult
+Declare Function GetItem(s As String, depth As Integer = 0) As ItemResult
+
+Function ConcatArrays(arr1 As StringArray, arr2 As StringArray) As StringArray
+    Dim result As StringArray
+    Dim totalLen As Integer = arr1.length * arr2.length
+    Redim result.elements(totalLen - 1)
+    result.length = totalLen
+
+    Dim idx As Integer = 0
+    For i As Integer = 0 To arr1.length - 1
+        For j As Integer = 0 To arr2.length - 1
+            result.elements(idx) = arr1.elements(i) & arr2.elements(j)
+            idx += 1
+        Next j
+    Next i
+
+    Return result
+End Function
+
+Function GetItem(s As String, depth As Integer = 0) As ItemResult
+    Dim result As ItemResult
+    Redim result.items.elements(0)
+    result.items.elements(0) = ""
+    result.items.length = 1
+
+    While Len(s) > 0
+        Dim c As String = Left(s, 1)
+
+        If depth > 0 Andalso (c = "," Orelse c = "}") Then
+            result.remaining = s
+            Return result
+        Elseif c = "{" Then
+            Dim groupResult As GroupResult = GetGroup(Mid(s, 2), depth + 1)
+            If groupResult.success Then
+                result.items = ConcatArrays(result.items, groupResult.items)
+                s = groupResult.remaining
+                Continue While
+            End If
+        Elseif c = "\" Andalso Len(s) > 1 Then
+            s = Mid(s, 2)
+            c = "\" & Left(s, 1)
+        End If
+
+        For i As Integer = 0 To result.items.length - 1
+            result.items.elements(i) &= c
+        Next
+        s = Mid(s, 2)
+    Wend
+
+    result.remaining = s
+    Return result
+End Function
+
+Function GetGroup(s As String, depth As Integer) As GroupResult
+    Dim result As GroupResult
+    Dim comma As Boolean = False
+    result.success = False
+    Redim result.items.elements(0)
+    result.items.length = 0
+
+    While Len(s) > 0
+        Dim itemResult As ItemResult = GetItem(s, depth)
+        If Len(itemResult.remaining) = 0 Then Exit While
+
+        s = itemResult.remaining
+
+        If result.items.length = 0 Then
+            result.items = itemResult.items
+        Else
+            Dim newLen As Integer = result.items.length + itemResult.items.length
+            Redim Preserve result.items.elements(newLen - 1)
+            For i As Integer = 0 To itemResult.items.length - 1
+                result.items.elements(result.items.length + i) = itemResult.items.elements(i)
+            Next
+            result.items.length = newLen
+        End If
+
+        If Left(s, 1) = "}" Then
+            result.success = True
+            If comma Then
+                result.remaining = Mid(s, 2)
+                Return result
+            End If
+
+            For i As Integer = 0 To result.items.length - 1
+                result.items.elements(i) = "{" & result.items.elements(i) & "}"
+            Next
+            result.remaining = Mid(s, 2)
+            Return result
+        End If
+
+        If Left(s, 1) = "," Then
+            comma = True
+            s = Mid(s, 2)
+        End If
+    Wend
+
+    Return result
+End Function
+
+' Main program
+Dim testStrings(3) As String
+testStrings(0) = "~/{Downloads,Pictures}/*.{jpg,gif,png}"
+testStrings(1) = "It{{em,alic}iz,erat}e{d,}, please."
+testStrings(2) = "{,{,gotta have{ ,\, again\, }}more }cowbell!"
+testStrings(3) = "{}} some }{,{\\{ edge, edge} \,}{ cases, {here} \\\\\}"
+
+For i As Integer = 0 To 3
+    Print testStrings(i) & Chr(10) & String(44, "-")
+    Dim result As ItemResult = GetItem(testStrings(i))
+    For j As Integer = 0 To result.items.length - 1
+        Print result.items.elements(j)
+    Next
+    Print
+Next
+
+Sleep

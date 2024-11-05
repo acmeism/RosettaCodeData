@@ -27,7 +27,7 @@ BEGIN # construct some Farey Sequences and calculate their lengths       #
             length
          FI # farey sequence length # ;
     # task #
-    FOR i TO 11 DO farey sequence length( i, TRUE ) OD;
+    FOR i TO 11 DO VOID( farey sequence length( i, TRUE ) ) OD;
     FOR n FROM 100 BY 100 TO 1 000 DO
         print( ( "Farey Sequence of order ", whole( n, -4 )
                , " has length: ", whole( farey sequence length( n, FALSE ), -6 )

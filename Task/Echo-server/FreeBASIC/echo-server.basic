@@ -1,0 +1,80 @@
+#include once "win/winsock2.bi"
+
+Type SOCKET As Ulongint
+
+Const PORT = 12321
+Const BUFFER_SIZE = 1024
+Dim Shared As SOCKET sock
+
+Sub clientHandler(Byval clientSocket As SOCKET)
+    Dim As String linea
+    Dim As ZString * BUFFER_SIZE buffer
+    Dim As Integer bytesReceived
+
+    Do
+        bytesReceived = recv(clientSocket, @buffer, BUFFER_SIZE-1, 0)
+        If bytesReceived <= 0 Then Exit Do
+
+        buffer[bytesReceived] = 0
+        linea = *Cast(ZString Ptr, @buffer)
+        Print "Received: "; linea
+
+        send(clientSocket, Strptr(linea), Len(linea), 0)
+    Loop
+
+    closesocket(clientSocket)
+End Sub
+
+Sub server()
+    Dim As sockaddr_in addr
+    With addr
+        .sin_family = AF_INET
+        .sin_port = htons(PORT)
+        .sin_addr.s_addr = INADDR_ANY
+    End With
+
+    sock = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0)
+    If sock = INVALID_SOCKET Then
+        Print "Failed to create socket"
+        Exit Sub
+    End If
+
+    If bind(sock, Cast(sockaddr Ptr, @addr), Sizeof(sockaddr_in)) = SOCKET_ERROR Then
+        Print "Bind failed"
+        closesocket(sock)
+        Exit Sub
+    End If
+
+    If listen(sock, SOMAXCONN) = SOCKET_ERROR Then
+        Print "Listen failed"
+        closesocket(sock)
+        Exit Sub
+    End If
+
+    Print "Server running on port "; PORT
+
+    Do
+        Dim As sockaddr_in clientAddr
+        Dim As Long clientAddrLen = Sizeof(sockaddr_in)
+        Dim As SOCKET clientSocket = accept(sock, Cast(sockaddr Ptr, @clientAddr), @clientAddrLen)
+
+        If clientSocket <> INVALID_SOCKET Then
+            Print "Connection from "; *inet_ntoa(clientAddr.sin_addr)
+            clientHandler(clientSocket)
+        End If
+    Loop
+End Sub
+
+' Initialize Winsock
+Dim As WSADATA wsaData
+If WSAStartup(MAKEWORD(2, 2), @wsaData) Then
+    Print "Winsock initialization failed"
+    End 1
+End If
+
+' Run server
+server()
+
+' Cleanup on exit
+closesocket(sock)
+WSACleanup()

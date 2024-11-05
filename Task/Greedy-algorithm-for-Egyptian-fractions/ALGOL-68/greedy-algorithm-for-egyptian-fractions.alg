@@ -1,4 +1,4 @@
-BEGIN # compute some Egytian fractions #
+BEGIN # compute some Egyptian fractions #
     PR precision 2000 PR # set the number of digits for LONG LONG INT #
     PROC gcd = ( LONG LONG INT a, b )LONG LONG INT:
         IF b = 0 THEN
@@ -14,7 +14,7 @@ BEGIN # compute some Egytian fractions #
     MODE LISTOFRATIONAL = STRUCT( RATIONAL element, REF LISTOFRATIONAL next );
     REF LISTOFRATIONAL  nil list of rational = NIL;
     OP   TOSTRING = (           INT a )STRING: whole( a, 0 );
-    OP   TOSTRING = (      LONG INT a )STRING: whole( a, 0 );
+CO  OP   TOSTRING = (      LONG INT a )STRING: whole( a, 0 ); # not needed for the task # CO
     OP   TOSTRING = ( LONG LONG INT a )STRING: whole( a, 0 );
     OP   TOSTRING = (      RATIONAL a )STRING:
          IF den OF a = 1
@@ -49,12 +49,12 @@ BEGIN # compute some Egytian fractions #
          ELSE
             REF LISTOFRATIONAL result     := nil list of rational;
             REF LISTOFRATIONAL end result := nil list of rational;
-            PROC add = ( RATIONAL r )VOID:
+            PROC add = ( RATIONAL rn )VOID:
                  IF end result IS nil list of rational THEN
-                    result     := HEAP LISTOFRATIONAL := ( r, nil list of rational );
+                    result     := HEAP LISTOFRATIONAL := ( rn, nil list of rational );
                     end result := result
                  ELSE
-                    next OF end result := HEAP LISTOFRATIONAL := ( r, nil list of rational );
+                    next OF end result := HEAP LISTOFRATIONAL := ( rn, nil list of rational );
                     end result         := next OF end result
                  FI ; # add #
             IF num OF r > den OF r THEN

@@ -1,16 +1,24 @@
 (define (collatz n)
-(if (= n 1) '(1)
-(cons n (collatz (if (even? n) (/ n 2) (+ 1 (* 3 n)))))))
+  (if (= n 1)
+      (list 1)
+      (cons n
+           (collatz (if (even? n) (/ n 2) (+ 1 (* 3 n)))))))
 
 (define (collatz-length n)
-(let aux ((n n) (r 1)) (if (= n 1) r
-(aux (if (even? n) (/ n 2) (+ 1 (* 3 n))) (+ r 1)))))
+  (let aux ((n n) (r 1))
+    (if (= n 1)
+        r
+        (aux (if (even? n) (/ n 2) (+ 1 (* 3 n)))
+             (+ r 1)))))
 
 (define (collatz-max a b)
-(let aux ((i a) (j 0) (k 0))
-(if (> i b) (list j k)
-(let ((h (collatz-length i)))
-(if (> h k) (aux (+ i 1) i h) (aux (+ i 1) j k))))))
+  (let aux ((i a) (j 0) (k 0))
+    (if (> i b)
+        (list j k)
+        (let ((h (collatz-length i)))
+          (if (> h k)
+              (aux (+ i 1) i h)
+              (aux (+ i 1) j k))))))
 
 (collatz 27)
 ; (27 82 41 124 62 31 94 47 142 71 214 107 322 161 484 242 121 364 182

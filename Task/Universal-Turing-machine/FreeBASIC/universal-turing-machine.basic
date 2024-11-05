@@ -1,0 +1,154 @@
+' Machine definitions
+Enum
+    nombre = 1
+    initState
+    endState
+    blank
+End Enum
+
+Dim Shared As Boolean cntOnly = True
+Dim Shared As String incrementer, threeStateBB, fiveStateBB
+
+incrementer = "Simple incrementer,q0,qf,B"
+incrementer &= ",q0,1,1,right,q0,q0,B,1,stay,qf"
+
+Dim As String a
+threeStateBB = "Three-state busy beaver,a,halt,0"
+Restore ThreeStateData
+Do
+    Read a
+    If a = "" Then Exit Do
+    threeStateBB &= "," & a
+Loop
+
+fiveStateBB = "Five-state busy beaver,A,H,0"
+Restore FiveStateData
+Do
+    Read a
+    If a = "" Then Exit Do
+    fiveStateBB &= "," & a
+Loop
+
+Cls
+
+' Data sections
+ThreeStateData:
+Data "a,0,1,right,b"
+Data "a,1,1,left,c"
+Data "b,0,1,left,a"
+Data "b,1,1,right,b"
+Data "c,0,1,left,b"
+Data "c,1,1,stay,halt"
+Data ""
+
+FiveStateData:
+Data "A,0,1,right,B"
+Data "A,1,1,left,C"
+Data "B,0,1,right,C"
+Data "B,1,1,right,B"
+Data "C,0,1,right,D"
+Data "C,1,0,left,E"
+Data "D,0,1,left,A"
+Data "D,1,1,left,D"
+Data "E,0,1,stay,H"
+Data "E,1,0,left,A"
+Data ""
+
+' Display a representation of the tape and machine state on the screen
+Sub show(state As String, headPos As Integer, tape As String)
+    Print " " & state & Chr(9) & "| ";
+    For posic As Integer = 1 To Len(tape)
+        If posic = headPos Then
+            Print "[" & Mid(tape, posic, 1) & "] ";
+        Else
+            Print " " & Mid(tape, posic, 1) & "  ";
+        End If
+    Next
+    Print
+End Sub
+
+Function string_rep(s As String, n As Integer) As String
+    Dim r As String = ""
+    For i As Integer = 1 To n
+        r &= s
+    Next
+    Return r
+End Function
+
+' Simulate a turing machine
+Sub UTM(mach As String, tape As String, cntOnly As Boolean = False)
+    Dim As String state
+    Dim As Integer headPos, cnter
+    Dim As String machine()
+
+    Dim As Integer m = Len(tape)
+    Dim As Integer i, j, n
+    Dim As String temp = ""
+    j = 1
+    For i = 1 To Len(mach)
+        If Mid(mach, i, 1) = "," Then
+            Redim Preserve machine(j)
+            machine(j) = temp
+            temp = ""
+            j += 1
+        Else
+            temp &= Mid(mach, i, 1)
+        End If
+    Next i
+    Redim Preserve machine(j)
+    machine(j) = temp
+    n = j
+
+    state = machine(initState)
+    n -= blank
+    headPos = 1
+
+    Print machine(nombre) & !"\n" & string_rep("=", Len(machine(nombre))) & !"\n"
+    If Not cntOnly Then Print " State" & !"\t" & "| Tape [head]" & !"\n----------------------"
+
+    Do
+        If Mid(tape, headPos, 1) = " " Then Mid(tape, headPos, 1) = machine(blank)
+        If Not cntOnly Then show(state, headPos, tape)
+
+        For rule As Integer = blank + 1 To n Step 5
+            If machine(rule) = state Andalso machine(rule + 1) = Mid(tape, headPos, 1) Then
+                Mid(tape, headPos, 1) = machine(rule + 2)
+
+                If machine(rule + 3) = "left" Then
+                    headPos -= 1
+                    If headPos < 1 Then
+                        headPos = 1
+                        tape = " " & tape
+                    End If
+                End If
+
+                If machine(rule + 3) = "right" Then
+                    headPos += 1
+                    If headPos > m Then
+                        m += 1
+                        tape &= " "
+                    End If
+                End If
+
+                state = machine(rule + 4)
+                Exit For
+            End If
+        Next
+
+        cnter += 1
+    Loop Until state = machine(endState)
+
+    If cntOnly Then
+        Print "Steps taken: "; cnter
+    Else
+        show(state, headPos, tape)
+    End If
+    Print
+End Sub
+
+' Main procedure
+UTM(incrementer, "111")
+UTM(threeStateBB, " ")
+UTM(fiveStateBB, " ", cntOnly)
+
+Sleep

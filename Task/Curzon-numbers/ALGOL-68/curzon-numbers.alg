@@ -5,13 +5,13 @@ BEGIN # find some generalised Curzon numbers - translation of the C++ sample #
          ELSE
               LONG INT result := 1;
               LONG INT base   := rqd base MOD mod;
-              LONG INT exp    := rqd exp;
-              WHILE exp > 0 DO
-                  IF ODD exp THEN
+              LONG INT ex     := rqd exp;
+              WHILE ex > 0 DO
+                  IF ODD ex THEN
                       result TIMESAB base MODAB mod
                   FI;
                   base TIMESAB base MODAB mod;
-                  exp  OVERAB 2
+                  ex   OVERAB 2
               OD;
               result
          FI # modpow # ;
@@ -20,7 +20,7 @@ BEGIN # find some generalised Curzon numbers - translation of the C++ sample #
          BEGIN
              LONG INT m = k * n + 1;
              modpow( k, n, m ) + 1 = m
-         END # is curon # ;
+         END # is curzon # ;
 
     FOR k FROM 2 BY 2 TO 10 DO
         print( ( "Curzon numbers with base ", whole( k, 0 ), ":", newline ) );

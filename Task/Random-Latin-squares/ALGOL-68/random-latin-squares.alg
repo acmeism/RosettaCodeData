@@ -4,9 +4,9 @@ BEGIN # generate random latin squares #
     #       modified to shufflw a row of a [,]CHAR array #
     PROC knuth shuffle = (REF[,]CHAR a, INT row)VOID:
     (
-      PROC between = (INT a, b)INT :
+      PROC between = (INT l, h)INT :
       (
-        ENTIER (random * ABS (b-a+1) + (a<b|a|b))
+        ENTIER (random * ABS (h-l+1) + (l<h|l|h))
       );
       FOR i FROM LWB a TO UPB a DO
         INT  j = between(LWB a, UPB a);
@@ -29,7 +29,6 @@ BEGIN # generate random latin squares #
             OD;
             knuth shuffle( result, 1 );
             FOR row FROM 2 TO n - 1 DO
-                BOOL ok := FALSE;
                 WHILE
                     knuth shuffle( result, row );
                     BOOL all different := TRUE;

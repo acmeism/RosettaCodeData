@@ -37,4 +37,5 @@ else
 
 include Functions
 include Numbers
+include Sequences
 include Abend

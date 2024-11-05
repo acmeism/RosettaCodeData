@@ -1,0 +1,131 @@
+Type Graph
+    As Integer nodes
+    As Integer Ptr edges
+End Type
+
+' Function to create a new graph
+Function CreateGraph(nodeCount As Integer) As Graph Ptr
+    Dim As Graph Ptr g = Callocate(Sizeof(Graph))
+    g->nodes = nodeCount
+    g->edges = Callocate(nodeCount * nodeCount * Sizeof(Integer))
+    Return g
+End Function
+
+' Function to add an edge to the graph
+Sub AddEdge(g As Graph Ptr, desde As Integer, hasta As Integer)
+    If desde >= 0 Andalso desde < g->nodes Andalso hasta >= 0 Andalso hasta < g->nodes Then
+        g->edges[desde * g->nodes + hasta] = 1
+    End If
+End Sub
+
+Dim Shared As Integer Ptr index, lowlink, onStack, stack
+Dim Shared As Integer stackSize, stackCapacity, x
+Dim Shared As Graph Ptr currentGraph
+Dim Shared As Sub(c() As Integer, count As Integer) emitFunc
+
+Sub StrongConnect(n As Integer)
+    index[n] = x
+    lowlink[n] = x
+    x += 1
+
+    ' Check if we need to resize the stack
+    If stackSize >= stackCapacity Then
+        stackCapacity *= 2
+        stack = Reallocate(stack, stackCapacity * Sizeof(Integer))
+    End If
+
+    stack[stackSize] = n
+    stackSize += 1
+    onStack[n] = 1
+
+    For nb As Integer = 0 To currentGraph->nodes - 1
+        If currentGraph->edges[n * currentGraph->nodes + nb] Then
+            If index[nb] = -1 Then
+                StrongConnect(nb)
+                If lowlink[nb] < lowlink[n] Then lowlink[n] = lowlink[nb]
+            Elseif onStack[nb] Then
+                If index[nb] < lowlink[n] Then lowlink[n] = index[nb]
+            End If
+        End If
+    Next
+
+    If lowlink[n] = index[n] Then
+        Dim As Integer componentSize = 0
+        Dim As Integer component(currentGraph->nodes - 1)
+        Dim As Integer w
+        Do
+            w = stack[stackSize - 1]
+            stackSize -= 1
+            onStack[w] = 0
+            component(componentSize) = w
+            componentSize += 1
+        Loop While w <> n
+        emitFunc(component(), componentSize)
+    End If
+End Sub
+
+Sub Tarjan(g As Graph Ptr, emit As Sub(c() As Integer, count As Integer))
+    currentGraph = g
+    emitFunc = emit
+
+    index = Callocate(g->nodes * Sizeof(Integer))
+    lowlink = Callocate(g->nodes * Sizeof(Integer))
+    onStack = Callocate(g->nodes * Sizeof(Integer))
+
+    stackCapacity = g->nodes
+    stack = Callocate(stackCapacity * Sizeof(Integer))
+    stackSize = 0
+    x = 0
+
+    For i As Integer = 0 To g->nodes - 1
+        index[i] = -1
+        lowlink[i] = -1
+        onStack[i] = 0
+    Next
+
+    For n As Integer = 0 To g->nodes - 1
+        If index[n] = -1 Then StrongConnect(n)
+    Next
+
+    Deallocate(index)
+    Deallocate(lowlink)
+    Deallocate(onStack)
+    Deallocate(stack)
+End Sub
+
+Sub PrintComponent(c() As Integer, count As Integer)
+    Print "Component:";
+    For i As Integer = 0 To count - 1
+        Print c(i);
+    Next
+    Print
+End Sub
+
+Sub FreeGraph(g As Graph Ptr)
+    Deallocate(g->edges)
+    Deallocate(g)
+End Sub
+
+' Main function
+Dim As Graph Ptr g = CreateGraph(8)
+
+AddEdge(g, 0, 1)
+AddEdge(g, 2, 0)
+AddEdge(g, 5, 2)
+AddEdge(g, 5, 6)
+AddEdge(g, 6, 5)
+AddEdge(g, 1, 2)
+AddEdge(g, 3, 1)
+AddEdge(g, 3, 2)
+AddEdge(g, 3, 4)
+AddEdge(g, 4, 5)
+AddEdge(g, 4, 3)
+AddEdge(g, 7, 4)
+AddEdge(g, 7, 7)
+AddEdge(g, 7, 6)
+
+Tarjan(g, @PrintComponent)
+
+FreeGraph(g)
+
+Sleep

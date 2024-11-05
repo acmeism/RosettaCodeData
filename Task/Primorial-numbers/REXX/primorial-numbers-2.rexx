@@ -99,5 +99,6 @@ return
 
 include Numbers
 include Functions
+include Sequences
 include Constants
 include Abend

@@ -25,7 +25,7 @@ BEGIN # subsitiution cipher #
             PROC decode = ( CHAR c, base, STRING code )CHAR:
                  BEGIN
                     INT c pos := 0;
-                    char in string( c, c pos, code );
+                    VOID( char in string( c, c pos, code ) );
                     REPR ( ABS base + ( c pos - 1 ) )
                  END # decode # ;
             STRING result := cipher text;

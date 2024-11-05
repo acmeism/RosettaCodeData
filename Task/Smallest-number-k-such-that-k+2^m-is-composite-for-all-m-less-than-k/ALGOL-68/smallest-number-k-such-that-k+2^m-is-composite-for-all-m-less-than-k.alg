@@ -8,7 +8,7 @@ BEGIN # find the smallest k such that k+2^m is composite for all 0 < m < k   #
             LONG LONG INT big k   = ak;
             LONG LONG INT p2     := 2;
             BOOL          result := FALSE;
-            FOR m TO ak - 1 WHILE result := NOT is probably prime( big k + p2 ) DO p2 *:= 2 OD;
+            TO ak - 1 WHILE result := NOT is probably prime( big k + p2 ) DO p2 *:= 2 OD;
             result
          END # is a033919 # ;
 

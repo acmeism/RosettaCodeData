@@ -64,11 +64,13 @@ BEGIN # construct number names from a number                                  #
             OD;
             IF n MOD 1000 = 0 THEN result + "th" ELSE result FI
        FI # NAME # ;
+CO  # not used in this task, but in general we might need the followingL      #
     # additional operator to handle shorter integers                          #
     OP NAME = ( INT       n )STRING: NAME LENG n;
     # additional operators to handle integers expressed in floating point     #
     OP NAME = ( LONG REAL n )STRING: NAME ENTIER n;
     OP NAME = ( REAL      n )STRING: NAME ENTIER n;
+CO
     # task test cases                                                         #
     []LONG INT t = ( 1, 2, 3, 4, 5, 11, 65, 100, 101, 272, 23 456, 8 007 006 005 004 003 );
     FOR n FROM LWB t TO UPB t DO

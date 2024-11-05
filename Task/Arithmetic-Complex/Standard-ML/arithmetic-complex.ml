@@ -1,15 +1,23 @@
 (* Signature for complex numbers *)
 signature COMPLEX = sig
- type num
+  type num
 
- val complex : real * real -> num
+  (* creation *)
+  val complex : real * real -> num
 
- val negative : num -> num
- val plus : num -> num -> num
- val minus : num -> num -> num
- val times : num -> num -> num
- val invert : num -> num
- val print_number : num -> unit
+  (* operations *)
+  val negative : num -> num
+  val plus : num -> num -> num
+  val minus : num -> num -> num
+  val times : num -> num -> num
+  val invert : num -> num
+
+  (* polar form *)
+  val abs : num -> real
+  val arg : num -> real
+
+  (* output *)
+  val print_number : num -> unit
 end;
 
 (* Actual implementation *)
@@ -28,6 +36,9 @@ structure Complex :> COMPLEX = struct
     in
       (a / denom, ~b / denom)
     end
+
+  fun abs (x, y) = Math.sqrt (x*x + y*y)
+  fun arg (x, y) = Math.atan2(y, x)
 
   fun print_number (a, b) =
     print (Real.toString(a) ^ " + " ^ Real.toString(b) ^ "i\n")

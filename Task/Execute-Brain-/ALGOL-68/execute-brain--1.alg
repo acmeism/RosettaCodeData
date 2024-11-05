@@ -86,11 +86,10 @@ BEGIN # Brain**** -> Algol 68 transpiler #
     # get the code to transpile and output it as a comment at the start #
     # of the code #
     print( ( "CO BF> " ) );
-    STRING code list;
-    read( ( code list, newline ) );
-    print( ( newline, code list, newline, "CO", newline ) );
+    STRING bf code;
+    read( ( bf code, newline ) );
+    print( ( newline, bf code, newline, "CO", newline ) );
     # transpile the code #
-    generate( code list )
-
+    generate( bf code )
 
 END

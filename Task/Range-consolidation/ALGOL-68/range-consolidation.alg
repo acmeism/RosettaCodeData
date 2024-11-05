@@ -18,7 +18,7 @@ BEGIN # range consolidation                                                  #
     OP   > = ( RANGE a, b )BOOL: lb OF a > lb OF b;
 
     # sorts a into order of each element's lb                                #
-    OP   SORT = ( []RANGE a )[]RANGE:
+    OP   SORT = ( []RANGE qsa )[]RANGE:
          BEGIN
             # in-place quick sort an array of RANGEs from element lb         #
             #                                                  to element ub #
@@ -44,11 +44,10 @@ BEGIN # range consolidation                                                  #
                         left      +:= 1;
                         right     -:= 1
                     OD;
-                    quicksort( a, lb,   right );
-                    quicksort( a, left, ub    );
-                    a
+                    VOID( quicksort( a, lb,   right ) );
+                    quicksort( a, left, ub    )
                  FI # quicksort # ;
-            quicksort( HEAP[ LWB a : UPB a ]RANGE := a, LWB a, UPB a )
+            quicksort( HEAP[ LWB qsa : UPB qsa ]RANGE := qsa, LWB qsa, UPB qsa )
          END # SORT # ;
 
     # returns the consolidation of the ranges in a in                        #

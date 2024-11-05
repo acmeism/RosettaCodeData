@@ -1,4 +1,4 @@
- Use Zeller's Congruence to determine the day of the week, given
+# Use Zeller's Congruence to determine the day of the week, given
 # year, month and day as integers in the conventional way.
 # Emit 0 for Saturday, 1 for Sunday, etc.
 #

@@ -20,7 +20,7 @@ else
 i = 2; a = 1; b = 8; n = 0
 do while n < y
    v = b-a
-   if IsPrime(v) then do
+   if Prime(v) then do
       n = n+1
       if n >= x then do
          call Charout ,Right(v,z)

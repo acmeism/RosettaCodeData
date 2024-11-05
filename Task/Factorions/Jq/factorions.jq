@@ -29,7 +29,7 @@ def sufficient:
      .digits += 1
      | .value *= $base )  ;
 
-# Show the factorions for all based from 2 through 12:
+# Show the factorions for all bases from 2 through 12:
 (range(2;10)
  | . as $base
  | sufficient.value as $max

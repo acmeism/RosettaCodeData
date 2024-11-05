@@ -1,0 +1,166 @@
+Module k_d {
+    push random(!381210&): drop
+    class point {
+        dim coords(0 to 2) As Single  '3D points
+        remove {
+          REM  ? "Deleted Point("+.coords()#str$(", ")+")"
+        }
+     class:
+        Module Point (a=0, b=0, c=0) {
+            .coords(0):=a,b,c
+        }
+    }
+
+    class KdNode {
+        punto=pointer()
+        izda=pointer()
+        dcha=pointer()
+    class:
+        Module KdNode {
+            .punto<=pointer(point(![]))
+        }
+    }
+    class KdTree {
+        root=pointer() ' As KdNode Ptr
+        bestNode=pointer() ' As KdNode Ptr
+        Single bestDist
+        Integer visited, dimensions
+        remove {
+             .root<=pointer()
+             REM print "tree deleted"
+        }
+    class:
+        Module KdTree (&nodes(), dimensions As Integer) {
+            .dimensions<=dimensions
+            .root<= @MakeTree(0, len(nodes())-1, 0)
+            Function MakeTree(startIdx As Integer, endIdx As Integer, depth As Integer)
+                If endIdx <= startIdx Then =pointer(): exit function
+                local Integer midIdx = startIdx + (endIdx - startIdx) div 2, axis = depth Mod dimensions, i, j
+                Data startIdx, endIdx-1
+                do If Stackitem()>=Stackitem(2) Then Drop 2:if  empty then exit else continue
+                    over 2,2
+                    Read p, r : i = p-1
+                    For nodes(r) {
+                    x=.punto=>coords(axis)
+                    For j=p to r-1 {
+                    For nodes(j) {If ..punto=>coords(axis)> x Then i++: swap .punto, ..punto
+                    }}:For nodes(i+1){swap .punto, ..punto}:Push  i+2, i:shift 3
+                    }
+                Always
+                nodes(midIdx).izda = @MakeTree(startIdx, midIdx, depth + 1)
+                nodes(midIdx).dcha = @MakeTree(midIdx+1 , endIdx, depth + 1)
+                ->nodes(midIdx)
+            End Function
+        }
+    }
+    Function Global FindNearest(tree As *KdTree, punto As *Point) {
+            Function Point_Distance(Th As *Point, pt As *Point) {
+                Single dist, d :  Integer i
+                For i = 0 To 2
+                    d= th=>coords(i) - pt=>coords(i)
+                    dist += d * d
+                Next
+                =dist
+            }
+            result->point()
+
+            If tree is type null then =result: exit
+            if tree=>root is type null Then =result: exit
+
+            tree=>bestNode = Pointer()
+            tree=>visited = 0
+            tree=>bestDist = 0
+
+            SearchNearest(tree=>root, 0, tree)
+
+            If not tree=>bestNode is type null Then result = tree=>bestNode=>punto
+
+            =result
+
+            Sub SearchNearest(node as pointer, depth As Integer, tree As *KdTree)
+                If node is type null Then Exit Sub
+                tree=>visited ++
+
+                local Single dist = Point_Distance(node=>punto, punto)
+                If tree=>bestNode is type null or  dist < tree=>bestDist Then
+                        tree=>bestDist = dist
+                        tree=>bestNode = node
+                End if
+                If tree=>bestDist = 0 Then Exit Sub
+
+                Local Integer axis = depth Mod tree=>dimensions
+                Local Single dx= node=>punto=>coords(axis) - punto=>coords(axis)
+                If dx > 0 Then
+                    SearchNearest(node=>izda, depth + 1, tree)
+                    If dx * dx >= tree=>bestDist Then Exit Sub
+                    SearchNearest(node=>dcha,  depth + 1, tree)
+                Else
+                    SearchNearest(node=>dcha, depth + 1, tree)
+                    If dx * dx >= tree=>bestDist Then Exit Sub
+                    SearchNearest(node=>izda, depth + 1, tree)
+                End If
+            End Sub
+    }
+    Module TestWikipedia {
+        Doc$ <= "Wikipedia example data:"+{
+        }
+        searchPoint->Point(9, 2)
+
+        k=stack:=2,3,5,4,9,6,4,7,8,1,7,2
+        'k=stack:=7, 2, 8, 1, 4, 7, 9, 6, 5, 4, 2, 3
+        Feed=Lambda k -> {
+        	if len(k)=0 then =point(): exit
+        	stack k {->KdNode(number, number)}
+        }
+
+        Dim points(0 to 5)<<Feed()
+        tree->KdTree(&points(), 2)
+        nearest=FindNearest(tree, searchPoint)
+        Doc$ <=  "Search point: (" + (searchPoint=>coords(0) )+ ", " + (searchPoint=>coords(1)) + ")"+{
+        }
+        Doc$ <= "Nearest point: (" + (nearest=>coords(0) )+ ", " + (nearest=>coords(1)) + ")"+{
+        }
+        Doc$ <= "Distance: " + (Sqrt(tree=>bestDist))+{
+        }
+        Doc$ <= "Nodes visited: " + (tree=>visited)+{
+        }
+        tree=pointer()
+
+    }
+    Module TestRandom (count As Integer) {
+        doc$ <="Random data (" + count + " points):"+{
+        }
+        integer i
+        searchPoint->Point(rnd, rnd, rnd)
+        feed =lambda ->{
+            ->KdNode(rnd, rnd, rnd)
+        }
+        Dim points(count)<<feed()
+        tree->KdTree(&points(), 3)
+        nearest=FindNearest(tree, searchPoint)
+        Doc$ <= "Search point: (" +searchPoint=>coords()#str$(", ") + ")"+{
+              }
+        Doc$ <= "Nearest point: (" +nearest=>coords()#str$(", ") + ")"+{
+        }
+        Doc$ <= "Distance: " + (Sqrt(tree=>bestDist))+{
+        }
+        Doc$ <= "Nodes visited: " + (tree=>visited)+{
+        }
+        tree=pointer()
+    }
+    Global Doc$
+    Document Doc$
+    TestWikipedia
+    profiler
+    TestRandom 1000
+    Print timecount
+    profiler
+    TestRandom 10000
+    Print timecount
+    Report Doc$
+    try{
+    	clipboard doc$
+    }
+    Save.Doc doc$, "out.txt"
+}
+k_d

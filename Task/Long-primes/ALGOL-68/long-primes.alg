@@ -13,7 +13,7 @@ BEGIN # find some long primes - primes whose reciprocol have a period of p-1 #
     OP   PERIOD = ( INT n )INT:  # returns the period of the reciprocal of n #
          BEGIN
             INT r := 1;
-            FOR i TO n + 1 DO
+            TO n + 1 DO
                 r *:= 10 MODAB n
             OD;
             INT rr = r;

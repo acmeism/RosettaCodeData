@@ -53,7 +53,6 @@ BEGIN # calculate the mean and standard deviation of some data and draw a    #
             FOR i FROM LWB count TO UPB count DO
                 IF count[ i ] > max count THEN max count := count[ i ] FI
             OD;
-            INT  len    = ( UPB data - LWB data ) + 1;
             REAL v     := 0;
             REAL scale  = max count / h scale;
             FOR i FROM LWB count TO UPB count DO

@@ -1,0 +1,175 @@
+Function isNumericString(s As String) As Boolean
+    For i As Integer = 1 To Len(s)
+        Dim c As String = Mid(s, i, 1)
+        If c < "0" Or c > "9" Then Return False
+    Next
+    Return True
+End Function
+
+Function isHexString(s As String) As Boolean
+    For i As Integer = 1 To Len(s)
+        Dim c As String = Mid(s, i, 1)
+        If Not ((c >= "0" And c <= "9") Or (c >= "a" And c <= "f") Or (c >= "A" And c <= "F")) Then Return False
+    Next
+    Return True
+End Function
+
+Function Split(text As String, delimiter As String, arr() As String) As Integer
+    If Len(text) = 0 Then Return 0
+
+    Dim As Integer cnt = 0, posic = 0, lastPos = 0
+    Redim arr(8)  ' Pre-allocate array with sufficient size
+
+    Do
+        posic = Instr(lastPos + 1, text, delimiter)
+        If posic = 0 Then
+            If lastPos < Len(text) Then
+                arr(cnt) = Mid(text, lastPos + 1)
+                cnt += 1
+            End If
+            Exit Do
+        End If
+
+        arr(cnt) = Mid(text, lastPos + 1, posic - lastPos - 1)
+        cnt += 1
+        lastPos = posic
+    Loop
+
+    Return cnt
+End Function
+
+Function parseIP(addr As String) As String
+    Dim As String result = "IP address   : " & addr & !"\n"
+    Dim As String parts(8), ipParts(8)
+    Dim As Integer cnt, i
+    Dim As String port = "not specified"
+
+    ' Check if it's an IPv4 address
+    cnt = Split(addr, ":", parts())
+
+    ' IPv4 processing
+    cnt = Split(parts(0), ".", ipParts())
+    If cnt = 4 Then
+        Dim As String hexa = ""
+        Dim As Boolean valid = True
+
+        For i = 0 To 3
+            Dim As Integer value = Valint(ipParts(i))
+            If value >= 0 Andalso value <= 255 Then
+                hexa &= Right("0" & Hex(value), 2)
+            Else
+                valid = False
+                Exit For
+            End If
+        Next
+
+        If valid Then
+            result &= "Address      : " & hexa & !"\n"
+            result &= "Address Space: IPv4" & !"\n"
+            If Len(parts(1)) > 0 Then
+                Dim As Integer portVal = Valint(parts(1))
+                If portVal >= 0 Andalso portVal <= 65535 Then
+                    result &= "Port         : " & parts(1) & !"\n"
+                End If
+            Else
+                result &= "Port         : not specified" & !"\n"
+            End If
+            Return result
+        End If
+    End If
+
+    ' Check if it's an IPv6 address
+    If Instr(addr, ":") > 0 Then
+        Dim As String ipv6Addr = addr
+
+        If Left(addr, 1) = "[" Then
+            Dim As Integer endBracket = Instr(addr, "]")
+            If endBracket > 0 Then
+                ipv6Addr = Mid(addr, 2, endBracket - 2)
+                If endBracket < Len(addr) Then
+                    port = Mid(addr, endBracket + 2)
+                End If
+            End If
+        End If
+
+        ' Special handling for IPv4-mapped IPv6 addresses
+        If Instr(ipv6Addr, "::ffff:") > 0 Then
+            Dim As String ipv4Part = Mid(ipv6Addr, Instr(ipv6Addr, "::ffff:") + 7)
+            cnt = Split(ipv4Part, ".", ipParts())
+
+            If cnt = 4 Then
+                Dim As String hexa = "FFFF"
+                Dim As Boolean valid = True
+
+                For i = 0 To 3
+                    Dim As Integer value = Valint(ipParts(i))
+                    If value >= 0 Andalso value <= 255 Then
+                        hexa &= Right("0" & Hex(value), 2)
+                    Else
+                        valid = False
+                        Exit For
+                    End If
+                Next
+
+                If valid Then
+                    result &= "Address      : " & hexa & !"\n"
+                    result &= "Address Space: IPv6" & !"\n"
+                    result &= "Port         : " & port & !"\n"
+                    Return result
+                End If
+            End If
+            ' If IPv4 part is invalid, return invalid address
+            Return result & "Address      : Invalid Address" & !"\n"
+        End If
+
+        cnt = Split(ipv6Addr, ":", ipParts())
+        If cnt > 0 Then
+            Dim As String hexa = ""
+            Dim As Integer emptyIndex = -1
+
+            ' Find :: position
+            For i = 0 To cnt - 1
+                If Len(ipParts(i)) = 0 Then
+                    emptyIndex = i
+                    Exit For
+                End If
+            Next
+
+            ' Process parts before ::
+            For i = 0 To emptyIndex - 1
+                hexa &= Right("0000" & ipParts(i), 4)
+            Next
+
+            ' Fill middle with zeros
+            If emptyIndex >= 0 Then
+                Dim As Integer zerosNeeded = 8 - (cnt - 1)
+                hexa &= String(zerosNeeded * 4, "0")
+            End If
+
+            ' Process parts after ::
+            For i = emptyIndex + 1 To cnt - 1
+                hexa &= Right("0000" & ipParts(i), 4)
+            Next
+
+            result &= "Address      : " & hexa & !"\n"
+            result &= "Address Space: IPv6" & !"\n"
+            result &= "Port         : " & port & !"\n"
+            Return result
+        End If
+    End If
+
+    Return result & "Address      : Invalid Address" & !"\n"
+End Function
+
+' Test cases
+Dim As String ipAddresses(0 To ...) = { _
+"127.0.0.1", "127.0.0.1:80", "::1", "[::1]:80", "2605:2700:0:3::4713:93e3", _
+"[2605:2700:0:3::4713:93e3]:80", "::ffff:192.168.173.22", _
+"[::ffff:192.168.173.22]:80", _
+"1::", "::", "256.0.0.0", "::ffff:127.0.0.0.1", "RosettaCode" }
+
+For i As Byte = 0 To Ubound(ipAddresses)
+    Print parseIP(ipAddresses(i))
+Next
+
+Sleep

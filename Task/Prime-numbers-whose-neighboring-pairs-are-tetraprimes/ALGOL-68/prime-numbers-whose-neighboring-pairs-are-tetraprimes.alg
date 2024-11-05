@@ -11,8 +11,8 @@ BEGIN # find primes whose neighbouring pairs are tetraprimes - i.e. have 4   #
         IF pfc[ n ] = 0 THEN                                    # i is prime #
             INT power      := 1;
             INT n to power := n;
-            INT start      := n + n;
-            WHILE FOR j FROM start BY n to power TO UPB pfc DO
+            INT start n    := n + n;
+            WHILE FOR j FROM start n BY n to power TO UPB pfc DO
                       IF pfc[ j ] >= 0 THEN
                           # no duplicate factors yet                         #
                           pfc[ j ] +:= 1
@@ -28,7 +28,7 @@ BEGIN # find primes whose neighbouring pairs are tetraprimes - i.e. have 4   #
                   LONG INT long n to power := LENG n to power * n;
                   long n to power <= UPB pfc
             DO
-                start := n to power := SHORTEN long n to power
+                start n := n to power := SHORTEN long n to power
             OD
         FI
     OD;

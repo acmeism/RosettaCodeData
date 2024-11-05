@@ -32,5 +32,6 @@ say Format(Time('e'),,3) 'seconds'
 exit
 
 include Numbers
+include Sequences
 include Functions
 include Abend

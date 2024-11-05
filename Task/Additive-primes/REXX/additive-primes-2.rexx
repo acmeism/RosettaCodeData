@@ -6,16 +6,16 @@ numeric digits 16
 if n = '' then
    n = -500
 show = (n > 0); n = Abs(n)
-a = AdditivePrimes(n)
+a = Additiveprimes(n)
 if show then do
    do i = 1 to a
-      call Charout ,right(addi.additiveprime.i,8)' '
+      call Charout ,Right(addi.additiveprime.i,8)' '
       if i//10 = 0 then
          say
    end
    say
 end
-say a 'additive primes found below' n
+say a 'additive Primes found below' n
 say Time('e') 'seconds'
 exit
 
@@ -44,17 +44,18 @@ p = Primes(x)
 /* Collect additive primes */
 n = 0
 do i = 1 to p
-   q = prim.prime.i; s = 0
+   q = prim.Prime.i; s = 0
    do j = 1 to Length(q)
       s = s+Substr(q,j,1)
    end
-   if IsPrime(s) then do
+   if Prime(s) then do
       n = n+1; addi.additiveprime.n = q
    end
 end
 /* Return number of additive primes */
 return n
 
-include Numbers
 include Functions
+include Numbers
+include Sequences
 include Abend

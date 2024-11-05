@@ -1,7 +1,5 @@
-say 'Emirp primes - Using REXX libraries - Build 20240829'
+say 'Emirp primes - Using REXX libraries'
 parse version version; say version; say
-
-/* Primes is in Numbers - See Extensible prime generator */
 
 call Time('r'); numeric digits 7
 call Primes 1e6
@@ -17,14 +15,14 @@ say; say Format(Time('e'),,3) 'seconds'; say
 exit
 
 Task1:
-procedure expose prim. flag.
+procedure expose prim.
 say 'The first 20 emirps:'
 n = 0
 do i = 1
    a = prim.prime.i; b = Reverse(a)
    if a = b then
       iterate i
-   if \ flag.prime.b then
+   if \ prim.flag.b then
       iterate i
    n = n+1
    if n > 20 then
@@ -35,7 +33,7 @@ say; say
 return
 
 Task2:
-procedure expose prim. flag.
+procedure expose prim.
 say 'All emirps > 7700 and < 8000:'
 n = 0
 do i = 1
@@ -47,7 +45,7 @@ do i = 1
    if a = b then
       iterate i
    b = Reverse(a)
-   if \ flag.prime.b then
+   if \ prim.flag.b then
       iterate i
    n = n+1
    call Charout ,a' '
@@ -56,14 +54,14 @@ say; say
 return
 
 Task3:
-procedure expose prim. flag.
+procedure expose prim.
 say 'The 10000th emirp:'
 n = 0
 do i = 1
    a = prim.prime.i; b = Reverse(a)
    if a = b then
       iterate i
-   if \ flag.prime.b then
+   if \ prim.flag.b then
       iterate i
    n = n+1
    if n = 10000 then do
@@ -74,14 +72,14 @@ end
 return
 
 Stress:
-procedure expose prim. flag.
+procedure expose prim.
 say 'Number of emirps < 100 million:'
 p = prim.0; n = 0
 do i = 1 to p
    a = prim.prime.i; b = Reverse(a)
    if a = b then
       iterate i
-   if \ flag.prime.b then
+   if \ prim.flag.b then
       iterate i
    n = n+1
 end
@@ -91,4 +89,4 @@ say prim.prime.p
 return
 
 include Functions
-include Numbers
+include Sequences

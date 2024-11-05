@@ -22,7 +22,7 @@ BEGIN # Floyd-Warshall algorithm - translated from the Lua sample #
                                )
                              );
                         WHILE u := nxt[ u - 1, v - 1 ];
-                              print( ( " -> " +whole( u, 0 ) ) );
+                              print( ( " -> " + whole( u, 0 ) ) );
                               u /= v
                         DO SKIP OD;
                         print( ( newline ) )
@@ -34,12 +34,12 @@ BEGIN # Floyd-Warshall algorithm - translated from the Lua sample #
     PROC floyd warshall = ( [,]INT weights, INT num vertices )VOID:
          BEGIN
 
-            REAL infinity = max real;
+            REAL infinite = max real;
 
             [ 0 : num vertices - 1, 0 : num vertices - 1 ]REAL dist;
             FOR i FROM LWB dist TO 1 UPB dist DO
                 FOR j FROM 2 LWB dist TO 2 UPB dist DO
-                    dist[ i, j ] := infinity
+                    dist[ i, j ] := infinite
                 OD
             OD;
 
@@ -59,7 +59,7 @@ BEGIN # Floyd-Warshall algorithm - translated from the Lua sample #
             FOR k FROM 2 LWB dist TO 2 UPB dist DO
                 FOR i FROM 1 LWB dist TO 1 UPB dist DO
                     FOR j FROM 2 LWB dist TO 2 UPB dist DO
-                        IF dist[ i, k ] /= infinity AND dist[ k, j ] /= infinity THEN
+                        IF dist[ i, k ] /= infinite AND dist[ k, j ] /= infinite THEN
                             IF dist[ i, k ] + dist[ k, j ] < dist[ i, j ] THEN
                                 dist[ i, j ] := dist[ i, k ] + dist[ k, j ];
                                 nxt[  i, j ] := nxt[  i, k ]
@@ -71,14 +71,14 @@ BEGIN # Floyd-Warshall algorithm - translated from the Lua sample #
 
              print result( dist, nxt )
          END # floyd warshall # ;
-
-    [,]INT weights = ( ( 1, 3, -2 )
-                     , ( 2, 1,  4 )
-                     , ( 2, 3,  3 )
-                     , ( 3, 4,  2 )
-                     , ( 4, 2, -1 )
-                     );
-    INT num vertices = 4;
-    floyd warshall( weights, num vertices )
-
+    BEGIN
+        [,]INT weights = ( ( 1, 3, -2 )
+                         , ( 2, 1,  4 )
+                         , ( 2, 3,  3 )
+                         , ( 3, 4,  2 )
+                         , ( 4, 2, -1 )
+                         );
+        INT num vertices = 4;
+        floyd warshall( weights, num vertices )
+    END
 END

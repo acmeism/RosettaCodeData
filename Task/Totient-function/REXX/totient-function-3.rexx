@@ -133,4 +133,5 @@ return x
 
 include Functions
 include Numbers
+include Sequences
 include Abend

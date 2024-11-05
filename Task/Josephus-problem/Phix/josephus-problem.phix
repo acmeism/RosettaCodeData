@@ -1,0 +1,201 @@
+-- skipping - used by 360 assembly, 6502 Assembly, AWK, EchoLisp, ERRE, MATLAB, NetRexx, PHP, PL/I, REXX[version 1].
+-- Method: all prisoners stay where they are, executioner walks round and round, skipping over ever increasing numbers
+-- of dead bodies (slowest of the lot, by quite some margin)
+function skipping(sequence prisoners, integer step, survivors=1)
+    integer n = length(prisoners), nn = n, p = 0
+    while n>survivors do
+        integer found = 0
+        while found<step do
+            p = iff(p=nn?1:p+1)
+            found += prisoners[p]!=-1
+        end while
+        prisoners[p] = -1
+        n -= 1
+    end while
+    return remove_all(-1,prisoners)
+end function
+--?skipping({"Joe","Jack","William","John","James"},2,1) --> {"William"}
+
+-- linked list - used by Arch64 Assembly, Ada, ARM Assembly, Common Lisp[2, probably], Fortran,
+--                       JavaScript[1] (albeit dbl-lnk), Python[3].
+-- Method: like skipping, all prisoners stay where they are, but
+--         the executioner uses the links to speed things up a bit.
+function linked_list(sequence prisoners, integer step, survivors)
+    integer n = length(prisoners)
+    sequence links = tagset(n,2)&1
+    integer p = n, prvp
+    while n>survivors do
+        for i=1 to step do
+            prvp = p
+            p = links[p]
+        end for
+        prisoners[p] = -1
+        links[prvp] = links[p]
+        n -= 1
+    end while
+    return remove_all(-1,prisoners)
+end function
+
+-- sliding queue - used by Clojure, Crystal, D (both), Eiffel, Elixir, Erlang, friendly interactive shell, Go, jq,
+--                         Perl, PowerShell, PureBasic (albeit one at a time), Quackery, Raku, REBOL, Ruby, Scala,
+--                         Sidef[1], Tcl, Vlang.
+-- Method: all skipped prisoners rejoin the end of the queue which sidles left,
+--         executioner stays put until the queue gets too short.
+function sliding_queue(sequence prisoners, integer step, survivors)
+    integer n = length(prisoners)
+    while n>survivors do
+        integer k = remainder(step-1,n)+1                   -- (mostly k==step)
+        prisoners = prisoners[k+1..$]&prisoners[1..k-1]     -- rotate, dropping one.
+        n -= 1
+    end while
+    return prisoners
+end function
+
+-- contractacycle - used by AppleScript[2], Groovy
+-- Method: executioner walks along killing every k'th prisoner; while he walks back the queue contracts to remove gaps.
+-- (once the queue gets too small it obviously reverts to one at a time, a bit more like contractalot below)
+function contractacycle(integer n, integer k, s)
+    sequence living = tagset(n)
+    integer startPosition = k, i, lasti
+    while n!=s do -- Keep going round the circle until only s prisoners remain.
+        integer circleSize = n
+        if (n < k) then
+            i = mod(startPosition-1,circleSize) + 1
+            living = living[1..i-1]&living[i+1..$]
+            n -= 1
+            lasti = i
+        else
+            for i=startPosition to circleSize by k do
+                living[i] = -1
+                n -= 1
+                if (n = s) then exit end if -- Not Groovy, see note
+                lasti = i
+            end for
+            living = remove_all(-1,living)
+        end if
+        startPosition = lasti + k - circleSize
+    end while
+    return living
+end function
+-- Groovy does not have a n=s test, it probably is entirely unnecessary. The Groovy code is also somewhat neater,
+-- always using a loop and remove_all() - while not probihitively expensive, it may check lots of things for -1
+-- that the slicing won't.
+
+-- contractalot - used by 11L, Arturo, AutoHotkey, C#, C++, Delphi, Frink, Formulae, Java (both), JavaScript[2],
+--                        Julia[2], Kotlin, Lua, NanoQuery, Nim, Objeck, Oforth, Processing, Python[1], R[2],
+--                        Rust, Seed7, Swift, VBScript, Vedit, VisualBasic.NET, XPL0, zkl.
+-- Method: executioner walks round and round, queue contracts after every kill.
+--         Often implemented as execute all prisoners then release last one killed.
+function contractalot(integer n, integer k, s)
+    sequence list = tagset(n)
+    integer i = 1
+    while n>s do
+        i += k - 1
+        if (i > n) then i := mod(i-1, n)+1 end if
+        list [i..i] = {}
+        n -= 1
+    end while
+    return list
+end function
+
+-- recursive - used by Emacs Lisp, Icon, Julia[1], PARI/GP, PicoLisp (less the optms.n), Sidef[2]
+-- Method: recursive mod maths madness - only handles the lone survivor case.
+function recursive(integer n, k)
+    return iff(n=1?1:1+mod(k-1+(recursive(n-1, k)),n))
+end function
+
+-- iterative - used by ALGOL 68, ANSI Standard BASIC, AppleScript[1,3(!!)], BASIC(*11), Batch File, C (but not ULL),
+--                     Common Lisp[1], Craft Basic, Easylang, EDSAC (allegedly), Factor, Forth, FreeBASIC, FTCBASIC,
+--                     FutureBasic, Modula-2, Python[2], R, Racket, Ring, SequenceL, ZX Spectrum Basic
+-- Method: iterative mod maths madness - but hey, it will be extremely fast.
+--         Unlike recursive, it can also deliver >1 survivor, one at a time.
+function iterative(integer n, k, m=0)
+    -- Return m-th on the reversed kill list; m=0 is final survivor.
+    for a = m+1 to n do
+        m = mod(m+k, a)
+    end for
+    return m + 1     -- (make result 1-based)
+end function
+
+-- iterative2 - used by Icon[2]
+-- Method: more iterative maths madness
+function iterative2(integer n,k,s)
+    integer a = k*(n-s) + 1,
+         olda = a
+    atom q = k/(k-1),
+        nk = n*k
+    while a <= nk do
+        olda = a
+        a = ceil(a*q)
+    end while
+    return nk - olda + 1 -- (make result 1-based)
+end function
+
+-- test driver
+--demo/rosetta/Josephus.exw
+constant show_all = true,
+         show_slow = false,
+         show_skipping = false,
+         show_linkedlist = false,
+         show_sliding_queue = false,
+         show_contractacycle = false,
+         show_contractalot = false,
+         show_recursive = false,
+         show_iterative = false,
+         show_iterative2 = true
+
+constant TAGSET = #01,
+         ITER   = #02,
+         ITER2  = #04,
+         SLOW   = #08,
+         ONES   = #10
+
+constant tests = {{41,3,1,false},
+                  {41,3,3,false},
+                  {5,2,1,false},
+                  {5,4,1,false},
+                  {50,2,1,false},
+                  {60,3,1,false},
+                  {23482,3343,3,true},
+                  {23482,3343,1,true},
+                  {41,3,6,false}}
+
+procedure test(string name, integer flags)
+    atom t0 = time()
+    integer rid = routine_id(name)
+    for i=1 to length(tests) do
+        integer {prisoners, step, survivors, slow} = tests[i]
+        if (not and_bits(flags,ONES) or survivors=1)
+        and (not slow or show_slow or not and_bits(flags,SLOW)) then
+            sequence res
+            if and_bits(flags,ONES) then
+                -- (recursive does not take a 3rd param)
+                res = {rid(prisoners,step)}
+            elsif and_bits(flags,TAGSET) then
+                res = rid(tagset(prisoners),step,survivors)
+            elsif and_bits(flags,ITER) then
+                res = {}
+                for s=0 to survivors-1 do
+                    res &= rid(prisoners,step,s)
+                end for
+            elsif and_bits(flags,ITER2) then
+                res = {}
+                for s=prisoners-survivors+1 to prisoners do
+                    res &= rid(prisoners,step,s)
+                end for
+            else
+                res = rid(prisoners,step,survivors)
+            end if
+            printf(1,"%s(%d,%d,%d) = %v\n",{name,prisoners,step,survivors,res})
+        end if
+    end for
+    ?elapsed(time()-t0)
+end procedure
+if show_all or show_skipping        then test("skipping",TAGSET+SLOW)       end if
+if show_all or show_linkedlist      then test("linked_list",TAGSET+SLOW)    end if
+if show_all or show_sliding_queue   then test("sliding_queue",TAGSET+SLOW)  end if
+if show_all or show_contractacycle  then test("contractacycle",SLOW)        end if
+if show_all or show_contractalot    then test("contractalot",NULL)          end if
+if show_all or show_recursive       then test("recursive",ONES)             end if
+if show_all or show_iterative       then test("iterative",ITER)             end if
+if show_all or show_iterative2      then test("iterative2",ITER2)           end if

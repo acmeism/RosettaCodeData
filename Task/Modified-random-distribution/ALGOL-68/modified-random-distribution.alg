@@ -2,13 +2,13 @@ BEGIN # Modified random distribution - translation of the Wren sample #
 
     next random; # initialise the random number generator #
 
-    PROC rng = ( PROC(REAL)REAL modifier )REAL:
+    PROC rng = ( PROC(REAL)REAL modifier fn )REAL:
          BEGIN
             REAL r1, r2;
             WHILE
                 r1 := random;
                 r2 := random;
-                r2 >= modifier( r1 )
+                r2 >= modifier fn( r1 )
             DO SKIP OD;
             r1
          END # rng # ;
@@ -21,7 +21,7 @@ BEGIN # Modified random distribution - translation of the Wren sample #
     CHAR hist char      = "#";
     INT  hist char size = 125;
     [ 0 : num bins - 1 ]INT  bins ; FOR i FROM LWB bins TO UPB bins DO bins[ i ] := 0 OD;
-    FOR i FROM 0 TO n DO
+    FROM 0 TO n DO
         bins[ ENTIER ( rng( modifier ) / bin size ) ] +:= 1
     OD;
 

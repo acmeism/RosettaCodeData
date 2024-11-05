@@ -55,7 +55,7 @@ say 'First 50 prime cyclop numbers:'
 n = 0
 do i = 2 to cycl.0
    a = cycl.cyclop.i
-   if IsPrime(a) then do
+   if Prime(a) then do
       n = n+1
       if n <= 50 then do
          call Charout ,Right(a,8)
@@ -76,9 +76,9 @@ say 'First 50 blind prime cyclop numbers:'
 n = 0
 do i = 2 to cycl.0
    a = cycl.cyclop.i
-   if IsPrime(a) then do
+   if Prime(a) then do
       l = Length(a); m = l%2; b = Left(a,m)||Right(a,m)
-      if IsPrime(b) then do
+      if Prime(b) then do
          n = n+1
          if n <= 50 then do
             call Charout ,Right(a,8)
@@ -101,7 +101,7 @@ n = 0
 do i = 2 to cycl.0
    a = cycl.cyclop.i
    if a = Reverse(a) then do
-      if IsPrime(a) then do
+      if Prime(a) then do
          n = n+1
          if n <= 50 then do
             call Charout ,Right(a,8)

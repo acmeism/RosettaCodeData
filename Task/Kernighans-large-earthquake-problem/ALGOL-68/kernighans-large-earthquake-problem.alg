@@ -45,7 +45,7 @@ ELSE
                 FILE real value;
                 associate( real value, f );
                 on value error( real value
-                              , ( REF FILE f )BOOL:
+                              , ( REF FILE ef )BOOL:
                                      BEGIN
                                          # "handle" invalid data #
                                          result := 0;

@@ -13,28 +13,28 @@ BEGIN # Multiple Regression - trnslation of the VB.NET sample but using the #
                         );
 
     PRIO NEWMATRIX = 1;
-    OP   NEWMATRIX = ( INT rows, INT cols )MATRIX:
+    OP   NEWMATRIX = ( INT m rows, INT m cols )MATRIX:
          BEGIN
             MATRIX result;
-            require( rows > 0, "Need at least one row" );
-            row count OF result := rows;
-            require( cols > 0, "Need at least one column" );
-            col count OF result := cols;
-            data OF result := HEAP[ 1 : rows, 1 : cols ]REAL;
-            FOR r TO rows DO FOR c TO cols DO ( data OF result )[ r, c ] := 0 OD OD;
+            require( m rows > 0, "Need at least one row" );
+            row count OF result := m rows;
+            require( m cols > 0, "Need at least one column" );
+            col count OF result := m cols;
+            data OF result := HEAP[ 1 : m rows, 1 : m cols ]REAL;
+            FOR r TO m rows DO FOR c TO m cols DO ( data OF result )[ r, c ] := 0 OD OD;
             result
          END # NEWMATRIX # ;
 
     OP   NEWMATRIX = ( [,]REAL source )MATRIX:
          BEGIN
             MATRIX result;
-            INT rows = 1 + ( 1 UPB source - 1 LWB source );
-            require( rows > 0, "Need at least one row" );
-            row count OF result := rows;
-            INT cols = 1 + ( 2 UPB source - 2 LWB source );
-            require( cols > 0, "Need at least one column" );
-            col count OF result := cols;
-            data OF result := HEAP[ 1 : rows, 1 : cols ]REAL := source[ AT 1, AT 1 ];
+            INT m rows = 1 + ( 1 UPB source - 1 LWB source );
+            require( m rows > 0, "Need at least one row" );
+            row count OF result := m rows;
+            INT m cols = 1 + ( 2 UPB source - 2 LWB source );
+            require( m cols > 0, "Need at least one column" );
+            col count OF result := m cols;
+            data OF result := HEAP[ 1 : m rows, 1 : m cols ]REAL := source[ AT 1, AT 1 ];
             result
          END # NEWMATRIX # ;
 
@@ -101,16 +101,16 @@ BEGIN # Multiple Regression - trnslation of the VB.NET sample but using the #
                 m[this row,lead col:] := m[other row,lead col:];
                 m[other row,lead col:] := swap
             FI;
-            FIELD scale = 1/m[this row,lead col];
-            IF scale /= 1 THEN
+            FIELD scalef = 1/m[this row,lead col];
+            IF scalef /= 1 THEN
                 m[this row,lead col] := 1;
-                FOR col FROM lead col+1 TO 2 UPB m DO m[this row,col] *:= scale OD
+                FOR col FROM lead col+1 TO 2 UPB m DO m[this row,col] *:= scalef OD
             FI;
-            FOR other row FROM LWB m TO UPB m DO
-                IF this row /= other row THEN
-                    REAL scale = m[other row,lead col];
-                    m[other row,lead col]:=0;
-                    FOR col FROM lead col+1 TO 2 UPB m DO m[other row,col] -:= scale*m[this row,col] OD
+            FOR other row pos FROM LWB m TO UPB m DO
+                IF this row /= other row pos THEN
+                    REAL o scale = m[other row pos,lead col];
+                    m[other row pos,lead col]:=0;
+                    FOR col FROM lead col+1 TO 2 UPB m DO m[other row pos,col] -:= o scale*m[this row,col] OD
                 FI
             OD;
             lead col +:= 1

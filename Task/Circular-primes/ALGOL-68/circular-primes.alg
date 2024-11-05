@@ -52,12 +52,12 @@ BEGIN # find circular primes - primes where all cyclic permutations  #
          END # CIRCULARPRIMESIEVE # ;
     # construct a sieve of circular primes up to 999 999              #
     # only the first permutation is included                          #
-    []BOOL prime = CIRCULARPRIMESIEVE 999 999;
+    []BOOL c prime = CIRCULARPRIMESIEVE 999 999;
     # print the first 19 circular primes #
     INT c count := 0;
     print( ( "First 19 circular primes: " ) );
     FOR i WHILE c count < 19 DO
-        IF prime[ i ] THEN
+        IF c prime[ i ] THEN
             print( ( " ", whole( i, 0 ) ) );
             c count +:= 1
         FI

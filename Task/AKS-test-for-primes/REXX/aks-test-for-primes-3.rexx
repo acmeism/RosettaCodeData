@@ -4,17 +4,20 @@ arg p
 if p = '' then
    p = 10
 numeric digits Max(10,Abs(p)%3)
-call Combinations p
+call Combis p
 call Polynomials p
 call ShowPrimes p
 exit
 
-Combinations:
+Combis:
 procedure expose comb.
-arg p; p = Abs(p)
+arg p
 call Time('r')
-say 'Combinations up to' p'...'
-say Combs(p) 'combinations generated'
+if p > 0 then
+   say 'Combinations up to' p'...'
+else
+   say 'Combinations for' Abs(p)'...'
+say Combinations(p) 'Combinations generated'
 say Format(Time('e'),,3) 'seconds'
 say
 return
@@ -61,9 +64,9 @@ say 'Primes...'
 if p < 0 then do
    p = Abs(p)
    if prim.0 > 0 then
-      say p 'is prime'
+      say p 'is Prime'
    else
-      say p 'is not prime'
+      say p 'is not Prime'
 end
 else do
    do i = 1 to prim.0
@@ -77,47 +80,52 @@ say Format(Time('e'),,3) 'seconds'
 say
 return
 
-Combs:
--- Combinations
+Combinations:
+/* Combinations */
 procedure expose comb.
-arg x
--- Valid
-if \ Iswhole(x) then
-   x = dummy
-if x < 0 then
-   x = dummy
--- Recurring definition
+arg xx
+/* Validate */
+if \ Whole(xx) then say abend
+/* Recurring definition */
 comb. = 1
-do i = 1 to x
-   i1 = i-1
-   do j = 1 to i1
-      j1 = j-1
-      comb.i.j = comb.i1.j1+comb.i1.j
+if xx < 0 then do
+   xx = -xx; m = xx%2; a = 1
+   do i = 1 to m
+      a = a*(xx-i+1)/i; comb.xx.i = a
    end
+   do i = m+1 to xx-1
+      j = xx-i; comb.xx.i = comb.xx.j
+   end
+   return xx+1
 end
-return (x*x+3*x+2)/2
+else do
+   do i = 1 to xx
+      i1 = i-1
+      do j = 1 to i1
+         j1 = j-1; comb.i.j = comb.i1.j1+comb.i1.j
+      end
+   end
+   return (xx*xx+3*xx+2)/2
+end
 
 Ppower:
--- Exponentiation
+/* Exponentiation */
 procedure expose poly. comb. work.
 arg x,y
--- Validate
-if x = '' then
-   x = dummy
-if \ Iswhole(y) then
-   y = dummy
-if y < 0 then
-   y = dummy
--- Exponentiate
+/* Validate */
+if x = '' then say abend
+if \ Whole(y) then say abend
+if y < 0 then say abend
+/* Exponentiate */
 numeric digits Digits()+2
 wx = Words(x); wm = wx*y-y+1
 poly. = 0; poly.0 = wm
 select
    when wx = 1 then
--- Power of a number
+/* Power of a number */
       poly.coef.1 = x**y
    when wx = 2 then do
--- Newton's binomial
+/* Newton's binomial */
       a = Word(x,1); b = Word(x,2)
       do i = 1 to wm
          j = y-i+1; k = i-1
@@ -125,7 +133,7 @@ select
       end
    end
    otherwise do
--- Repeated multiplication
+/* Repeated multiplication */
       do i = 1 to wx
          poly.coef.1.i = Word(x,i)
          poly.coef.2.i = poly.coef.1.i
@@ -151,14 +159,14 @@ select
    end
 end
 numeric digits Digits()-2
--- Normalize coefs
+/* Normalize coefs */
 call Pnormalize
 return wm
 
 Parray2formula:
--- Array -> Formula
+/* Array -> Formula */
 procedure expose poly.
--- Generate formula
+/* Generate formula */
 y = ''; wm = poly.0
 do i = 1 to wm
    a = poly.coef.i
@@ -187,8 +195,9 @@ do i = 1 to wm
 end
 if y = '' then
    y = 0
-return strip(y)
+return Strip(y)
 
 include Functions
 include Numbers
 include Polynomial
+include Sequences

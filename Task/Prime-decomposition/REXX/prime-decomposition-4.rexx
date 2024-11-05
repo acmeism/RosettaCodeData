@@ -1,5 +1,7 @@
 /*REXX pgm does prime decomposition of a range of positive integers (with a prime count)*/
-call time('r')
+include Settings
+
+say version; say 'Prime decompositoion'; say
 Numeric Digits 1000                   /*handle thousand digits For the powers*/
 Parse Arg  bot  top  step   base  add /*get optional arguments from the C.L. */
 If bot='qq' Then Do
@@ -8,50 +10,45 @@ If bot='qq' Then Do
   End
 If bot=='' Then                       /* no arguments given                  */
   Parse Value 1 100 With bot top      /* set default range                  .*/
-If top=='' Then top=bot               /* process one number                  */
-If step=='' Then step=1               /* step=2 to process only odd numbers  */
+If top=='' Then top=bot               /* process one Number                  */
+If step=='' Then step=1               /* step=2 to process only Odd numbers  */
 If add =='' Then add=-1               /* for Mersenne tests                  */
 tell=top>0                            /*If TOP is negative, suppress displays*/
-top=abs(top)
-w=length(top)                         /*get maximum width For aligned display*/
+top=Abs(top)
+w=Length(top)                         /*get maximum width For aligned display*/
 If base\=='' Then
-  w=length(base**top)                 /*will be testing powers of two laterqq */
-tag.=left('', 7)                      /*some literals:  pad;  prime (or not).*/
+  w=Length(base**top)                 /*will be testing powers of two laterqq */
+tag.=Left('', 7)                      /*some literals:  pad;  Prime (or not).*/
 tag.0='{unity}'
-tag.1='[prime]'
-Numeric Digits max(9,w+1)             /*maybe increase the digits precision. */
-np=0                                  /*np:    is the number of primes found.*/
-Do n=bot To top by step               /*process a single number or a range.  */
+tag.1='[Prime]'
+Numeric Digits Max(9,w+1)             /*maybe increase the digits precision. */
+np=0                                  /*np:    is the Number of Primes found.*/
+Do n=bot To top by step               /*process a single Number or a range.  */
   qq=n
   If base\=='' Then                   /*should we perform a 'Mersenne' testqq */
     qq=base**n+add
-  f=factors(qq)                       /* number of prime factors             */
-  If f=1 Then                         /* If the number is prime              */
-    np=np+1                           /* Then bump prime counter             */
+  f=Factors(qq)                       /* Number of Prime Factors             */
+  If f=1 Then                         /* If the Number is Prime              */
+    np=np+1                           /* Then bump Prime counter             */
   If tell Then do
      pf = ''
      do i = 1 to f
         pf = pf glob.factor.i
      end
-    Say right(qq,w) right('('f')',9) 'prime factors: ' tag.f pf
+    Say Right(qq,w) Right('('f')',9) 'Prime Factors: ' tag.f pf
   end
   End   /*n*/
 Say ''
-ps='prime'
+ps='Prime'
 If f>1 Then ps=ps's'                  /*setup For proper English in sentence.*/
-Say right(np, w+9+1) ps 'found.'      /*display the number of primes found.  */
-say format(time('e'),,3) 'seconds'
+Say Right(np, w+9+1) ps 'found.'      /*display the Number of Primes found.  */
+say Format(Time('e'),,3) 'seconds'
 Exit                                  /*stick a fork in it,  we're all done. */
 
 Factors:
 /* Prime factors of an integer */
 procedure expose glob.
 arg x
-/* Validity */
-if \ Whole(x) then
-   return 'X'
-if x < 1 then
-   return 'X'
 /* Fast values */
 if x = 1 then do
    glob.factor.0 = 0
@@ -102,3 +99,5 @@ return n
 
 include Functions
 include Numbers
+include Sequences
+include Abend

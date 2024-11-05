@@ -4,7 +4,7 @@
 def countcoins(target):
   . as $coin
   | reduce range(0; length) as $a
-      ( [1];   # there is 1 way to make 0 cents
+      ( [1] + [range(0, target)|0];   # there is 1 way to make 0 cents
         reduce range(1; target + 1) as $b
           (.;                                      # total[]
            if $b < $coin[$a] then .
@@ -14,3 +14,7 @@ def countcoins(target):
              end
            end ) )
   | .[target] ;
+
+### Examples:
+([1,5,10,25] | countcoins(100)),
+([1, 5, 10, 25, 50, 100] | countcoins(100000))

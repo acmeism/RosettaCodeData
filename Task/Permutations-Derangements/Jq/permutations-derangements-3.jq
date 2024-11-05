@@ -1,5 +1,4 @@
 $ jq -n -c -r -f derangements.jq
-jq -n -c -r -f derangements.jq
 
 Derangements:
 [2,1,4,3]

@@ -49,7 +49,7 @@ procedure expose glob. fact.
 arg x
 /* Formulas for negative and positive (half)integers */
 if x < 0 then do
-   if IsHalf(x) then do
+   if Half(x) then do
       numeric digits Digits()+2
       i = Abs(Floor(x)); y = (-1)**i*2**(2*i)*Fact(i)*Sqrt(Pi())/Fact(2*i)
       numeric digits Digits()-2
@@ -57,9 +57,9 @@ if x < 0 then do
    end
 end
 if x > 0 then do
-   if IsWhole(x) then
+   if Whole(x) then
       return Fact(x-1)
-   if IsHalf(x) then do
+   if Half(x) then do
       numeric digits Digits()+2
       i = Floor(x); y = Fact(2*i)*Sqrt(Pi())/(2**(2*i)*Fact(i))
       numeric digits Digits()-2

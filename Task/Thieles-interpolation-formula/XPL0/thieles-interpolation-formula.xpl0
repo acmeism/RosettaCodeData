@@ -1,0 +1,56 @@
+include xpllib;         \for Print
+define N1 = 32;
+define N2 = N1 * (N1-1) / 2;
+define STEP = .05;
+
+real XVal(N1), T_Sin(N1), T_Cos(N1), T_Tan(N1);
+
+\Rho tables, layout:
+\       Rho_[n-1](x0)
+\       Rho_[n-2](x0), Rho_[n-1](x1),
+\       ....
+\       Rho_0(x0), Rho_0(x1), ... Rho_0(x_[n-1])
+\   Rho_i row starts at index (n - 1 - i) * (n - i) / 2
+
+real R_Sin(N2), R_Cos(N2), R_Tan(N2);
+
+\Both Rho and Thiele functions recursively resolve values as decribed by
+\ formulas.  Rho is cached, Thiele is not.
+
+func real Rho(X, Y, R, I, N);           \Rho_n(x_i, x_{i+1}, ..., x_{i + n})
+real X, Y, R; int I, N;
+int  Idx;
+[if N < 0 then return 0.;
+if N = 0 then return Y(I);
+
+Idx:= (N1-1-N)*(N1-N)/2 + I;
+if R(Idx) # R(Idx) then                 \only happens if value not computed yet
+        R(Idx):= (X(I) - X(I+N)) /
+                (Rho(X, Y, R, I, N-1) - Rho(X, Y, R, I+1, N-1)) +
+                Rho(X, Y, R, I+1, N-2);
+return R(Idx);
+];
+
+func real Thiele(X, Y, R, Xin, N);
+real X, Y, R, Xin; int N;
+[if N > N1-1 then return 1.;
+return Rho(X, Y, R, 0, N) - Rho(X, Y, R, 0, N-2) +
+        (Xin-X(N)) / Thiele(X, Y, R, Xin, N+1);
+];
+
+int  I;
+[for I:= 0 to N1-1 do
+        [XVal(I):= float(I) * STEP;
+        T_Sin(I):= Sin(XVal(I));
+        T_Cos(I):= Cos(XVal(I));
+        T_Tan(I):= T_Sin(I) / T_Cos(I);
+        ];
+for I:= 0 to N2-1 do            \init Rho tables to NaN
+        [R_Sin(I):= 0./0.;
+         R_Cos(I):= 0./0.;
+         R_Tan(I):= 0./0.;
+        ];
+Print("%1.14f\n", 6.*Thiele(T_Sin, XVal, R_Sin, .5, 0));
+Print("%1.14f\n", 3.*Thiele(T_Cos, XVal, R_Cos, .5, 0));
+Print("%1.14f\n", 4.*Thiele(T_Tan, XVal, R_Tan, 1., 0));
+]

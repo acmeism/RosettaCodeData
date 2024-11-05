@@ -19,7 +19,7 @@ BEGIN # find and factorise some Fermat numbers: F(n) = 2^(2^n) + 1            #
          IF   is probably prime( n )
          THEN n
          ELIF LONG LONG INT x := 2, y := 2, d := 1;
-              PROC g = ( LONG LONG INT x )LONG LONG INT: ( ( x * x ) + 1 ) MOD n;
+              PROC g = ( LONG LONG INT gx )LONG LONG INT: ( ( gx * gx ) + 1 ) MOD n;
               WHILE d = 1 DO
                   x := g( x );
                   y := g( g( y ) );

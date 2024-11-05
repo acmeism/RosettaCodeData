@@ -33,4 +33,5 @@ say
 return
 
 include Numbers
+include Sequences
 include Functions

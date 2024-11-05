@@ -21,7 +21,7 @@ procedure expose glob.
 numeric digits Digits()+2
 y = 0.5-Ln(2)
 do n = 3 by 2 to 1000000
-   if IsPrime(n) then do
+   if Prime(n) then do
       q = 1/n; t = Ln(1-q)+q; y = y+t
    end
 end

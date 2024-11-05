@@ -1,10 +1,11 @@
-say 'Factor of a Mersenne number - Using REXX libraries'
+include Settings
+say 'Factor of a Mersenne Number - Using REXX libraries'
 parse version version; say version; say
 call Time('r')
 numeric digits 300
 n = Primes(1000)
 do i = 1 to n
-   x = prim.prime.i
+   x = prim.Prime.i
    select
       when (x >= 2 & x <= 83) then
          call Task x
@@ -21,7 +22,7 @@ Task:
 procedure
 arg x
 a = x; a = 'M'a; m = 2**x
-do k = 1 by 2*x to ISqrt(m)
+do k = 1 by 2*x to Isqrt(m)
    if Right(k,1) = 5 then
       iterate k
    b = k//8
@@ -32,14 +33,15 @@ do k = 1 by 2*x to ISqrt(m)
          iterate k
       c = m//k
       if c = 1 then do
-         say a 'is composite =' k 'x ...'
+         say a 'is Composite =' k 'x ...'
          leave k
       end
    end
 end
 if c <> 1 then
-   say a 'is prime'
+   say a 'is Prime'
 return
 
 include Functions
-include Numbers
+include Sequences
+Include Abend

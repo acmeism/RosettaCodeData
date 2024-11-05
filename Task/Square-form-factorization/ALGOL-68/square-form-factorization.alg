@@ -93,8 +93,8 @@ BEGIN # Daniel Shanks's Square Form Factorization (SquFoF) - based on the Wren s
     print( ( "----------------------------------------", newline ) );
     FOR example FROM LWB examples TO UPB examples DO
         INTEGER n    = examples[ example ];
-        INTEGER fact = squfof( n );
-        STRING  quot = IF fact = 0 THEN "fail" ELSE whole( n OVER fact, 0 ) FI;
-        print( ( whole( n, -20 ), " ", whole( fact, -10 ), " ", quot, newline ) )
+        INTEGER fctr = squfof( n );
+        STRING  quot = IF fctr = 0 THEN "fail" ELSE whole( n OVER fctr, 0 ) FI;
+        print( ( whole( n, -20 ), " ", whole( fctr, -10 ), " ", quot, newline ) )
     OD
 END

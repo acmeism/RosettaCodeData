@@ -1,0 +1,301 @@
+#include "string.bi"
+
+#define MIN(a, b) iif((a) < (b), (a), (b))
+
+Enum Direction
+    UP
+    DOWN
+End Enum
+
+Type Sequence
+    As Integer length
+    As Double values(Any)
+End Type
+
+' Constants for correction types
+Dim As String correctionTypes(7) = { _
+"Benjamini-Hochberg", "Benjamini-Yekutieli", "Bonferroni", "Hochberg", _
+"Holm", "Hommel", "Sidak", "Unknown" }
+
+' Test p-values
+Dim Shared As Double test_values(49) = { _
+4.533744e-01, 7.296024e-01, 9.936026e-02, 9.079658e-02, 1.801962e-01, _
+8.752257e-01, 2.922222e-01, 9.115421e-01, 4.355806e-01, 5.324867e-01, _
+4.926798e-01, 5.802978e-01, 3.485442e-01, 7.883130e-01, 2.729308e-01, _
+8.502518e-01, 4.268138e-01, 6.442008e-01, 3.030266e-01, 5.001555e-02, _
+3.194810e-01, 7.892933e-01, 9.991834e-01, 1.745691e-01, 9.037516e-01, _
+1.198578e-01, 3.966083e-01, 1.403837e-02, 7.328671e-01, 6.793476e-02, _
+4.040730e-03, 3.033349e-04, 1.125147e-02, 2.375072e-02, 5.818542e-04, _
+3.075482e-04, 8.251272e-03, 1.356534e-03, 1.360696e-02, 3.764588e-04, _
+1.801145e-05, 2.504456e-07, 3.310253e-02, 9.427839e-03, 8.791153e-04, _
+2.177831e-04, 9.693054e-04, 6.610250e-05, 2.900813e-02, 5.735490e-03 }
+
+Function minimum(p As Sequence) As Double
+    Dim m As Double = p.values(0)
+    For i As Integer = 1 To p.length - 1
+        If p.values(i) < m Then m = p.values(i)
+    Next
+    Return m
+End Function
+
+Function maximum(p As Sequence) As Double
+    Dim m As Double = p.values(0)
+    For i As Integer = 1 To p.length - 1
+        If p.values(i) > m Then m = p.values(i)
+    Next
+    Return m
+End Function
+
+Sub ratchet(p As Sequence, direcc As Integer)
+    Dim m As Double = p.values(0)
+    Dim i As Integer
+
+    If direcc = UP Then
+        For i = 1 To p.length - 1
+            ' Corrected logic: only update if greater than minimum
+            If p.values(i) > m Then p.values(i) = m
+            m = p.values(i)
+        Next
+    Else
+        For i = 1 To p.length - 1
+            If p.values(i) < m Then p.values(i) = m
+            m = p.values(i)
+        Next
+    End If
+
+    ' Cap at 1.0
+    For i = 0 To p.length - 1
+        If p.values(i) > 1.0 Then p.values(i) = 1.0
+    Next
+End Sub
+
+Function schwartzian(p As Sequence, mult As Sequence, direcc As Integer) As Sequence
+    Dim As Sequence result
+    result.length = p.length
+    Redim result.values(p.length-1)
+    Dim As Integer i, j
+
+    ' Sort with indices
+    Dim As Integer indices(p.length-1)
+    For i = 0 To p.length-1
+        indices(i) = i
+    Next
+
+    ' Sort based on direccection
+    For i = 0 To p.length-2
+        For j = 0 To p.length-2-i
+            Dim As Boolean cond
+            If direcc = UP Then
+                cond = p.values(indices(j)) < p.values(indices(j+1))
+            Else
+                cond = p.values(indices(j)) > p.values(indices(j+1))
+            End If
+            If cond Then Swap indices(j), indices(j+1)
+        Next
+    Next
+
+    ' Apply multipliers
+    For i = 0 To p.length-1
+        result.values(i) = p.values(indices(i)) * mult.values(i)
+    Next
+
+    ratchet(result, direcc)
+
+    ' Restore original order
+    Dim As Sequence final
+    final.length = p.length
+    Redim final.values(p.length-1)
+
+    For i = 0 To p.length-1
+        final.values(indices(i)) = result.values(i)
+    Next
+
+    Return final
+End Function
+
+Function adjust(p As Sequence, method As String) As Sequence
+    Dim As Sequence result
+    result.length = p.length
+    Redim result.values(p.length-1)
+
+    Dim As Sequence mult
+    mult.length = p.length
+    Redim mult.values(p.length-1)
+
+    Dim As Integer i
+    Dim As Double tmp
+
+    Select Case method
+    Case "Benjamini-Hochberg"
+        For i = 0 To p.length-1
+            mult.values(i) = p.length / (p.length - i)
+        Next
+        Return schwartzian(p, mult, UP)
+
+    Case "Benjamini-Yekutieli"
+        tmp = 0
+        For i = 1 To p.length
+            tmp += 1.0 / i
+        Next
+
+        For i = 0 To p.length-1
+            mult.values(i) = tmp * p.length / (p.length - i)
+        Next
+        Return schwartzian(p, mult, UP)
+
+    Case "Bonferroni"
+        For i = 0 To p.length-1
+            result.values(i) = Min(p.values(i) * p.length, 1.0)
+        Next
+        Return result
+
+    Case "Hochberg"
+        For i = 0 To p.length-1
+            mult.values(i) = i + 1
+        Next
+        Return schwartzian(p, mult, UP)
+
+    Case "Holm"
+        For i = 0 To p.length-1
+            mult.values(i) = p.length - i
+        Next
+        Return schwartzian(p, mult, DOWN)
+
+    Case "Hommel"
+        Dim As Integer order(p.length-1), j
+        Dim As Double s(p.length-1)
+
+        ' Sort and get order
+        For i = 0 To p.length-1
+            order(i) = i
+        Next
+        For i = 0 To p.length-2
+            For j = 0 To p.length-2-i
+                If p.values(order(j)) > p.values(order(j+1)) Then Swap order(j), order(j+1)
+            Next
+        Next
+
+        ' Get sorted values
+        For i = 0 To p.length-1
+            s(i) = p.values(order(i))
+        Next
+
+        ' Calculate initial minimum
+        Dim As Double m(p.length-1)
+        For i = 0 To p.length-1
+            m(i) = s(i) * p.length / (i + 1)
+        Next
+
+        Dim As Double min_val = m(0)
+        For i = 1 To p.length-1
+            If m(i) < min_val Then min_val = m(i)
+        Next
+
+        Dim As Double pa(p.length-1), q(p.length-1)
+        For i = 0 To p.length-1
+            pa(i) = min_val
+            q(i) = min_val
+        Next
+
+        ' Hommel algorithm
+        For j = p.length-1 To 2 Step -1
+            Dim As Integer lower_count = p.length - j + 1
+            Dim As Integer upper_count = j - 1
+
+            ' Initialize qmin with first upper value
+            Dim As Double qmin = j * s(p.length - j + 1) / 2.0
+
+            ' Check remaining upper values
+            For i = 1 To upper_count-1
+                Dim As Double tmp = s(p.length - j + 1 + i) * j / (2.0 + i)
+                qmin = MIN(qmin, tmp)
+            Next
+
+            ' Update lower values
+            For i = 0 To lower_count-1
+                q(i) = MIN(s(i) * j, qmin)
+            Next
+
+            ' Update upper values
+            For i = lower_count To p.length-1
+                q(i) = q(p.length - j)
+            Next
+
+            ' Update pa with maximum between current and new values
+            For i = 0 To p.length-1
+                If q(i) > pa(i) Then pa(i) = q(i)
+            Next
+        Next
+
+        ' Map back to original order
+        For i = 0 To p.length-1
+            result.values(order(i)) = MIN(pa(i), 1.0)
+        Next
+        Return result
+
+    Case "Šidák", "Sidak"
+        For i = 0 To p.length-1
+            result.values(i) = 1.0 - (1.0 - p.values(i)) ^ p.length
+        Next
+        Return result
+
+    Case Else
+        result.length = 0
+    End Select
+
+    Return result
+End Function
+
+Function formatOutput(values As Sequence) As String
+    Dim As String result = ""
+    Dim As Integer i, j
+
+    For i = 0 To values.length -1 Step 5
+        result &= "[" & Format(i, "00") & "]  "
+        For j = 0 To 4
+            If i + j < values.length Then
+                result &= Format(values.values(i+j), "0.0000000000") & " "
+            End If
+        Next
+        result &= !"\n"
+    Next
+    Return result
+End Function
+
+'Main program
+Dim As Sequence p
+p.length = 50
+Redim p.values(49)
+Dim As Integer i
+
+' Initialize p-values
+For i = 0 To 49
+    p.values(i) = test_values(i)
+Next
+
+' Check p-values
+If p.length = 0 Orelse minimum(p) < 0 Orelse maximum(p) > 1 Then
+    Print "p-values must be in range 0.0 to 1.0"
+    End
+End If
+
+' Apply each correction method
+For i = 0 To 7
+    Dim As String method = correctionTypes(i)
+
+    Print method
+
+    Dim As Sequence result = adjust(p, method)
+
+    If result.length > 0 Then
+        Print formatOutput(result)
+    Else
+        Print "Sorry, do not know how to do '" & method & "' correction."
+        Print "Perhaps you want one of these?:"
+        For j As Integer = 0 To 6
+            Print "  " & correctionTypes(j)
+        Next
+    End If
+Next
+
+Sleep

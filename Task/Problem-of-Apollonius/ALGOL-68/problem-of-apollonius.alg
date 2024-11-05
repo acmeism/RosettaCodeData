@@ -4,9 +4,9 @@ BEGIN # solve the problem of Apollonius - find circles tangential to 3 others #
     OP   FMT = ( REAL v )STRING:
          BEGIN
             STRING result := fixed( v, -12, 2 );
-            INT    start  := LWB result;
-            WHILE IF start >= UPB result THEN FALSE ELSE result[ start ] = " " FI DO start +:= 1 OD;
-            result[ start : ]
+            INT    rstart := LWB result;
+            WHILE IF rstart >= UPB result THEN FALSE ELSE result[ rstart ] = " " FI DO rstart +:= 1 OD;
+            result[ rstart : ]
          END # FMT # ;
 
     MODE CIRCLE = STRUCT( REAL x, y, radius );
@@ -76,13 +76,14 @@ BEGIN # solve the problem of Apollonius - find circles tangential to 3 others #
             ( xs, ys, rs )
          END # solve apollonius # ;
 
-    CIRCLE c1 = ( 0, 0, 1 );
-    CIRCLE c2 = ( 4, 0, 1 );
-    CIRCLE c3 = ( 2, 4, 2 );
+    BEGIN
+        CIRCLE c1 = ( 0, 0, 1 );
+        CIRCLE c2 = ( 4, 0, 1 );
+        CIRCLE c3 = ( 2, 4, 2 );
 
-    # should output "Circle[x=2.00,y=2.10,r=3.90]" (green circle in image) #
-    print( ( TOSTRING solve apollonius( c1, c2, c3,  1,  1, 1 ), newline ) );
-    # should output "Circle[x=2.00,y=0.83,r=1.17]" (red circle in image)   #
-    print( ( TOSTRING solve apollonius( c1, c2, c3, -1, -1,-1 ), newline ) )
-
+        # should output "Circle[x=2.00,y=2.10,r=3.90]" (green circle in image) #
+        print( ( TOSTRING solve apollonius( c1, c2, c3,  1,  1, 1 ), newline ) );
+        # should output "Circle[x=2.00,y=0.83,r=1.17]" (red circle in image)   #
+        print( ( TOSTRING solve apollonius( c1, c2, c3, -1, -1,-1 ), newline ) )
+    END
 END

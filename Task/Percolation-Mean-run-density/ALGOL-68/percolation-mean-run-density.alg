@@ -7,7 +7,7 @@ BEGIN
             REAL thresh = p;
             TO runs DO
                INT x := 0;
-               FOR i FROM len BY -1 TO 1 DO
+               FROM len BY -1 TO 1 DO
                   INT y   = ABS ( random < thresh );
                   count +:= ABS ( x < y );
                   x := y

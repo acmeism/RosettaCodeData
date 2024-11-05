@@ -1,0 +1,99 @@
+#include "datetime.bi"
+
+Type DateResult
+    As String long_date
+    As String round_date
+End Type
+
+Function IntToStr(num As Integer, ancho As Integer = 2) As String
+    Return Right("00" & Str(num), ancho)
+End Function
+
+Function JulianDate(y As Integer, m As Integer, d As Integer) As Long
+    Dim As Long a = (14 - m) \ 12
+    y += 4800 - a
+    m += 12 * a - 3
+    Return d + ((153 * m + 2) \ 5) + 365 * y + (y \ 4) - (y \ 100) + (y \ 400) - 32045
+End Function
+
+Function g2m(dateStr As String, gtm_correlation As Boolean = True) As DateResult
+    Dim As DateResult result
+
+    ' Constants and arrays
+    Dim As Long correlation = Iif(gtm_correlation, 584283, 584285)
+
+    Dim As Long long_count_days(4) = {144000, 7200, 360, 20, 1}
+
+    Dim As String tzolkin_months(19) = { _
+    "Imix'", "Ik'", "Ak'bal", "K'an", "Chikchan", "Kimi", "Manik'", "Lamat", _
+    "Muluk", "Ok", "Chuwen", "Eb", "Ben", "Hix", "Men", "K'ib'", "Kaban", _
+    "Etz'nab'", "Kawak", "Ajaw" }
+
+    Dim As String haad_months(18) = { _
+    "Pop", "Wo'", "Sip", "Sotz'", "Sek", "Xul", "Yaxk'in", "Mol", "Ch'en", _
+    "Yax", "Sak'", "Keh", "Mak", "K'ank'in", "Muwan", "Pax", "K'ayab", _
+    "Kumk'u", "Wayeb'" }
+
+    ' Parse date string (YYYY-MM-DD)
+    Dim As Integer y = Valint(Mid(dateStr, 1, 4))
+    Dim As Integer m = Valint(Mid(dateStr, 6, 2))
+    Dim As Integer d = Valint(Mid(dateStr, 9, 2))
+
+    ' Calculate Julian days
+    Dim As Long julian_days = JulianDate(y, m, d)
+
+    ' Calculate long count date
+    Dim As Long remainder = julian_days - correlation
+    Dim As Integer long_parts(4)
+
+    For i As Integer = 0 To 4
+        long_parts(i) = remainder \ long_count_days(i)
+        remainder Mod= long_count_days(i)
+    Next
+
+    ' Format long date
+    result.long_date = ""
+    For i As Integer = 0 To 4
+        If i > 0 Then result.long_date &= "."
+        result.long_date &= IntToStr(long_parts(i))
+    Next
+
+    ' Calculate round calendar date
+    Dim As Integer tzolkin_month = (julian_days + 16) Mod 20
+    Dim As Integer tzolkin_day = ((julian_days + 5) Mod 13) + 1
+
+    Dim As Integer haab_month = ((julian_days + 65) Mod 365) \ 20
+    Dim As String haab_day
+    Dim As Integer haab_day_num = ((julian_days + 65) Mod 365) Mod 20
+    haab_day = Iif(haab_day_num = 0, "Chum", Str(haab_day_num))
+
+    Dim As Integer lord_number = (julian_days - correlation) Mod 9
+    If lord_number = 0 Then lord_number = 9
+
+    ' Format round date
+    result.round_date = Trim(Str(tzolkin_day)) & " " & _
+    Left(tzolkin_months(tzolkin_month) & Space(10), 10) & _
+    Right(Space(4) & Trim(haab_day), 4) & " " & _
+    Left(haad_months(haab_month) & Space(8), 8) & _
+    Space(7) & "G" & Trim(Str(lord_number))
+
+    Return result
+End Function
+
+' Main program
+Print " Gregorian     Long           Tzolk'in        Haab'         Lord of"
+Print "   Date        Count           # Name       Day Month      the Night"
+Print "----------   --------------   --------    -------------    ---------"
+
+Dim As String dates(9) = { _
+"1961-10-06", "1963-11-21", "2004-06-19", "2012-12-18", "2012-12-21", _
+"2019-01-19", "2019-03-27", "2020-02-29", "2020-03-01", "2071-05-16" }
+
+Dim As DateResult result
+
+For i As Integer = 0 To 9
+    result = g2m(dates(i))
+    Print dates(i); "   "; result.long_date; "   "; result.round_date
+Next
+
+Sleep

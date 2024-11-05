@@ -1,0 +1,76 @@
+#include once "windows.bi"
+#include once "win/winsock2.bi"
+
+Type SOCKET As Ulongint
+
+' Define the response text
+Const RESPONSE_TEXT = "Goodbye, World!"
+Const CRLF = Chr(13) & Chr(10)
+
+' Initialize Winsock
+Dim As WSADATA wsaData
+If WSAStartup(&h0202, @wsaData) Then
+    Print "Error initializing Winsock"
+    End 1
+End If
+
+' Create a socket
+Dim As SOCKET serverSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0)
+If serverSocket = INVALID_SOCKET Then
+    Print "Error creating socket"
+    WSACleanup()
+    End 1
+End If
+
+' Bind the socket to the port
+Dim As sockaddr_in serverAddr
+With serverAddr
+    .sin_family = AF_INET
+    .sin_addr.s_addr = INADDR_ANY
+    .sin_port = htons(8080)
+End With
+
+' Bind the socket to the port
+If bind(serverSocket, Cast(sockaddr Ptr, @serverAddr), Sizeof(sockaddr_in)) = SOCKET_ERROR Then
+    Print "Error binding socket"
+    closesocket(serverSocket)
+    WSACleanup()
+    End 1
+End If
+
+' Listen for incoming connections
+If listen(serverSocket, SOMAXCONN) = SOCKET_ERROR Then
+    Print "Error listening on socket"
+    closesocket(serverSocket)
+    WSACleanup()
+    End 1
+End If
+
+Print "Server is running on http://localhost:8080/"
+
+' Main server loop
+Do
+    Dim As sockaddr_in clientAddr
+    Dim As Long clientAddrLen = Sizeof(sockaddr_in)
+
+    Dim As SOCKET clientSocket = accept(serverSocket, Cast(sockaddr Ptr, @clientAddr), @clientAddrLen)
+    If clientSocket = INVALID_SOCKET Then
+        Print "Error accepting connection"
+        Continue Do
+    End If
+
+    ' Build and send the HTTP response
+    Dim As String httpResponse = _
+    "HTTP/1.1 200 OK" & CRLF & _
+    "Content-Length: " & Len(RESPONSE_TEXT) & CRLF & _
+    "Content-Type: text/plain" & CRLF & _
+    CRLF & _
+    RESPONSE_TEXT
+
+    send(clientSocket, Strptr(httpResponse), Len(httpResponse), 0)
+    closesocket(clientSocket)
+Loop
+
+' Final cleaning
+closesocket(serverSocket)
+WSACleanup()

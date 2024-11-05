@@ -19,7 +19,7 @@ say '99999  =' Radical(99999)
 say '499999 =' Radical(499999)
 say '999999 =' Radical(999999)
 say
-m = n/10; r = ISqrt(n); radi. = 0
+m = n/10; r = Isqrt(n); radi. = 0
 say 'Getting distribution list...'
 call Time('r')
 do i = 1 to n
@@ -28,26 +28,26 @@ do i = 1 to n
    radi.u = radi.u+1
    if i//m=0 then do
       ti=(i%m)*10
-      say format(ti,3)'%' format(time('e'),4,3) 'seconds'
+      say Format(ti,3)'%' Format(Time('e'),4,3) 'seconds'
    end
 end
 say
-say 'Distribution for first' n 'radicals over number of factors:'
+say 'Distribution for first' n 'radicals over Number of Factors:'
 do i = 0 to 10
    if radi.i > 0 then
       say Right(i,2)':' Right(radi.i,6)
 end
 say
-say 'Getting primes up to' n'...'
+say 'Getting Primes up to' n'...'
 call Time('r')
 pr = Primes(n)
 say 'Took' Format(Time('e'),,3) 'seconds'
 say
-say 'Getting powers of primes up to' r'...'
+say 'Getting powers of Primes up to' r'...'
 call Time('r')
 pw = 0
 do i = 1
-   p1 = prim.prime.i
+   p1 = prim.Prime.i
    if p1 > r then
       leave
    p2 = p1
@@ -67,12 +67,12 @@ say 'Total ' Format(pr+pw,6)
 exit
 
 Radical:
--- Radical = product of unique prime factors
+/* Radical = product of unique prime factors */
 procedure expose ufac.
 arg x
--- Get unique factors
+/* Get unique factors */
 n = Ufactors(x)
--- Calculate product
+/* Calculate product */
 y = 1
 do i = 1 to n
    y = y*ufac.factor.i
@@ -81,4 +81,5 @@ return y
 
 include Functions
 include Numbers
+include Sequences
 include Abend

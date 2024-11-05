@@ -1,11 +1,11 @@
-PROC revn = ( LONG INT na, nda )LONG INT:
+PROC revn = ( LONG INT nav, ndav )LONG INT:
 BEGIN
-    LONG INT n := na, nd := nda, r := 0, i := 0;
+    LONG INT na := nav, nda := ndav, r := 0, i := 0;
     WHILE i +:= 1;
-          i <= nd
+          i <= nda
     DO
-        r *:= 10 +:= ( n MOD 10 );
-        n OVERAB 10
+        r *:= 10 +:= ( na MOD 10 );
+        na OVERAB 10
     OD;
     r
 END # revn # ;

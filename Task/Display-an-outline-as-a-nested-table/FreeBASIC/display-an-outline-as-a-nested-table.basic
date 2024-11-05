@@ -1,0 +1,166 @@
+# define MAX  100
+
+Type nNode
+    nombre As String
+    childrenCnt As Integer
+    children(MAX) As nNode Ptr
+End Type
+
+Type iNode
+    level As Integer
+    nombre As String
+End Type
+
+Sub toNest(iNodes() As iNode, start As Integer, level As Integer, n As nNode Ptr)
+    If level = 0 Then n->nombre = iNodes(start).nombre
+
+    For i As Integer = start + 1 To Ubound(iNodes)
+        If iNodes(i).level = level + 1 Then
+            Dim As nNode Ptr c = New nNode
+            c->nombre = iNodes(i).nombre
+            c->childrenCnt = 0
+            toNest(iNodes(), i, level + 1, c)
+            n->children(n->childrenCnt) = c
+            n->childrenCnt += 1
+        Elseif iNodes(i).level <= level Then
+            Exit For
+        End If
+    Next
+End Sub
+
+Sub makeIndent(outline As String, tabu As Integer, iNodes() As iNode)
+    Dim As String lines(MAX)
+    Dim As Integer lineCnt = 0
+
+    ' Dividir el string en líneas
+    Dim As Integer posic = 1
+    Do
+        Dim As Integer nextPos = Instr(posic, outline, !"\n")
+        If nextPos = 0 Then
+            lines(lineCnt) = Mid(outline, posic)
+            lineCnt += 1
+            Exit Do
+        Else
+            lines(lineCnt) = Mid(outline, posic, nextPos - posic)
+            lineCnt += 1
+            posic = nextPos + 1
+        End If
+    Loop
+
+    Redim As iNode iNodes(lineCnt - 1)
+
+    For i As Integer = 0 To lineCnt - 1
+        Dim As String line2 = Ltrim(lines(i))
+        Dim As Integer le = Len(lines(i)), le2 = Len(line2)
+        Dim As Integer level = (le - le2) \ tabu
+        iNodes(i).level = level
+        iNodes(i).nombre = line2
+    Next
+End Sub
+
+Function colSpan(nn As nNode Ptr) As Integer
+    If nn->childrenCnt = 0 Then Return 1
+
+    Dim As Integer s = 0
+    For i As Integer = 0 To nn->childrenCnt - 1
+        s += colSpan(nn->children(i))
+    Next
+    Return s
+End Function
+
+Sub nestedFor(nn As nNode Ptr, level As Integer, maxLevel As Integer, col As Integer, Byref result As String, cols() As String)
+    If level = 1 Andalso maxLevel > level Then
+        For i As Integer = 0 To nn->childrenCnt - 1
+            nestedFor(nn->children(i), 2, maxLevel, i, result, cols())
+        Next
+    Elseif level < maxLevel Then
+        For i As Integer = 0 To nn->childrenCnt - 1
+            nestedFor(nn->children(i), level + 1, maxLevel, col, result, cols())
+        Next
+    Else
+        If nn->childrenCnt > 0 Then
+            For i As Integer = 0 To nn->childrenCnt - 1
+                Dim As nNode Ptr c = nn->children(i)
+                Dim As Integer span = colSpan(c)
+                Dim As Integer cn = col + 1
+                If maxLevel = 1 Then cn = i + 1
+                result &= "| style=""background: " & cols(cn) & " "" colspan=" & span & " | " & c->nombre & !"\n"
+            Next
+        Else
+            result &= "|  |" & !"\n"
+        End If
+    End If
+End Sub
+
+Function toMarkup(n As nNode Ptr, cols() As String, depth As Integer) As String
+    Dim As String result = ""
+
+    result &= "{| class=""wikitable"" style=""text-align: center;""" & !"\n"
+    result &= "|-" & !"\n"
+    Dim As Integer span = colSpan(n)
+    result &= "| style=""background: " & cols(0) & """ colspan=" & span & " | " & n->nombre & !"\n"
+    result &= "|-" & !"\n"
+
+    For maxLevel As Integer = 1 To depth - 1
+        nestedFor(n, 1, maxLevel, 0, result, cols())
+        If maxLevel < depth - 1 Then result &= "|-" & !"\n"
+    Next
+
+    result &= "|}"
+    Return result
+End Function
+
+' Main program
+Const outline = _
+"Display an outline as a nested table." & !"\n" & _
+"    Parse the outline to a tree," & !"\n" & _
+"        measuring the indent of each line," & !"\n" & _
+"        translating the indentation to a nested structure," & !"\n" & _
+"        and padding the tree to even depth." & !"\n" & _
+"    count the leaves descending from each node," & !"\n" & _
+"        defining the width of a leaf as 1," & !"\n" & _
+"        and the width of a parent node as a sum." & !"\n" & _
+"            (The sum of the widths of its children) " & !"\n" & _
+"    and write out a table with 'colspan' values" & !"\n" & _
+"        either as a wiki table," & !"\n" & _
+"        or as HTML."
+
+Dim As String cols(4) = {"#ffffe6;", "#ffebd2;", "#f0fff0;", "#e6ffff;", "#ffeeff;"}
+
+Dim As iNode iNodes(MAX)
+makeIndent(outline, 4, iNodes())
+Dim As nNode Ptr n = New nNode
+n->childrenCnt = 0
+toNest(iNodes(), 0, 0, n)
+Print toMarkup(n, cols(), 4)
+
+Print !"\n\n"
+
+Const outline2 = _
+"Display an outline as a nested table." & !"\n" & _
+"    Parse the outline to a tree," & !"\n" & _
+"        measuring the indent of each line," & !"\n" & _
+"        translating the indentation to a nested structure," & !"\n" & _
+"        and padding the tree to even depth." & !"\n" & _
+"    count the leaves descending from each node," & !"\n" & _
+"        defining the width of a leaf as 1," & !"\n" & _
+"        and the width of a parent node as a sum." & !"\n" & _
+"            (The sum of the widths of its children)" & !"\n" & _
+"            Propagating the sums upward as necessary. " & !"\n" & _
+"    and write out a table with 'colspan' values" & !"\n" & _
+"        either as a wiki table," & !"\n" & _
+"        or as HTML." & !"\n" & _
+"    Optionally add color to the nodes."
+
+Dim As String cols2(4) = {"#e6ffff;", "#ffffe6;", "#ffebd2;", "#f0fff0;", "#ffeeff;"}
+
+Dim As iNode iNodes2(MAX)
+makeIndent(outline2, 4, iNodes2())
+Dim As nNode Ptr n2 = New nNode
+n2->childrenCnt = 0
+toNest(iNodes2(), 0, 0, n2)
+Print toMarkup(n2, cols2(), 4)
+
+' Free memory
+Delete n
+Delete n2

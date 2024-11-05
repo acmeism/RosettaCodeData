@@ -1,9 +1,7 @@
 # PROC to suffix a number with st, nd, rd or th as appropriate #
 PROC nth = ( INT number )STRING:
 BEGIN
-
     INT number mod 100 = number MOD 100;
-
 # RESULT #
     whole( number, 0 )
   + IF number mod 100 >= 10 AND number mod 100 <= 20
@@ -29,21 +27,20 @@ BEGIN
     FOR test value FROM from TO to
     DO
         STRING test result = nth( test value );
-        print( ( "        "[ 1 : 8 - UPB test result ], nth( test value ) ) );
+        print( ( "        "[ 1 : 8 - UPB test result ], test result ) );
         test count +:= 1;
         IF test count MOD 8 = 0
         THEN
             print( ( newline ) )
         FI
     OD;
+    IF test count MOD 8 /= 0
+    THEN
+        print( ( newline ) )
+    FI;
     print( ( newline ) )
 END; # test nth #
 
-
-main: (
-
-    test nth(    0,   25 );
-    test nth(  250,  265 );
-    test nth( 1000, 1025 )
-
-)
+test nth(    0,   25 );
+test nth(  250,  265 );
+test nth( 1000, 1025 )

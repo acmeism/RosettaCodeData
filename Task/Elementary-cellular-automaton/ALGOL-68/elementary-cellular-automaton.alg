@@ -1,15 +1,18 @@
 BEGIN # elementary cellular automaton #
-    COMMENT returns the next state from state using rule; s must be at least 2 characters long and consist of # and - only COMMENT
+    COMMENT returns the next state from state using rule s must be at least 2 characters long
+            and consist of # and - only
+    COMMENT
     PROC next state = ( STRING state, INT rule )STRING:
          BEGIN
             COMMENT returns 1 or 0 depending on whether c = # or not COMMENT
             OP TOINT = ( CHAR c )INT: IF c = "#" THEN 1 ELSE 0 FI;
             # construct the state with additional extra elements to allow wrap-around #
             STRING s = state[ UPB state ] + state + state[ LWB state : LWB state + 1 ];
-            COMMENT convert rule to a string of # or - depending on whether the bits of r are on or off COMMENT
+            COMMENT convert rule to a string of # or - depending on whether the bits of r are on or off
+            COMMENT
             STRING r := "";
             INT    v := rule;
-            FOR i TO 8 DO
+            TO 8 DO
                 r +:= IF ODD v THEN "#" ELSE "-" FI;
                 v OVERAB 2
             OD;

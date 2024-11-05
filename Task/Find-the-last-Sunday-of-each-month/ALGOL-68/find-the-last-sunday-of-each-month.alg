@@ -33,17 +33,18 @@ BEGIN # find the last Sunday in each month of a year             #
             OD;
             last
          END # last sundays # ;
-    # test the last sundays procedure                            #
-    INT   year = 2021;
-    []INT last = last sundays( year );
-    FOR m pos TO 12 DO
-        print( ( whole( year, 0 )
-               , IF m pos < 10 THEN "-0" ELSE "-1" FI
-               , whole( m pos MOD 10, 0 )
-               , "-"
-               , whole( last[ m pos ], 0 )
-               , newline
-               )
-             )
-    OD
+    BEGIN # test the last sundays procedure                      #
+        INT   year = 2021;
+        []INT last = last sundays( year );
+        FOR m pos TO 12 DO
+            print( ( whole( year, 0 )
+                   , IF m pos < 10 THEN "-0" ELSE "-1" FI
+                   , whole( m pos MOD 10, 0 )
+                   , "-"
+                   , whole( last[ m pos ], 0 )
+                   , newline
+                   )
+                 )
+        OD
+    END
 END

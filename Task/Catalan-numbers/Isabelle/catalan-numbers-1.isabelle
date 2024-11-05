@@ -1,0 +1,125 @@
+theory Catalan_Numbers
+imports
+  "HOL-Computational_Algebra.Computational_Algebra" "HOL-Library.Code_Target_Numeral"
+begin
+
+(* recursive definition *)
+fun catalan :: "nat ⇒ nat" where
+  "catalan 0 = 1"
+| [simp del]: "catalan (Suc n) = (∑i≤n. catalan i * catalan (n - i))"
+
+(* the generating function F(X) = ∑n. C(n)X^n of the Catalan numbers
+   as a formal power series *)
+definition fps_catalan :: "real fps" where "fps_catalan = Abs_fps (real ∘ catalan)"
+
+(* C(X) satisfies the identity C(X) = 1 + X C(X)^2 *)
+lemma fps_catalan_recurrence:
+  "fps_catalan = 1 + fps_X * fps_catalan^2"
+proof (rule fps_ext)
+  fix n :: nat
+  show "fps_nth fps_catalan n = fps_nth (1 + fps_X * fps_catalan^2) n"
+    by (cases n) (simp_all add: fps_square_nth catalan.simps(2) fps_catalan_def)
+qed
+
+(* Solving for C we get C(X) = (1 - sqrt(1 - 4x)) / (2x) *)
+lemma fps_catalan_fps_binomial:
+  "fps_catalan = (1/2 * (1 - (fps_binomial (1/2) oo (-4*fps_X)))) / fps_X"
+proof -
+  let ?F = "fps_catalan"
+  have "fps_X * (1 + fps_X * ?F^2) = fps_X * ?F"
+    by (simp only: fps_catalan_recurrence [symmetric])
+  hence "(1 / 2 - fps_X * ?F)⇧2 = - fps_X + 1 / 4"
+    by (simp add: algebra_simps power2_eq_square fps_numeral_simps)
+  also have "… = (1/2 * (fps_binomial (1/2) oo (-4*fps_X)))^2"
+    by (simp add: power_mult_distrib div_power fps_binomial_1 fps_binomial_power
+                  fps_compose_power fps_compose_add_distrib ring_distribs)
+  finally have "1/2 - fps_X * ?F = 1/2 * (fps_binomial (1/2) oo (-4*fps_X))"
+    by (rule fps_power_eqD) simp_all
+  hence "fps_X*?F = 1/2 * (1 - (fps_binomial (1/2) oo (-4*fps_X)))" by algebra
+  thus ?thesis
+    by (metis fps_X_neq_zero nonzero_mult_div_cancel_left)
+qed
+
+(* A closed form for the Catalan numbers in terms of the generalised binomial coefficients
+   can be read off directly from this solution for C(x), namely:
+   c_n = 2 (-4)^n B(1/2, n+1) *)
+lemma catalan_closed_form_gbinomial:
+  "real (catalan n) = 2 * (-4) ^ n * ((1/2) gchoose (n+1))"
+proof -
+  have "(catalan n :: real) = fps_nth fps_catalan n"
+    by (simp add: fps_catalan_def)
+  also have "… = 2 * (-4) ^ n * ((1/2) gchoose (n+1))"
+    by (subst fps_catalan_fps_binomial)
+       (simp add: fps_div_fps_X_nth numeral_fps_const fps_compose_linear)
+  finally show ?thesis .
+qed
+
+(* Simplifying the generalised binomial coefficients to regular ones we get
+   another closed form: c_n = B(2n, n) / (n+1) *)
+lemma catalan_closed_form':
+  "catalan n * (n + 1) = (2*n) choose n"
+proof -
+  have "real ((2*n) choose n) = fact (2*n) / (fact n)^2"
+    by (simp add: binomial_fact power2_eq_square)
+  also have "(fact (2*n) :: real) = 4^n * pochhammer (1 / 2) n * fact n"
+    by (simp add: fact_double power_mult)
+  also have "… / (fact n)^2 / real (n+1) = real (catalan n)"
+    by (simp add: catalan_closed_form_gbinomial gbinomial_pochhammer pochhammer_rec
+          field_simps power2_eq_square power_mult_distrib [symmetric] del: of_nat_Suc)
+  finally have "real (catalan n * (n+1)) = real ((2*n) choose n)" by (simp add: field_simps)
+  thus ?thesis
+    by linarith
+qed
+
+theorem catalan_closed_form: "catalan n = ((2*n) choose n) div (n + 1)"
+  by (subst catalan_closed_form' [symmetric], subst div_mult_self_is_m) auto
+
+(* With this, it is now also easy to derive a linear recurrence of order 1
+   (with polynomial coefficients): *)
+lemma catalan_rec':
+  "(n + 2) * catalan (n + 1) = 2 * (2 * n + 1) * catalan n"
+proof (cases "n > 0")
+  case True
+  have "real (catalan (n + 1) * (n + 1 + 1)) =
+           real (catalan n * (n + 1)) * 2 * real (2 * n + 1) / real (n + 1)"
+    using True unfolding catalan_closed_form'
+    by (simp add: fact_reduce binomial_fact divide_simps) (auto simp: algebra_simps)?
+  also have "… = real (2 * (2 * n + 1) * catalan n)"
+    by (simp del: of_nat_Suc add: divide_simps) (auto simp: algebra_simps)?
+  also have "catalan (n + 1) * (n + 1 + 1) = (n + 2) * catalan (n + 1)"
+    by simp
+  finally show ?thesis
+    by linarith
+qed (auto simp: catalan.simps(2))
+
+theorem catalan_rec:
+  "catalan (Suc n) = (catalan n * (2*(2*n+1))) div (n+2)"
+  by (subst mult.commute, subst catalan_rec' [symmetric], subst div_mult_self1_is_m) auto
+
+(* To make the computation more efficient, we now derive a simple
+   tail-recursive version of this *)
+function catalan_aux where [simp del]:
+  "catalan_aux n k acc =
+     (if k ≥ n then acc else catalan_aux n (Suc k) ((acc * (2*(2*k+1))) div (k+2)))"
+  by auto
+termination by (relation "Wellfounded.measure (λ(a,b,_). a - b)") simp_all
+
+lemma catalan_aux_correct:
+  assumes "k ≤ n"
+  shows   "catalan_aux n k (catalan k) = catalan n"
+using assms
+proof (induction n k "catalan k" rule: catalan_aux.induct)
+  case (1 n k)
+  show ?case
+  proof (cases "k < n")
+    case True
+    hence "catalan_aux n k (catalan k) = catalan_aux n (Suc k) (catalan (Suc k))"
+      by (subst catalan_rec; subst catalan_aux.simps) auto
+    with 1 True show ?thesis by (simp add: catalan_rec)
+  qed (insert "1.prems", simp_all add: catalan_aux.simps)
+qed
+
+lemma catalan_code [code]: "catalan n = catalan_aux n 0 1"
+  using catalan_aux_correct[of 0 n] by simp
+
+end

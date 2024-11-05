@@ -29,7 +29,7 @@ call Time('r')
 say 'First' t 'terms of the sequence:'
 do i = 2 to t
    do j = 1 to w
-      if \ IsWhole(n/d.j) then
+      if \ Whole(n/d.j) then
          iterate
       call CharOut ,Right(n,9)
       if i//10 = 0 then
@@ -57,7 +57,7 @@ say 'Prime numbers:'
 n = 2; p = 0
 do i = 2 to 1300000
    do j = 1 to w
-      if \ IsWhole(n/d.j) then
+      if \ Whole(n/d.j) then
          iterate j
       if p.n then do
          p = p+1

@@ -8,25 +8,25 @@ BEGIN
          ELSE
              # non-empty list #
              # partitions the subset of list from left to right #
-             PROC partition = ( REF[]INT list, INT left, right, pivot index )INT:
+             PROC partition = ( REF[]INT plist, INT pleft, pright, pivot index )INT:
                   BEGIN
                       # swaps elements a and b in list #
-                      PROC swap = ( REF[]INT list, INT a, b )VOID:
+                      PROC swap = ( REF[]INT slist, INT a, b )VOID:
                            BEGIN
-                               INT t = list[ a ];
-                               list[ a ] := list[ b ];
-                               list[ b ] := t
+                               INT t       = slist[ a ];
+                               slist[ a ] := slist[ b ];
+                               slist[ b ] := t
                            END # swap # ;
-                      INT pivot value = list[ pivot index ];
-                      swap( list, pivot index, right );
-                      INT store index := left;
-                      FOR i FROM left TO right - 1 DO
-                          IF list[ i ] < pivot value THEN
-                              swap( list, store index, i );
+                      INT pivot value = plist[ pivot index ];
+                      swap( plist, pivot index, pright );
+                      INT store index := pleft;
+                      FOR i FROM pleft TO pright - 1 DO
+                          IF plist[ i ] < pivot value THEN
+                              swap( plist, store index, i );
                               store index +:= 1
                           FI
                       OD;
-                      swap( list, right, store index );
+                      swap( plist, pright, store index );
                       store index
                   END # partition # ;
              INT  left  := LWB list, right := UPB list, result := 0;
@@ -37,9 +37,7 @@ BEGIN
                      found := TRUE
                  ELSE
                      INT pivot index
-                       = partition( list
-                                  , left
-                                  , right
+                       = partition( list, left, right
                                   , left + ENTIER ( ( random * ( right - left ) + 1 ) )
                                   );
                      IF k = pivot index THEN

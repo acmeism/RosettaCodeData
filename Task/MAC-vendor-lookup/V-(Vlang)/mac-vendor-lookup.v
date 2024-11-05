@@ -1,16 +1,16 @@
 import net.http
 import time
 
-const macs =
-('
+const macs = ("
 FC-A1-3E
 FC:FB:FB:01:FA:21
+xx:12:5
 D4:F4:6F:C9:EF:8D
-')
+")
 
 fn main() {
-    for line in macs.split('\n') {
-        if line !='' {
+    for line in macs.split_into_lines() {
+        if !line.is_blank() {
             println(mac_lookup(line))
             time.sleep(2 * time.second) // considerate delay between attempts
         }
@@ -18,6 +18,6 @@ fn main() {
 }
 
 fn mac_lookup(mac string) string {
-    resp := http.get("http://api.macvendors.com/" + mac) or {return 'No data from server'}
+    resp := http.get("http://api.macvendors.com/" + mac) or {return "No data from server"}
     return resp.body.str()
 }

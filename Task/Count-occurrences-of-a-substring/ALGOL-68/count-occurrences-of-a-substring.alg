@@ -1,7 +1,7 @@
 PROC count string in string = (STRING needle, haystack)INT: (
-  INT start:=LWB haystack, next, out:=0;
-  FOR count WHILE string in string(needle, next, haystack[start:]) DO
-    start+:=next+UPB needle-LWB needle;
+  INT start pos:=LWB haystack, next, out:=0;
+  FOR count WHILE string in string(needle, next, haystack[start pos:]) DO
+    start pos+:=next+UPB needle-LWB needle;
     out:=count
   OD;
   out

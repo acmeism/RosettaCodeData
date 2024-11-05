@@ -5,7 +5,7 @@ BEGIN # circlesort                                                           #
     OP   =:= = ( REF INT a, b )VOID: BEGIN INT t = a; a := b; b := t END;
 
     # sorts data in-place and returns a reference to data                    #
-    OP   CIRCLESORT = ( REF[]INT data )REF[]INT:
+    OP   CIRCLESORT = ( REF[]INT data to sort )REF[]INT:
          BEGIN
             PROC circlesort = ( REF[]INT data, INT low, high, swaps so far )INT:
                  IF low >= high THEN swaps so far
@@ -32,8 +32,8 @@ BEGIN # circlesort                                                           #
                     swaps := circlesort( data, low + mid + 1, high, swaps )
                  FI # circlesort # ;
 
-            WHILE circlesort( data, LWB data, UPB data, 0 ) > 0 DO SKIP OD;
-            data
+            WHILE circlesort( data to sort, LWB data to sort, UPB data to sort, 0 ) > 0 DO SKIP OD;
+            data to sort
          END # CIRCLESORT # ;
 
     # prints the elements of an array of integers separated by spaces         #

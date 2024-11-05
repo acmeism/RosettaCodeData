@@ -35,17 +35,18 @@ BEGIN # find the last Friday in each month of a year             #
             OD;
             last
          END # last fridays # ;
-    # test the last fridays procedure                            #
-    INT   year = 2021;
-    []INT last = last fridays( year );
-    FOR m pos TO 12 DO
-        print( ( whole( year, 0 )
-               , IF m pos < 10 THEN "-0" ELSE "-1" FI
-               , whole( m pos MOD 10, 0 )
-               , "-"
-               , whole( last[ m pos ], 0 )
-               , newline
-               )
-             )
-    OD
+    BEGIN # test the last fridays procedure                      #
+        INT   year = 2021;
+        []INT last = last fridays( year );
+        FOR m pos TO 12 DO
+            print( ( whole( year, 0 )
+                   , IF m pos < 10 THEN "-0" ELSE "-1" FI
+                   , whole( m pos MOD 10, 0 )
+                   , "-"
+                   , whole( last[ m pos ], 0 )
+                   , newline
+                   )
+                 )
+        OD
+    END
 END

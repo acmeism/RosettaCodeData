@@ -1,6 +1,7 @@
 BEGIN # find some anti-primes: numbers with more divisors than the     #
       # previous numbers                                               #
-    REF[]INT ndc     := HEAP[ 1 : 0 ]INT; # table of divisor counts    #
+    HEAP[ 1 : 0 ]INT empty list;
+    REF[]INT ndc     := empty list;       # table of divisor counts    #
     INT max divisors := 0;
     INT a count      := 0;
     FOR n WHILE a count < 20 DO

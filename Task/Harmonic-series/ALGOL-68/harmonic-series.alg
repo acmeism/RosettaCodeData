@@ -2,12 +2,12 @@ BEGIN # find some harmonic numbers, Hn is the sum of the reciprocals of 1..n #
     # returns the first n Harmonic numbers #
     OP   HARMONIC = ( INT n )[]REAL:
          BEGIN
-            [ 1 : n ]REAL h;
-            h[ 1 ] := 1;
+            [ 1 : n ]REAL hs;
+            hs[ 1 ] := 1;
             FOR i FROM 2 TO n DO
-                h[ i ] := h[ i - 1 ] + ( 1 / i )
+                hs[ i ] := hs[ i - 1 ] + ( 1 / i )
             OD;
-            h
+            hs
          END # HARMONIC # ;
     # find the first 20 000 harmonic numbers #
     []REAL h = HARMONIC 20 000;

@@ -28,9 +28,15 @@ fibz = fixz (\ fn f s i -> if i < 2 then f else fn s (f + s) (i - 1)) 1 1 -- eff
 fixy : ((() -> a) -> a) -> a
 fixy f = f <| \ () -> fixy f -- direct function recursion
 -- the above is not value recursion but function recursion!
+-- the below is an attempt at value recursion, but...
 -- fixv f = let x = f x in x -- not allowed by task or by Elm!
--- we can make Elm allow it by injecting laziness...
--- fixv f = let x = f () x in x -- but now value recursion not function recursion
+-- we can make Elm allow it by injecting laziness but...
+fix : ((() -> a) -> a) -> a
+fix f = let xf() = f xf in xf() -- this is just another form of function recursion...
+-- the above is what the Haskell `fix` non-sharing fix point combinator actually is
+-- because all values are actually non-strict/lazy, meaning they require a "thunk" as
+-- above to be evaluated to their actual value, which is equivalent to `xf() ==> x` above!
+-- thus, in Haskell, all "boxed" values such as this actually represent function applications!
 
 facy : Int -> Int
 -- facy = fixy <| \ f n -> if n < 2 then 1 else n * f () (n - 1) -- inefficient recursion

@@ -1,69 +1,74 @@
-' We import the windows sockets library
-#Include Once "windows.bi"
-#Include Once "win/winsock.bi"
+#If Defined(__FB_WIN32__)
+    #Include Once "win/winsock2.bi"
+#ElseIf Defined(__FB_LINUX__)
+    #Include Once "crt/netdb.bi"
+    #Include Once "crt/sys/socket.bi"
+    #Include Once "crt/netinet/in.bi"
+    #Include Once "crt/arpa/inet.bi"
+    #Include Once "crt/unistd.bi"
+    #Include Once "crt/sys/select.bi"
+#Else
+    #Error Platform Not supported
+#EndIf
 
-#include "fbgfx.bi"
+Type SOCKET As Ulongint
 
-#define NET_BUFLEN 1024
+Const NET_BUFLEN = 1024
+Const PORT = 256
+Const HOST = "127.0.0.1"
 
-'--- SENDER ---
-
-Dim As WSADATA wsaData
-
+' Initialize variables
+#If Defined(__FB_WIN32__)
+    Dim As WSADATA wsaData
+#EndIf
 Dim As SOCKET sendSocket
 Dim As sockaddr_in recvAddr
-Dim As Integer port = 256
-Dim As Ubyte sendBuf(NET_BUFLEN-1)
-Dim As Integer bufLen = NET_BUFLEN
-Dim As Integer iResult
 Dim As String message = "hello socket world"
+Dim As Ubyte sendBuf(NET_BUFLEN-1)
+Dim As Integer bufLen = Len(message)
 
-' We copy the message to the buffer
-For i As Ubyte = 1 To Len(message)
+' Copy message to buffer
+For i As Integer = 1 To bufLen
     sendBuf(i-1) = Cbyte(Asc(Mid(message, i, 1)))
 Next
 
-' We update bufLen to be the length of the message
-bufLen = Len(message)
+' Initialize Winsock
+If WSAStartup(MAKEWORD(2,2), @wsaData) = 0 Then
+    ' Create socket
+    sendSocket = WSASocket(AF_INET, SOCK_DGRAM, IPPROTO_UDP, NULL, 0, 0)
 
-' We initialize Winsock
-If (WSAStartup(MAKEWORD(2,2), @wsaData) <> 0) Then
-    Beep: Print "Error: Winsock init"
-    Sleep
-    End
-End If
+    If sendSocket <> INVALID_SOCKET Then
+        ' Configure server address
+        With recvAddr
+            .sin_family = AF_INET
+            .sin_port = htons(PORT)
+            .sin_addr.s_addr = inet_addr(HOST)
+        End With
 
-' We create the socket
-sendSocket = socket_(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
-If sendSocket = INVALID_SOCKET Then
-    Beep: Print "Error: Net socket"
-    WSACleanup()
-    Sleep
-    End
-End If
+        ' Send message
+        Print "Sending message..."
+        Dim As Integer bytesSent = sendto(sendSocket, @sendBuf(0), bufLen, 0, Cast(sockaddr Ptr, @recvAddr), Sizeof(sockaddr_in))
 
-' We configure the server structure
-recvAddr.sin_family = AF_INET
-recvAddr.sin_port = htons(256)
-recvAddr.sin_addr.s_addr = inet_addr("127.0.0.1")
+        If bytesSent <> SOCKET_ERROR Then
+            Print "Bytes sent: "; bytesSent
+        Else
+            Print "Error sending message"
+        End If
 
-' We send the message
-Print "Trying: Net send"
-iResult = sendto(sendSocket, @sendBuf(0), bufLen, 0, Cptr(sockaddr Ptr, @recvAddr), Sizeof(recvAddr))
-If (iResult = SOCKET_ERROR) Then
-    Beep: Print "Error: Net send"
-    closesocket(sendSocket)
-    WSACleanup()
-    Sleep
-    End
+        ' Close socket
+        #If Defined(__fb_win32__)
+            closesocket(sendSocket)
+        #Else
+            Close(sendSocket)
+        #EndIf
+    Else
+        Print "Error creating socket"
+    End If
+
+    ' Cleanup Winsock
+    #If Defined(__fb_win32__)
+        WSACleanup()
+    #EndIf
 Else
-    Print "number of bytes send:"; iResult
+    Print "Error initializing Winsock"
 End If
-
-iResult = closeSocket(sendSocket)
-If (iResult < 0) Then
-    Beep: Print "Error: Close socket"
-End If
-
-'closesocket(sock)
-WSACleanup()

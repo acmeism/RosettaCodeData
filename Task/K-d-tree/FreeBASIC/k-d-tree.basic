@@ -1,0 +1,194 @@
+Const NULL As Any Ptr = 0
+
+Type Point
+    coords(2) As Single  '3D points
+End Type
+
+Type KdNode
+    punto As Point
+    izda As KdNode Ptr
+    dcha As KdNode Ptr
+End Type
+
+Type KdTree
+    root As KdNode Ptr
+    bestNode As KdNode Ptr
+    bestDist As Single
+    visited As Integer
+    dimensions As Integer
+End Type
+
+Function Point_Distance(This As Point, pt As Point) As Single
+    Dim dist As Single = 0
+    For i As Integer = 0 To 2
+        Dim d As Single = this.coords(i) - pt.coords(i)
+        dist += d * d
+    Next
+    Return dist
+End Function
+
+Function CreateNode(p As Point) As KdNode Ptr
+    Dim node As KdNode Ptr = New KdNode
+    node->punto = p
+    node->izda = NULL
+    node->dcha = NULL
+    Return node
+End Function
+
+Function MakeTree(nodes() As KdNode Ptr, startIdx As Integer, endIdx As Integer, depth As Integer, dimensions As Integer) As KdNode Ptr
+    If endIdx <= startIdx Then Return NULL
+
+    Dim As Integer midIdx = startIdx + (endIdx - startIdx) \ 2
+    Dim As Integer axis = depth Mod dimensions
+
+    For i As Integer = startIdx To endIdx - 1
+        For j As Integer = i + 1 To endIdx
+            If nodes(i)->punto.coords(axis) > nodes(j)->punto.coords(axis) Then
+                Swap nodes(i), nodes(j)
+            End If
+        Next
+    Next
+
+    nodes(midIdx)->izda = MakeTree(nodes(), startIdx, midIdx, depth + 1, dimensions)
+    nodes(midIdx)->dcha = MakeTree(nodes(), midIdx + 1, endIdx, depth + 1, dimensions)
+
+    Return nodes(midIdx)
+End Function
+
+Sub SearchNearest(node As KdNode Ptr, punto As Point, depth As Integer, tree As KdTree Ptr)
+    If node = NULL Then Exit Sub
+
+    tree->visited += 1
+    Dim As Single dist = Point_Distance(node->punto, punto)
+
+    If tree->bestNode = NULL Orelse dist < tree->bestDist Then
+        tree->bestDist = dist
+        tree->bestNode = node
+    End If
+
+    If tree->bestDist = 0 Then Exit Sub
+
+    Dim As Integer axis = depth Mod tree->dimensions
+    Dim As Single dx = node->punto.coords(axis) - punto.coords(axis)
+
+    If dx > 0 Then
+        SearchNearest(node->izda, punto, depth + 1, tree)
+        If dx * dx >= tree->bestDist Then Exit Sub
+        SearchNearest(node->dcha, punto, depth + 1, tree)
+    Else
+        SearchNearest(node->dcha, punto, depth + 1, tree)
+        If dx * dx >= tree->bestDist Then Exit Sub
+        SearchNearest(node->izda, punto, depth + 1, tree)
+    End If
+End Sub
+
+Function BuildKdTree(points() As Point, dimensions As Integer) As KdTree Ptr
+    Dim As KdTree Ptr tree = New KdTree
+    If tree = NULL Then Return NULL
+
+    tree->dimensions = dimensions
+    tree->bestDist = 0
+    tree->visited = 0
+    tree->root = NULL
+    tree->bestNode = NULL
+
+    Dim nodes(Ubound(points)) As KdNode Ptr
+    For i As Integer = 0 To Ubound(points)
+        nodes(i) = CreateNode(points(i))
+        If nodes(i) = NULL Then Return NULL
+    Next
+
+    tree->root = MakeTree(nodes(), 0, Ubound(nodes), 0, dimensions)
+    Return tree
+End Function
+
+Function FindNearest(tree As KdTree Ptr, punto As Point) As Point
+    Dim As Point result
+
+    If tree = NULL Orelse tree->root = NULL Then Return result
+
+    tree->bestNode = NULL
+    tree->visited = 0
+    tree->bestDist = 0
+
+    SearchNearest(tree->root, punto, 0, tree)
+
+    If tree->bestNode <> NULL Then result = tree->bestNode->punto
+
+    Return result
+End Function
+
+Sub TestWikipedia()
+    Print "Wikipedia example data:"
+
+    Dim As Point points(5)
+    points(0).coords(0) = 2: points(0).coords(1) = 3
+    points(1).coords(0) = 5: points(1).coords(1) = 4
+    points(2).coords(0) = 9: points(2).coords(1) = 6
+    points(3).coords(0) = 4: points(3).coords(1) = 7
+    points(4).coords(0) = 8: points(4).coords(1) = 1
+    points(5).coords(0) = 7: points(5).coords(1) = 2
+
+    Dim As KdTree Ptr tree = BuildKdTree(points(), 2)
+    If tree = NULL Then
+        Print "Error creating tree"
+        End 1
+    End If
+
+    Dim As Point searchPoint
+    searchPoint.coords(0) = 9
+    searchPoint.coords(1) = 2
+
+    Dim As Point nearest = FindNearest(tree, searchPoint)
+
+    Print "Nearest point: (" & nearest.coords(0) & ", " & nearest.coords(1) & ")"
+    Print "Distance: " & Sqr(tree->bestDist)
+    Print "Nodes visited: " & tree->visited
+
+    Delete tree
+End Sub
+
+Function RandomDouble(min As Single, max As Single) As Single
+    Return min + (max - min) * Rnd()
+End Function
+
+Function CreateRandomPoint() As Point
+    Dim As Point p
+    p.coords(0) = RandomDouble(0, 1)
+    p.coords(1) = RandomDouble(0, 1)
+    p.coords(2) = RandomDouble(0, 1)
+    Return p
+End Function
+
+Sub TestRandom(count As Integer)
+    Print "Random data (" & count & " points):"
+
+    Dim As Point points(count-1)
+    For i As Integer = 0 To count-1
+        points(i) = CreateRandomPoint()
+    Next
+
+    Dim As KdTree Ptr tree = BuildKdTree(points(), 3)
+
+    Dim As Point searchPoint = CreateRandomPoint()
+    Dim As Point nearest = FindNearest(tree, searchPoint)
+
+    Print "Search point : (" & searchPoint.coords(0) & ", " & searchPoint.coords(1) & ", " & searchPoint.coords(2) & ")"
+    Print "Nearest point: (" & nearest.coords(0) & ", " & nearest.coords(1) & ", " & nearest.coords(2) & ")"
+    Print "Distance: " & Sqr(tree->bestDist)
+    Print "Nodes visited: " & tree->visited
+
+    Delete tree
+End Sub
+
+'Main program
+' Original Wikipedia example
+TestWikipedia()
+Print
+' Random tests
+Randomize Timer
+TestRandom(1000)
+Print
+TestRandom(10000)
+
+Sleep

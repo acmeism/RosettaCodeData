@@ -57,18 +57,19 @@ BEGIN # draw some Cistercian Numerals                                        #
              lines[ i ][ pos : ( pos + cw ) - 1 ] := STRING( cn[ i, : ] )
          OD # print cistercian # ;
 
-    []INT tests = ( 0, 20, 300, 4000, 5555, 6789, 1968 );
-    # construct an array of blank lines and insert the Cistercian Numereals  #
-    [ 1 : ch ]STRING lines;                                     # into them  #
-    FOR i FROM LWB lines TO UPB lines DO
-        lines[ i ] := " " * ( ( ( UPB tests -LWB tests ) + 1 ) * ( cw * 2 ) )
-    OD;
-    FOR i FROM LWB tests TO UPB tests DO print( ( whole( tests[ i ], - cw ), " " * cw ) ) OD;
-    print( ( newline ) );
-    INT i pos := 1 - ( cw * 2 );
-    FOR i FROM LWB tests TO UPB tests DO
-        insert cistercian( TOCISTERCIAN tests[ i ], lines, i pos +:= cw * 2 )
-    OD;
-    FOR i FROM LWB lines TO UPB lines DO print( ( lines[ i ], newline ) ) OD
-
+    BEGIN
+        []INT tests = ( 0, 20, 300, 4000, 5555, 6789, 1968 );
+        # construct an array of blank lines and insert the                   #
+        [ 1 : ch ]STRING lines;            # Cistercian Numereals into them  #
+        FOR i FROM LWB lines TO UPB lines DO
+            lines[ i ] := " " * ( ( ( UPB tests -LWB tests ) + 1 ) * ( cw * 2 ) )
+        OD;
+        FOR i FROM LWB tests TO UPB tests DO print( ( whole( tests[ i ], - cw ), " " * cw ) ) OD;
+        print( ( newline ) );
+        INT i pos := 1 - ( cw * 2 );
+        FOR i FROM LWB tests TO UPB tests DO
+            insert cistercian( TOCISTERCIAN tests[ i ], lines, i pos +:= cw * 2 )
+        OD;
+        FOR i FROM LWB lines TO UPB lines DO print( ( lines[ i ], newline ) ) OD
+    END
 END

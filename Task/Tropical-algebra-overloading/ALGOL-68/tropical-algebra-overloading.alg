@@ -2,6 +2,14 @@ BEGIN # tropical algebra operator overloading #
 
     REAL minus inf = - max real;
 
+    # we can't use (X) or (+) as operator symbols, however we can     #
+    # overload + and use X                                            #
+    # however is we overload the OP + (REAL,REAL)REAL, we need to     #
+    # be able to access the original, hence this PROC and the         #
+    # operators must be defined in a nested block                     #
+    # note, redefining the + operator like this would probably be     #
+    # frowned on                                                      #
+
     PROC real plus = ( REAL a, b )REAL: a + b;
 
     BEGIN
@@ -18,7 +26,7 @@ BEGIN # tropical algebra operator overloading #
         OP    X = ( INT a, REAL b )REAL: REAL(a) X      b;
         OP    X = ( REAL a, INT b )REAL: a       X REAL(b);
         OP    X = ( INT a,      b )REAL: REAL(a) X REAL(b);
-        OP    + = ( INT a, REAL b )REAL: REAL(a) +      b;
+CO      OP    + = ( INT a, REAL b )REAL: REAL(a) +      b; # not needed for the task # CO
         OP    + = ( REAL a, INT b )REAL: a       + REAL(b);
         OP    + = ( INT a,      b )REAL: REAL(a) + REAL(b);
         OP    ^ = ( INT a,      b )REAL: REAL(a) ^      b;

@@ -1,6 +1,8 @@
-#include<stdio.h>
+#include <stdlib.h>
+#include <stdio.h>
 
-int main()
+int main(void)
 {
-	return printf("\nHello World!");
+  puts("Hello world!");
+  return EXIT_SUCCESS;
 }

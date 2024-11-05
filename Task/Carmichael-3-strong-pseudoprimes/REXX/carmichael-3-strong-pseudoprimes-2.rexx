@@ -24,7 +24,7 @@ parse arg x
 n = 0
 do p1 = 3 by 2 to x
 /* Method Janeson */
-   if \ IsPrime(p1) then
+   if \ Prime(p1) then
       iterate p1
    pm = p1-1; ps = -p1*p1
    do h3 = 1 to pm
@@ -37,10 +37,10 @@ do p1 = 3 by 2 to x
          if t2 <> d//h3 then
             iterate d
          p2 = 1+t1%d
-         if \ IsPrime(p2) then
+         if \ Prime(p2) then
             iterate d
          p3 = 1+(p1*p2%h3)
-         if \ IsPrime(p3) then
+         if \ Prime(p3) then
             iterate d
          if (p2*p3)//pm <> 1 then
             iterate d

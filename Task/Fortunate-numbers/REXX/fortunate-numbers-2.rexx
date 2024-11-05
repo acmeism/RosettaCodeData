@@ -24,7 +24,7 @@ do i = 1 to x
    p = prmo.primorial.i
    do j = 3 by 2
       m = m+1
-      if IsPrime(p+j) then
+      if Prime(p+j) then
          leave j
    end
    if work.j = 0 then do
@@ -55,6 +55,7 @@ say Format(Time('e'),,3) 'seconds'; say
 return
 
 include Numbers
+include Sequences
 include Functions
 include Constants
 include Abend

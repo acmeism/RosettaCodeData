@@ -1,0 +1,99 @@
+Function integrate(a As Double, b As Double, n As Integer, f As Function(x As Double, a As Double) As Double, param As Double) As Double
+    Dim As Double h = (b - a) / n
+    Dim As Double sum = 0
+    For i As Integer = 0 To n - 1
+        Dim As Double x = a + i * h
+        sum += (f(x, param) + 4 * f(x + h/2, param) + f(x + h, param)) / 6
+    Next
+    Return sum * h
+End Function
+
+Function f0(t As Double, a As Double) As Double
+    Return (t ^ (a - 1)) * Exp(-t)
+End Function
+
+' Simple implementation of the gamma function
+Function gammaFunc(x As Double) As Double
+    If x = 1 Or x = 2 Then
+        Return 1
+    Elseif x > 0 And x < 1 Then
+        Return gammaFunc(x + 1) / x
+    Elseif x > 1 Then
+        Return (x - 1) * gammaFunc(x - 1)
+    Else
+        Return 0 ' Undefined for x <= 0
+    End If
+End Function
+
+Function gammaIncomplete(a As Double, x As Double) As Double
+    Dim As Double am1 = a - 1
+    Dim As Double h = 1.5e-2
+    Dim As Double y = am1
+
+    While (f0(y, a) * (x - y) > 2e-8 And y < x)
+        y += 0.4
+    Wend
+
+    If y > x Then y = x
+
+    Dim As Double integralResult = integrate(0, y, Int(y/h), @f0, a)
+    Return 1 - integralResult / gammaFunc(a)
+End Function
+
+Function chi2UniformDistance(ds() As Double) As Double
+    Dim As Double expected = 0
+    Dim As Integer i, n = Ubound(ds) - Lbound(ds) + 1
+
+    For i = Lbound(ds) To Ubound(ds)
+        expected += ds(i)
+    Next
+    expected /= n
+
+    Dim As Double sum = 0
+    For i = Lbound(ds) To Ubound(ds)
+        sum += (ds(i) - expected) ^ 2
+    Next
+
+    Return sum / expected
+End Function
+
+Function chi2Probability(dof As Integer, dist As Double) As Double
+    Return gammaIncomplete(0.5 * dof, 0.5 * dist)
+End Function
+
+Function chiIsUniform(ds() As Double, significance As Double) As Boolean
+    Dim As Integer dof = Ubound(ds) - Lbound(ds)
+    Dim As Double dist = chi2UniformDistance(ds())
+    Return chi2Probability(dof, dist) > significance
+End Function
+
+' Main program
+Dim As Double dsets(1, 4) = { _
+{199809, 200665, 199607, 200270, 199649}, _
+{522573, 244456, 139979,  71531,  21461} }
+
+For i As Integer = 0 To 1
+    Dim As Double ds(4)
+    For j As Integer = 0 To 4
+        ds(j) = dsets(i, j)
+    Next
+
+    Print "Dataset: ";
+    For j As Integer = 0 To 4
+        Print Using "###### "; ds(j);
+    Next
+    Print
+
+    Dim As Integer dof = Ubound(ds) - Lbound(ds)
+    Dim As Double dist = chi2UniformDistance(ds())
+    Print Using "DOF: # Distance: &"; dof; dist;
+
+    Dim As Double prob = chi2Probability(dof, dist)
+    Print Using " Probability: ##.#####"; prob;
+
+    Dim As String uniform = Iif(chiIsUniform(ds(), 0.05), "Yes", "No")
+    Print " Uniform? "; uniform
+    Print
+Next
+
+Sleep

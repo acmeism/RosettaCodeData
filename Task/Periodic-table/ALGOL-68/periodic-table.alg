@@ -24,7 +24,7 @@ BEGIN # display the period and group number of an element, #
                 # lantanoids or actinoids                   #
                 INT series period = IF p = "8" THEN 8 ELSE 9 FI;
                 INT series group := 4;
-                FOR e TO 15 DO
+                TO 15 DO
                     position[ element ] := ( group multiplier * series group ) + series period;
                     element            +:= 1;
                     series group       +:= 1

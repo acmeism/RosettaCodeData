@@ -1,0 +1,6 @@
+FOR i = 1 TO 10
+	PRINT STR$(i);
+	IF (i MOD 5) THEN PRINT ", "; ELSE PRINT
+NEXT i
+PRINT
+END

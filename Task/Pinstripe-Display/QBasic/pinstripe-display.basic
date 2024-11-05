@@ -1,0 +1,14 @@
+SCREEN 12
+w = 640: h = 480
+
+h = h \ 4
+y2 = h - 1
+
+FOR ps = 1 TO 4
+    col = 0
+    FOR x = 0 TO (w - ps - 1) STEP ps
+        LINE (x, y1)-(x + ps - 1, y2), col, BF
+        col = 15 - col ' col alternate between 0 (black) and 15 (white)
+    NEXT x
+    y1 = y1 + h: y2 = y2 + h
+NEXT ps

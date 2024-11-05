@@ -28,9 +28,7 @@ OP   SUMDIGITS = ( INT value, INT base )INT:
 # second operator                                                     #
 OP   SUMDIGITS = ( BITS value, INT base )INT: ABS value SUMDIGITS base;
 
-main:(
-
-    # test the SUMDIGITS operator #
+BEGIN # test the SUMDIGITS operator #
 
     print( ( "value\base base digit-sum", newline ) );
     print( ( "      1\10   10 ", whole(      1 SUMDIGITS 10, -9 ), newline ) );
@@ -42,4 +40,4 @@ main:(
     # the digits in...                                                  #
     print( ( "     73\10   71 ", whole(     73 SUMDIGITS 71, -9 ), newline ) )
 
-)
+END

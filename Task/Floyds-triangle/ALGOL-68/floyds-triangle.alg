@@ -1,6 +1,10 @@
-# procedure to print a Floyd's Triangle with n lines                      #
+# procedure to print a Floyd's Triangle with n lines                        #
 PROC floyds triangle = ( INT n )VOID:
 BEGIN
+
+    # the triangle should be left aligned with the individual numbers     #
+    # right-aligned with only one space before the number in the final    #
+    # row                                                                 #
 
     # calculate the number of the highest number that will be printed     #
     # ( the sum of the integers 1, 2, ... n )                             #
@@ -24,10 +28,6 @@ BEGIN
 
 END; # floyds triangle #
 
-main: (
-
-    floyds triangle(  5 );
-    print( ( newline ) );
-    floyds triangle( 14 )
-
-)
+floyds triangle(  5 );
+print( ( newline ) );
+floyds triangle( 14 )

@@ -8,6 +8,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 public final class UkkonenSuffixTree {
@@ -48,7 +50,7 @@ public final class UkkonenSuffixTree {
 			text = Arrays.copyOfRange(aWord.toCharArray(), 0, aWord.length() + 1);
 			text[aWord.length()] = '\uF123'; // Terminal character
 			
-			nodes = new Node[2 * aWord.length() + 2];
+			nodes = new Node[2 * text.length];
 	        root = newNode(UNDEFINED, UNDEFINED);
 	        activeNode = root;
 	
@@ -60,9 +62,9 @@ public final class UkkonenSuffixTree {
 		public Map<String, Set<Integer>> getLongestRepeatedSubstrings() {
 			List<Integer> indexes = doTraversal();
 			String word = String.valueOf(text).substring(0, text.length - 1);
-			Map<String, Set<Integer>> result = new HashMap<String, Set<Integer>>();
+			SortedMap<String, Set<Integer>> result = new TreeMap<String, Set<Integer>>();
 			
-			if ( indexes.get(0) > 0 ) {
+			if ( indexes.getFirst() > 0 ) {
 				for ( int i = 1; i < indexes.size(); i++ ) {
 					String substring = word.substring(indexes.get(i), indexes.get(i) + indexes.get(0));			
 					result.computeIfAbsent(substring, k -> new TreeSet<Integer>()).add(indexes.get(i));	

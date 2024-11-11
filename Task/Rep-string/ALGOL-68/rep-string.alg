@@ -36,8 +36,7 @@ END; # longest rep string #
 
 
 # test the longest rep string procedure                                    #
-main:
-(
+BEGIN
 
     []STRING tests = ( "1001110011"
                      , "1110111011"
@@ -65,4 +64,4 @@ main:
                )
              )
     OD
-)
+END

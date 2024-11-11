@@ -78,7 +78,8 @@ public final class FunctionalCoverageTree {
 		ground_floor.get(1).addChildren(living_rooms_house_2);		
 		
 		final double overallCoverage = cleaning.getCoverage();
-		System.out.println("OVERALL COVERAGE = " + String.format("%.6f", overallCoverage) + System.lineSeparator());
+		System.out.println("OVERALL COVERAGE = " + String.format("%.6f", overallCoverage));
+        System.out.println();
 		System.out.println("NAME HIERARCHY                  | WEIGHT | COVERAGE |" );
 		System.out.println("--------------------------------|--------|----------|");
 		cleaning.display();
@@ -129,14 +130,14 @@ final class FCNode {
 	}
 	
 	private void updateCoverage() {
-		double value1 = 0.0;
-	    int value2 = 0;
+		double sumWeightedCoverage = 0.0;
+	    int sumWeight = 0;
 	    for ( FCNode node : children ) {
-	    	value1 += node.weight * node.coverage;
-	    	value2 += node.weight;
+	    	sumWeightedCoverage += node.weight * node.coverage;
+	    	sumWeight += node.weight;
 	    }
 	
-	    setCoverage(value1 / value2);
+	    setCoverage(sumWeightedCoverage / sumWeight);
 	}	
 	
 	private void display(int aLevel) {		

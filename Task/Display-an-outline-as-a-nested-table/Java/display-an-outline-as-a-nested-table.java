@@ -268,8 +268,8 @@ public final class DisplayAnOutlineAsANestedTable {
 		
 		private static int index = -1;
 		
-		private static final List<String> colours = List.of( "#ffff66;", "#ffcc66;", "#ccffcc;", "#ccccff;",
-                                                             "#ffcccc;", "#00cccc;", "#cc9966;", "#ffccff;" );
+		private static final List<String> colours = List.of(
+            "#ffff66;", "#ffcc66;", "#ccffcc;", "#ccccff;", "#ffcccc;", "#00cccc;", "#cc9966;", "#ffccff;" );
 		
 	}
 

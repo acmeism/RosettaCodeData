@@ -1,13 +1,13 @@
-hanzi  ← '甲' '乙' '丙' '丁' '戊' '己' '庚' '辛' '壬' '癸' '子' '丑' '寅' '卯' '辰' '巳' '午' '未' '申' '酉' '戌' '亥'
-pinyin ← 'jiă' 'yĭ' 'bĭng' 'dīng' 'wù' 'jĭ' 'gēng' 'xīn' 'rén' 'gŭi' 'zĭ' 'chŏu' 'yín' 'măo' 'chén' 'sì' 'wŭ' 'wèi' 'shēn' 'yŏu' 'xū' 'hài'
-
-pinyinFor ← { pinyin /⍨ ⍵ ⍷ hanzi }
-
 stems     ← '甲' '乙' '丙' '丁' '戊' '己' '庚' '辛' '壬' '癸'
 branches  ← '子' '丑' '寅' '卯' '辰' '巳' '午' '未' '申' '酉' '戌' '亥'
 animals   ← 'Rat'  'Ox'   'Tiger' 'Rabbit' 'Dragon' 'Snake' 'Horse' 'Goat' 'Monkey' 'Rooster' 'Dog' 'Pig'
 elements  ← 'Wood' 'Fire' 'Earth' 'Metal'  'Water'
 aspects   ← 'yang' 'yin'
+
+hanzi  ← stems, branches
+pinyin ← 'jiă' 'yĭ' 'bĭng' 'dīng' 'wù' 'jĭ' 'gēng' 'xīn' 'rén' 'gŭi', 'zĭ' 'chŏu' 'yín' 'măo' 'chén' 'sì' 'wŭ' 'wèi' 'shēn' 'yŏu' 'xū' 'hài'
+
+pinyinFor ← { pinyin /⍨ ⍵ ⍷ hanzi }
 
 position     ← { 1 + 60 | ⍵ - 4 }
 item         ← { ⍺ ⌷⍨ 1 + (≢⍺) | 1 -⍨ position ⍵ }

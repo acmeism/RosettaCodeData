@@ -1,0 +1,208 @@
+/*
+ADFGVX cipher
+https://rosettacode.org/wiki/ADFGVX_cipher
+
+Requires file, unixdict.txt to be on the desktop
+https://github.com/quinnj/Rosetta-Julia/blob/master/unixdict.txt
+
+*/
+
+begin globals
+
+  str255 ADFGVX
+  ADFGVX  = "ADFGVX"
+  str255 ALPHABET
+  ALPHABET  = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+end globals
+
+local fn InitialisePolybiusSquare As str255
+  short i, j
+
+  str255 letters(36)
+  For i = 0 To 35
+    letters(i) = Mid$(ALPHABET, i + 1, 1)
+  Next
+
+  For i = 0 To 35
+    j = Int(rnd (36))
+    Swap letters(i), letters(j)
+  Next
+
+  short row, column
+  str255 result
+  result = ""
+  For row = 0 To 5
+    For column = 0 To 5
+      result = result + letters(6 * row + column)
+    Next
+  Next
+
+End fn = result
+
+local fn CreateKey(size As short) As str255
+  If size < 7 Or size > 12
+    Print "Key should contain between 7 and 12 letters, both inclusive."
+    Exit fn
+  End If
+
+  short i, j
+  str255 TheWord, candidates(1000)
+  short ff = 1 // file number
+
+  short CandidatesCounter = 1
+
+  CFUrlRef ParentDirectory = fn FileManagerURLForDirectory( NSDesktopDirectory, NSUserDomainMask )
+  CFUrlRef UnixDictURL = fn URLByAppendingPathComponent( ParentDirectory, @"unixdict.txt" )
+
+
+  Open "I",ff, UnixDictURL
+  While Eof(ff) = 0
+    Line Input #ff, TheWord
+
+    str255 uniqueWord
+    uniqueWord = ""
+    For i = 1 To Len$(TheWord)
+      If Instr$(1,uniqueWord, Mid$(TheWord, i, 1)) = 0
+        uniqueWord = uniqueWord +  Mid$(TheWord, i, 1)
+      End If
+    Next
+
+    If Len$(TheWord) = size && Len$(TheWord) = Len$(uniqueWord)
+      TheWord = Ucase$(TheWord)
+
+      bool isAlphanum = _true
+      For i = 1 To Len$(TheWord)
+        If (Mid$(TheWord, i, 1) < "A" && Mid$(TheWord, i, 1) <= "Z") && (Mid$(TheWord, i, 1) < "0" && Mid$(TheWord, i, 1) <= "9")
+          isAlphanum = _false
+          Exit For
+        End If
+      Next
+
+
+      If isAlphanum
+        //Redim Preserve candidates(Ubound(candidates) + 1)
+        CandidatesCounter ++
+        candidates(CandidatesCounter) = TheWord
+      End If
+    End If
+  Wend
+  Close #ff
+
+
+
+  For i = 0 To CandidatesCounter
+    j = Int(Rnd (CandidatesCounter + 1))
+    Swap candidates(i), candidates(j)
+  Next
+
+End fn = candidates(0)
+
+local fn Encrypt(plainText As str255, polybius As str255, key As str255) As str255
+  short i, j, row, column
+  str255 code, ch, encrypted
+
+  code = ""
+  For i = 1 To Len$(plainText)
+    ch = Mid$(plainText, i, 1)
+    For row = 0 To 5
+      For column = 0 To 5
+        If Mid$(polybius, row * 6 + column + 1, 1) = ch
+          code = code +  Mid$(ADFGVX, row + 1, 1)
+          code = code +  Mid$(ADFGVX, column + 1, 1)
+        End If
+      Next
+    Next
+  Next
+
+  encrypted = ""
+  For i = 1 To Len$(key)
+    ch = Mid$(key, i, 1)
+    For j = Instr$(1,key, ch) - 1 To Len$(code) - 1 Step Len$(key)
+      encrypted = encrypted +  Mid$(code, j + 1, 1)
+    Next
+    encrypted = encrypted +  " "
+  Next
+
+
+End fn = encrypted
+
+local fn Decrypt(encryptedText As str255, polybius As str255, key As str255) As str255
+  short i, j, row, column, spaceCount, codeSize
+  str255 result, stream, TheWord, code, plainText
+  str255 blocks(200)
+  short BlocksCounter = 1
+  result = ""
+  i = 1
+  While i <= Len$(encryptedText)
+    If Mid$(encryptedText, i, 1) = " "
+      i += 1
+    Else
+      result += Mid$(encryptedText, i, 1)
+      i += 1
+    End If
+  Wend
+  spaceCount = Len$(encryptedText) - Len$(result)
+  codeSize = Len$(encryptedText) - spaceCount
+
+
+  stream = encryptedText
+  While Len$(stream) > 0
+    TheWord = Left$(stream, Instr$(1,stream, " ") - 1)
+    //Redim Preserve blocks(Ubound(blocks) + 1)
+    BlocksCounter ++
+    blocks(BlocksCounter) = TheWord
+    stream = Mid$(stream, Instr$(1,stream, " ") + 1)
+  Wend
+
+  code = ""
+  For i = 0 To codeSize - 1
+    BlocksCounter ++
+    For j = 0 To BlocksCounter
+      If Len$(code) < codeSize Then code = code + Mid$(blocks(j), i + 1, 1)
+    Next
+  Next
+
+  plainText = ""
+  For i = 1 To codeSize - 1 Step 2
+    row = Instr$(1,ADFGVX, Mid$(code, i, 1)) - 1
+    column = Instr$(1,ADFGVX, Mid$(code, i + 1, 1)) - 1
+    plainText = plainText +  Mid$(polybius, row * 6 + column + 1, 1)
+  Next
+
+
+End fn = plainText
+
+str255 polybius
+polybius = fn InitialisePolybiusSquare
+Print "The 6 x 6 Polybius square:"
+Print " | A D F G V X"
+Print "--------------"
+short row
+For row = 0 To 5
+  Print Mid$(ADFGVX, row + 1, 1); "|";
+  short column
+  For column  = 0 To 5
+    Print " "; Mid$(polybius, row * 6 + column + 1, 1);
+  Next
+  Print
+Next
+
+str255 key
+key = fn CreateKey(9)
+print
+Print "The key is "; key
+str255 plainText
+plainText = "ATTACKAT1200AM"// 20241105
+print
+Print "Plain text: "; plainText
+str255 encryptedText
+encryptedText = fn Encrypt(plainText, polybius, key)
+print
+Print "Encrypted: "; encryptedText
+str255 decryptedText
+decryptedText = fn Decrypt(encryptedText, polybius, key)
+print
+Print "Decrypted: "; decryptedText
+
+handleevents

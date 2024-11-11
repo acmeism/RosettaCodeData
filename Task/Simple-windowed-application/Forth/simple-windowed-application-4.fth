@@ -13,7 +13,7 @@ TextView' t
 
 \ the running count is always on the stack
 \ so a variable for that is not needed
-:noname
+:noname ( count -- count+1 )
   1+  \ increment the count
   " Number of clicks: " put: t
   dup deciNumstr insert: t ; setAction: b \ update the text representation of count

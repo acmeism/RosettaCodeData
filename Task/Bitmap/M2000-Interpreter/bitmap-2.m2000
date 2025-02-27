@@ -1,55 +1,57 @@
 Module  P6 {
       Function Bitmap  {
             def x as long, y as long, Import as boolean
-
-            If match("NN") then {
+            If match("NN") then
                  Read x, y
-            } else.if Match("N") Then  {
+            else.if Match("N") Then
                   \\ is a file?
                   Read f as long
-                  buffer whitespace as byte
-                  if not Eof(f) then {
-                        get #f, whitespace :P6$=eval$(whitespace)
-                        get #f, whitespace : P6$+=eval$(whitespace)
-                        def boolean getW=true, getH=true, getV=true
-                        def long v
-                        \\ str$("P6") has 2 bytes. "P6" has 4 bytes
-                        If p6$=str$("P6") Then {
-                              do {
+                  byte whitespace[0]
+                  if not Eof(f) then
+                        get #f, whitespace :P6$=chr$(whitespace[0])
+                        get #f, whitespace : P6$+=chr$(whitespace[0])
+                        boolean getW=true, getH=true, getV=true
+                        long v
+                        If p6$="P6" Then
+                              do
                                     get #f, whitespace
-                                    if Eval$(whitespace)=str$("#") then {
-                                          do {get #f, whitespace} until eval(whitespace)=10
-                                    } else  {
-                                         select case eval(whitespace)
-                                          case 32, 9, 13, 10
-                                          { if getW and x<>0 then {
-                                                      getW=false
-                                                } else.if getH  and y<>0 then {
-                                                      getH=false
-                                                } else.if getV and v<>0 then {
-                                                      getV=false
-                                                }
-                                          }
-                                          case 48 to 57
-                                          {if getW then {
-                                                     x*=10
-                                                     x+=eval(whitespace, 0)-48
-                                                } else.if getH then {
-                                                     y*=10
-                                                     y+=eval(whitespace, 0)-48
-                                                } else.if getV then {
-                                                     v*=10
-                                                     v+=eval(whitespace, 0)-48
-                                                }
-                                          }
-                                          End Select
+                                    select case whitespace[0]
+                                    case 35
+                                    {do get #f, whitespace
+                                        until whitespace[0]=10
                                     }
+                                    case 32, 9, 13, 10
+                                    { if getW and x<>0 then
+                                                getW=false
+                                          else.if getH  and y<>0 then
+                                                getH=false
+                                          else.if getV and v<>0 then
+                                                getV=false
+                                          end if
+                                    }
+                                    case 48 to 57
+                                    {if getW then
+                                               x*=10
+                                               x+=whitespace[0]-48
+                                          else.if getH then
+                                               y*=10
+                                               y+=whitespace[0]-48
+                                          else.if getV then
+                                               v*=10
+                                               v+=whitespace[0]-48
+                                          end if
+                                    }
+                                    End Select
                                     iF eof(f) then Error "Not a ppm file"
-                              } until getV=false
-                        }  else Error "Not a P6 ppm"
+                              until getV=false
+                        else
+                            Error "Not a P6 ppm"
+                        end if
                         Import=True
-                  }
-            } else Error "No proper arguments"
+                  end if
+            else
+                Error "No proper arguments"
+            end if
             if x<1 or y<1 then  Error "Wrong dimensions"
             structure rgb {
                   red as byte
@@ -78,7 +80,7 @@ Module  P6 {
             Return Image1, 0!magic:="cDIB", 0!w:=Hex$(x,2), 0!h:=Hex$(y, 2)
             if not Import then  Return Image1, 0!lines:=Str$(String$(chrcode$(255), Len(rasterline)*y))
             Buffer Clear Pad as Byte*4
-            SetPixel=Lambda Image1, Pad,aLines=Len(Raster)-Len(Rasterline), blines=-Len(Rasterline) (x, y, c) ->{
+            SetPixel=Lambda Image1, Pad, aLines=Len(Raster)-Len(Rasterline), blines=-Len(Rasterline) (x, y, c) ->{
                   where=alines+3*x+blines*y
                   if c>0 then c=color(c)
                   c-!
@@ -101,23 +103,41 @@ Module  P6 {
                   Print #f, "P6";chr$(10);"# Created using M2000 Interpreter";chr$(10);
                   Print #f, x;" ";y;" 255";chr$(10);
                   x2=x-1 :  where=0
-                  Buffer pad as byte*3
-                  For y1= 0 to y-1 {
-                        For x1=0 to x2 {
-                             Return pad, 0:=eval$(image1, 0!linesB!where, 3)
-                             Push Eval(pad, 2) : Return pad, 2:=Eval(pad, 0), 0:=Number
-                             Put #f, pad : where+=3
-                        }
+                  x0=x*3
+                  structure rgbP6 {
+                        r as byte
+                        g as byte
+                        b as byte
+                  }
+                  buffer Pad as rgbP6*x*y
+                  For y1=y-1 to 0 {
+                        Return pad, x*y1:=eval$(image1, 0!linesB!where, x0)
+                        where+=x0
                         m=where mod 4 : if m<>0 then where+=4-m
                   }
+                  For x1=0 to x*y-1 {
+                        Push Eval(pad, x1!b) : Return pad, x1!b:=Eval(pad, x1!r), x1!r:=Number
+                  }
+                  Put #f, pad
             }
             if Import then {
-                  x0=x-1 : where=0
-                  Buffer Pad1 as byte*3
-                  For y1=y-1 to 0 {
-                        For x1=0 to x0 {Get #f, Pad1 : Push Eval(pad1, 2) : Return pad1, 2:=Eval(pad1, 0), 0:=Number
-                              Return Image1, 0!linesB!where:=Eval$(Pad1) : where+=3}
-                        m=where mod 4 : if m<>0 then where+=4-m}
+                    x0=x-1 : where=0
+                    structure rgbP6 {
+                        r as byte
+                        g as byte
+                        b as byte
+                    }
+                    buffer Pad1 as rgbP6*x*y
+                    Get #f, Pad1
+                    For x1=0 to x*y-1 {
+                        Push Eval(pad1, x1!b) : Return pad1, x1!b:=Eval(pad1, x1!r), x1!r:=Number
+                    }
+                    x1=x*3
+                    For y1=y-1 to 0 {
+                        Return Image1, 0!linesB!where:=Eval$(Pad1, y1*x, x1)
+                        where+=3*(x0+1)
+                        m=where mod 4 : if m<>0 then where+=4-m
+                    }
             }
             Group Bitmap {
                   SetPixel=SetPixel

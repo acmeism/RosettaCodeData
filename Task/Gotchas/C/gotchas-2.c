@@ -1,1 +1,3 @@
-int foo[4] = {4,8,12,16};
+if (a==b) {
+	...;	/* this is run if a and b are equal */
+}

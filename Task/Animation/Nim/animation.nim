@@ -1,4 +1,4 @@
-import gintro/[glib, gobject, gdk, gtk, gio]
+import gtk2, gdk2, glib2
 
 type
 
@@ -6,56 +6,56 @@ type
   ScrollDirection = enum toLeft, toRight
 
   # Data transmitted to update callback.
-  UpdateData = ref object
-    label: Label
+  UpdateData = object
+    label: PLabel
     scrollDir: ScrollDirection
 
-#---------------------------------------------------------------------------------------------------
 
-proc update(data: UpdateData): gboolean =
+proc update(data: var UpdateData): gboolean {.cdecl.} =
   ## Update the text, scrolling to the right or to the left according to "data.scrollDir".
-
-  data.label.setText(if data.scrollDir == toRight: data.label.text[^1] & data.label.text[0..^2]
-                     else: data.label.text[1..^1] & data.label.text[0])
+  let text = $data.label.text   # Get text as a Nim string.
+  let newText = if data.scrollDir == toRight: text[^1] & text[0..^2]
+                else: text[1..^1] & text[0]
+  data.label.setText(newText.cstring)
   result = gboolean(1)
 
-#---------------------------------------------------------------------------------------------------
 
-proc changeScrollingDir(evtBox: EventBox; event: EventButton; data: UpdateData): bool =
+proc changeScrollingDir(evtBox: PEventBox; event: PEventButton; data: ptr UpdateData): bool =
   ## Change scrolling direction.
-
   data.scrollDir = ScrollDirection(1 - ord(data.scrollDir))
 
-#---------------------------------------------------------------------------------------------------
 
-proc activate(app: Application) =
-  ## Activate the application.
+proc onDestroyEvent(widget: PWidget; data: Pgpointer): gboolean {.cdecl.} =
+  ## Process the "destroy" event.
+  main_quit()
 
-  let window = app.newApplicationWindow()
-  window.setSizeRequest(150, 50)
-  window.setTitle("Animation")
 
-  # Create an event box to catch the button press event.
-  let evtBox = newEventBox()
-  window.add(evtBox)
 
-  # Create the label and add it to the event box.
-  let label = newLabel("Hello World! ")
-  evtBox.add(label)
+nim_init()
 
-  # Create the update data.
-  let data = UpdateData(label: label, scrollDir: toRight)
+let window = window_new(WINDOW_TOPLEVEL)
+window.set_size_request(150, 50)
+window.set_title("Animation")
 
-  # Connect the "button-press-event" to the callback to change scrolling direction.
-  discard evtBox.connect("button-press-event", changeScrollingDir, data)
+# Create an event box to catch the button press event.
+let evtBox = event_box_new()
+window.add evtBox
 
-  # Create a timer to update the label and simulate scrolling.
-  timeoutAdd(200, update, data)
+# Create the label and add it to the event box.
+let label = label_new("Hello World! ")
+evtBox.add label
 
-  window.showAll()
+# Create the update data.
+var data = UpdateData(label: label, scrollDir: toRight)
 
-#———————————————————————————————————————————————————————————————————————————————————————————————————
+# Connect the "button-press-event" to the callback to change the scrolling direction.
+discard evtBox.signal_connect("button-press-event", SIGNAL_FUNC(changeScrollingDir), data.addr)
 
-let app = newApplication(Application, "Rosetta.animation")
-discard app.connect("activate", activate)
-discard app.run()
+# Quit the application if the window is closed.
+discard window.signal_connect("destroy", SIGNAL_FUNC(onDestroyEvent), nil)
+
+# Create a timer to update the label and simulate scrolling.
+discard timeout_add(200, cast[gtk2.TFunction](animation.update), data.addr)
+
+window.showAll()
+main()

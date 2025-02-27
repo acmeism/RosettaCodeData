@@ -52,7 +52,7 @@ BEGIN # Koch Curve in SVG                                                    #
 
             put( svg file, ( "'/>", newline, "</svg>", newline ) );
             close( svg file )
-         FI # sierpinski square # ;
+         FI # koch curve # ;
 
     koch curve( "koch.svg", 600, 5, 4, 150, 150 )
 

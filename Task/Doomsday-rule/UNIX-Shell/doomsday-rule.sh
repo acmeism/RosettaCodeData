@@ -5,14 +5,14 @@ day-of-the-week()
   then
     local -ra names=({Sun,Mon,Tues,Wednes,Thurs,Fri,Satur}day) doomsday=({37,41}7426415375)
     local -i i c s t a b
-    local -i {year,month,day}=${BASH_REMATCH[++i]}
+    local -i {y,m,d}=${BASH_REMATCH[++i]}
     echo ${names[
-      c=year/100,
-      s=(year%100)/12,
-      t=(year % 100) % 12,
+      c=y/100,
+      s=(y%100)/12,
+      t=(y % 100) % 12,
       a=(5*(c%4)+2) % 7,
       b=(s + t + (t / 4) + a ) % 7,
-      (b + day - ${doomsday[(year%4 == 0) && ((year%100) || (year%400 == 0))]:month-1:1} + 7) % 7
+      (b + d - ${doomsday[(y%4 == 0) && ((y%100) || (y%400 == 0))]:m-1:1} + 7) % 7
     ]}
   else return 1
   fi

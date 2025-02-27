@@ -63,7 +63,7 @@ fn (lr LogRep) str() string {
 }
 
 struct HammingsLog {
-  mut:
+    mut:
     // automatically initialized with LogRep = one (defult)...
     s2 []LogRep = []LogRep { len: 1024, cap: 1024 }
     s3 []LogRep = []LogRep { len: 1024, cap: 1024 }

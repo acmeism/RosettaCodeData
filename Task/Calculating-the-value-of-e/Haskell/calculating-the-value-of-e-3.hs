@@ -1,16 +1,4 @@
-{-# LANGUAGE TupleSections #-}
-
-------------------- APPROXIMATIONS TO E ------------------
-
-approximatEs :: [Double]
-approximatEs =
-  fst
-    <$> iterate
-      ( \(e, (i, n)) ->
-          (,) . (e +) . (1 /) <*> (succ i,) $ i * n
-      )
-      (1, (1, 1))
-
---------------------------- TEST -------------------------
-main :: IO ()
-main = print $ approximatEs !! 17
+eApprox n = snd $ foldr f (1, 1) [n, pred n .. 1]
+  where
+    f x (fl, e) =
+      let y = fl * x in (y, e + 1 / y)

@@ -5,10 +5,10 @@ func$[] rev a$[] .
    return a$[]
 .
 lin$ = "rosetta code phrase reversal"
-print strjoin rev strchars lin$
+print strjoin rev strchars lin$ ""
 words$[] = strsplit lin$ " "
 for w$ in words$[]
-   write strjoin rev strchars w$
+   write strjoin rev strchars w$ ""
    write " "
 .
 print ""

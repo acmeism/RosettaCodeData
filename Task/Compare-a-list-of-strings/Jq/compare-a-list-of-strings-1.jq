@@ -1,11 +1,11 @@
 # Are the strings all equal?
 def lexically_equal:
-  . as $in
-  | reduce range(0;length-1) as $i
-      (true; if . then $in[$i] == $in[$i + 1] else false end);
+  if length <= 1 then true
+  else . as $in
+  | all( range(0;length-1); $in[0] == $in[. + 1])
+  end;
 
-# Are the strings in strictly ascending order?
+# Are the elements in strictly ascending order?
 def lexically_ascending:
   . as $in
-  | reduce range(0;length-1) as $i
-      (true; if . then $in[$i] < $in[$i + 1] else false end);
+  | all( range(0;length-1); $in[.] < $in[. + 1]);

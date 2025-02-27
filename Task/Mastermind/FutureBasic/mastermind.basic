@@ -1,0 +1,452 @@
+_window = 1
+_Check = 250
+_NewGame = 251
+
+_view = 2000
+
+_PrefWnd = 2
+begin enum 1
+  _NoOfColours
+  _Label
+  _CodeLgth
+  _Label1
+  _Guesses
+  _Repeats
+  _Label2
+  _Exit
+  _info
+end enum
+
+begin enum 1000
+  _blue
+  _Red
+  _Yellow
+  _Magenta
+  _Orange
+  _Green
+  _Brown
+  _Cyan
+  _Purple
+  _DarkGray
+end enum
+
+_mApplication = 0
+begin enum 0
+  _iAbout
+  _iSeparator
+  _PreferencesItem
+  _iSeparator1
+  _iHide
+end enum
+
+_EditMenu = 1
+
+begin enum
+  _iUndo
+  _iRedo
+  _
+  _iCut
+  _iCopy
+  _iPaste
+  _iDelete
+  _iSelectAll
+end enum
+
+
+begin globals
+CFStringRef gColours, gCodeLgth, gGuesses
+BOOL gRepeats = NO, gWon = NO
+ColorRef gNewColour
+int gNextFld = 1, gRestriction = 1
+CFMutableArrayRef gArray
+CFMutableArrayRef gTargetArray
+CFMutableArrayRef gTargetColours
+CFMutableArrayRef gGuessArray
+int gLine = 1, gLastGuess, gLength
+int gColor(12)
+CFMutableArrayRef gRestrict
+end globals
+
+// Colours 2 - 12
+// Code Lgth 4 - 10
+// Guesses 7 - 20 total fields 10*20 = 200
+
+gArray = fn MutableArrayWithCapacity(0)
+gTargetArray = fn MutableArrayWithCapacity(0)
+gGuessArray = fn MutableArrayWithCapacity(0)
+gRestrict = fn MutableArrayWithCapacity(0)
+gTargetColours = fn MutableArrayWithCapacity(0)
+
+// Master Mind game
+
+void local fn SetBackgroundColor( col as ColorRef )
+  TextFieldRef fld = fn ViewWithTag(gNextFld)
+  UndoManagerRef um = fn ResponderUndoManager( fld )
+  UndoManagerRegisterUndo( um, @fn SetBackgroundColor, fn TextFieldBackgroundColor(fld))
+  UndoManagerSetActionName( um, @"Set Background Color" )
+  TextFieldSetBackgroundColor( fld, col )
+end fn
+
+LOCAL FN Max(Big as int,Little AS int) as int
+  int MaxNo
+  IF Big > Little THEN MaxNo = Big ELSE MaxNo  = Little
+END FN = MaxNo
+
+void local fn SetColor
+  for int x = 0 to 11
+    gColor(x) = x
+  next
+end fn
+
+local fn RandomChoice( count as int) as int
+  int x,i
+  Bool check = NO
+  DO
+    x = rnd( count + 1 ) - 1
+    if gColor(x) > -1
+      i = gColor(x )
+      if gColor(x) == 0
+        gColor(x) = -1
+      else
+        gColor(x) = -gColor(x)
+      end if
+      check = YES
+    end if
+  until check == YES
+end fn = i
+
+void local fn Winning
+  alert -1,, @"Message", @"You Won This Game", @"OK;Continue", YES
+  AlertButtonSetKeyEquivalent( 1, 1, @"\e" )
+  alert 1
+  gWon = YES
+end fn
+
+void local fn SetTarget
+  int count =   fn StringIntValue( gColours )
+  int x, y
+  CFStringRef key
+  ColorRef col
+  MutableArrayRemoveAllObjects( gTargetArray )
+  MutableArrayRemoveAllObjects( gTargetColours )
+
+  for x = 0 to count - 1
+    if gRepeats == NO
+      y = fn RandomChoice( count )
+    else
+      y = rnd( count + 1 ) - 1
+    end if
+    key = fn StringWithFormat( @"%d", y)
+    col = fn ArrayObjectAtIndex( gArray, y )
+    MutableArrayInsertObjectAtIndex( gTargetColours,col, x )
+    MutableArrayInsertObjectAtIndex( gTargetArray,key, x )
+  next
+end fn
+
+void local fn SetFields
+  Int x,y,z = 1,xx,yy,zz = 299
+  int CodeLgth = fn StringIntValue( gCodeLgth )
+  int Guesses = fn StringIntValue( gGuesses )
+  CGRect r, lr
+  gLastGuess = Guesses
+  xx = 20:yy = 40
+  r = fn CGRectMake( xx, yy, 25, 25 )
+  lr = fn CGRectMake( xx+CodeLgth*25 + 50, yy + 6, 12,12 )
+  for x = 1 to Guesses
+    for y = 1 to CodeLgth
+      textfield z,,@"", r
+      ControlSetFontWithName(z,@"Times",12)
+      ControlSetAlignment( z, NSTextAlignmentCenter )
+      TextFieldSetBackgroundColor( z, fn ColorWhite )
+      r = fn CGRectOffset( r, 25, 0)
+      textfield z+zz,,@"",lr
+      TextFieldSetBackgroundColor( z+zz, fn ColorLightGray )
+      z++
+      lr = fn CGRectOffset( lr, 12,0)
+    next
+    lr = fn CGRectOffset( lr, -12*CodeLgth, 25 )
+    r = fn CGRectOffset( r,-CodeLgth*25, 25)
+  next
+end fn
+
+local fn FindColourAtPixel( tag as long ) as ColorRef
+End Fn = fn ViewColorAtPoint( tag, fn EventLocationInView( tag ))
+
+local fn ClearTarget
+  int x, z = 3000
+  int CodeLgth = fn StringIntValue( gCodeLgth )
+
+  for x = 0 to CodeLgth-1
+    TextFieldSetBackgroundColor( z, fn ColorClear )
+    z++
+  next
+  textlabel 3100, @""
+end fn
+
+local fn ShowTarget
+  int x, z = 3000
+  int CodeLgth = fn StringIntValue( gCodeLgth )
+  int Guesses = fn StringIntValue( gGuesses )
+  CGRect rr = fn CGRectMake( 20, Guesses*30 + 30, 25,25 )
+
+  for x = 0 to CodeLgth-1
+    textfield z,,, rr
+    TextFieldSetBackgroundColor( z, fn ArrayObjectAtIndex( gTargetColours, x ) )
+    rr = fn CGRectOffset( rr, 25, 0 )
+    z++
+  next
+  textlabel 3100, @"Target Array", ( 20, Guesses*30 + 60, 100, 26 )
+end fn
+
+void local fn BuildWnd
+  ColorRef col
+  Int x,z = 1,offset = 200
+  CGRect r, rr
+  int lgth, wide
+  int CodeLgth = fn StringIntValue( gCodeLgth )
+  int Guesses = fn StringIntValue( gGuesses )
+  int Colour = fn StringIntValue( gColours )
+  if Colour <= CodeLgth
+    select CodeLgth
+      case 4,5,6,7
+        Colour += 3
+      case 8,9,10
+        Colour = 12
+    end select
+  end if
+  if Guesses < 9 && Colour > 9 then offset += (Colour-Guesses) * 25
+  CFArrayRef array = @[fn ColorBlue,fn ColorRed,fn ColorYellow,fn ColorMagenta,fn ColorOrange,fn ColorGreen,fn ColorBrown,fn ColorCyan,fn ColorPurple,fn ColorDarkGray,fn ColorSystemPink,fn ColorSystemTeal]
+  MutableArrayAddObjectsFromArray( gArray, array )
+  wide =  CodeLgth*37 + 180
+  lgth = fn Max(Guesses*27 + offset, Colour*30 + 50 )
+  gLength = lgth
+  window _window, @"Master Mind", ( 210,310,wide, lgth )
+  ViewSetFlipped(_windowContentViewTag, YES)
+  fn SetFields
+  subclass view _view, ( wide - 65, 20,50, lgth - 60)
+  ViewSetFlipped( _view, YES )
+  rr = fn CGRectMake( wide - 65, 20,50, lgth - 60)
+  rect rr,,8
+  r = fn CGRectMake( 15, 15, 25,25)
+  z = 1000
+  for x = 0 to Colour - 1
+    col = fn ArrayObjectAtIndex( array, x)
+    subclass view  z, r
+    ViewSetWantsLayer( z, YES )
+    CALayerSetBackgroundColor( fn ViewLayer(z), col )
+    ViewInitTrackingArea( z )
+    ViewAddSubView( _view, z )
+    r = fn CGRectOffset( r,0,30 )
+    z++
+  next
+
+  button _Check, , , @"Check", ( 30, lgth - 65, 100, 26)
+  button _NewGame, , ,@"New Game", (150, lgth - 65, 100, 26 )
+
+end fn
+
+void local fn Capture( wnd as long )
+  int y, z
+  CFStringRef txt = @""
+
+  select Wnd
+    case _PrefWnd
+      gColours = fn PopUpButtonTitleOfSelectedItem(_NoOfColours)
+      gCodeLgth = fn PopUpButtonTitleOfSelectedItem(_CodeLgth)
+      gGuesses = fn PopUpButtonTitleOfSelectedItem(_Guesses)
+      if fn ButtonState( _Repeats ) == NSControlStateValueOn then gRepeats = YES else gRepeats = NO
+      fn SetColor
+    case _window
+      //if fn ButtonState( _Repeats ) == NSControlStateValueOn then gRepeats = YES else gRepeats = NO
+      z = fn StringIntValue( gCodeLgth )
+      y = gLine*z - z + 1
+      MutableArrayRemoveAllObjects( gGuessArray )
+      for int x = y to (y + z - 1)
+        txt = fn ControlStringValue( x)
+        MutableArrayAddObject(gGuessArray, txt )
+      next
+      gLine++
+      if gLine > gLastGuess
+        fn ShowTarget
+        alert -1,, @"Message", @"You Fail to win this Game", @"OK;Continue", YES
+        AlertButtonSetKeyEquivalent( 1, 1, @"\e" )
+        alert 1
+        gWon = NO
+      end if
+  end select
+end fn
+
+void local fn Compare
+  int x,y,count = fn StringIntValue( gCodeLgth )
+  CFTypeRef target,guess,target1
+  bool won = YES
+
+  fn Capture( _window )
+  gRestriction = 1
+  //Check for location and colour
+  for x = 0 to count - 1
+    target = fn ArrayObjectAtIndex( gTargetArray, x)
+    guess = fn ArrayObjectAtIndex( gGuessArray, x)
+    if target == guess
+      TextFieldSetBackgroundColor( (gLine-2)*count + 300 + x, fn ColorBlack )
+    else
+      for y = 0 to count - 1
+        won = NO
+        target1 = fn ArrayObjectAtIndex( gTargetArray, y)
+        if target1 == guess
+          TextFieldSetBackgroundColor( (gLine-2)*count + 300 + x, fn ColorWhite )
+        end if
+      next
+    end if
+  next
+  ControlSetEnabled( _Check, NO )
+  MutableArrayRemoveAllObjects( gRestrict )
+  if won == YES then fn Winning
+end fn
+
+void local fn NewGame
+  fn SetColor
+  fn SetFields
+  if gWon == NO
+    fn ClearTarget
+  end if
+  fn SetTarget
+  gLine = 1
+  gNextFld = 1
+end fn
+
+void local fn Preferences
+  CGRect rr, lr
+  window _PrefWnd, @"Preferences", ( 0,0,250,350)
+
+  rr = fn CGRectMake( 20,220,160,26)
+  lr = fn CGRectMake( 20,200, 60, 26 )
+  textlabel _label, @"No Of Colours", rr
+  popupbutton _NoOfColours,,19, @"2;3;4;5;6;7;8;9;10;11;12", lr
+  rr = fn CGRectOffset( rr, 0, -50)
+  lr = fn CGRectOffset( lr, 0, -50)
+  textlabel _label1, @"No Of Items", rr
+  popupbutton _CodeLgth,,7,@"4;5;6;7;8;9;10", lr
+  rr = fn CGRectOffset( rr, 0, -50)
+  lr = fn CGRectOffset( lr, 0, -50)
+  textlabel _label2, @"No Of Guesses", rr
+  popupbutton _Guesses,,14,@"4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20", lr
+  rr = fn CGRectMake( 100,150,100,26)
+  button _Exit,,,@"Begin Game", rr
+  checkbox _Repeats,,,@"Repeats Allowed", ( 20, 70 , 160, 26 )
+  rr = fn CGRectMake( 10,250, 230, 100)
+  textfield _info,,@"Move mouse over coloured square to choose\nThen move away from window\nRepeat for all fields\nThen click Check",rr
+  gNextFld = 1
+  gRestriction = 1
+  UserDefaultsRestoreWindowViewValues( _PrefWnd, NULL )
+end fn
+
+void Local Fn BuildMenu  //build menu & get handle
+  menu _mApplication, _iAbout
+  menu _mApplication, _iSeparator
+  menu _mApplication, _PreferencesItem,, @"Settings…", @","
+  menu _mApplication, _iSeparator1
+  menu _mApplication, _iHide,, @"Hide Master Mind", @"h"
+  MenuItemSetAction( _mApplication, _iHide, @"hide:")
+
+  EditMenu _EditMenu
+  /*
+    menu _EditMenu,_iUndo,YES
+    MenuItemSetActionCallBack( _EditMenu, _iUndo, @fn SetBackGroundColor, NULL )
+    menu _EditMenu,_iRedo
+
+    menu _EditMenu,_iCut
+    menu _EditMenu,_iCopy
+    menu _EditMenu,_iPaste
+    menu _EditMenu,_iDelete
+    menu _EditMenu,_iSelectAll
+	  */
+end fn
+
+void local fn doMenu(act as long, ref as long )
+  select act
+    case _mApplication
+      select ref
+        case _PreferencesItem
+          windowClose( _window)
+          fn Preferences
+        case else
+      end select
+    case _EditMenu
+      /*
+            select ref
+            case _iUndo
+            gNextFld--
+            case _iRedo
+            gNextFld++
+            case _iCut
+            case _iCopy
+            case _iPaste
+            case _iDelete
+            case _iSelectAll
+            end select
+			      */
+  end select
+end fn
+
+void local fn doDialog( act as long, ref as long, wnd as long)
+  select Wnd
+    case _window
+      select act
+        case _BtnClick
+          select ref
+            case _Check : fn Compare
+            case _NewGame : fn NewGame
+
+          end select
+        case _viewMouseEntered,_viewMouseDown
+          select ref
+            if gRepeats == NO && fn ArrayDoesContain( gRestrict, (ObjectRef)fn StringWithFormat( @"%d", ref )) == YES
+            else
+              if gRestriction < fn StringIntValue( gCodeLgth) + 1
+                gNewColour = fn FindColourAtPixel( ref )
+                ControlSetStringValue( gNextFld, fn StringWithFormat(@"%d",ref-1000))
+                fn SetBackgroundColor( gNewColour )
+                if gRepeats == NO
+                  MutableArrayAddObject( gRestrict,fn StringWithFormat( @"%d", ref ))
+                end if
+                gNextFld++
+                gRestriction++
+              else
+                ControlSetEnabled( _Check, YES )
+              end if
+            end if
+          end select
+      end select
+    case _PrefWnd
+      select act
+        case _btnClick
+          select ref
+            case _NoOfColours
+              gColours = fn PopUpButtonTitleOfSelectedItem(ref)
+            case _CodeLgth
+              gCodeLgth = fn PopUpButtonTitleOfSelectedItem(ref)
+            case _Guesses
+              gGuesses = fn PopUpButtonTitleOfSelectedItem(ref)
+            Case _Repeats
+              if fn ButtonState( _Repeats ) == NSControlStateValueOn then gRepeats = YES else gRepeats = NO
+            case _Exit
+              UserDefaultsStoreWindowViewValues( wnd, NULL )
+              fn Capture (wnd )
+              WindowClose( wnd)
+              fn BuildWnd
+              fn SetTarget
+          end select
+      end select
+  end select
+end fn
+
+
+fn Preferences
+fn BuildMenu
+
+
+on Dialog fn doDialog
+on Menu fn doMenu
+
+HandleEvents

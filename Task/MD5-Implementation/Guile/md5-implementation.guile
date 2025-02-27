@@ -1,0 +1,196 @@
+;;;This is intended to be run by Guile
+;;;If you want to try it elsewhere, I think you might need to replace some module importing lines
+
+;;module-required (rnrs bytevectors)
+;;usage -> {bytevector-u8-list bytevector-length bytevector->uint-list bytevector-u8-set! bytevector-copy! bytevector-u32-set!} <in> {pad listify}
+;;
+(use-modules (rnrs bytevectors))
+
+;;module-required (ice-9 receive) (ice-9 exceptions)
+;;usage -> {receive make-exception-with-message} <in> {md5sum test-suite}
+;;
+(use-modules (ice-9 receive))
+(use-modules (ice-9 exceptions))
+
+;;syntax-name F
+;;match -> (<$:self:F> B C D)
+;;
+(define-syntax F
+  (syntax-rules ()
+    [(_ B C D)
+     (logior (logand B C) (logand (lognot B) D))]))
+
+;;syntax-name G
+;;match -> (<$:self:G> B C D)
+;;
+(define-syntax G
+  (syntax-rules ()
+    [(_ B C D)
+     (logior (logand B D) (logand C (lognot D)))]))
+
+;;syntax-name H
+;;match -> (<$:self:H> B C D)
+;;
+(define-syntax H
+  (syntax-rules ()
+    [(_ B C D)
+     (logxor B C D)]))
+
+;;syntax-name I
+;;match -> (<$:self:I> B C D)
+;;
+(define-syntax I
+  (syntax-rules ()
+    [(_ B C D)
+     (logxor C (logior B (lognot D)))]))
+
+;;syntax-name leftrotate
+;;match -> (<$:self:leftrotate> num s)
+;;
+(define-syntax leftrotate
+  (syntax-rules ()
+    [(_ num s)
+     (let ([num (logand num #xFFFFFFFF)])
+       (logior (ash num (- s 32)) (ash num s)))]))
+
+;;procedure-name pad
+;;input -> bv (bytevector)
+;;output -> output-bv (bytevector) [(zero? (floor-remainder (bytevector-length output-bv) 64)) => #t]
+;;
+(define pad
+  (lambda (bv)
+    (let* ([bv-length (bytevector-length bv)]
+	   [original-length (* 8 bv-length)]
+	
+	   [remainder (floor-remainder bv-length 64)]
+	   [pad-total (if (>= remainder 56) (- 128 remainder) (- 64 remainder))]
+	   [total-length (+ bv-length pad-total)]
+	   [output-bv (make-bytevector total-length 0)]
+	
+	   [original-length-cooked (logand original-length #xFFFFFFFFFFFFFFFF)]
+	   [original-length-bv (uint-list->bytevector (list original-length-cooked) (endianness little) 8)])
+
+      (bytevector-copy! bv 0 output-bv 0 bv-length)
+      (bytevector-u8-set! output-bv bv-length #x80)
+      (bytevector-copy! original-length-bv 0 output-bv (- total-length 8) 8)
+
+      output-bv)))
+
+;;procedure-name listify
+;;input -> bv (bytevector) [(zero? (floor-remainder (bytevector-length output-bv) 64)) => #t]
+;;output -> _ (list:list:u32[16])
+;;
+(define listify
+  (lambda (bv)
+    (let ([bv-as-u32-list (bytevector->uint-list bv (endianness little) 4)])
+      (let ([total-num (/ (length bv-as-u32-list) 16)])
+	    (let loop ([n 0] [lst bv-as-u32-list])
+		       (if (>= n (- total-num 1))
+			   (list lst)
+			   (cons (list-head lst 16) (loop (+ 1 n) (list-tail lst 16)))))))))
+
+;;procedure-name process-512bits
+;;input -> X (list;u32[16]) A B C D K s <as-is>
+;;output -> _ (u32[4])
+;;note -> "This function is intended to do the real 64 rounds calculation and return the A B C D in the end but it doesn't need to loop at all"
+;;
+(define process-512bits
+  (lambda (X A B C D K s)
+    (let ([AA A][BB B][CC C][DD D])
+      (let ([F1 #f][g #f][i 0])
+	(while (<= i 63)
+	  (when (and (>= i 0) (<= i 15))
+	    (set! F1 (F BB CC DD))
+	    (set! g i))
+	  (when (and (>= i 16) (<= i 31))
+	    (set! F1 (G BB CC DD))
+	    (set! g (modulo (1+ (* 5 i)) 16)))
+	  (when (and (>= i 32) (<= i 47))
+	    (set! F1 (H BB CC DD))
+	    (set! g (modulo (+ 5 (* 3 i)) 16)))
+	  (when (and (>= i 48) (<= i 63))
+	    (set! F1 (I BB CC DD))
+	    (set! g (modulo (* 7 i) 16)))
+	
+	  (set! F1 (modulo (+ F1 AA (list-ref K i) (list-ref X g)) (expt 2 32)))
+	  (set! AA DD)
+	  (set! DD CC)
+	  (set! CC BB)
+	  (set! BB (modulo (+ BB (leftrotate F1 (list-ref s i))) (expt 2 32)))
+
+	  (set! i (1+ i)))
+
+	(values (modulo (+ A AA) (expt 2 32))
+		(modulo (+ B BB) (expt 2 32))
+		(modulo (+ C CC) (expt 2 32))
+		(modulo (+ D DD) (expt 2 32)))))))
+
+#! uncomment this block if guile complains about the unbound variable: format
+;;module-required (ice-9 format)
+;;usage -> format (procedure) <in> md5sum (procedure)
+;;
+(use-modules (ice-9 format))
+!#
+
+;;procedure-name md5sum
+;;input -> bv (bytevector)
+;;output -> _ (string)
+;;
+(define md5sum
+  (lambda (bv)
+    (let ([A #x67452301]
+	  [B #xEFCDAB89]
+	  [C #x98BADCFE]
+	  [D #x10325476]
+	  [K '(#xd76aa478 #xe8c7b756 #x242070db  #xc1bdceee  #xf57c0faf  #x4787c62a  #xa8304613  #xfd469501  #x698098d8  #x8b44f7af  #xffff5bb1  #x895cd7be  #x6b901122  #xfd987193  #xa679438e  #x49b40821  #xf61e2562  #xc040b340  #x265e5a51  #xe9b6c7aa  #xd62f105d  #x02441453  #xd8a1e681  #xe7d3fbc8  #x21e1cde6  #xc33707d6  #xf4d50d87  #x455a14ed  #xa9e3e905  #xfcefa3f8  #x676f02d9  #x8d2a4c8a  #xfffa3942  #x8771f681  #x6d9d6122  #xfde5380c  #xa4beea44  #x4bdecfa9  #xf6bb4b60  #xbebfbc70  #x289b7ec6  #xeaa127fa  #xd4ef3085  #x04881d05  #xd9d4d039  #xe6db99e5  #x1fa27cf8  #xc4ac5665  #xf4292244  #x432aff97  #xab9423a7  #xfc93a039  #x655b59c3  #x8f0ccc92  #xffeff47d  #x85845dd1  #x6fa87e4f  #xfe2ce6e0  #xa3014314  #x4e0811a1  #xf7537e82  #xbd3af235  #x2ad7d2bb  #xeb86d391)]
+	  [s '(7 12 17 22 7 12 17 22  7 12 17 22  7 12 17 22 5  9 14 20  5  9 14 20  5  9 14 20  5  9 14 20 4 11 16 23 4 11 16 23  4 11 16 23  4 11 16 23 6 10 15 21  6 10 15 21  6 10 15 21  6 10 15 21)])
+      (let* ([padded-bv (pad bv)]
+	     [512bits-word-lists (listify padded-bv)]
+	     [words-list-length (length 512bits-word-lists)])
+	
+	(do ((index 0 (1+ index)))
+	    ((>= index words-list-length))
+	
+	  (receive (A1 B1 C1 D1) (process-512bits (list-ref 512bits-word-lists index) A B C D K s)
+	    (set! A A1)
+	    (set! B B1)
+	    (set! C C1)
+	    (set! D D1)))
+
+	(let ([bvA (uint-list->bytevector (list A) (endianness little) 4)]
+	      [bvB (uint-list->bytevector (list B) (endianness little) 4)]
+	      [bvC (uint-list->bytevector (list C) (endianness little) 4)]
+	      [bvD (uint-list->bytevector (list D) (endianness little) 4)])
+	  (set! A (car (bytevector->uint-list bvA (endianness big) 4)))
+	  (set! B (car (bytevector->uint-list bvB (endianness big) 4)))
+	  (set! C (car (bytevector->uint-list bvC (endianness big) 4)))
+	  (set! D (car (bytevector->uint-list bvD (endianness big) 4))))
+	
+	(format #f "~8,'0x~8,'0x~8,'0x~8,'0x" A B C D)))))
+
+;;procedure-name test-suite
+;;input -> <$:nil>
+;;output -> _ (string)
+;;note -> "this is the test function for the overall output"
+;;
+(define test-suite
+  (lambda ()
+    (let ([standard '(("" . "d41d8cd98f00b204e9800998ecf8427e")
+		      ("a" . "0cc175b9c0f1b6a831c399e269772661")
+		      ("abc" . "900150983cd24fb0d6963f7d28e17f72")
+		      ("message digest" . "f96b697d7cb7938d525a2f31aaf161d0")
+		      ("abcdefghijklmnopqrstuvwxyz" . "c3fcd3d76192e4007dfb496cca67e13b")
+		      ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789" . "d174ab98d277d9f5a5611c2c9f419d9f")
+		      ("12345678901234567890123456789012345678901234567890123456789012345678901234567890" . "57edf4a22be3c955ac49da2e2107b67a"))])
+      (for-each (lambda (some-pair)
+		  (display "Now checking: ")
+		  (write some-pair)
+		  (newline)
+		  (let ([my-ans (md5sum (string->utf8 (car some-pair)))])
+		    (display "my answer is: ")
+		    (display my-ans)
+		    (newline)
+		    (if (string=? my-ans (cdr some-pair))
+			(begin (display "Pass! Next!") (newline))
+			(raise-exception (make-exception-with-message "Failed!")))))
+		standard))))

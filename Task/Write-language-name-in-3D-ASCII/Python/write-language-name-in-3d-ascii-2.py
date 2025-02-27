@@ -46,7 +46,6 @@ charSet4 = [
 "   |__/   \________/   |__/             ",
 ]
 
-# ...then the sets are combined back by barbequing them together!
 charTable = [(charSet1[i] +
               charSet2[i] +
               charSet3[i] +

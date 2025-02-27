@@ -1,0 +1,108 @@
+Const NUM_PHILOSOPHERS = 5
+Const HUNGER = 3
+Const THINK_TIME = 1000
+Const EAT_TIME = 1000
+
+Type Fork
+    mutex As Any Ptr
+    available As Boolean
+End Type
+
+Type Philosopher
+    nombre As String
+    leftFork As Fork Ptr
+    rightFork As Fork Ptr
+    hunger As Integer
+End Type
+
+Dim Shared As Philosopher philosophers(NUM_PHILOSOPHERS-1)
+Dim Shared As Fork forks(NUM_PHILOSOPHERS-1)
+Dim Shared As Any Ptr printMutex
+
+Function threadSafePrint(text As String) As Integer
+    Mutexlock(printMutex)
+    Print text
+    Mutexunlock(printMutex)
+    Return 0
+End Function
+
+Sub delay(ms As Integer)
+    Dim As Double t = Timer
+    While (Timer - t) * 1000 < ms
+        Sleep 1, 1
+    Wend
+End Sub
+
+Function philosopherThread(param As Any Ptr) As Any Ptr
+    Dim As Philosopher Ptr phil = param
+
+    threadSafePrint(phil->nombre + "  seated")
+
+    While phil->hunger > 0
+        threadSafePrint(phil->nombre + "  hungry")
+
+        Mutexlock(phil->leftFork->mutex)
+        Mutexlock(phil->rightFork->mutex)
+
+        threadSafePrint(phil->nombre + "  eating")
+        delay(EAT_TIME)
+
+        Mutexunlock(phil->leftFork->mutex)
+        Mutexunlock(phil->rightFork->mutex)
+
+        threadSafePrint(phil->nombre + "  thinking")
+        delay(THINK_TIME)
+
+        phil->hunger -= 1
+    Wend
+
+    threadSafePrint(phil->nombre + " satisfied")
+    threadSafePrint(phil->nombre + " left the table")
+
+    Return 0
+End Function
+
+' Main program
+Dim As Integer i
+Dim As String names(NUM_PHILOSOPHERS-1) = {"Aristotle", "Kant", "Spinoza", "Marx", "Russell"}
+Print "Table empty"
+
+printMutex = Mutexcreate()
+
+' Initialize forks
+For i = 0 To NUM_PHILOSOPHERS-1
+    forks(i).mutex = Mutexcreate()
+    forks(i).available = True
+Next
+
+' Initialize philosophers
+For i = 0 To NUM_PHILOSOPHERS-1
+    philosophers(i).nombre = names(i)
+    philosophers(i).hunger = HUNGER
+    philosophers(i).leftFork = @forks(i)
+    philosophers(i).rightFork = @forks((i + 1) Mod NUM_PHILOSOPHERS)
+Next
+
+' Make last philosopher left-handed
+Swap philosophers(NUM_PHILOSOPHERS-1).leftFork, philosophers(NUM_PHILOSOPHERS-1).rightFork
+
+' Create threads
+Dim As Any Ptr threads(NUM_PHILOSOPHERS-1)
+For i = 0 To NUM_PHILOSOPHERS-1
+    threads(i) = Threadcreate(Cast(Sub(As Any Ptr), @philosopherThread), @philosophers(i))
+Next
+
+' Wait for all threads
+For i = 0 To NUM_PHILOSOPHERS-1
+    Threadwait(threads(i))
+Next
+
+' Cleanup
+For i = 0 To NUM_PHILOSOPHERS-1
+    Mutexdestroy(forks(i).mutex)
+Next
+
+Mutexdestroy(printMutex)
+Print "Table empty"
+
+Sleep

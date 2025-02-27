@@ -1,12 +1,11 @@
-import gintro/[glib, gobject, gtk, gio, cairo]
+import gtk2, gdk2, cairo
 
 const
   Width = 640
   Height = 480
 
-#---------------------------------------------------------------------------------------------------
 
-proc draw(area: DrawingArea; context: Context) =
+proc draw(area: PDrawingArea; cr: ptr Context) =
   ## Draw the greyscale bars.
 
   const
@@ -25,43 +24,39 @@ proc draw(area: DrawingArea; context: Context) =
 
     # Draw rectangles.
     for _ in 1..nrect:
-      context.rectangle(x, y, rectWidth, rectHeight)
-      context.setSource([grey, grey, grey])
-      context.fill()
+      cr.rectangle(x, y, rectWidth, rectHeight)
+      cr.setSourceRgb(grey, grey, grey)
+      cr.fill()
       x += rectWidth
       grey += incr
 
     y += rectHeight
     nrect *= 2
 
-#---------------------------------------------------------------------------------------------------
 
-proc onDraw(area: DrawingArea; context: Context; data: pointer): bool =
+proc onExposeEvent(area: PDrawingArea; event: PEventExpose; data: pointer): bool =
   ## Callback to draw/redraw the drawing area contents.
-
-  area.draw(context)
+  let cr = cairoCreate(area.window)
+  area.draw(cr)
   result = true
 
-#---------------------------------------------------------------------------------------------------
 
-proc activate(app: Application) =
-  ## Activate the application.
+proc onDestroyEvent(widget: PWidget; data: pointer): bool =
+  mainQuit()
 
-  let window = app.newApplicationWindow()
-  window.setSizeRequest(Width, Height)
-  window.setTitle("Greyscale bars")
 
-  # Create the drawing area.
-  let area = newDrawingArea()
-  window.add(area)
+nimInit()
+let window = windowNew(WINDOW_TOPLEVEL)
+window.setSizeRequest(Width, Height)
+window.setTitle("Greyscale bars")
+discard window.signalConnect("destroy", SIGNAL_FUNC(onDestroyEvent), nil)
 
-  # Connect the "draw" event to the callback to draw the spiral.
-  discard area.connect("draw", ondraw, pointer(nil))
+# Create the drawing area.
+let area = drawingAreaNew()
+window.add area
 
-  window.showAll()
+# Connect the "expose" event to the callback to draw the bars.
+discard area.signalConnect("expose-event", SIGNAL_FUNC(onExposeEvent), nil)
 
-#———————————————————————————————————————————————————————————————————————————————————————————————————
-
-let app = newApplication(Application, "Rosetta.GreyscaleBars")
-discard app.connect("activate", activate)
-discard app.run()
+window.showAll()
+main()

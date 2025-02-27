@@ -46,6 +46,6 @@ proc task2ok . .
       mul i bal bal$[]
       bal -= 1
    .
-   print "Balance after 25 years: $" & bal & "." & substr strjoin bal$[] 1 16
+   print "Balance after 25 years: $" & bal & "." & substr strjoin bal$[] "" 1 16
 .
 task2ok

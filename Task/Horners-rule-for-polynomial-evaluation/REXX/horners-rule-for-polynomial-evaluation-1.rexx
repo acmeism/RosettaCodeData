@@ -1,19 +1,45 @@
-/*REXX program  demonstrates using    Horner's rule    for   polynomial evaluation.     */
-numeric digits 30                                /*use extra numeric precision.         */
-parse  arg  x poly                               /*get value of X and the coefficients. */
-$=                                               /*start with a clean slate equation.   */
-       do deg=0  until  poly==''                 /*get the equation's coefficients.     */
-       parse var poly c.deg poly;  c.deg=c.deg/1 /*get equation coefficient & normalize.*/
-       if c.deg>=0  then c.deg= '+'c.deg         /*if ¬ negative, then prefix with a  + */
-       $=$  c.deg                                /*concatenate it to the equation.      */
-       if deg\==0 & c.deg\=0  then $=$'∙x^'deg   /*¬1st coefficient & ¬0?  Append X pow.*/
-       $=$ '  '                                  /*insert some blanks, make it look nice*/
-       end   /*deg*/
-say '         x = '   x
-say '    degree = '  deg
-say '  equation = '   $
-a=c.deg                                          /*A:  is the accumulator  (or answer). */
-         do j=deg-1  by -1  for deg;   a=a*x+c.j /*apply Horner's rule to the equations.*/
-         end   /*j*/
-say                                              /*display a blank line for readability.*/
-say '    answer = ' a                            /*stick a fork in it,  we're all done. */
+/* REXX ---------------------------------------------------------------
+* 27.07.2012 Walter Pachl
+*            coefficients reversed to descending order of power
+*            I'm used to x**2+x-3
+*            equation formatting prettified (coefficients 1 and 0)
+*--------------------------------------------------------------------*/
+  Numeric Digits 30                /* use extra numeric precision.   */
+  Parse Arg x poly                 /* get value of x and coefficients*/
+  rpoly=''
+  Do p=0 To words(poly)-1
+    rpoly=rpoly word(poly,words(poly)-p)
+    End
+  poly=rpoly
+  equ=''                           /* start with equation clean slate*/
+  deg=words(poly)-1
+  pdeg=deg
+  Do Until deg<0                   /* get the equation's coefficients*/
+    Parse Var poly c.deg poly      /* in descending order of powers  */
+    c.deg=c.deg+0                  /* normalize it                   */
+    If c.deg>0 & deg<pdeg Then     /* positive and not first term    */
+      prefix='+'                   /*  prefix a + sign.              */
+    Else prefix=''
+    Select
+      When deg=0 Then term=c.deg
+      When deg=1 Then
+        If c.deg=1 Then term='x'
+                   Else term=c.deg'*x'
+      Otherwise
+        If c.deg=1 Then term='x^'deg
+                   Else term=c.deg'*x^'deg
+      End
+    If c.deg<>0 Then               /* build up the equation          */
+      equ=equ||prefix||term
+    deg=deg-1
+    End
+  a=c.pdeg
+  Do p=pdeg To 1 By -1             /* apply Horner's rule.           */
+    pm1=p-1
+    a=a*x+c.pm1
+    End
+  Say '        x = ' x
+  Say '   degree = ' pdeg
+  Say ' equation = ' equ
+  Say ' '
+  Say '   result = ' a

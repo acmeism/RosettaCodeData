@@ -1,5 +1,5 @@
 import "./big" for BigInt
-import "./set" for Set
+import "./hash" for HashSet
 
 var iterations = 500
 var limit = 10000
@@ -8,7 +8,7 @@ var bigLimit = BigInt.new(limit)
 // In the sieve,  0 = not Lychrel, 1 = Seed Lychrel, 2 = Related Lychrel
 var lychrelSieve    = List.filled(limit + 1, 0)
 var seedLychrels    = []
-var relatedLychrels = Set.new()
+var relatedLychrels = HashSet.new()
 
 var isPalindrome = Fn.new { |bi|
     var s = bi.toString
@@ -32,12 +32,12 @@ var lychrelTest = Fn.new { |i, seq|
     }
     var sizeBefore = relatedLychrels.count
     // if all of these can be added 'i' must be a seed Lychrel
-    relatedLychrels.addAll(seq.map { |i| i.toString }) // can't add BigInts directly to a Set
+    relatedLychrels.addAll(seq)
     if (relatedLychrels.count - sizeBefore == seq.count) {
         seedLychrels.add(i)
         lychrelSieve[i] = 1
     } else {
-        relatedLychrels.add(i.toString)
+        relatedLychrels.add(i)
         lychrelSieve[i] = 2
     }
 }

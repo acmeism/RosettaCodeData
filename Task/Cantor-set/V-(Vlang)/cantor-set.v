@@ -5,12 +5,10 @@ const (
 
 fn cantor(mut lines [][]u8, start int, len int, index int) {
     seg := len / 3
-    if seg == 0 {
-        return
-    }
+    if seg == 0 {return}
     for i in index.. height {
         for j in start + seg..start + 2 * seg {
-            lines[i][j] = ' '[0]
+            lines[i][j] = " " [0]
         }
     }
     cantor(mut lines, start, seg, index + 1)

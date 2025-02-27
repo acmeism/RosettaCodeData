@@ -15,6 +15,6 @@ on animate
       x1 = x2
       y1 = y2
       length += 1
-      angle = (angle + incr) mod 360
+      angle += incr
    .
 .

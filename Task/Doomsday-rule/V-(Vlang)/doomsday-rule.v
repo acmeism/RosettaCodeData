@@ -1,5 +1,4 @@
-const
-(
+const (
 	days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 	first_days_common = [3, 7, 7, 4, 2, 6, 4, 1, 5, 3, 7, 5]
 	first_days_leap = [4, 1, 7, 4, 2, 6, 4, 1, 5, 3, 7, 5]
@@ -24,15 +23,11 @@ fn main() {
 		d = date[8..10].int()
 		a = anchor_day(y)
 		f = first_days_common[m]
-		if is_leap_year(y) {
-			f = first_days_leap[m]
-		}
+		if is_leap_year(y) {f = first_days_leap[m]}
 		w = d - f
-		if w < 0 {
-			w = 7 + w
-		}
+		if w < 0 {w = 7 + w}
 		dow = (a + w) % 7
-		println('$date -> ${days[dow]}')
+		println("$date -> ${days[dow]}")
 	}
 }
 

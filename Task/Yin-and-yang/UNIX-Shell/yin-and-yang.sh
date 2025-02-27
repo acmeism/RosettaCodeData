@@ -4,19 +4,19 @@ in_circle() { #(cx, cy, r, x y)
   # on (cx,cy)
   # (but really scaled to an ellipse with vertical minor semiaxis r and
   # horizontal major semiaxis 2r)
-  local -i cx=$1 cy=$2 r=$3 x=$4 y=$5
-  local -i dx dy
+  typeset -i cx=$1 cy=$2 r=$3 x=$4 y=$5
+  typeset -i dx dy
   (( dx=(x-cx)/2, dy=y-cy, dx*dx + dy*dy <= r*r ))
 }
 
 taijitu() { #radius
-  local -i radius=${1:-17}
-  local -i x1=0 y1=0 r1=radius            # outer circle
-  local -i x2=0 y2=-radius/2 r2=radius/6  # upper eye
-  local -i x3=0 y3=-radius/2 r3=radius/2  # upper half
-  local -i x4=0 y4=+radius/2 r4=radius/6  # lower eye
-  local -i x5=0 y5=+radius/2 r5=radius/2  # lower half
-  local -i x y
+  typeset -i radius=${1:-17}
+  typeset -i x1=0 y1=0 r1=radius            # outer circle
+  typeset -i x2=0 y2=-radius/2 r2=radius/6  # upper eye
+  typeset -i x3=0 y3=-radius/2 r3=radius/2  # upper half
+  typeset -i x4=0 y4=+radius/2 r4=radius/6  # lower eye
+  typeset -i x5=0 y5=+radius/2 r5=radius/2  # lower half
+  typeset -i x y
   for (( y=radius; y>=-radius; --y )); do
     for (( x=-2*radius; x<=2*radius; ++x)); do
       if ! in_circle $x1 $y1 $r1 $x $y; then

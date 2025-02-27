@@ -1,11 +1,11 @@
-import gintro/[glib, gobject, gtk, gio, cairo]
+import gtk2, glib2, gdk2, cairo
 
 const
   Width = 600
   Height = 460
 
 type
-  Color = array[3, float]
+  Color = (float, float, float)
   Edge {.pure.} = enum LT, TR, RB, BL
 
 const
@@ -23,20 +23,23 @@ const
            [TR, LT, LT, BL, BL, RB, RB, TR, TR, LT, LT, BL],
            [TR, TR, LT, LT, BL, BL, RB, RB, TR, TR, LT, LT]]
 
-  Black: Color = [0.0, 0.0, 0.0]
-  Blue: Color = [0.2, 0.3, 1.0]
-  White: Color = [1.0, 1.0, 1.0]
-  Yellow: Color = [0.8, 0.8, 0.0]
+  Black: Color = (0.0, 0.0, 0.0)
+  Blue: Color = (0.2, 0.3, 1.0)
+  White: Color = (1.0, 1.0, 1.0)
+  Yellow: Color = (0.8, 0.8, 0.0)
 
   Colors: array[Edge, array[4, Color]] = [[White, Black, Black, White],
                                           [White, White, Black, Black],
                                           [Black, White, White, Black],
                                           [Black, Black, White, White]]
 
-#---------------------------------------------------------------------------------------------------
 
-proc draw(area: DrawingArea; context: Context) =
-  ## Draw the pattern in the area.
+template setSource(ctx: ptr Context; color: Color) =
+  ctx.setSourceRgb(color[0], color[1], color[2])
+
+
+proc draw(context: ptr Context) =
+  ## Draw the pattern.
 
   func line(x1, y1, x2, y2: float; color: Color) =
     context.setSource(color)
@@ -62,34 +65,33 @@ proc draw(area: DrawingArea; context: Context) =
       line(px + 23, py + 23, px, py + 23, carray[2])
       line(px, py + 23, px, py, carray[3])
 
-#---------------------------------------------------------------------------------------------------
 
-proc onDraw(area: DrawingArea; context: Context; data: pointer): bool =
+proc onExposeEvent(area: PDrawingArea; event: PEventExpose; data: pointer): gboolean {.cdecl.} =
   ## Callback to draw/redraw the drawing area contents.
-
-  area.draw(context)
+  let context = cairoCreate(area.window)
+  context.draw()
   result = true
 
-#---------------------------------------------------------------------------------------------------
 
-proc activate(app: Application) =
-  ## Activate the application.
+proc onDestroyEvent(widget: PWidget; data: pointer): gboolean {.cdecl.} =
+  ## Process the "destroy" event.
+  mainQuit()
 
-  let window = app.newApplicationWindow()
-  window.setSizeRequest(Width, Height)
-  window.setTitle("Peripheral drift illusion")
 
-  # Create the drawing area.
-  let area = newDrawingArea()
-  window.add(area)
+nimInit()
+let window = windowNew(WINDOW_TOPLEVEL)
+window.setSizeRequest(Width, Height)
+window.setTitle("Peripheral drift illusion")
 
-  # Connect the "draw" event to the callback to draw the pattern.
-  discard area.connect("draw", ondraw, pointer(nil))
+# Create the drawing area.
+let area = drawingAreaNew()
+window.add area
 
-  window.showAll()
+# Connect the "expose" event to the callback to draw the pattern.
+discard area.signalConnect("expose-event", SIGNAL_FUNC(onExposeEvent), nil)
 
-#———————————————————————————————————————————————————————————————————————————————————————————————————
+# Quit the application if the window is closed.
+discard window.signalConnect("destroy", SIGNAL_FUNC(onDestroyEvent), nil)
 
-let app = newApplication(Application, "Rosetta.Illusion")
-discard app.connect("activate", activate)
-discard app.run()
+window.showAll()
+main()

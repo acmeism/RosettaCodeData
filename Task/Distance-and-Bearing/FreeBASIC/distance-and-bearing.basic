@@ -1,0 +1,148 @@
+Type Airport
+    nombre As String
+    location As String
+    ICAO As String
+    dist As Double
+    bearing As Integer
+End Type
+
+#define MAX_AIRPORTS  21
+#define PI  3.1415926535897932
+
+Dim Shared db(MAX_AIRPORTS) As Airport
+Dim Shared DME As Double, TOHDG As Double
+
+Function DegToRad(degrees As Double) As Double
+    Return degrees * PI / 180
+End Function
+
+Function RoundIt(theNum As Double, theDec As Integer) As Double
+    Return Fix(theNum * (10 ^ theDec) + 0.5) / (10 ^ theDec)
+End Function
+
+Function DistanceGC(lat1 As Double, lon1 As Double, lat2 As Double, lon2 As Double) As Double
+    Dim As Double Dm, ER, dLat, dLon, a, c
+
+    ER = 6371.0 'Earth's mean radius in km
+    dLat = DegToRad(lat2) - DegToRad(lat1)
+    dLon = DegToRad(lon2) - DegToRad(lon1)
+    a = Sin(dLat / 2) * Sin(dLat / 2) + Cos(DegToRad(lat1)) * Cos(DegToRad(lat2)) * Sin(dLon / 2) * Sin(dLon / 2)
+    c = 2 * Atan2(Sqr(a), Sqr(1 - a))
+    Dm = ER * c / 1.852
+
+    Return Dm
+End Function
+
+Function Bearing(lat1 As Double, lon1 As Double, lat2 As Double, lon2 As Double) As Double
+    Dim As Double lat1Rad = DegToRad(lat1)
+    Dim As Double lat2Rad = DegToRad(lat2)
+    Dim As Double dLon = DegToRad(lon2 - lon1)
+    Dim As Double y = Sin(dLon) * Cos(lat2Rad)
+    Dim As Double x = Cos(lat1Rad) * Sin(lat2Rad) - Sin(lat1Rad) * Cos(lat2Rad) * Cos(dLon)
+
+    Return (Atan2(y, x) * 180/PI + 360) Mod 360
+End Function
+
+Sub Insert(ap As Airport)
+    Dim n As Integer = MAX_AIRPORTS - 1
+    If ap.dist >= db(n).dist Then Exit Sub
+    While ap.dist < db(n).dist Andalso n > 0
+        db(n + 1) = db(n)
+        n -= 1
+    Wend
+    db(n + 1) = ap
+End Sub
+
+Sub Test(lat2 As Double, lon2 As Double)
+    Static As Double lat1 = 51.514669, lon1 = 2.198581 'Rosetta coordinates
+    DME = DistanceGC(lat1, lon1, lat2, lon2)
+    DME = RoundIt(DME, 1)
+    TOHDG = Bearing(lat1, lon1, lat2, lon2)
+    TOHDG = RoundIt(TOHDG, 0)
+End Sub
+
+Function IsValidNumber(s As String) As Integer
+    Return (Val(s) <> 0 Or s = "0")
+End Function
+
+Function ReadAirportFile() As Integer
+    Dim As String linea, campo, c
+    Dim As Airport ap
+    Dim As Integer i, j, inQuotes
+
+    Open "Airport-data.csv" For Input As #1
+    If Err Then Print "Error opening file": Return 0
+
+    While Not Eof(1)
+        Line Input #1, linea
+        If Len(linea) = 0 Then Continue While
+
+        Dim fields(15) As String
+        i = 0
+        campo = ""
+        inQuotes = 0
+
+        For j = 1 To Len(linea)
+            c = Mid(linea, j, 1)
+            Select Case c
+            Case """"
+                inQuotes = Not inQuotes
+            Case ","
+                If Not inQuotes Then
+                    If i < Ubound(fields) Then
+                        fields(i) = campo
+                        i += 1
+                        campo = ""
+                    End If
+                Else
+                    campo &= c
+                End If
+            Case Else
+                If c <> """" Then campo &= c
+            End Select
+        Next
+
+        If i <= Ubound(fields) Then fields(i) = campo
+
+        If i >= 7 Then
+            If IsValidNumber(fields(6)) And IsValidNumber(fields(7)) Then
+                'Process the fields
+                Test(Val(fields(6)), Val(fields(7)))
+                ap.nombre = Trim(fields(1))
+                ap.location = Trim(fields(2)) & ", " & Trim(fields(3))
+                ap.ICAO = Trim(fields(5))
+                ap.dist = DME
+                ap.bearing = TOHDG
+                Insert(ap)
+            End If
+        End If
+    Wend
+
+    Close #1
+    Return 1
+End Function
+
+'Main program
+Dim i As Integer
+
+'Initialize distances
+For i = 0 To MAX_AIRPORTS
+    db(i).dist = 99999
+Next
+
+If ReadAirportFile() Then
+    Print "AIRPORT/COUNTRY"; Tab(39); "ICAO"; Tab(46); "DISTANCE  BEARING"
+    Print String(62, "-")
+
+    For i = 1 To MAX_AIRPORTS - 1
+        With db(i)
+            Print Left(.nombre & Space(38), 38)
+            Print Left(.location & Space(38), 38);
+            Print Left(.ICAO & Space(5), 5); Spc(6);
+            Print Using "##.#     ###"; .dist; .bearing;
+            Print Chr(248); Chr(10)
+        End With
+    Next
+End If
+
+Sleep

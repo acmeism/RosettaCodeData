@@ -1,1 +1,3 @@
-System.print("\e[2J")
+import "./ansi" for Screen
+
+Screen.clear()

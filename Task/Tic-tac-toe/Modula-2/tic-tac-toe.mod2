@@ -1,0 +1,268 @@
+MODULE TicTacToe;
+
+FROM STextIO IMPORT
+  WriteLn, WriteString, ReadString, SkipLine;
+FROM SWholeIO IMPORT
+  WriteInt, ReadCard;
+FROM RandomNumbers IMPORT
+  Rnd;
+
+TYPE
+  TWinPos = ARRAY [0 .. 7], [0 .. 2] OF INTEGER; (* Winning positions *)
+  TMover = (Human, Computer, Nobody);
+
+CONST
+  WinPos = TWinPos{{0, 1, 2}, {3, 4, 5},
+                   {6, 7, 8}, {0, 3, 6},
+                   {1, 4, 7}, {2, 5, 8},
+                   {0, 4, 8}, {2, 4, 6}};
+
+VAR
+  Board    : ARRAY [0 .. 8] OF CHAR;
+  BestMove,
+  T        : INTEGER;
+  MyPiece,
+  HisPiece : CHAR;
+  CompFirst: BOOLEAN;
+  Mover    : TMover;
+  Answ     : ARRAY [0 .. 1] OF CHAR;
+  MyWinsCnt,
+  HisWinsCnt,
+  DrawsCnt,
+  MovesCnt,
+  I        : CARDINAL;
+
+PROCEDURE WriteStringLn(S: ARRAY OF CHAR);
+BEGIN
+  WriteString(S);
+  WriteLn
+END WriteStringLn;
+
+PROCEDURE SpacesFilled(): BOOLEAN;
+VAR
+  I: CARDINAL;
+BEGIN
+  FOR I := 0 TO 8 DO
+    IF Board[I] = " " THEN
+      RETURN FALSE;
+    END
+  END;
+  RETURN TRUE
+END SpacesFilled;
+
+PROCEDURE DisplayNumberedBoard;
+VAR
+  I  : CARDINAL;
+  Row: ARRAY [0 .. 10] OF CHAR;
+BEGIN
+  Row := " * | * | * ";
+  FOR I := 0 TO 8 BY 3 DO
+    Row[1] := CHR(I + 1 + ORD("0"));
+    Row[5] := CHR(I + 2 + ORD("0"));
+    Row[9] := CHR(I + 3 + ORD("0"));
+    WriteStringLn(Row);
+    IF I <> 6 THEN
+      WriteStringLn("---+---+---");
+    END;
+  END
+END DisplayNumberedBoard;
+
+PROCEDURE DisplayPiecedBoard;
+VAR
+  I  : CARDINAL;
+  Row: ARRAY [0 .. 10] OF CHAR;
+BEGIN
+  Row := " * | * | * ";
+  FOR I := 0 TO 8 BY 3 DO
+    Row[1] := Board[I];
+    Row[5] := Board[I + 1];
+    Row[9] := Board[I + 2];
+    WriteStringLn(Row);
+    IF I <> 6 THEN
+      WriteStringLn("---+---+---");
+    END;
+  END;
+END DisplayPiecedBoard;
+
+PROCEDURE Evaluate(Me: CHAR; Him: CHAR): INTEGER;
+  (* Recursive algorithm *)
+VAR
+  I       : CARDINAL;
+  SafeMove,
+  V,
+  LoseFlag: INTEGER;
+BEGIN
+  IF Win(Me) THEN
+    RETURN 1
+  END;
+  IF Win(Him) THEN
+    RETURN -1
+  END;
+  IF SpacesFilled() THEN
+    RETURN 0
+  END;
+  LoseFlag := 1;
+  I := 0;
+  WHILE I <= 8 DO
+    IF Board[I] = " " THEN
+      Board[I] := Me; (* Try the move. *)
+      V := Evaluate(Him, Me);
+      Board[I] := " "; (* Restore the empty space. *)
+      IF V = -1 THEN
+        BestMove := I;
+        RETURN 1
+      END;
+      IF V = 0 THEN
+        LoseFlag := 0;
+        SafeMove := I
+      END;
+    END;
+    I := I + 1;
+  END;
+  BestMove := SafeMove;
+  RETURN -LoseFlag
+END Evaluate;
+
+PROCEDURE Win(Piece: CHAR): BOOLEAN;
+VAR
+  I: CARDINAL;
+BEGIN
+  FOR I := 0 TO 7 DO
+    IF (Board[WinPos[I, 0]] = Piece) AND
+       (Board[WinPos[I, 1]] = Piece) AND
+       (Board[WinPos[I, 2]] = Piece) THEN
+      RETURN TRUE
+    END;
+  END;
+  RETURN FALSE
+END Win;
+
+PROCEDURE ClearBoard;
+VAR
+  I: CARDINAL;
+BEGIN
+  FOR I := 0 TO 8 DO
+    Board[I] := " "
+  END;
+END ClearBoard;
+
+PROCEDURE WriteSummary(What: ARRAY OF CHAR; Cnt: CARDINAL);
+BEGIN
+  WriteString(What);
+  WriteInt(Cnt, 1);
+  WriteString(" game");
+  IF Cnt <> 1 THEN
+    WriteStringLn("s.");
+  ELSE
+    WriteStringLn(".");
+  END;
+END WriteSummary;
+
+BEGIN
+  MyWinsCnt := 0;
+  HisWinsCnt := 0;
+  DrawsCnt := 0;
+  CompFirst := TRUE; (* It be reversed, so in fact human goes first *)
+  WriteLn;
+  WriteStringLn("            TIC-TAC-TOE");
+  WriteLn;
+  WriteStringLn("In this version, X always goes first.");
+  WriteStringLn("The board is numbered:");
+  REPEAT
+    CompFirst := NOT CompFirst; (* reverse who goes first *)
+    MovesCnt := 0;
+    WriteLn;
+    DisplayNumberedBoard;
+    WriteLn;
+    IF CompFirst THEN
+      WriteStringLn("I go first.");
+    ELSE
+      WriteString("You go first.");
+    END;
+    WriteLn;
+    ClearBoard;
+    IF CompFirst THEN
+      MyPiece := "X";
+      HisPiece := "O"
+    ELSE
+      MyPiece := "O";
+      HisPiece := "X"
+    END;
+    IF CompFirst THEN
+      Mover := Computer
+    ELSE
+      Mover := Human
+    END;
+    WHILE Mover <> Nobody DO
+      CASE Mover OF
+      | Computer:
+          IF MovesCnt = 0 THEN
+            BestMove := Rnd(9)
+          ELSIF MovesCnt = 1 THEN
+            IF Board[4] <> " " THEN
+              BestMove := Rnd(2) * 6 + Rnd(2) * 2 (* 0, 2, 6, or 8 *)
+            ELSE
+              BestMove := 4
+            END
+          ELSE
+            T := Evaluate(MyPiece, HisPiece)
+          END;
+          Board[BestMove] := MyPiece;
+          MovesCnt := MovesCnt + 1;
+          WriteLn;
+          DisplayPiecedBoard;
+          WriteLn;
+          IF Win(MyPiece) THEN
+            MyWinsCnt := MyWinsCnt + 1;
+            WriteStringLn("I win!");
+            Mover := Nobody
+          ELSIF SpacesFilled() THEN
+            DrawsCnt := DrawsCnt + 1;
+            WriteStringLn("It's a draw. Thank you.");
+            Mover := Nobody
+          ELSE
+            Mover := Human
+          END
+      | Human:
+          LOOP
+            WriteString("Where do you move? ");
+            ReadCard(I);
+            SkipLine;
+            IF (I < 1) OR (I > 9) THEN
+              WriteString("Illegal! ");
+            ELSIF Board[I - 1] <> " " THEN
+              WriteString("Place already occupied. ");
+            ELSE
+              EXIT
+            END
+          END;
+          Board[I - 1] := HisPiece;
+          MovesCnt := MovesCnt + 1;
+          WriteLn;
+          DisplayPiecedBoard;
+          WriteLn;
+          IF Win(HisPiece) THEN
+            HisWinsCnt := HisWinsCnt + 1;
+            WriteStringLn("You beat me! Good game.");
+            Mover := Nobody
+          ELSIF SpacesFilled() THEN
+            DrawsCnt := DrawsCnt + 1;
+            WriteStringLn("It's a draw. Thank you.");
+            Mover := Nobody
+          ELSE
+            Mover := Computer
+          END;
+      END (* CASE *)
+    END; (* WHILE *)
+    WriteLn;
+    WriteString("Another game (y/n)? ");
+    ReadString(Answ);
+    SkipLine
+  UNTIL CAP(Answ[0]) <> "Y";
+  WriteLn;
+  WriteStringLn("Final score:");
+  WriteSummary("You won ", MyWinsCnt);
+  WriteSummary("I won ", MyWinsCnt);
+  WriteSummary("We tied ", DrawsCnt);
+  WriteStringLn("See you later!");
+END TicTacToe.

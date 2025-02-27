@@ -27,7 +27,7 @@ public:
 		text = word + '\u0004'; // Terminal character
 
 		nodes.reserve(2 * text.length());
-		root = newNode(UNDEFINED, UNDEFINED);
+		root = new_node(UNDEFINED, UNDEFINED);
 		active_node = root;
 
 		for ( const char& character : text ) {
@@ -36,8 +36,8 @@ public:
 	}
 
 	std::map<std::string, std::set<int32_t>> get_longest_repeated_substrings() {
-		std::vector<int32_t> indexes = doTraversal();
-		std::string word = text.substr(0, text.length() - 1);
+		const std::vector<int32_t> indexes = do_traversal();
+		const std::string word = text.substr(0, text.length() - 1);
 		std::map<std::string, std::set<int32_t>> result{ };
 
 		if ( indexes.front() > 0 ) {
@@ -61,7 +61,7 @@ private:
 			}
 
 			if ( ! nodes[active_node].children.contains(text[active_edge]) ) {
-				const int32_t leaf = newNode(text_index, LEAF_NODE);
+				const int32_t leaf = new_node(text_index, LEAF_NODE);
 				nodes[active_node].children[text[active_edge]] = leaf;
 				add_suffix_link(active_node);
 			} else {
@@ -76,9 +76,9 @@ private:
 					break;
 				}
 
-				const uint32_t split = newNode(nodes[next].start, nodes[next].start + active_length);
+				const uint32_t split = new_node(nodes[next].start, nodes[next].start + active_length);
 				nodes[active_node].children[text[active_edge]] = split;
-				const int32_t leaf = newNode(text_index, LEAF_NODE);
+				const int32_t leaf = new_node(text_index, LEAF_NODE);
 				nodes[split].children[character] = leaf;
 				nodes[next].start += active_length;
 				nodes[split].children[text[nodes[next].start]] = next;
@@ -118,7 +118,7 @@ private:
 		need_parent_link = node;
 	}
 
-	uint32_t newNode(const int32_t& start, const int32_t& end) {
+	uint32_t new_node(const int32_t& start, const int32_t& end) {
 		Node node(start, end);
 		node.leaf_index = ( end == LEAF_NODE ) ? leaf_index_generator++ : UNDEFINED;
 		nodes[current_node] = node;
@@ -126,7 +126,7 @@ private:
 		return current_node++;
 	}
 
-	std::vector<int32_t> doTraversal() {
+	std::vector<int32_t> do_traversal() {
 		std::vector<int32_t> indexes{ };
 		indexes.emplace_back(UNDEFINED);
 
@@ -152,8 +152,7 @@ private:
 
 	std::vector<Node> nodes;
 	std::string text;
-
-    int32_t root;
+	int32_t root;
 	int32_t active_node, active_length = 0, active_edge = 0;
 	int32_t text_index = 0, current_node = 0, need_parent_link = 0, remainder = 0, leaf_index_generator = 0;
 
@@ -162,32 +161,32 @@ private:
 };
 
 int main() {
-	std::vector<int32_t> limits = { 1'000, 10'000, 100'000 };
+	const std::vector<int32_t> limits = { 1'000, 10'000, 100'000 };
+
+	std::ifstream stream("../piDigits.txt");
+	const std::string contents( ( std::istreambuf_iterator<char>(stream) ),
+						        ( std::istreambuf_iterator<char>() ) );
 
 	for ( const int32_t& limit : limits ) {
-		std::ifstream stream("../piDigits.txt");
-		std::string contents( ( std::istreambuf_iterator<char>(stream) ),
-                              ( std::istreambuf_iterator<char>() ) );
-		std::string pi_digits = contents.substr(0, limit);
+		const std::string pi_digits = contents.substr(0, limit);
 
-		auto begin = std::chrono::high_resolution_clock::now();
+		const auto begin = std::chrono::high_resolution_clock::now();
 		SuffixTree tree(pi_digits);
 		std::map<std::string, std::set<int32_t>> substrings = tree.get_longest_repeated_substrings();
-		auto end = std::chrono::high_resolution_clock::now();
-		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>( end - begin );
+		const auto end = std::chrono::high_resolution_clock::now();
+		const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>( end - begin );
 
 		std::cout << "First " << limit << " digits of pi has longest repeated characters:" << std::endl;
 		for ( std::pair<std::string, std::set<int32_t>> entry : substrings ) {
 			std::cout << "    '" << entry.first << "' starting at index ";
-			for ( int32_t index : entry.second ) {
+			for ( const int32_t& index : entry.second ) {
 				std::cout << index << " ";
 			}
 			std::cout << std::endl;
 		}
 
-		std::cout << "Time taken: " << elapsed << " milliseconds." << std::endl << std::endl;
+		std::cout << "Time taken: " << elapsed << std::endl << std::endl;
 	}
 
-	std::cout << "The timings show that the implementation has approximately linear performance."
-              << std::endl;
+	std::cout << "The timings show that the implementation has approximately linear performance." << std::endl;
 }

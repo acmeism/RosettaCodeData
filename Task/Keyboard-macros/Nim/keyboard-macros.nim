@@ -1,75 +1,73 @@
 import tables
 
-import gintro/[glib, gobject, gio]
-import gintro/gtk except Table
-import gintro/gdk except Window
+import gtk2, glib2
+import gdk2 except PWindow
 
 type
 
-  MacroProc = proc(app: App)
+  MacroProc = proc(app: var App)
   MacroTable = Table[int, MacroProc]  # Mapping key values -> procedures.
 
-  App = ref object of Application
+  App = object
     dispatchTable: MacroTable
-    label: Label
+    label: PLabel
 
-#---------------------------------------------------------------------------------------------------
 
-proc addMacro(app: App; ch: char; macroProc: MacroProc) =
+proc addMacro(app: var App; ch: char; macroProc: MacroProc) =
   ## Assign a procedure to a key.
   ## If the key is already assigned, nothing is done.
   let keyval = ord(ch)
   if keyval notin app.dispatchTable:
     app.dispatchTable[keyval] = macroProc
 
-#---------------------------------------------------------------------------------------------------
+
 # Macro procedures.
 
-proc proc1(app: App) =
+proc proc1(app: var App) =
   app.label.setText("You called macro 1")
 
-proc proc2(app: App) =
+proc proc2(app: var App) =
   app.label.setText("You called macro 2")
 
-proc proc3(app: App) =
+proc proc3(app: var App) =
   app.label.setText("You called macro 3")
 
-#---------------------------------------------------------------------------------------------------
 
-proc onKeyPress(window: ApplicationWindow; event: Event; app: App): bool =
-  var keyval: int
-  if not event.getKeyval(keyval): return false
+proc onKeyPress(window: PWindow; event: PEventKey; app: var App): bool =
+  let keyval = event.keyval.int
   if keyval in app.dispatchTable:
     app.dispatchTable[keyval](app)
   result = true
 
-#---------------------------------------------------------------------------------------------------
 
-proc activate(app: App) =
-  ## Activate the application.
+proc onDestroyEvent(widget: PWidget; data: pointer): gboolean {.cdecl.} =
+  ## Quit the application.
+  mainQuit()
 
-  app.addMacro('1', proc1)
-  app.addMacro('2', proc2)
-  app.addMacro('3', proc3)
 
-  let window = app.newApplicationWindow()
-  window.setTitle("Keyboard macros")
+var app: App
 
-  let hbox = newBox(Orientation.horizontal, 10)
-  window.add(hbox)
-  let vbox = newBox(Orientation.vertical, 10)
-  hbox.packStart(vbox, true, true, 10)
+nimInit()
 
-  app.label = newLabel()
-  app.label.setWidthChars(18)
-  vbox.packStart(app.label, true, true, 5)
+app.addMacro('1', proc1)
+app.addMacro('2', proc2)
+app.addMacro('3', proc3)
 
-  discard window.connect("key-press-event", onKeyPress, app)
+let window = windowNew(WINDOW_TOPLEVEL)
+window.setTitle("Keyboard macros")
+window.setSizeRequest(300, 50)
+discard window.signalConnect("destroy", SIGNAL_FUNC(onDestroyEvent), nil)
 
-  window.showAll()
+let hbox = hboxNew(false, 10)
+window.add hbox
+let vbox = vboxNew(false, 10)
+hbox.packStart(vbox, true, true, 10)
 
-#———————————————————————————————————————————————————————————————————————————————————————————————————
+app.label = labelNew(nil)
+app.label.setWidthChars(18)
+vbox.packStart(app.label, true, true, 5)
 
-let app = newApplication(App, "Rosetta.KeyboardMacros")
-discard app.connect("activate", activate)
-discard app.run()
+discard window.signalConnect("key-press-event", SIGNAL_FUNC(onKeyPress), app.addr)
+
+window.showAll()
+main()

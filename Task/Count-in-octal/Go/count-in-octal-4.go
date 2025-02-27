@@ -1,5 +1,6 @@
+package main
 import (
-    "big"
+    "math/big"
     "fmt"
 )
 

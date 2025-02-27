@@ -1,4 +1,4 @@
-U       =. {{]F.(u[_2:Z:v)}}   NB. apply u until v is true
+U       =. {{u^:(-.@:v)^:_.}}   NB. apply u until v is true
 input   =. 1!:1@1@echo@'Guess: '
 output  =. [ ('Bulls: ',:'Cows: ')echo@,.":@,.
 isdigits=. *./@e.&'0123456789'

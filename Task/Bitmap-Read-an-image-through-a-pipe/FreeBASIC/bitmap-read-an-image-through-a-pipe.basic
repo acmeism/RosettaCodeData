@@ -1,0 +1,65 @@
+Type IMAGE
+    w As Integer
+    h As Integer
+    bpp As Integer
+    dato(Any) As Ubyte
+End Type
+
+Function readImageFile(filename As String, img As IMAGE) As Boolean
+    ' First convert image to PPM using temp file
+    Dim As String cmd = "magick.exe " & filename & " temp.ppm"
+    Shell(cmd)
+
+    Dim As Integer ff = Freefile
+    Open "temp.ppm" For Binary As #ff
+
+    ' Read PPM header
+    Dim As String linea
+    Line Input #ff, linea  ' P6
+    If Left(linea, 2) <> "P6" Then Return True
+
+    ' Skip comments
+    Do
+        Line Input #ff, linea
+        If Left(linea, 1) <> "#" Then Exit Do
+    Loop
+
+    img.w = Val(Left(linea, Instr(linea, " ")))
+    img.h = Val(Mid(linea, Instr(linea, " ")))
+
+    ' Allocate memory for image data
+    Redim img.dato(img.w * img.h * 3 - 1)
+
+    ' Read binary pixel data
+    Get #ff, , img.dato()
+
+    Close #ff
+    Kill("temp.ppm")  ' Clean up temp file
+    Return False
+End Function
+
+Function writePPM(filename As String, img As IMAGE) As Boolean
+    Dim As Integer ff = Freefile
+    Open filename For Binary As #ff
+
+    ' Write PPM header
+    Put #ff, , "P6" & Chr(10)
+    Put #ff, , Str(img.w) & " " & Str(img.h) & Chr(10)
+    Put #ff, , "255" & Chr(10)
+
+    ' Write image data
+    For i As Integer = 0 To (img.w * img.h * 3 - 1) Step 3
+        Put #ff, , img.dato(i + 1) ' Green
+        Put #ff, , img.dato(i + 2) ' Blue
+        Put #ff, , img.dato(i)     ' Red
+    Next
+
+    Close #ff
+    Return False
+End Function
+
+' Main program
+Dim As IMAGE img
+
+If readImageFile("example.png", img) Then Print "Error reading input file"
+If writePPM("output.ppm", img) Then Print "i:\Error writing PPM file"

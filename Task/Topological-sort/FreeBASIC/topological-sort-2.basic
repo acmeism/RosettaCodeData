@@ -1,0 +1,168 @@
+Const NULL As Any Ptr = 0
+
+Type item_t
+    As String nombre
+    As Integer Ptr deps
+    As Integer n_deps
+    As Integer  idx
+    As Integer depth
+End Type
+
+Dim Shared As String entrada
+entrada = "des_system_lib   std synopsys std_cell_lib des_system_lib dw02 dw01 ramlib ieee" & Chr(10) & _
+"dw01             ieee dw01 dware gtech" & Chr(10) & _
+"dw02             ieee dw02 dware" & Chr(10) & _
+"dw03             std synopsys dware dw03 dw02 dw01 ieee gtech" & Chr(10) & _
+"dw04             dw04 ieee dw01 dware gtech" & Chr(10) & _
+"dw05             dw05 ieee dware" & Chr(10) & _
+"dw06             dw06 ieee dware" & Chr(10) & _
+"dw07             ieee dware" & Chr(10) & _
+"dware            ieee dware" & Chr(10) & _
+"gtech            ieee gtech" & Chr(10) & _
+"ramlib           std ieee" & Chr(10) & _
+"std_cell_lib     ieee std_cell_lib" & Chr(10) & _
+"synopsys" & Chr(10) & _
+"cycle_11         cycle_12" & Chr(10) & _
+"cycle_12         cycle_11" & Chr(10) & _
+"cycle_21         dw01 cycle_22 dw02 dw03" & Chr(10) & _
+"cycle_22         cycle_21 dw01 dw04" & Chr(10)
+
+Function get_item(list() As item_t, Byref longi As Integer, nombre As String) As Integer
+    Dim As Integer i
+    For i = 0 To longi - 1
+        If list(i).nombre = nombre Then Return i
+    Next
+
+    longi += 1
+    Redim Preserve list(longi - 1)
+    i = longi - 1
+    list(i).idx = i
+    list(i).nombre = nombre
+    list(i).n_deps = 0
+    list(i).deps = NULL
+    list(i).depth = 0
+    Return i
+End Function
+
+Sub add_dep(Byref it As item_t, i As Integer)
+    If it.idx = i Then Return
+    it.deps = Reallocate(it.deps, (it.n_deps + 1) * Sizeof(Integer))
+    it.deps[it.n_deps] = i
+    it.n_deps += 1
+End Sub
+
+Function parse_input(ret() As item_t) As Integer
+    Dim As Integer i, parent, idx, n_items, posic, nextpos
+    Dim As item_t list()
+    Dim As String s, linea, word
+
+    n_items = 0
+    s = entrada
+
+    Do While Len(s) > 0
+        posic = Instr(s, Chr(10))
+        If posic = 0 Then
+            linea = s
+            s = ""
+        Else
+            linea = Left(s, posic - 1)
+            s = Mid(s, posic + 1)
+        End If
+
+        i = 0
+        While Len(linea) > 0
+            linea = Trim(linea)
+            If Len(linea) = 0 Then Exit While
+
+            posic = Instr(linea, " ")
+            If posic = 0 Then
+                word = linea
+                linea = ""
+            Else
+                word = Left(linea, posic - 1)
+                linea = Mid(linea, posic + 1)
+            End If
+
+            If Len(word) > 0 Then
+                idx = get_item(list(), n_items, word)
+
+                If i = 0 Then
+                    parent = idx
+                Else
+                    add_dep(list(parent), idx)
+                End If
+                i += 1
+            End If
+        Wend
+    Loop
+
+    Redim ret(n_items - 1)
+    For i = 0 To n_items - 1
+        ret(i) = list(i)
+    Next
+
+    Return n_items
+End Function
+
+Function get_depth(base_() As item_t, idx As Integer, bad As Integer) As Integer
+    Dim As Integer max = 1, i, t
+
+    If base_(idx).n_deps = 0 Then
+        base_(idx).depth = 1
+        Return 1
+    End If
+
+    If base_(idx).depth < 0 Then Return base_(idx).depth
+    If base_(idx).depth > 0 Then Return base_(idx).depth
+
+    base_(idx).depth = bad
+    For i = 0 To base_(idx).n_deps - 1
+        t = get_depth(base_(), base_(idx).deps[i], bad)
+        If t < 0 Then
+            max = t
+            Exit For
+        End If
+        If max < t + 1 Then max = t + 1
+    Next
+
+    base_(idx).depth = max
+    Return max
+End Function
+
+' Main program
+Dim As Integer i, j, n, bad = -1, max = -1000000, min = 1000000
+Dim As item_t items()
+
+n = parse_input(items())
+
+For i = 0 To n - 1
+    If items(i).depth = 0 And get_depth(items(), i, bad) < 0 Then bad -= 1
+Next
+
+For i = 0 To n - 1
+    If items(i).depth > max Then max = items(i).depth
+    If items(i).depth < min Then min = items(i).depth
+Next
+
+Print "Compile order:"
+For i = min To max
+    If i = 0 Then Continue For
+
+    If i < 0 Then
+        Print "   [unorderable]";
+    Else
+        Print i; ":";
+    End If
+
+    For j = 0 To n - 1
+        If items(j).depth = i Then Print " "; items(j).nombre;
+    Next
+    Print
+Next
+
+' Clean up memory
+For i = 0 To n - 1
+    If items(i).deps <> NULL Then Deallocate(items(i).deps)
+Next
+
+Sleep

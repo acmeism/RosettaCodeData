@@ -1,0 +1,99 @@
+uint16      board( 9 ), goal( 9 )
+int         size, count, mask
+colorref    hue( 1 )
+CFStringRef key
+bool        win
+
+local fn show
+  int x = 20, y = 20, row, col, v, t = size * 20 + 63
+  text @"Courier", 17, fn ColorGray, fn colorClear
+  cls
+  printf@"\n  GOAL"
+  print @( size * 2 + 8, 1 )"BOARD"
+  for row = 0 to size -1
+    y = row * 20 + 40
+    for col = 0 to size - 1
+      v  = ( goal( row ) & bit( col ) ) > 0
+      x  = col * 20 + 20
+      rect fill ( x, y, 19, 19 ), hue( v )
+      print %( x + 5, y - 2 ) v
+      x += t
+      v  = ( board( row ) & bit( col ) ) > 0
+      rect fill ( x, y, 19, 19 ), hue( v )
+      print %( x + 5, y - 2 ) v
+    next
+    print %( x + 25, y - 2 ) mid( key, size + row, 1 )
+  next
+  //print %( t + 15, y + 17 ) left( @" A B C D E F G H I J", size * 2 ) //Alternate
+  print %( t + 15, y + 17 ) left( @" Q W E R T Y U I O P", size * 2 )
+  print %( size * 20 + 26, size * 10 + 20 )@"MOVES"
+  print %( t - 18, size * 10 + 40 )count
+end fn
+
+local fn match as bool
+  for int r = 0 to size -1
+    if board( r ) <> goal( r ) then return no
+  next
+end fn = yes
+
+local fn move( k as int )
+  select k
+    case >= size  : board( k - size) ^^= mask    //row
+    case >= 0                                      //column
+      for int r = 0 to size -1
+        board( r ) ^^= bit( k )
+      next
+    case else : exit fn
+  end select
+  DialogEventSetBool(YES) // we handled the event
+  count ++
+  fn show
+end fn
+
+local fn newGame
+  int r
+  for r = 0 to size -1
+    board( r ) = rnd( mask ) -1
+  next
+  fn memmove( @goal( 0 ), @board( 0 ), 20 )
+  do
+    for r = 0 to size
+      fn move( rnd( size * 2 ) -1)
+    next
+  until !fn match
+  count = 0
+  fn show
+end fn
+
+local fn init( sz as int )
+  if sz < 3 | sz > 10 then stop "Size param must be 3-10" : end
+  size = sz//:stop
+  mask = bit( size ) - 1
+  hue( 0 ) = fn colorYellow
+  hue( 1 ) = fn colorcyan//Green
+  subclass window 1, @"Flipping bits puzzle", ( 0, 0, sz * 40 + 123, sz * 20 + 80 )¬
+  , NSWindowStyleMaskTitled + NSWindowStyleMaskClosable
+  //key = fn StringWithFormat( @"Q%@%@", left( @"ABCDEFGHIJ", sz ), left( @"1234567890", sz ) ) //Alternate
+  key = fn StringWithFormat( @"%@%@", LEFT( @"QWERTYUIOP", sz ), left( @"1234567890", sz ) )
+  fn newGame
+end fn
+
+local fn doDialog( evt as long )
+  select ( evt )
+    case _windowKeyDown
+      if win then win = no : fn newGame : exit fn
+      fn move( instr( 0, key, fn EventCharacters, NSCaseInsensitiveSearch ) )
+      if fn match
+        text ,,_zRed
+        print @(size*2 + 1, 0)"SOLVED!"
+        print %(20,size*20+50)"Any key for new game."
+        win = yes : beep
+      end if
+    case _windowWillClose : end
+  end select
+end fn
+
+on dialog fn DoDialog
+fn init( 3 )
+fn newGame
+handleevents

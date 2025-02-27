@@ -32,6 +32,6 @@
         (push (or found? "*error*") result  -1))
       (join result " "))))
 
-(foo
+(println (foo
 "riG   rePEAT copies  put mo   rest    types   fup.    6       poweRin"
-)
+))

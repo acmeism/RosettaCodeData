@@ -1,0 +1,173 @@
+#include "string.bi"
+
+Type NumberNames
+    cardinal As ZString Ptr
+    ordinal As ZString Ptr
+End Type
+
+Type NamedNumber
+    cardinal As ZString Ptr
+    ordinal As ZString Ptr
+    number As Ulongint
+End Type
+
+' Arrays of number names
+Dim Shared small(0 To 19) As NumberNames = { _
+(@"zero", @"zeroth"), (@"one", @"first"), (@"two", @"second"), _
+(@"three", @"third"), (@"four", @"fourth"), (@"five", @"fifth"), _
+(@"six", @"sixth"), (@"seven", @"seventh"), (@"eight", @"eighth"), _
+(@"nine", @"ninth"), (@"ten", @"tenth"), (@"eleven", @"eleventh"), _
+(@"twelve", @"twelfth"), (@"thirteen", @"thirteenth"), _
+(@"fourteen", @"fourteenth"), (@"fifteen", @"fifteenth"), _
+(@"sixteen", @"sixteenth"), (@"seventeen", @"seventeenth"), _
+(@"eighteen", @"eighteenth"), (@"nineteen", @"nineteenth") }
+
+Dim Shared tens(0 To 7) As NumberNames = { _
+(@"twenty", @"twentieth"), (@"thirty", @"thirtieth"), _
+(@"forty", @"fortieth"), (@"fifty", @"fiftieth"), _
+(@"sixty", @"sixtieth"), (@"seventy", @"seventieth"), _
+(@"eighty", @"eightieth"), (@"ninety", @"ninetieth") }
+
+Dim Shared namedNumbers(0 To 6) As NamedNumber = { _
+(@"hundred", @"hundredth", 100ULL), _
+(@"thousand", @"thousandth", 1000ULL), _
+(@"million", @"millionth", 1000000ULL), _
+(@"billion", @"billionth", 1000000000ULL), _
+(@"trillion", @"trillionth", 1000000000000ULL), _
+(@"quadrillion", @"quadrillionth", 1000000000000000ULL), _
+(@"quintillion", @"quintillionth", 1000000000000000000ULL) }
+
+Function getName(n As NumberNames, ordinal As Boolean) As String
+    Return *Iif(ordinal, n.ordinal, n.cardinal)
+End Function
+
+Function getNamedName(n As NamedNumber, ordinal As Boolean) As String
+    Return *Iif(ordinal, n.ordinal, n.cardinal)
+End Function
+
+Function getNamedNumber(n As Ulongint) As NamedNumber
+    For i As Integer = 0 To 5
+        If n < namedNumbers(i + 1).number Then Return namedNumbers(i)
+    Next
+    Return namedNumbers(6)
+End Function
+
+Function isLetter(c As Integer) As Boolean
+    Return ((c >= 65 And c <= 90) Or (c >= 97 And c <= 122))
+End Function
+
+Function countLetters(s As String) As Integer
+    Dim cnt As Integer = 0
+    For i As Integer = 1 To Len(s)
+        If isLetter(Asc(Mid(s, i, 1))) Then cnt += 1
+    Next
+    Return cnt
+End Function
+
+Sub appendNumberName(result As String Ptr, n As Ulongint, ordinal As Boolean, Byref resultCount As Integer)
+    Static As String tempStr
+
+    If n < 20 Then
+        result[resultCount] = getName(small(n), ordinal)
+        resultCount += 1
+    Elseif n < 100 Then
+        If (n Mod 10) = 0 Then
+            result[resultCount] = getName(tens(n\10 - 2), ordinal)
+        Else
+            tempStr = getName(tens(n\10 - 2), False)
+            tempStr &= "-"
+            tempStr &= getName(small(n Mod 10), ordinal)
+            result[resultCount] = tempStr
+        End If
+        resultCount += 1
+    Else
+        Dim As NamedNumber num = getNamedNumber(n)
+        Dim As Ulongint p = num.number
+        appendNumberName(result, n\p, False, resultCount)
+
+        If (n Mod p) = 0 Then
+            result[resultCount] = getNamedName(num, ordinal)
+            resultCount += 1
+        Else
+            result[resultCount] = getNamedName(num, False)
+            resultCount += 1
+            appendNumberName(result, n Mod p, ordinal, resultCount)
+        End If
+    End If
+End Sub
+
+Function makeSentence(cnt As Integer, Byref resultSize As Integer) As String Ptr
+    Dim As Const String opening(0 To 12) = { _
+    "Four", "is", "the", "number", "of", "letters", "in", "the", _
+    "first", "word", "of", "this", "sentence," }
+
+    Dim As String Ptr result = Callocate((cnt + 1) * Sizeof(String))
+    resultSize = 0
+
+    ' Add opening words more efficiently
+    For i As Integer = 0 To 12
+        If i = cnt Then Exit For
+        result[i] = opening(i)
+    Next
+    resultSize = Iif(cnt < 13, cnt, 13)
+
+    ' Generate remaining words
+    Dim As Integer i = 1
+    While resultSize < cnt
+        appendNumberName(result, countLetters(result[i]), False, resultSize)
+        If resultSize >= cnt Then Exit While
+
+        result[resultSize] = "in"
+        result[resultSize + 1] = "the"
+        resultSize += 2
+        If resultSize >= cnt Then Exit While
+
+        appendNumberName(result, i + 1, True, resultSize)
+        result[resultSize - 1] += ","
+        i += 1
+    Wend
+
+    Return result
+End Function
+
+' Main program
+Dim As Integer n = 201
+Dim As Integer i, wordCount, totalLength
+Dim As String Ptr words = makeSentence(n, wordCount)
+
+Print "The lengths of the first"; n; !" words are:\n"
+
+For i = 0 To n - 1
+    If i Mod 25 = 0 Then Print Using "###: "; i + 1;
+    Print Using " ##"; countLetters(words[i]);
+    If (i + 1) Mod 25 = 0 Then Print
+Next
+
+' Calculate sentence length more efficiently
+totalLength = -1  ' Account for last space
+For i = 0 To n - 1
+    totalLength += Len(words[i]) + 1  ' Include space
+Next
+
+Print !"\n\nLength of sentence = "; Format(totalLength, "#,###")
+Deallocate(words)
+
+' Process larger numbers
+n = 1000
+While n <= 10000000
+    words = makeSentence(n, wordCount)
+
+    ' Calculate sentence length
+    totalLength = -1  ' Start at -1 to account for last space
+    For i = 0 To n - 1
+        totalLength += Len(words[i]) + 1  ' Add length plus space
+    Next
+
+    Print !"\nThe length of word "; Format(n, "#,###"); " ["; words[n-1]; "] is "; countLetters(words[n-1])
+    Print "Length of sentence = "; Format(totalLength, "#,###")
+
+    Deallocate(words)
+    n *= 10
+Wend
+
+Sleep

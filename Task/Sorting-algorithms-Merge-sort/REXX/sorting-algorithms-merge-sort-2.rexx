@@ -1,67 +1,70 @@
-Main:
-call Generate
-call Show
-call Mergesort 1,n
-call Show
-exit
-
-Generate:
-call Random,,12345
-n = 10
-do i = 1 to n
-   stem.i = Random()
-end
-stem.0 = n
-return
-
-Show:
-do i = 1 to n
-   say right(i,2) right(stem.i,3)
-end
-say
-return
-
-Mergesort:
-procedure expose stem. work.
-arg b,e
-if e-b < 1 then
-   return
-if e-b = 1 then do
-   if stem.b > stem.e then do
-      t = stem.b; stem.b = stem.e; stem.e = t
+/***********************************************************************
+* Translating blanks in the array's elements lets me use Version 1
+***********************************************************************/
+Call Init
+unsortedList=''
+Do i=1 To arr.0
+  If pos('00'x,arr.i)>0 Then Do
+    'Sorry, array elements must not contain ''00''x characters'
+    Exit
+    End
+  unsortedList=unsortedList translate(arr.i,'00'x,' ')
+  End
+say 'Array :'
+Call show
+sortedList = mergeSort(unsortedList)
+Do i=1 To arr.0
+  arr.i=translate(word(sortedList,i),' ','00'x)
+  End
+Say ''
+Say 'Sorted:'
+Call show
+Exit
+show:
+  Do i=1 To arr.0
+    Say 'arr.'i'='arr.i
+    End
+  Return
+mergesort: Procedure
+  Parse Arg a
+  If words(a)=1 Then Return a
+  mid=words(a)%2+1
+  l1=subword(a,1,mid-1)
+  l2=subword(a,mid)
+  l1 = mergesort( l1 )
+  l2 = mergesort( l2 )
+  Return merge( l1, l2 )
+merge: Procedure
+  Parse Arg a,b
+  c=''
+  Do while words(a)>0 & words(b)>0
+    If  word(a,1) > word(b,1) Then Do
+       c=c word(b,1)
+       b=subword(b,2)
+       End
+    Else Do
+       c=c word(a,1)
+       a=subword(a,2)
+       End
    end
-   return
-end
-m = (b+e)%2
-call Mergesort b,m
-call Mergesort m+1,e
-call Merger b,m,e
-return
+   c=c a
+   c=c b
+   Return c
 
-Merger:
-procedure expose stem. work.
-arg b,m,e
-i = b; j = m+1; k = b
-do while i <= m | j <= e
-   select
-      when i <= m & j <= e then do
-         if stem.i <= stem.j then do
-            work.k = stem.i; i = i+1
-         end
-         else do
-            work.k = stem.j; j = j+1
-         end
-         k = k+1
-      end
-      when i<=m then do
-         work.k = stem.i; i = i+1; k = k+1
-      end
-      otherwise do
-         work.k = stem.j; j = j+1; k = k+1
-      end
-   end
-end
-do i = b to e
-   stem.i = work.i
-end
-return
+init:
+  arr.=0
+  Call store '---The seven deadly sins---'
+  Call store '==========================='
+  Call store 'pride'
+  Call store 'avarice'
+  Call store 'wrath'
+  Call store 'envy'
+  Call store 'gluttony'
+  Call store 'sloth'
+  Call store 'lust'
+  Return
+store:
+  z=arr.0+1
+  arr.z=arg(1)
+  arr.0=z
+  Return

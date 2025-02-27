@@ -8,7 +8,7 @@ func$ reverse s$ .
    for i = 1 to len a$[] div 2
       swap a$[i] a$[len a$[] - i + 1]
    .
-   return strjoin a$[]
+   return strjoin a$[] ""
 .
 func search s$ .
    max = len w$[] + 1

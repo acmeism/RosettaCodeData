@@ -13,7 +13,7 @@
           (LAMBDA (K-SUCCESS)           ;   which we return possibles.
             (CALL-WITH-CURRENT-CONTINUATION
               (LAMBDA (K-FAILURE)       ; K-FAILURE will try the next
-                (SET! FAIL K-FAILURE)   ;   possible expression.
+                (SET! FAIL (LAMBDA () (K-FAILURE 'anything-is-fine-here)))   ;   possible expression.
                 (K-SUCCESS              ; Note that the expression is
                  (LAMBDA ()             ;   evaluated in tail position
                    expression))))       ;   with respect to AMB.

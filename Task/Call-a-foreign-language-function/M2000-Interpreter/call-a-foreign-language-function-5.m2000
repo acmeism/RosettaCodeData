@@ -1,14 +1,14 @@
 Module checkit {
       Static DisplayOnce=0
-      N=100000
+      N=1000000
       Read ? N
       Form 60
       Pen 14
       Background { Cls 5}
       Cls 5
-      \\ use f1 do unload lib - because only New statemend unload it
+      ' use f1 do unload lib - because only New statemend unload it
       FKEY 1,"save ctst1:new:load ctst1"
-      \\ We use a function as string container, because c code can easy color decorated in M2000.
+      ' We use a function as string container, because c code can easy color decorated in M2000.
       Function ccode {
             long primes(long a[], long b)
             {
@@ -52,53 +52,54 @@ Module checkit {
                   return 0;
             }
       }
-      \\ extract code. &functionname() is a string with the code inside "{ }"
-      \\ a reference to function actual is code of function in m2000
-      \\ using Document object we have an easy way to drop paragraphs
+      ' extract code. &functionname() is a string with the code inside "{ }"
+      ' a reference to function actual is code of function in m2000
+      ' using Document object we have an easy way to drop paragraphs
       document code$=Mid$(&ccode(), 2, len(&ccode())-2)
-      \\ remove 1st line two times \\ one line for an edit information from interpreter
-      \\ paragraph$(code$, 1) export paragraph 1st,using  third parameter -1 means delete after export.
+      ' remove 1st line two times ' one line for an edit information from interpreter
+      ' paragraph$(code$, 1) export paragraph 1st,using  third parameter -1 means delete after export.
       drop$=paragraph$(code$,1,-1)+paragraph$(code$,1,-1)
       If DisplayOnce Else {
+            If exist(temporary$+"MyName.dll") then dos "del "+temporary$+"MyName.*", 200;
             Report 2, "c code for primes"
-            Report code$ \\ report stop after 3/4 of screen lines use. Press spacebar or mouse button to continue
+            Report code$ ' report stop after 3/4 of screen lines use. Press spacebar or mouse button to continue
             DisplayOnce++
       }
 
-      \\ dos "del c:\MyName.*", 200;
 
-      If not exist("c:\MyName.dll") then {
+
+      If not exist(temporary$+"MyName.dll") then {
             Report 2, "Now we have to make a dll"
-            Rem : Load Make \\ we can use a Make.gsb in current folder - this is the user folder for now
+            Rem : Load Make ' we can use a Make.gsb in current folder - this is the user folder for now
             Module MAKE ( fname$, code$, timeout ) {
                   if timeout<1000 then timeout=1000
                   If left$(fname$,2)="My" Else Error "Not proper name - use 'My' as first two letters"
                   Print "Delete old files"
-                  try { remove "c:\MyName" }
-                  Dos "del  c:\"+fname$+".*", timeout;
+                  try { remove temporary$+"MyName" }
+                  Dos "del  "+temporary$+fname$+".*", timeout;
                   Print "Save c file"
-                  Open "c:\"+fname$+".c" for output as F \\ use of non unicode output
+                  Open temporary$+fname$+".c" for output as F ' use of non unicode output
                   Print #F, code$
                   Close #F
-                  \\ use these two lines for opening dos console and return to M2000 command line
-                  rem : Dos "cd c:\ && gcc -c -DBUILD_DLL "+fname$+".c"
+                  ' use these two lines for opening dos console and return to M2000 command line
+                  rem : Dos "cd " +temporary$+" && gcc -c -DBUILD_DLL "+fname$+".c"
                   rem : Error "Check for errors"
-                  \\ by default we give a time to process dos command and then continue
+                  ' by default we give a time to process dos command and then continue
                   Print "make object file"
-                  dos "cd c:\ && gcc -c -DBUILD_DLL "+fname$+".c" , timeout;
-                  if exist("c:\"+fname$+".o") then {
+                  dos "cd " +temporary$+" && gcc -c -DBUILD_DLL "+fname$+".c" , timeout;
+                  if exist(temporary$+fname$+".o") then {
                         Print "make dll"
-                        dos "cd c:\ && gcc -shared -o "+fname$+".dll "+fname$+".o -Wl,--out-implib,libmessage.a", timeout;
+                        dos "cd " +temporary$+" && gcc -shared -o "+fname$+".dll "+fname$+".o -Wl,--out-implib,libmessage.a", timeout;
                   } else Error "No object file - Error"
-                  if not exist("c:\"+fname$+".dll") then Error "No dll - Error"
+                  if not exist(temporary$+fname$+".dll") then Error "No dll - Error"
             }
             Make "MyName", code$, 1000
       }
-      Declare primes lib c "c:\MyName.primes" {long c, long d} \\ c after lib mean CDecl call
-      \\ So now we can check error
-      \\ make a Buffer (add two more longs for any purpose)
-      Buffer Clear A as Long*(N+2) \\ so A(0) is base address, of an array of 100002 long (unsign for M2000).
-      \\ profiler enable a timecount
+      Declare primes lib c temporary$+"MyName.primes" {long c, long d} ' c after lib mean CDecl call
+      ' So now we can check error
+      ' make a Buffer (add two more longs for any purpose)
+      Buffer Clear A as Long*(N+2) ' so A(0) is base address, of an array of 100002 long (unsign for M2000).
+      ' profiler enable a timecount
       profiler
       Call primes(A(0), N)
       m=timecount
@@ -118,7 +119,8 @@ Module checkit {
             Print
       }
       Print format$("Compute {0} primes in range 1 to {1}, in msec:{2:3}", total, N, m)
-      \\ unload dll, we have to use exactly the same name, as we  use it  in declare except for last chars ".dll"
-      remove "c:\MyName"
+      ' unload dll, we have to use exactly the same name, as we  use it  in declare except for last chars ".dll"
+      remove  temporary$+"MyName"
 }
+' use clear statement to clear static variables before run this, to make new dll
 checkit

@@ -1,5 +1,11 @@
 Imports System.Net
 
-Dim client As WebClient = New WebClient()
-Dim content As String = client.DownloadString("http://www.google.com")
-Console.WriteLine(content)
+Module RCHttp
+
+    Public Sub Main(args As String())
+        Dim client As New WebClient()
+        Dim content As String = client.DownloadString("http://www.google.com")
+        Console.WriteLine(content)
+    End Sub
+
+End Module

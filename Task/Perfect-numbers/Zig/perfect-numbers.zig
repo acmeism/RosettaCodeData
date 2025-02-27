@@ -1,8 +1,8 @@
 const std = @import("std");
 const expect = std.testing.expect;
-const stdout = std.io.getStdOut().outStream();
 
 pub fn main() !void {
+    const stdout = std.io.getStdOut().writer();
     var i: u32 = 2;
     try stdout.print("The first few perfect numbers are: ", .{});
     while (i <= 10_000) : (i += 2) if (propersum(i) == i)
@@ -23,7 +23,7 @@ fn propersum(n: u32) u32 {
 }
 
 test "Proper divisors" {
-    expect(propersum(28) == 28);
-    expect(propersum(71) == 1);
-    expect(propersum(30) == 42);
+    try expect(propersum(28) == 28);
+    try expect(propersum(71) == 1);
+    try expect(propersum(30) == 42);
 }

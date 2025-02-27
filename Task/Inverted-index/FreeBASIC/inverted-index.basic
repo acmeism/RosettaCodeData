@@ -1,0 +1,115 @@
+Const NULL As Any Ptr = 0
+
+Type WordCant
+    arch As String
+    cant As Integer
+    sgte As WordCant Ptr
+End Type
+
+Type WordEntry
+    word As String
+    cnts As WordCant Ptr
+    sgte As WordEntry Ptr
+End Type
+
+Function addWord(root As WordEntry Ptr, word As String, arch As String) As WordEntry Ptr
+    Dim As WordEntry Ptr actual = root
+    Dim As WordCant Ptr newCant
+
+    ' Search existing word
+    While actual <> NULL
+        If actual->word = word Then
+            ' Word exists, update cant for file
+            Dim As WordCant Ptr cant = actual->cnts
+            While cant <> NULL
+                If cant->arch = arch Then
+                    cant->cant += 1
+                    Return root
+                End If
+                cant = cant->sgte
+            Wend
+            ' Add new file cant
+            newCant = New WordCant
+            newCant->arch = arch
+            newCant->cant = 1
+            newCant->sgte = actual->cnts
+            actual->cnts = newCant
+            Return root
+        End If
+        actual = actual->sgte
+    Wend
+
+    ' Add new word
+    Dim As WordEntry Ptr newEntry = New WordEntry
+    newCant = New WordCant
+    newCant->arch = arch
+    newCant->cant = 1
+    newCant->sgte = NULL
+
+    newEntry->word = word
+    newEntry->cnts = newCant
+    newEntry->sgte = root
+    Return newEntry
+End Function
+
+Function makeDoubleIndex(files() As String) As WordEntry Ptr
+    Dim As WordEntry Ptr index = NULL
+
+    For i As Integer = Lbound(files) To Ubound(files)
+        Dim As Integer ff = Freefile
+        Open files(i) For Input As #ff
+
+        Dim As String linea, word
+        While Not Eof(ff)
+            Line Input #ff, linea
+            linea = Lcase(linea)
+
+            Dim As Integer start = 1, posic
+            Do
+                posic = Instr(start, linea, Any " ,.;:!?()[]{}""'")
+                word = Mid(linea, start, Iif(posic = 0, Len(linea) - start + 1, posic - start))
+
+                word = Trim(word)
+                If Len(word) > 0 Then index = addWord(index, word, files(i))
+
+                start = posic + 1
+            Loop Until posic = 0
+        Wend
+        Close #ff
+    Next
+
+    Return index
+End Function
+
+Sub wordSearch(index As WordEntry Ptr, searchTerms() As String)
+    For i As Integer = Lbound(searchTerms) To Ubound(searchTerms)
+        Dim As String word = Lcase(searchTerms(i))
+        Dim As WordEntry Ptr entry = index
+
+        While entry <> NULL
+            If entry->word = word Then
+                Print Chr(34); word; Chr(34); " found in ";
+                Dim As WordCant Ptr cant = entry->cnts
+                While cant <> NULL
+                    Print cant->arch;
+                    If cant->sgte <> NULL Then Print ", ";
+                    cant = cant->sgte
+                Wend
+                Print
+                Exit While
+            End If
+            entry = entry->sgte
+        Wend
+
+        If entry = NULL Then Print Chr(34); word; """ not found."
+    Next
+End Sub
+
+' Main program
+Dim As String files(3) = {"file1.txt", "file2.txt", "file3.txt", "file4.txt"}
+Dim As String searchTerms(4) = {"forehead", "of", "hand", "a", "foot"}
+
+Dim As WordEntry Ptr index = makeDoubleIndex(files())
+wordSearch(index, searchTerms())
+
+Sleep

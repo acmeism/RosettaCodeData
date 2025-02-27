@@ -53,7 +53,7 @@ BEGIN # Dragon Curve in SVG                                                  #
 
             put( svg file, ( "'/>", newline, "</svg>", newline ) );
             close( svg file )
-         FI # sierpinski square # ;
+         FI # dragon curve # ;
 
     dragon curve( "dragon.svg", 1200, 5, 12, 400, 200 )
 

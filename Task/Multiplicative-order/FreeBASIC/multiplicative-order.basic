@@ -1,0 +1,177 @@
+#include "windows.bi"
+
+Type prime_factor
+    p As Ulong
+    e As Ulong
+End Type
+
+' Arrays and their counters
+Dim Shared primes(1 Shl 15) As Ulong
+Dim Shared primeCount As Integer = 0
+
+Function get_prime_factors(n As Ulong, factors() As prime_factor) As Integer
+    Static As Ulong e, p, i
+    Dim factorCount As Integer = 0
+
+    ' Handle even numbers specially
+    If (n And 1) = 0 Then
+        e = 0
+        While (n And 1) = 0
+            e += 1
+            n Shr= 1
+        Wend
+        factors(factorCount).p = 2
+        factors(factorCount).e = e
+        factorCount += 1
+    End If
+
+    ' Now we only need to check odd numbers
+    For i = 1 To primeCount - 1
+        p = primes(i)
+        If p * p > n Then Exit For
+
+        If (n Mod p) = 0 Then
+            e = 0
+            Do
+                e += 1
+                n \= p
+            Loop While (n Mod p) = 0
+
+            factors(factorCount).p = p
+            factors(factorCount).e = e
+            factorCount += 1
+        End If
+    Next
+
+    If n > 1 Then
+        factors(factorCount).p = n
+        factors(factorCount).e = 1
+        factorCount += 1
+    End If
+
+    Return factorCount
+End Function
+
+Function get_factors(n As Ulong, factors() As Ulong) As Integer
+    Dim As Ulong i, k
+    Dim As Integer p, j, prevLen
+    Dim As prime_factor prime_factors(100)
+    Dim As Integer factorCount = get_prime_factors(n, prime_factors())
+
+    factors(0) = 1
+    Dim As Integer len2 = 1
+    Dim As Integer totalFactors = 1
+
+    For i = 0 To factorCount - 1
+        p = prime_factors(i).p
+        prevLen = totalFactors
+
+        For j = 0 To prime_factors(i).e - 1
+            For k = 0 To prevLen - 1
+                factors(totalFactors) = factors(k) * p
+                totalFactors += 1
+            Next
+            p *= prime_factors(i).p
+        Next
+    Next
+
+    ' Sort the factors
+    For i = 0 To totalFactors - 2
+        For p = i + 1 To totalFactors - 1
+            If factors(i) > factors(p) Then Swap factors(i), factors(p)
+        Next
+    Next
+
+    Return totalFactors
+End Function
+
+Function mpow(a As Ulongint, p As Ulongint, m As Ulongint) As Ulongint
+    Dim r As Ulongint = 1
+    While p > 0
+        If (p And 1) Then r = (r * a) Mod m
+        a = (a * a) Mod m
+        p Shr= 1
+    Wend
+    Return r
+End Function
+
+Function ipow(a As Ulongint, p As Ulongint) As Ulongint
+    Dim r As Ulongint = 1
+    While p > 0
+        If (p And 1) Then r *= a
+        a *= a
+        p Shr= 1
+    Wend
+    Return r
+End Function
+
+Function GCD(n As Ulongint, d As Ulongint) As Ulongint
+    Return Iif(d = 0, n, GCD(d, n Mod d))
+End Function
+
+Function lcm(r As Ulongint, s As Ulongint) As Ulongint
+    Return (r * s) / GCD(r, s)
+End Function
+
+Function multi_order_p(a As Ulong, p As Ulong, e As Ulong) As Ulong
+    Dim As Ulong m = ipow(p, e)
+    Dim As Ulong t = (m \ p) * (p - 1)
+    Dim As Ulong fac(1000)
+    Dim As Integer facCount = get_factors(t, fac())
+
+    For i As Integer = 0 To facCount - 1
+        If mpow(a, fac(i), m) = 1 Then Return fac(i)
+    Next
+
+    Return 0
+End Function
+
+Function multi_order(a As Ulong, m As Ulong) As Ulong
+    Dim pf(100) As prime_factor
+    Dim pfCount As Integer = get_prime_factors(m, pf())
+    Dim res As Ulong = 1
+
+    For i As Integer = 0 To pfCount - 1
+        res = lcm(res, multi_order_p(a, pf(i).p, pf(i).e))
+    Next
+
+    Return res
+End Function
+
+Sub sieve()
+    Dim As Integer i, j
+    Const SIZE = 1 Shl 15
+    Static bits(0 To SIZE-1) As Boolean
+
+    ' Fill with True's (faster than loop)
+    FillMemory(@bits(0), SIZE, True)
+
+    bits(0) = False
+    bits(1) = False
+
+    ' Only need to check up to sqrt(SIZE)
+    For i = 2 To Int(Sqr(SIZE))
+        If bits(i) Then
+            For j = i * i To SIZE-1 Step i
+                bits(j) = False
+            Next
+        End If
+    Next
+
+    ' Store primes in array
+    For i = 2 To SIZE-1
+        If bits(i) Then
+            primes(primeCount) = i
+            primeCount += 1
+        End If
+    Next
+End Sub
+
+' Main program
+sieve()
+Print multi_order(37, 1000)    ' Prints 100
+Print multi_order(37, 3343)    ' Prints 1114
+Print multi_order(54, 100001)  ' Prints 9090
+Print multi_order(3047753288, 2257683301)  ' Prints 62713425
+
+Sleep

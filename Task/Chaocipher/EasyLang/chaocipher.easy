@@ -1,8 +1,6 @@
 proc index c$ . a$[] ind .
    for ind = 1 to len a$[]
-      if a$[ind] = c$
-         return
-      .
+      if a$[ind] = c$ : return
    .
    ind = 0
 .
@@ -14,12 +12,9 @@ func$ chao txt$ mode .
    right$[] = strchars right$
    len tmp$[] 26
    for c$ in strchars txt$
-      # print strjoin left$[] & " " & strjoin right$[]
       if mode = 1
          index c$ right$[] ind
-         if ind = 0
-            return ""
-         .
+         if ind = 0 : return ""
          r$ &= left$[ind]
       else
          index c$ left$[] ind

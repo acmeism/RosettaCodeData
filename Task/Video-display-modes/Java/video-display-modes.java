@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 
-public final  class VideoDisplay {
+public final class VideoDisplayModes {
 	
 	public static void main(String[] aArgs) throws InterruptedException  {	
 		GraphicsEnvironment environment = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -36,10 +36,10 @@ public final  class VideoDisplay {
 	    }
 	   	
 	   	// Uncomment the line below to see an example of programmatically changing the video display.
-	   	// new VideoDisplay();		
+	   	// new VideoDisplayModes();		
 	}
 	
-	private VideoDisplay() throws InterruptedException {
+	private VideoDisplayModes() throws InterruptedException {
 		JFrame.setDefaultLookAndFeelDecorated(true);
     	JFrame frame = new JFrame("Video Display Demonstration");    	
     	frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

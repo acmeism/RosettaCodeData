@@ -1,23 +1,24 @@
+-- Module Quicksort.inc - Build 30 Jan 2025
+-- Generic stem sort
+
 default [label]=Quicksort [lt]=< [eq]== [gt]=>
--- Sorting procedure - Build 7 Sep 2024
--- (C) Paul van den Eertwegh 2024
 
 [label]:
 -- Sort a stem on 1 or more key columns, syncing 0 or more data columns
 procedure expose (table)
 arg table,keys,data
 -- Collect keys
-kn = words(keys)
+kn = Words(keys)
 do x = 1 to kn
-   key.x = word(keys,x)
+   key.x = Word(keys,x)
 end
 -- Collect data
-dn = words(data)
+dn = Words(data)
 do x = 1 to dn
-   data.x = word(data,x)
+   data.x = Word(data,x)
 end
 -- Sort
-n = value(table||0); s = 1; sl.1 = 1; sr.1 = n
+n = Value(table||0); s = 1; sl.1 = 1; sr.1 = n
 do until s = 0
    l = sl.s; r = sr.s; s = s-1
    do until l >= r
@@ -25,14 +26,14 @@ do until s = 0
       if r-l < 20 then do
          do i = l+1 to r
             do x = 1 to kn
-               k.x = value(table||key.x||i)
+               k.x = Value(table||key.x||i)
             end
             do x = 1 to dn
-               d.x = value(table||data.x||i)
+               d.x = Value(table||data.x||i)
             end
             do j=i-1 to l by -1
                do x = 1 to kn
-                  a = value(table||key.x||j)
+                  a = Value(table||key.x||j)
                   if a [gt] k.x then
                      leave x
                   if a [eq] k.x then
@@ -42,11 +43,11 @@ do until s = 0
                end
                k = j+1
                do x = 1 to kn
-                  t = value(table||key.x||j)
+                  t = Value(table||key.x||j)
                   call value table||key.x||k,t
                end
                do x = 1 to dn
-                  t = value(table||data.x||j)
+                  t = Value(table||data.x||j)
                   call value table||data.x||k,t
                end
             end
@@ -66,14 +67,14 @@ do until s = 0
 -- Find optimized pivot
          m = (l+r)%2
          do x = 1 to kn
-            a = value(table||key.x||l); b = value(table||key.x||m)
+            a = Value(table||key.x||l); b = Value(table||key.x||m)
             if a [gt] b then do
                do y = 1 to kn
-                  t = value(table||key.y||l); u = value(table||key.y||m)
+                  t = Value(table||key.y||l); u = Value(table||key.y||m)
                   call value table||key.y||l,u; call value table||key.y||m,t
                end
                do y = 1 to dn
-                  t = value(table||data.y||l); u = value(table||data.y||m)
+                  t = Value(table||data.y||l); u = Value(table||data.y||m)
                   call value table||data.y||l,u; call value table||data.y||m,t
                end
                leave
@@ -82,14 +83,14 @@ do until s = 0
                leave
          end
          do x = 1 to kn
-            a = value(table||key.x||l); b = value(table||key.x||r)
+            a = Value(table||key.x||l); b = Value(table||key.x||r)
             if a [gt] b then do
                do y = 1 to kn
-                  t = value(table||key.y||l); u = value(table||key.y||r)
+                  t = Value(table||key.y||l); u = Value(table||key.y||r)
                   call value table||key.y||l,u; call value table||key.y||r,t
                end
                do y = 1 to dn
-                  t = value(table||data.y||l); u = value(table||data.y||r)
+                  t = Value(table||data.y||l); u = Value(table||data.y||r)
                   call value table||data.y||l,u; call value table||data.y||r,t
                end
                leave
@@ -98,14 +99,14 @@ do until s = 0
                leave
          end
          do x = 1 to kn
-            a = value(table||key.x||m); b = value(table||key.x||r)
+            a = Value(table||key.x||m); b = Value(table||key.x||r)
             if a [gt] b then do
                do y = 1 to kn
-                  t = value(table||key.y||m); u = value(table||key.y||r)
+                  t = Value(table||key.y||m); u = Value(table||key.y||r)
                   call value table||key.y||m,u; call value table||key.y||r,t
                end
                do y = 1 to dn
-                  t = value(table||data.y||m); u = value(table||data.y||r)
+                  t = Value(table||data.y||m); u = Value(table||data.y||r)
                   call value table||data.y||m,u; call value table||data.y||r,t
                end
                leave
@@ -116,12 +117,12 @@ do until s = 0
 -- Rearrange rows in partition
          i = l; j = r
          do x = 1 to kn
-            p.x = value(table||key.x||m)
+            p.x = Value(table||key.x||m)
          end
          do until i > j
             do i = i
                do x = 1 to kn
-                  a = value(table||key.x||i)
+                  a = Value(table||key.x||i)
                   if a [lt] p.x then
                      leave x
                   if a [eq] p.x then
@@ -132,7 +133,7 @@ do until s = 0
             end
             do j = j by -1
                do x = 1 to kn
-                  a = value(table||key.x||j)
+                  a = Value(table||key.x||j)
                   if a [gt] p.x then
                      leave x
                   if a [eq] p.x then
@@ -143,11 +144,11 @@ do until s = 0
             end
             if i <= j then do
                do x = 1 to kn
-                  t = value(table||key.x||i); u = value(table||key.x||j)
+                  t = Value(table||key.x||i); u = Value(table||key.x||j)
                   call value table||key.x||i,u; call value table||key.x||j,t
                end
                do x = 1 to dn
-                  t = value(table||data.x||i); u = value(table||data.x||j)
+                  t = Value(table||data.x||i); u = Value(table||data.x||j)
                   call value table||data.x||i,u; call value table||data.x||j,t
                end
                i = i+1; j = j-1

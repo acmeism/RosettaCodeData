@@ -1,19 +1,18 @@
-# Pendulum simulation.
+import std/[math, random]
 
-import math, random
-
-import gintro/[gobject, gdk, gtk, gio, glib, cairo]
+import gtk2 except update
+import gdk2, glib2, cairo
 
 const
   Width = 500
   Height = 500
   DrawIters = 72
-  Red = [float 1, 0, 0]
-  Green = [float 0, 1, 0]
-  Blue = [float 0, 0, 1]
-  Black = [float 0, 0, 0]
-  White = [float 255, 255, 255]
-  Gold = [float 255, 215, 0]
+  Red = (1.0, 0.0, 0.0)
+  Green = (0.0, 1.0, 0.0)
+  Blue = (0.0, 0.0, 1.0)
+  Black = (0.0, 0.0, 0.0)
+  White = (1.0, 1.0, 1.0)
+  Gold = (1.0, 215 / 255, 0.0)
   Colors = [Blue, Red, Green, White, Gold]
   Angles = [75, 100, 135, 160]
 
@@ -23,39 +22,41 @@ type
   Point = Vec2
 
   # Description of the simulation.
-  Simulation = ref object
-    area: DrawingArea
+  Simulation = object
+    area: PDrawingArea
     xmax, ymax: float
     center: Point
     itercount: int
 
-#---------------------------------------------------------------------------------------------------
 
-proc newSimulation(area: DrawingArea; width, height: int): Simulation {.noInit.} =
-  ## Allocate and initialize the simulation object.
+proc initSimulation(area: PDrawingArea; width, height: int): Simulation {.noInit.} =
+  ## Initialize a simulation object.
+  result = Simulation(area: area,
+                      xmax: float(width - 1),
+                      ymax: float(height - 1),
+                      center: (result.xmax * 0.5, result.ymax * 0.5))
 
-  new(result)
-  result.area = area
-  result.xmax = float(width - 1)
-  result.ymax = float(height - 1)
-  result.center = (result.xmax * 0.5, result.ymax * 0.5)
 
-#---------------------------------------------------------------------------------------------------
+func δ(r, θ: float): Vec2 =
+  ## Return the delta in cartesian coordinates.
+  (r * cos(degToRad(θ)), r * sin(degToRad(θ)))
 
-func δ(r, θ: float): Vec2 = (r * cos(degToRad(θ)), r * sin(degToRad(θ)))
-
-#---------------------------------------------------------------------------------------------------
 
 func nextPoint(p: Point; r, θ: float): Point =
+  ## Return the next point for given polar coordinates.
   let dp = δ(r, θ)
   result = (p.x + dp.x, p.y + dp.y)
 
-#---------------------------------------------------------------------------------------------------
 
-proc draw(sim: Simulation; context: cairo.Context) =
+template setColor(ctx: ptr Context; color: (float, float, float)) =
+  ## Set the color for next drawing in given context.
+  ctx.setSourceRgb(color[0], color[1], color[2])
+
+
+proc draw(sim: var Simulation; context: ptr Context) =
   ## Draw the spiral.
 
-  context.setSource(Black)
+  context.setColor(Black)
   context.rectangle(0, 0, sim.xmax, sim.ymax)
   context.fill()
 
@@ -71,7 +72,7 @@ proc draw(sim: Simulation; context: cairo.Context) =
   for _ in 1..DrawIters:
     let p2 = p1.nextPoint(r, θ)
     context.moveTo(p1.x, p1.y)
-    context.setSource(color)
+    context.setColor(color)
     context.lineTo(p2.x, p2.y)
     context.setLineWidth(2)
     context.stroke()
@@ -79,35 +80,32 @@ proc draw(sim: Simulation; context: cairo.Context) =
     r += δr
     p1 = p2
 
-#---------------------------------------------------------------------------------------------------
 
-proc update(sim: Simulation): gboolean =
+proc update(sim: var Simulation): gboolean =
   ## Update the simulation state.
-
-  result = gboolean(1)
   sim.draw(sim.area.window.cairoCreate())
   inc sim.itercount
+  result = gboolean(1)
 
-#---------------------------------------------------------------------------------------------------
 
-proc activate(app: Application) =
-  ## Activate the application.
+proc onDestroyEvent(widget: PWidget; data: pointer): gboolean {.cdecl.} =
+  ## Quit the application.
+  mainQuit()
 
-  let window = app.newApplicationWindow()
-  window.setSizeRequest(Width, Height)
-  window.setTitle("Polyspiral")
 
-  let area = newDrawingArea()
-  window.add(area)
+nimInit()
 
-  let sim = newSimulation(area, Width, Height)
+let window = windowNew(WINDOW_TOPLEVEL)
+window.setSizeRequest(Width, Height)
+window.setTitle("Polyspiral")
+discard window.signalConnect("destroy", SIGNAL_FUNC(onDestroyEvent), nil)
 
-  timeoutAdd(500, update, sim)
+let area = drawingAreaNew()
+window.add area
 
-  window.showAll()
+let sim = initSimulation(area, Width, Height)
 
-#———————————————————————————————————————————————————————————————————————————————————————————————————
+discard timeoutAdd(500, cast[gtk2.TFunction](update), sim.addr)
 
-let app = newApplication(Application, "Rosetta.polyspiral")
-discard app.connect("activate", activate)
-discard app.run()
+window.showAll()
+main()

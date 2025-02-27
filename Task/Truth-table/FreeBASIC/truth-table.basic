@@ -1,0 +1,219 @@
+Dim Shared As Integer Variables(26)
+Dim Shared As Integer ExprStack(255)
+Dim Shared As Integer OpStack(255)
+Dim Shared As Integer OpPrecedence(6)
+Dim Shared As String Operators(6)
+Dim Shared As String VarList
+Dim Shared As Integer exprPos, stackPos, idx, combos
+
+' Initialize operator data with aliases
+Operators(1) = "!"   : OpPrecedence(1) = 4 ' NOT (both ~ and !)
+Operators(2) = "&"   : OpPrecedence(2) = 3 ' AND
+Operators(3) = "|"   : OpPrecedence(3) = 2 ' OR
+Operators(4) = "^"   : OpPrecedence(4) = 2 ' XOR
+Operators(5) = "=>"  : OpPrecedence(5) = 1 ' IMPLIES
+Operators(6) = "<="  : OpPrecedence(6) = 1 ' CONVERSE
+
+Sub EvaluateExpression()
+    Dim As Integer typeFlag, value
+    stackPos = 0
+
+    For idx = 0 To exprPos-1
+        typeFlag = ExprStack(idx) And 224
+        value = ExprStack(idx) And 31
+
+        Select Case typeFlag
+        Case 0  ' Operator
+            Select Case value
+            Case 1  ' NOT
+                If stackPos < 1 Then Print "Missing operand": Exit Sub
+                OpStack(stackPos-1) = 1 - OpStack(stackPos-1)
+            Case 2  ' AND
+                If stackPos < 2 Then Print "Missing operand": Exit Sub
+                stackPos -= 1
+                OpStack(stackPos-1) = OpStack(stackPos-1) And OpStack(stackPos)
+            Case 3  ' OR
+                If stackPos < 2 Then Print "Missing operand": Exit Sub
+                stackPos -= 1
+                OpStack(stackPos-1) = OpStack(stackPos-1) Or OpStack(stackPos)
+            Case 4  ' XOR
+                If stackPos < 2 Then Print "Missing operand": Exit Sub
+                stackPos -= 1
+                OpStack(stackPos-1) = OpStack(stackPos-1) Xor OpStack(stackPos)
+            Case 5  ' IMPLIES
+                If stackPos < 2 Then Print "Missing operand": Exit Sub
+                stackPos -= 1
+                OpStack(stackPos-1) = Iif(OpStack(stackPos-1), OpStack(stackPos), -1)
+            Case 6  ' CONVERSE
+                If stackPos < 2 Then Print "Missing operand": Exit Sub
+                stackPos -= 1
+                OpStack(stackPos-1) = Iif(OpStack(stackPos), OpStack(stackPos-1), -1)
+            End Select
+        Case 32  ' Constant
+            OpStack(stackPos) = -value
+            stackPos += 1
+        Case 64  ' Variable
+            OpStack(stackPos) = Variables(Instr(VarList, Chr(value + 65)))
+            stackPos += 1
+        End Select
+    Next
+
+    If stackPos <> 1 Then Print "Missing operator": Exit Sub
+End Sub
+
+Sub ProcessRemainingOperators()
+    While stackPos > 0
+        stackPos -= 1
+        Select Case OpStack(stackPos)
+        Case 97
+            Print "Error: missing )!": Exit Sub
+        Case Else
+            ExprStack(exprPos) = OpStack(stackPos)
+            exprPos += 1
+        End Select
+    Wend
+End Sub
+
+Sub BuildVariableList()
+    VarList = ""
+    For idx = 0 To exprPos-1
+        If (ExprStack(idx) And 224) = 64 Then
+            Dim As String tmpChar = Chr(ExprStack(idx) + 1)
+            If Instr(VarList, tmpChar) = 0 Then VarList &= tmpChar
+        End If
+    Next
+End Sub
+
+Sub PrintRow()
+    For idx = 1 To Len(VarList)
+        Print Iif(Variables(idx), "T ", "F ");
+    Next
+    Print "| ";
+
+    EvaluateExpression()
+    Print Iif(OpStack(0), "T", "F")
+End Sub
+
+Sub GenerateNextCombination()
+    idx = 1
+    While idx <= Len(VarList)
+        Select Case Variables(idx)
+        Case 1
+            Variables(idx) = 0
+            idx += 1
+        Case 0
+            Variables(idx) = 1
+            Exit While
+        End Select
+    Wend
+End Sub
+
+Sub PrintTruthTable(originalExpr As String)
+    For idx = 1 To Len(VarList)
+        Print Mid(VarList, idx, 1); " ";
+    Next
+    Print "| "; originalExpr
+    Print String(2 + 2*Len(VarList) + Len(originalExpr), "-")
+
+    For combos = 1 To 2^Len(VarList)
+        PrintRow()
+        GenerateNextCombination()
+    Next
+End Sub
+
+
+'Main program
+Print "Boolean expression evaluator"
+Print String(28, "-")
+Print "Accepts single-character variables (a-z, A-Z), postfix or infix."
+Print "Operators: ! (not), & (and), | (or), ^ (xor), => (implies), <= (converse)"
+Print "Optionally seperated by whitespace. Just enter nothing to quit."
+
+Dim As String inputExpr, cleanExpr, originalExpr, remainExpr, currentChar
+Dim As Integer asciiVal
+Dim As Boolean operatorFound
+
+Do
+    For idx = 1 To 26: Variables(idx) = 0: Next
+
+    Print : Input "Boolean expression: ", inputExpr
+    If inputExpr = "" Then Exit Do
+
+    cleanExpr = ""
+    exprPos = 0
+    stackPos = 0
+
+    ' Remove spaces
+    For idx = 1 To Len(inputExpr)
+        currentChar = Mid(inputExpr, idx, 1)
+        If currentChar <> " " Then cleanExpr &= currentChar
+    Next
+
+    originalExpr = cleanExpr
+
+    While cleanExpr <> ""
+        currentChar = Left(cleanExpr, 1)
+        asciiVal = Asc(currentChar) Or 32
+        remainExpr = Right(cleanExpr, Len(cleanExpr) - 1)
+
+        Select Case True
+        Case asciiVal >= 97 Andalso asciiVal <= 122
+            ExprStack(exprPos) = asciiVal - 33
+            exprPos += 1
+
+        Case currentChar = "0" Orelse currentChar = "1"
+            ExprStack(exprPos) = Val(currentChar) + 32
+            exprPos += 1
+
+        Case (currentChar = "(")
+            OpStack(stackPos) = 97
+            stackPos += 1
+
+        Case (currentChar = ")")
+            While stackPos > 0 And OpStack(stackPos-1) <> 97
+                ExprStack(exprPos) = OpStack(stackPos-1)
+                exprPos += 1
+                stackPos -= 1
+            Wend
+            If stackPos > 0 Then stackPos -= 1
+
+        Case Else
+            operatorFound = False
+            For idx = 1 To 6 '7
+                If Left(cleanExpr, Len(Operators(idx))) = Operators(idx) Orelse _
+                    (Operators(idx) = "~" Andalso Left(cleanExpr, 1) = "!") Then
+
+                    operatorFound = True
+                    cleanExpr = Right(cleanExpr, Len(cleanExpr) - Len(Operators(idx)))
+
+                    While stackPos > 0 Andalso OpStack(stackPos-1) <> 97 Andalso _
+                        OpPrecedence(OpStack(stackPos-1) And 31) >= OpPrecedence(idx)
+                        ExprStack(exprPos) = OpStack(stackPos-1)
+                        exprPos += 1
+                        stackPos -= 1
+                    Wend
+
+                    OpStack(stackPos) = idx
+                    stackPos += 1
+                    Exit For
+                End If
+            Next
+
+            If Not operatorFound Then
+                Print "Parse error at: "; cleanExpr
+                Print
+                Exit Do
+            End If
+            Continue While
+        End Select
+
+        cleanExpr = remainExpr
+    Wend
+
+    ' Process remaining operators and build variable list
+    ProcessRemainingOperators()
+    BuildVariableList()
+    PrintTruthTable(originalExpr)
+Loop
+
+Sleep

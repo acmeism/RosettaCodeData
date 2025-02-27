@@ -18,22 +18,12 @@ end;
 
 begin
   'BSD with seed = 1'.println;
-  var count := 0;
   var iter1 := bsdRand(1);
-  foreach var val in iter1 do
-  begin
+  foreach var val in iter1.Take(10) do
     println(val);
-    count += 1;
-    if count = 10 then break;
-  end;
   println;
   'Microsoft with seed = 0'.Println;
-  count := 0;
   var iter2 := msvcrtRand(0);
-  foreach var val in iter2 do
-  begin
+  foreach var val in iter2.Take(10) do
     println(val);
-    count += 1;
-    if count = 10 then break;
-  end;
 end.

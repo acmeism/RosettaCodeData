@@ -1,2 +1,5 @@
-myArray[40];
-int x = gotcha(myArray);
+int foo()
+{
+	char bar[20];
+	return sizeof(bar);	/* returns 20 as expected */
+}

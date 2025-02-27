@@ -53,7 +53,7 @@ BEGIN # Peano Curve in SVG                                                   #
 
             put( svg file, ( "'/>", newline, "</svg>", newline ) );
             close( svg file )
-         FI # sierpinski square # ;
+         FI # peano curve # ;
 
     peano curve( "peano.svg", 1200, 12, 3, 50, 50 )
 

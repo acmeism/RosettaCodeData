@@ -1,0 +1,95 @@
+DECLARE SUB ParseASCIIArt ()
+DECLARE FUNCTION HexToBinary$ (hexString AS STRING)
+
+TYPE TableEntry
+    nombre AS STRING * 8
+    bits AS INTEGER
+    startPos AS INTEGER
+    length AS INTEGER
+END TYPE
+
+ParseASCIIArt
+END
+
+FUNCTION HexToBinary$ (hexString AS STRING)
+    DIM hexMap(15) AS STRING
+    hexMap(0) = "0000": hexMap(1) = "0001": hexMap(2) = "0010": hexMap(3) = "0011"
+    hexMap(4) = "0100": hexMap(5) = "0101": hexMap(6) = "0110": hexMap(7) = "0111"
+    hexMap(8) = "1000": hexMap(9) = "1001": hexMap(10) = "1010": hexMap(11) = "1011"
+    hexMap(12) = "1100": hexMap(13) = "1101": hexMap(14) = "1110": hexMap(15) = "1111"
+
+    result$ = ""
+    FOR i = 0 TO LEN(hexString) - 1
+        hexDigit$ = UCASE$(MID$(hexString, i + 1, 1))
+        IF hexDigit$ >= "0" AND hexDigit$ <= "9" THEN
+            idx = VAL(hexDigit$)
+        ELSE
+            idx = ASC(hexDigit$) - ASC("A") + 10
+        END IF
+        IF idx >= 0 AND idx <= 15 THEN result$ = result$ + hexMap(idx)
+    NEXT
+    HexToBinary$ = result$
+END FUNCTION
+
+SUB ParseASCIIArt
+    DIM header AS STRING
+    header = "  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+" + CHR$(10)
+    header = header + "  |                      ID                       |" + CHR$(10)
+    header = header + "  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+" + CHR$(10)
+    header = header + "  |QR|   Opcode  |AA|TC|RD|RA|   Z    |   RCODE   |" + CHR$(10)
+    header = header + "  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+" + CHR$(10)
+    header = header + "  |                    QDCOUNT                    |" + CHR$(10)
+    header = header + "  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+" + CHR$(10)
+    header = header + "  |                    ANCOUNT                    |" + CHR$(10)
+    header = header + "  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+" + CHR$(10)
+    header = header + "  |                    NSCOUNT                    |" + CHR$(10)
+    header = header + "  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+" + CHR$(10)
+    header = header + "  |                    ARCOUNT                    |" + CHR$(10)
+    header = header + "  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+"
+
+    DIM fields(12) AS TableEntry
+    fields(0).nombre = "     ID ": fields(0).bits = 16: fields(0).startPos = 0: fields(0).length = 16
+    fields(1).nombre = "     QR ": fields(1).bits = 1: fields(1).startPos = 16: fields(1).length = 1
+    fields(2).nombre = " Opcode ": fields(2).bits = 4: fields(2).startPos = 17: fields(2).length = 4
+    fields(3).nombre = "     AA ": fields(3).bits = 1: fields(3).startPos = 21: fields(3).length = 1
+    fields(4).nombre = "     TC ": fields(4).bits = 1: fields(4).startPos = 22: fields(4).length = 1
+    fields(5).nombre = "     RD ": fields(5).bits = 1: fields(5).startPos = 23: fields(5).length = 1
+    fields(6).nombre = "     RA ": fields(6).bits = 1: fields(6).startPos = 24: fields(6).length = 1
+    fields(7).nombre = "      Z ": fields(7).bits = 3: fields(7).startPos = 25: fields(7).length = 3
+    fields(8).nombre = "  RCODE ": fields(8).bits = 4: fields(8).startPos = 28: fields(8).length = 4
+    fields(9).nombre = "QDCOUNT ": fields(9).bits = 16: fields(9).startPos = 32: fields(9).length = 16
+    fields(10).nombre = "ANCOUNT ": fields(10).bits = 16: fields(10).startPos = 48: fields(10).length = 16
+    fields(11).nombre = "NSCOUNT ": fields(11).bits = 16: fields(11).startPos = 64: fields(11).length = 16
+    fields(12).nombre = "ARCOUNT ": fields(12).bits = 16: fields(12).startPos = 80: fields(12).length = 16
+
+    hexStr$ = "78477bbf5496e12e1bf169a4"
+    binStr$ = HexToBinary$(hexStr$)
+
+    PRINT "RFC 1035 message diagram header:"
+    PRINT header
+    PRINT
+    PRINT " Decoded:"
+    PRINT " Name     Bits  Start  End"
+    PRINT " =======  ====  =====  ==="
+
+    FOR i = 0 TO 12
+        PRINT USING " \     \  ####  #####  ###"; fields(i).nombre; fields(i).bits; fields(i).startPos; fields(i).startPos + fields(i).length - 1
+    NEXT
+
+    PRINT
+    PRINT " Test string in hex:"
+    PRINT " "; hexStr$
+    PRINT
+    PRINT " Test string in binary:"
+    PRINT " "; binStr$
+    PRINT
+    PRINT " Unpacked:"
+    PRINT " Name     Size  Bit Pattern"
+    PRINT " =======  ====  ==============="
+
+    FOR i = 0 TO 12
+        bitPattern$ = MID$(binStr$, fields(i).startPos + 1, fields(i).length)
+        bitPattern$ = LEFT$(bitPattern$ + SPACE$(16), 16)
+        PRINT USING " \     \  ####  \             \"; fields(i).nombre; fields(i).bits; bitPattern$
+    NEXT
+END SUB

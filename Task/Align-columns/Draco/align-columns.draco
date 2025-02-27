@@ -1,0 +1,93 @@
+\util.g
+char separator = '$';
+
+type
+    colHandler = proc(byte n; *char col; bool last)void,
+    alignment = proc(byte padding; *char col)void;
+
+[256]byte ColWidths;
+alignment Alignment;
+
+proc find_max_col_width(byte n; *char col; bool last) void:
+    if ColWidths[n] < CharsLen(col) then
+        ColWidths[n] := CharsLen(col)
+    fi
+corp
+
+proc write_col_aligned(byte n; *char col; bool last) void:
+    byte padding;
+    padding := ColWidths[n] - CharsLen(col);
+    Alignment(padding, col);
+    if last then writeln() else write(' ') fi
+corp
+
+proc pad(byte padding) void:
+    while padding>0 do write(' '); padding := padding-1 od
+corp
+
+proc align_left(byte padding; *char col) void:  write(col); pad(padding) corp
+proc align_right(byte padding; *char col) void: pad(padding); write(col) corp
+proc align_center(byte padding; *char col) void:
+    pad(padding>>1);
+    write(col);
+    pad((padding>>1) + (padding&1))
+corp
+
+proc do_line(*char line; colHandler handler) void:
+    byte col;
+    bool last;
+    char ch;
+    *char colstart;
+    col := 0;
+    colstart := line;
+
+    while
+        ch := line*;
+        last := ch = '\e';
+        if last or ch = separator then
+            line* := '\e';
+            handler(col, colstart, last);
+            colstart := line+1;
+            col := col+1
+        fi;
+        not last
+    do
+        line := line+1
+    od
+corp
+
+proc do_columns(*char filename; colHandler handler) void:
+    [256]char linebuf;
+    *char line;
+    channel input text in;
+    file(1024) infile;
+
+    open(in, infile, filename);
+    line := &linebuf[0];
+    while readln(in; line) do do_line(line, handler) od;
+    close(in);
+corp
+
+proc ucase(char c) char: pretend(pretend(c, byte) & ~32, char) corp
+
+proc main() void:
+    *char filename, align;
+    word i;
+    for i from 0 upto 255 do ColWidths[i] := 0 od;
+
+    filename := GetPar();
+    if filename = nil then writeln("No filename given"); exit(1) fi;
+
+    align := GetPar();
+    if align = nil then writeln("No alignment given"); exit(1) fi;
+
+    case ucase(align*)
+        incase 'L': Alignment := align_left
+        incase 'R': Alignment := align_right
+        incase 'C': Alignment := align_center
+        default: writeln("Alignment must be L/R/C"); exit(1)
+    esac;
+
+    do_columns(filename, find_max_col_width);
+    do_columns(filename, write_col_aligned)
+corp

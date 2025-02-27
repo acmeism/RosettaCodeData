@@ -1,0 +1,393 @@
+/* ARM assembly Raspberry PI  */
+/*  program pancake number  */
+/*    */
+
+ /* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+.equ NBPANCAKEMAX, 30
+.equ NBQUEUEITEM, 5000000
+.equ NBVALUEMAX, 15
+.equ NUMPAN, 10
+
+/************************************/
+/* Macros                         */
+/************************************/
+//.include "../../ficmacros32.inc"        @ use for developper debugging
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+
+/* structure pancake flip*/
+    .struct  0
+Pan_left:                    @ next element left
+    .struct  Pan_left + 4
+Pan_right:                   @ next element right
+    .struct  Pan_right + 4
+Pan_value:                   @
+    .struct  Pan_value + NBVALUEMAX
+Pan_flips:
+    .struct  Pan_flips + 1   @  flips counter
+Pan_end:
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessStart:        .asciz "Program 32 bits start.\n"
+szMessFinOK:        .asciz "Program normal end. \n"
+szMessError:        .asciz "ERROR array flips too small.\n"
+szMessErrnotFind:   .asciz "Address not find in area.\n"
+
+szCarriageReturn:   .asciz "\n"
+szMessResHead:      .asciz "Pancake : @  "
+szMessResLib:       .asciz "Flips : @ example : "
+sMessResult:        .asciz " @,"
+
+.align 4
+
+QueuePancake:             .skip 4 * NBQUEUEITEM
+EndQueuePancake:
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:            .skip 24
+iCptMax:               .skip 4
+iAdddressMax:          .skip 4
+Pancakes:             .skip 4 * NBPANCAKEMAX
+arrayFlips:           .skip Pan_end *  NBQUEUEITEM
+
+iQueueStart:          .skip 4     @ queue start pointer
+iQueueEnd:            .skip 4     @ queue end pointer
+areaFlipTemp:         .skip 4+NBVALUEMAX
+
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                              @ entry of program
+    ldr r0,iAdrszMessStart
+    bl affichageMess
+    mov r4,#2                                    @ pancake number
+1:
+    mov r0,r4
+    bl pancakesNum
+    add r4,r4,#1
+    cmp r4,#NUMPAN
+    ble 1b
+
+    ldr r0,iAdrszMessFinOK
+    bl affichageMess
+100:                                               @ standard end of the program
+    mov r0, #0                                     @ return code
+    mov r7, #EXIT                                  @ request to exit program
+    svc #0                                         @ perform the system call
+
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrsMessResult:          .int sMessResult
+iAdrszMessStart:          .int szMessStart
+iAdrszMessFinOK:          .int szMessFinOK
+/******************************************************************/
+/*     pancake Number                                   */
+/******************************************************************/
+/* r0 contains pancake number */
+pancakesNum:                    @ INFO: pancakesNum
+    push {r2-r4,lr}
+    mov r4,r0
+    mov r1,#1
+    ldr r2,iAdriCptMax
+    str r1,[r2]
+    mov r10,#1                   @ max flips counter
+    ldr r0,iAdrQueuePancake
+    ldr r1,iAdriQueueStart
+    str r0,[r1]
+    ldr r1,iAdriQueueEnd
+    str r0,[r1]
+    ldr r11,iAdrarrayFlips       @ flips array item 0
+    ldr r0,iAdriAdddressMax
+    str r11,[r0]                 @ init with flips array item 0
+    mov r3,#0                    @ init pointer
+    str r3,[r11,#Pan_left]
+    str r3,[r11,#Pan_right]
+    strb r3,[r11,#Pan_flips]     @ init counter flips
+    add r6,r11,#Pan_value
+    mov r1,#1
+1:                               @ init flips area with first combinaison
+    str r1,[r6,r3]
+    add r3,r3,#1
+    add r1,r1,#1
+    cmp r1,r4
+    ble 1b
+                                 @ init queue
+    ldr r0,iAdrQueuePancake
+    str r11,[r0]                 @ init with first item
+    add r0,r0,#4
+    ldr r1,iAdriQueueEnd
+    str r0,[r1]
+    mov r12,#1                   @ indice flip area
+
+2:
+    ldr r1,iAdriQueueEnd
+    ldr r1,[r1]                 @ load end queue pointer
+    ldr r2,iAdriQueueStart
+    ldr r0,[r2]                 @ load start queue pointer
+    cmp r1,r0                   @ end queue ?
+    beq 20f
+    ldr r5,[r0]                 @ load value to start pointer
+    add r0,r0,#4                @ new start queue pointer
+    str r0,[r2]                 @ and store
+
+
+    add r0,r5,#Pan_flips
+    ldrb r9,[r0]
+    add r9,r9,#1               @ flip + 1
+    mov r8,#1                  @ poste 1
+5:                             @ start loop
+    mov r0,r5                  @ address pancake area
+
+    mov r1,#0
+    mov r2,r4
+    mov r3,r8
+    bl flip
+    cmp r0,#-1
+    beq 99f
+    mov r7,r0                  @ flipped
+
+    mov r1,r11                 @ area pancake address
+    mov r2,r4
+    mov r3,r12
+    bl searchArea
+    cmp r0,#-1
+    beq 10f                    @ find -> next loop
+    mov r3,#Pan_end
+    mul r6,r3,r12
+    add r6,r6,r11
+    cmp r0,#0
+    streq r6,[r1,#Pan_left]
+    strne r6,[r1,#Pan_right]
+    strb r9,[r6,#Pan_flips]
+
+    add r3,r6,#Pan_value
+    ldr r2,iAdrareaFlipTemp
+    add r2,r2,#Pan_value
+    mov r0,#0
+    str r0,[r6,#Pan_left]
+    str r0,[r6,#Pan_right]
+ 6:
+    ldrb r1,[r2,r0]
+    strb r1,[r3,r0]
+    add r0,r0,#1
+    cmp r0,r4
+    blt 6b
+
+    add r12,r12,#1                 @
+    ldr r0,iMaxItem
+    cmp r12,r0
+    bge 99f
+    ldr r0,iAdriQueueEnd
+    ldr r1,[r0]                     @ load end queue pointer
+    str r6,[r1]                     @ add fliped in queue
+    add r1,r1,#4
+    ldr r2,iAdrEndQueuePancake
+    ldr r2,[r2]
+    cmp r1,r2                        @ maxi ?
+    bge 99f
+
+    str r1,[r0]                      @ store next end queue pointer
+    cmp r9,r10
+    ble 10f
+    mov r10,r9
+    ldr r0,iAdriAdddressMax
+    str r7,[r0]
+10:                                  @  loops
+
+    add r8,r8,#1
+    cmp r8,r4
+    blt 5b
+    b 2b
+20:
+    mov r0,r4
+    ldr r1,iAdrsZoneConv
+    bl conversion10                     @ décimal conversion
+    add r1,r1,r0
+    mov r0,#0
+    strb r0,[r1]
+    ldr r0,iAdrszMessResHead
+    ldr r1,iAdrsZoneConv                @ insert conversion
+    bl strInsertAtCharInc
+    bl affichageMess
+    mov r0,r10
+    ldr r1,iAdrsZoneConv
+    bl conversion10                     @ décimal conversion
+    add r1,r1,r0
+    mov r0,#0
+    strb r0,[r1]
+    ldr r0,iAdrszMessResLib
+    ldr r1,iAdrsZoneConv                @ insert conversion
+    bl strInsertAtCharInc
+    bl affichageMess
+
+    ldr r1,iAdriAdddressMax
+    ldr r0,[r1]
+    mov r1,r4
+    bl displayTable
+    b 100f
+98:
+    affregtit erreur
+    ldr r0,iAdrszMessErrnotFind
+    bl affichageMess
+    mov r0,#-1
+99:
+    ldr r0,iAdrszMessError
+    bl affichageMess
+    mov r0,#-1
+100:
+    pop {r2-r4,pc}
+iAdrPancakes:          .int Pancakes
+iAdrQueuePancake:      .int QueuePancake
+iAdriQueueStart:       .int iQueueStart
+iAdriQueueEnd:         .int iQueueEnd
+iAdrEndQueuePancake:   .int EndQueuePancake
+iAdrarrayFlips:        .int arrayFlips
+
+iAdrszMessError:       .int szMessError
+iAdriCptMax:           .int iCptMax
+iAdriAdddressMax:      .int iAdddressMax
+iAdrszMessErrnotFind:  .int szMessErrnotFind
+iAdrszMessResHead:     .int szMessResHead
+iAdrszMessResLib:      .int szMessResLib
+iMaxItem:              .int NBQUEUEITEM
+/******************************************************************/
+/*         flip                                                   */
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 contains first start index
+/* r2 contains the number of elements  */
+/* r3 contains the position of flip   */
+flip:                        @ INFO: flip
+    push {r1-r8,lr}          @ save registers
+    mov r5,r0
+    ldr r8,iAdrareaFlipTemp
+    mov r4,#Pan_value
+    mov r0,#0
+    add r7,r8,#Pan_value
+    add r4,r4,r5
+1:                           @ copy area loop
+
+    ldrb r6,[r4,r0]
+    strb r6,[r7,r0]
+    add r0,r0,#1
+    cmp r0,r2
+    blt 1b                   @ loop
+
+    mov r0,r7
+    cmp r3,r2
+    subge r3,r2,#1           @ last index if position >= size
+2:
+    cmp r1,r3
+    bge 3f
+    ldrb r5,[r0,r1]         @ load value first  index
+    ldrb r6,[r0,r3]         @ load value position index
+    strb r6,[r0,r1]         @ inversion
+    strb r5,[r0,r3]         @
+    sub r3,r3,#1
+    add r1,r1,#1
+    b 2b
+3:
+    mov r0,r8               @ return flip area temp
+100:
+    pop {r1-r8,pc}
+iAdrareaFlipTemp:  .int areaFlipTemp
+/******************************************************************/
+/*         search area in table area                                                   */
+/******************************************************************/
+/* r0 contains the address area to search */
+/* r1 contains address area address
+/* r2 nombre elements */
+/* r3 nombre address area */
+/* r0 return -1 if find, 0 if pointer left, 1 if pointer right  */
+/* r1  return address item */
+searchArea :
+    push {r4-r11,lr}            @ save registers
+    mov r7,#0
+    mov r9,#Pan_end
+    add r10,r0,#Pan_value
+    mov r6,r1
+1:                              @ loop begin
+    mov r8,#0                   @ indice value array
+    add r5,r6,#Pan_value        @ load value address
+2:
+    ldrb r4,[r10,r8]            @ load one value to search
+    ldrb r11,[r5,r8]            @ load one value to tree
+    add r8,r8,#1
+    cmp r4,r11                  @ compare value
+    blt 3f                      @ smaller
+    bgt 4f                      @ highter
+    cmp r8,r2                   @ end value ?
+    blt 2b                      @ no -> loop
+    mov r0,#-1                  @ equal return -1
+    b 100f
+3:                              @ smaller
+    ldr r4,[r6,#Pan_left]       @ load left pointer
+    cmp r4,#0                   @ end ?
+    movne r6,r4
+    bne 1b                      @ loop
+    mov r1,r6                   @ last pointer address
+    mov r0,#0                   @ not find  pointer left
+    b 100f
+4:                              @ highter
+    ldr r4,[r6,#Pan_right]      @ load right pointer
+    cmp r4,#0
+    movne r6,r4
+    bne 1b
+    mov r1,r6                   @ last pointer address
+    mov r0,#1                   @ not find  pointer right
+100:
+    pop {r4-r11,pc}
+
+
+/******************************************************************/
+/*      Display table elements                                */
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 contains elements number */
+displayTable:                      @ INFO: displayTable
+    push {r0-r3,lr}                @ save registers
+    mov r4,r1
+    add r2,r0,#Pan_value
+    mov r3,#0
+1:                                 @ loop display table
+    ldrb r0,[r2,r3]
+    ldr r1,iAdrsZoneConv
+    bl conversion10                @ décimal conversion
+    add r1,r1,r0
+    mov r0,#0
+    strb r0,[r1]
+    ldr r0,iAdrsMessResult
+    ldr r1,iAdrsZoneConv           @ insert conversion
+    bl strInsertAtCharInc
+    bl affichageMess               @ display message
+    add r3,#1
+    cmp r3,r4
+    blt 1b
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    mov r0,r2
+100:
+    pop {r0-r3,lr}
+    bx lr
+iAdrsZoneConv:           .int sZoneConv
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

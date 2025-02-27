@@ -19,12 +19,14 @@
 * 24.04.2014 WP arcsin verbessert. courtesy Horst Wegscheider
 * 28.04.2014 WP run ooRexxDoc
 * 11.08.2014 WP replace log algorithm with Vladimir Zabrodsky's code
+* 23.12.2024 WP changed defauls: precision 16->50  Degrees to Radians
+* 23.12.2024 WP made Methods public
 **********************************************************************/
-.local~my.rxm=.rxm~new(16,"D")
+.local~my.rxm=.rxm~new(50,"R")
 
 ::Class rxm Public
 
-::Method init
+::Method init Public
   Expose precision type
   Use Arg  precision=(digits()),type='D'
 
@@ -40,13 +42,14 @@
 
 ::attribute type get
 
-::Method arccos
+::Method arccos Public
 /***********************************************************************
 * Return arccos(x,precision,type) -- with specified precision
 * arccos(x) = pi/2 - arcsin(x)
 ***********************************************************************/
   Expose precision type
   Use Strict Arg x,xprec=(precision),xtype=(type)
+  xtype=translate(xtype)
   iprec=xprec+10
   Numeric Digits iprec
   If x=1 Then
@@ -68,13 +71,14 @@
   Numeric Digits xprec
   Return (r+0)
 
-::Method arcsin
+::Method arcsin Public
 /***********************************************************************
 * Return arcsin(x,precision,type) -- with specified precision
 * arcsin(x) = x+(x**3)*1/2*3+(x**5)*1*3/2*4*5+(x**7)*1*3*5/2*4*6*7+...
 ***********************************************************************/
   Expose precision type
   Use Strict Arg x,xprec=(precision),xtype=(type)
+  xtype=translate(xtype)
   iprec=xprec+10
   Numeric Digits iprec
   sign=sign(x)
@@ -131,7 +135,7 @@
   Numeric Digits xprec
   Return sign*(r+0)
 
-::Method arctan
+::Method arctan Public
 /***********************************************************************
 * Return arctan(x,precision,type) -- with specified precision
 * x=0 -> arctan(x) = 0
@@ -144,6 +148,7 @@
 ***********************************************************************/
   Expose precision type
   Use Strict Arg x,xprec=(precision),xtype=(type)
+  xtype=translate(xtype)
   iprec=xprec+10
   Numeric Digits iprec
   Select
@@ -171,7 +176,7 @@
   Numeric Digits xprec
   Return (r+0)
 
-::Method arsinh
+::Method arsinh Public
 /***********************************************************************
 * Return arsinh(x,precision,type) -- with specified precision
 * arsinh(x) = ln(x+sqrt(x**2+1))
@@ -185,13 +190,14 @@
   Numeric Digits xprec
   Return (r+0)
 
-::Method cos
+::Method cos Public
 /* REXX *************************************************************
 * Return cos(x,precision,type) -- with the specified precision
 * cos(x)=sin(x+pi/2)
 ********************************************************************/
   Expose precision type
   Use Strict Arg x,xprec=(precision),xtype=(type)
+  xtype=translate(xtype)
   iprec=xprec+10
   Numeric Digits iprec
   Select
@@ -203,7 +209,7 @@
   Numeric Digits xprec
   Return (r+0)
 
-::Method cosh
+::Method cosh Public
 /* REXX ****************************************************************
 * Return cosh(x,precision,type) -- with specified precision
 * cosh(x) = 1+(x**2/2!)+(x**4/4!)+(x**6/6!)+-...
@@ -224,13 +230,14 @@
   Numeric Digits xprec
   Return (r+0)
 
-::Method cotan
+::Method cotan Public
 /* REXX *************************************************************
 * Return cotan(x,precision,type) -- with the specified precision
 * cot(x)=cos(x)/sin(x)
 ********************************************************************/
   Expose precision type
   Use Strict Arg x,xprec=(precision),xtype=(type)
+  xtype=translate(xtype)
   iprec=xprec+10
   Numeric Digits iprec
   s=self~sin(x,iprec,xtype)
@@ -241,7 +248,7 @@
   Numeric Digits xprec
   Return (r+0)
 
-::Method exp
+::Method exp Public
 /***********************************************************************
 * exp(x,precision) returns e**x -- with specified precision
 * exp(x,precision,base) returns base**x -- with specified precision
@@ -288,7 +295,7 @@
   Numeric Digits xprec
   Return (r+0)
 
-::Method log
+::Method log Public
 /***********************************************************************
 * log(x,precision) -- returns ln(x) with specified precision
 * log(x,precision,base) -- returns blog(x) with specified precision
@@ -328,7 +335,7 @@
     End
   Return r
 
-::Method ln2p
+::Method ln2p Public
   Parse Arg p
   Numeric Digits p+10
   If p<=1000 Then
@@ -344,8 +351,13 @@
     ln=newln
     End
 
-::Method LN2
-
+::Method LN2 Public
+    V = ''
+    V = V || 0.69314718055994530941723212145817656807
+    V = V || 5500134360255254120680009493393621969694
+    V = V || 7156058633269964186875420014810205706857
+    V = V || 3368552023575813055703267075163507596193
+    V = V || 0727570828371435190307038623891673471123350
 v=''
 v=v||0.69314718055994530941723212145817656807
 v=v||5500134360255254120680009493393621969694
@@ -375,7 +387,7 @@ v=v||231467232172053401649256872747782344535348
 
     return V
 
-::Method log10
+::Method log10 Public
 /***********************************************************************
 * Return log10(x,prec)  specified precision
 ***********************************************************************/
@@ -386,7 +398,7 @@ v=v||231467232172053401649256872747782344535348
   Numeric Digits xprec
   Return (r+0)
 
-::Method pi
+::Method pi Public
 /* REXX *************************************************************
 * Return pi with the specified precision
 ********************************************************************/
@@ -432,7 +444,7 @@ v=v||231467232172053401649256872747782344535348
   Numeric Digits xprec
   Return (p+0)
 
-::Method power
+::Method power Public
 /***********************************************************************
 * power(base,exponent,precision) returns base**exponent
 *                                            -- with specified precision
@@ -449,7 +461,7 @@ v=v||231467232172053401649256872747782344535348
       End
     Else Do                            /* Exponent is not an integer */
 --    Say 'for a negative base ('||b')',
---                           'exponent ('c') must be an integer'
+                           'exponent ('c') must be an integer'
       Return 'nan'                     /* Return not a number        */
       End
     End
@@ -463,7 +475,7 @@ v=v||231467232172053401649256872747782344535348
     Return r
   Return rsign*r
 
-::Method sqrt
+::Method sqrt Public
 /* REXX *************************************************************
 * Return sqrt(x,precision) -- with the specified precision
 ********************************************************************/
@@ -483,7 +495,7 @@ v=v||231467232172053401649256872747782344535348
   Numeric Digits xprec
   Return (r+0)
 
-::Method sin
+::Method sin Public
 /* REXX *************************************************************
 * Return sin(x,precision,type) -- with the specified precision
 * xtype = 'R' (radians, default) 'D' (degrees) 'G' (grades)
@@ -491,7 +503,8 @@ v=v||231467232172053401649256872747782344535348
 ********************************************************************/
   Expose precision type
   Use Strict Arg x,xprec=(precision),xtype=(type)
-  iprec=xprec+10                       /* internal precision         */
+  xtype=translate(xtype)
+  iprec=xprec+20                       /* internal precision         */
   Numeric Digits iprec
   /* first use pi constant or compute it if necessary                */
   pi=self~pi(iprec)
@@ -539,7 +552,7 @@ v=v||231467232172053401649256872747782344535348
   Numeric Digits xprec
   Return sign*(r+0)
 
-::Method sinh
+::Method sinh Public
 /* REXX ****************************************************************
 * Return sinh(x,precision) -- with specified precision
 * sinh(x) = x+(x**3/3!)+(x**5/5!)+(x**7/7!)+-...
@@ -561,13 +574,14 @@ v=v||231467232172053401649256872747782344535348
   Numeric Digits xprec
   Return (r+0)
 
-::Method tan
+::Method tan Public
 /* REXX *************************************************************
 * Return tan(x,precision,type) -- with the specified precision
 * tan(x)=sin(x)/cos(x)
 ********************************************************************/
   Expose precision type
   Use Strict Arg x,xprec=(precision),xtype=(type)
+  xtype=translate(xtype)
   iprec=xprec+10
   Numeric Digits iprec
   s=self~sin(x,iprec,xtype)
@@ -578,7 +592,7 @@ v=v||231467232172053401649256872747782344535348
   Numeric Digits xprec
   Return (t+0)
 
-::Method tanh
+::Method tanh Public
 /***********************************************************************
 * Return tanh(x,precision) -- with specified precision
 * tanh(x) = sinh(x)/cosh(x)
@@ -593,6 +607,7 @@ v=v||231467232172053401649256872747782344535348
 
 ::routine rxmarccos public
   Use Strict Arg x,xprec=(.my.rxm~precision),xtype=(.my.rxm~type)
+  xtype=translate(xtype)
 
   If datatype(x,'NUM')=0 Then Do
 --  Say 'Argument 1 must be a number'
@@ -616,6 +631,7 @@ v=v||231467232172053401649256872747782344535348
 
 ::routine rxmarcsin public
   Use Strict Arg x,xprec=(.my.rxm~precision),xtype=(.my.rxm~type)
+  xtype=translate(xtype)
 
   If datatype(x,'NUM')=0 Then Do
 --  Say 'Argument 1 must be a number'
@@ -709,7 +725,6 @@ v=v||231467232172053401649256872747782344535348
 --  Say 'Argument 3 must be R, D, or G'
     Raise Syntax 88.907 array(3,'R, D, or G',xtype)
     End
-
   return .my.rxm~cos(x,xprec,xtype)
 
 ::routine rxmcosh public

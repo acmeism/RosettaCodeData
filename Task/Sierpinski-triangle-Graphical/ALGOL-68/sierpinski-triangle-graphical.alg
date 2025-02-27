@@ -53,7 +53,7 @@ BEGIN # Sierpinski Triangle Curve in SVG                                     #
 
             put( svg file, ( "'/>", newline, "</svg>", newline ) );
             close( svg file )
-         FI # sierpinski square # ;
+         FI # sierpinski triangle curve # ;
 
     sierpinski triangle curve( "sierpinski_triangle.svg", 1200, 12, 5, 200, 400 )
 

@@ -1,9 +1,10 @@
-const print = @import("std").debug.print;
+const std = @import("std");
+const print = std.debug.print;
 pub fn main() void {
-  var i: u8 = 33;
-  print(" 32: Spc", .{});
-  while (i < 127) : (i += 1) {
-    print("{:03}: {c}  ", .{ i, i });
+
+  print("032: Spc ", .{});
+  for(33..127) |i| {
+    print("{:03}: {c:<4}", .{ i, std.math.cast(u8, i).? });
     if (@mod(i, 6) == 1) {
       print("\n", .{});
     }

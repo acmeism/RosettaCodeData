@@ -1,58 +1,41 @@
-import gintro/[glib, gobject, gtk, gio, cairo]
+import cairo
 
 const
-  Width = 400
-  Height = 300
+  Width = 600
+  Height = 400
 
-#---------------------------------------------------------------------------------------------------
 
-proc draw(area: DrawingArea; context: Context) =
+proc drawBars(surface: ptr Surface) =
   ## Draw the color bars.
 
-  const Colors = [[0.0, 0.0, 0.0], [255.0, 0.0, 0.0],
-                  [0.0, 255.0, 0.0], [0.0, 0.0, 255.0],
-                  [255.0, 0.0, 255.0], [0.0, 255.0, 255.0],
-                  [255.0, 255.0, 0.0], [255.0, 255.0, 255.0]]
+  const Colors = [(0.0, 0.0, 0.0),  # Black.
+                  (1.0, 0.0, 0.0),  # Red.
+                  (0.0, 1.0, 0.0),  # Green.
+                  (0.0, 0.0, 1.0),  # Blue.
+                  (1.0, 0.0, 1.0),  # Magenta.
+                  (0.0, 1.0, 1.0),  # Cyan.
+                  (1.0, 1.0, 0.0),  # Yellow.
+                  (1.0, 1.0, 1.0)   # White.
+                 ]
 
   const
     RectWidth = float(Width div Colors.len)
     RectHeight = float(Height)
 
+  let context = create(surface)
+
   var x = 0.0
-  for color in Colors:
+  for (r, g, b) in Colors:
     context.rectangle(x, 0, RectWidth, RectHeight)
-    context.setSource(color)
+    context.setSourceRgb(r, g, b)
     context.fill()
     x += RectWidth
 
-#---------------------------------------------------------------------------------------------------
+  context.destroy()
 
-proc onDraw(area: DrawingArea; context: Context; data: pointer): bool =
-  ## Callback to draw/redraw the drawing area contents.
 
-  area.draw(context)
-  result = true
-
-#---------------------------------------------------------------------------------------------------
-
-proc activate(app: Application) =
-  ## Activate the application.
-
-  let window = app.newApplicationWindow()
-  window.setSizeRequest(Width, Height)
-  window.setTitle("Color bars")
-
-  # Create the drawing area.
-  let area = newDrawingArea()
-  window.add(area)
-
-  # Connect the "draw" event to the callback to draw the spiral.
-  discard area.connect("draw", ondraw, pointer(nil))
-
-  window.showAll()
-
-#———————————————————————————————————————————————————————————————————————————————————————————————————
-
-let app = newApplication(Application, "Rosetta.ColorBars")
-discard app.connect("activate", activate)
-discard app.run()
+let surface = imageSurfaceCreate(FormatRgb24, 600, 400)
+surface.drawBars()
+if surface.writeToPng("color_bars.png") != StatusSuccess:
+  quit "Error while writing file.", QuitFailure
+surface.destroy()

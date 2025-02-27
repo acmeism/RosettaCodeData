@@ -1,1 +1,1 @@
-Until=. {{[F.(u[_2:Z:v)}}  NB. apply u until condition v is true
+Until=. {{u^:(-.@v)^:_.}}  NB. apply u until condition v is true

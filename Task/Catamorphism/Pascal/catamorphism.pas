@@ -1,53 +1,38 @@
 program reduceApp;
 
+{$modeswitch classicProcVars+}
+
+{Works in many modes with Free Pascal Compiler:
+fpc, objfpc, delphi, macpas, iso, extendedpascal}
+
 type
-//  tmyArray = array of LongInt;
-  tmyArray = array[-5..5] of LongInt;
-  tmyFunc = function (a,b:LongInt):LongInt;
+   Num = LongInt;  // this can be changed to Real if desired
+   BinaryFunc = function(a, b: Num): Num;
 
-function add(x,y:LongInt):LongInt;
-begin
-  add := x+y;
-end;
+function add(x, y: Num): Num; begin add := x + y; end;
+function sub(x, y: Num): Num; begin sub := x - y; end;
+function mul(x, y: Num): Num; begin mul := x * y; end;
 
-function sub(k,l:LongInt):LongInt;
-begin
-  sub := k-l;
-end;
-
-function mul(r,t:LongInt):LongInt;
-begin
-  mul := r*t;
-end;
-
-function reduce(myFunc:tmyFunc;a:tmyArray):LongInt;
+function reduce(func: BinaryFunc; a: array of Num): Num;
 var
-  i,res : LongInt;
+   i: Integer;
+   answer: Num;
 begin
-  res := a[low(a)];
-  For i := low(a)+1 to high(a) do
-    res := myFunc(res,a[i]);
-  reduce := res;
+   answer := a[low(a)];
+   for i := low(a)+1 to high(a) do
+      answer := func(answer, a[i]);
+   reduce := answer;  // return answer
 end;
 
-procedure InitMyArray(var a:tmyArray);
-var
-  i: LongInt;
-begin
-  For i := low(a) to high(a) do
-  begin
-    //no a[i] = 0
-    a[i] := i + ord(i=0);
-    write(a[i],',');
-  end;
-  writeln(#8#32);
-end;
-
-var
-  ma : tmyArray;
+VAR
+   // dynamic array
+   ma: array of Num;
+   // static arrays
+   mb: array[1..9] of Num = (1,2,3,4,5,6,7,8,9);
+   mc: array[0..8] of Num = (1,2,3,4,5,6,7,8,9);
 BEGIN
-  InitMyArray(ma);
-  writeln(reduce(@add,ma));
-  writeln(reduce(@sub,ma));
-  writeln(reduce(@mul,ma));
+   ma := [1,2,3,4,5,6,7,8,9];
+   writeln(reduce(add, ma));
+   writeln(reduce(sub, mb));
+   writeln(reduce(mul, mc));
 END.

@@ -1,5 +1,1 @@
-int foo()
-{
-char bar[20];
-return sizeof(bar);
-}
+int foo[4] = { 4, 8, 12, 16 };

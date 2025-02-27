@@ -1,4 +1,5 @@
 year = 1969
+# year = number substr timestr systime 1 4
 #
 wkdays$ = "Su Mo Tu We Th Fr Sa"
 pagewide = 80

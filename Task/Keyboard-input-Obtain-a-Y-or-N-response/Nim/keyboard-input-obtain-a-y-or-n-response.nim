@@ -1,41 +1,39 @@
-import strformat
-import gintro/[glib, gobject, gtk, gio]
-import gintro/gdk except Window
+import std/strformat
+import gtk2, glib2
+import gdk2 except PWindow
 
-#---------------------------------------------------------------------------------------------------
 
-proc onKeyPress(window: ApplicationWindow; event: Event; label: Label): bool =
-  var keyval: int
-  if not event.getKeyval(keyval): return false
+proc onKeyPress(window: PWindow; event: PEventKey; label: PLabel): bool =
+  let keyval = event.keyval.int
   if keyval in [ord('n'), ord('y')]:
-    label.setText(&"You pressed key '{chr(keyval)}'")
+    let text = &"You pressed key '{chr(keyval)}'"
+    label.setText(text.cstring)
   result = true
 
-#---------------------------------------------------------------------------------------------------
 
-proc activate(app: Application) =
-  ## Activate the application.
+proc onDestroyEvent(widget: PWidget; data: pointer): gboolean {.cdecl.} =
+  ## Quit the application.
+  mainQuit()
 
-  let window = app.newApplicationWindow()
-  window.setTitle("Y/N response")
 
-  let hbox = newBox(Orientation.horizontal, 0)
-  window.add(hbox)
-  let vbox = newBox(Orientation.vertical, 10)
-  hbox.packStart(vbox, true, true, 20)
+nimInit()
+let window = windowNew(WINDOW_TOPLEVEL)
+window.setSizeRequest(400, 200)
+window.setTitle("Y/N response")
 
-  let label1 = newLabel("   Press 'y' or 'n' key   ")
-  vbox.packStart(label1, true, true, 5)
+let hbox = hboxNew(false, 0)
+window.add hbox
+let vbox = vboxNew(false, 10)
+hbox.packStart(vbox, true, true, 20)
 
-  let label2 = newLabel()
-  vbox.packStart(label2, true, true, 5)
+let label1 = labelNew("   Press 'y' or 'n' key   ")
+vbox.packStart(label1, true, true, 5)
 
-  discard window.connect("key-press-event", onKeyPress, label2)
+let label2 = labelNew("")
+vbox.packStart(label2, true, true, 5)
 
-  window.showAll()
+discard window.signalConnect("key-press-event", SIGNAL_FUNC(onKeyPress), label2)
+discard window.signalConnect("destroy", SIGNAL_FUNC(onDestroyEvent), nil)
 
-#———————————————————————————————————————————————————————————————————————————————————————————————————
-
-let app = newApplication(Application, "Rosetta.YNResponse")
-discard app.connect("activate", activate)
-discard app.run()
+window.showAll()
+main()

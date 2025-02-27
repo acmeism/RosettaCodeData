@@ -1,82 +1,97 @@
-import strutils
-import gintro/[glib, gobject, gtk, gio]
+import std/strformat
+import gtk2, glib2
 
-type MainWindow = ref object of ApplicationWindow
-  strEntry: Entry
-  intEntry: SpinButton
+###############################################################################
+# Missing declaration.
 
-#---------------------------------------------------------------------------------------------------
+when defined(win32):
+  const lib = "libgtk-win32-2.0-0.dll"
+elif defined(macosx):
+  const lib = "(libgtk-quartz-2.0.0.dylib|libgtk-x11-2.0.dylib)"
+else:
+  const lib = "libgtk-x11-2.0.so(|.0)"
 
-proc displayValues(strval: string; intval: int) =
+proc getContentArea(dialog: PDialog): PVBox {.cdecl,
+    importc: "gtk_dialog_get_content_area", dynlib: lib.}
+
+
+###############################################################################
+
+type App = object
+  window: PWindow
+  strEntry: PEntry
+  intEntry: PSpinButton
+
+
+proc displayValues(app: App; strval: cstring; intval: int) =
   ## Display a dialog window with the values entered by the user.
 
-  let dialog = newDialog()
-  dialog.setModal(true)
-  let label1 = newLabel(" String value is “$1”.".format(strval))
-  label1.setHalign(Align.start)
-  dialog.contentArea.packStart(label1, true, true, 5)
-  let msg = " Integer value is $1 which is ".format(intval) &
-            (if intval == 75000: "right. " else: "wrong (expected 75000). ")
-  let label2 = newLabel(msg)
-  dialog.contentArea.packStart(label2, true, true, 5)
-  discard dialog.addButton("OK", ord(ResponseType.ok))
+  let dialog = dialogNewWithButtons("user_input_graphical", app.window,
+                                    DIALOG_MODAL or DIALOG_DESTROY_WITH_PARENT, "OK")
+  let label1 = labelNew(cstring(&" String value is “{strval}”."))
+  let contentArea = dialog.getContentArea()
+  contentArea.packStart(label1, true, true, 5)
+  let text = if intval == 75000: "right. " else: "wrong (expected 75000). "
+  let msg = &" Integer value is {intval} which is {text}"
+  let label2 = labelNew(msg.cstring)
+  contentArea.packStart(label2, true, true, 5)
   dialog.showAll()
   discard dialog.run()
   dialog.destroy()
 
-#---------------------------------------------------------------------------------------------------
 
-proc onOk(button: Button; window: MainWindow) =
+proc onOk(button: PButton; app: var App) =
   ## Callback executed when the OK button has been clicked.
-  let strval = window.strEntry.text()
-  let intval = window.intEntry.value().toInt
-  displayValues(strval, intval)
+  let strval = app.strEntry.getText()
+  let intval = app.intEntry.getValue().toInt
+  app.displayValues(strval, intval)
   if intval == 75_000:
-    window.destroy()
+    app.window.destroy()
 
-#---------------------------------------------------------------------------------------------------
 
-proc activate(app: Application) =
-  ## Activate the application.
+proc onDestroyEvent(widget: PWidget; data: pointer): gboolean {.cdecl.} =
+  ## Quit the application.
+  mainQuit()
 
-  let window = newApplicationWindow(MainWindow, app)
-  window.setTitle("User input")
 
-  let content = newBox(Orientation.vertical, 10)
-  content.setHomogeneous(true)
-  let grid = newGrid()
-  grid.setColumnSpacing(30)
-  let bbox = newButtonBox(Orientation.horizontal)
-  bbox.setLayout(ButtonBoxStyle.spread)
+var app: App
 
-  let strLabel = newLabel("Enter some text")
-  strLabel.setHalign(Align.start)
-  window.strEntry = newEntry()
-  grid.attach(strLabel, 0, 0, 1, 1)
-  grid.attach(window.strEntry, 1, 0, 1, 1)
+nimInit()
 
-  let intLabel = newLabel("Enter 75000")
-  intLabel.setHalign(Align.start)
-  window.intEntry = newSpinButtonWithRange(0, 80_000, 1)
-  grid.attach(intLabel, 0, 1, 1, 1)
-  grid.attach(window.intEntry, 1, 1, 1, 1)
+app.window = windowNew(WINDOW_TOPLEVEL)
+app.window.setTitle("User input")
+discard app.window.signalConnect("destroy", SIGNAL_FUNC(onDestroyEvent), nil)
 
-  let btnOk = newButton("OK")
+let content = vboxNew(false, 10)
+content.setHomogeneous(true)
+let grid = tableNew(2, 2, false)
+grid.setColSpacings(30)
 
-  bbox.add(btnOk)
+let hbox1 = hboxNew(false, 0)
+let strLabel = labelNew("Enter some text")
+app.strEntry = entryNew()
+hbox1.packStart(strLabel, false, false, 0)
+grid.attach(hbox1, 0, 1, 0, 1, constFILL, 0, 0, 0)
+grid.attach(app.strEntry, 1, 2, 0, 1, constFILL, 0, 0, 0)
 
-  content.packStart(grid, true, true, 0)
-  content.packEnd(bbox, true, true, 0)
+let hbox2 = hboxNew(false, 0)
+let intLabel = labelNew("Enter 75000")
+app.intEntry = spinButtonNew(0, 80_000, 1)
+hbox2.packStart(intLabel, false, false, 0)
+grid.attach(hbox2, 0, 1, 1, 2, constFILL, 0, 0, 0)
+grid.attach(app.intEntry, 1, 2, 1, 2, constFILL, 0, 0, 0)
 
-  window.setBorderWidth(5)
-  window.add(content)
+let btnOk = buttonNew("OK")
+btnOk.setSizeRequest(100, 40)
+let hbox3 = hboxNew(false, 20)
+hbox3.packEnd(btnOk, false, true, 10)
+content.packStart(grid, true, true, 0)
+content.packEnd(hbox3, false, false, 0)
 
-  discard btnOk.connect("clicked", onOk, window)
+app.window.setBorderWidth(5)
+app.window.add content
 
-  window.showAll()
+discard btnOk.signalConnect("clicked", SIGNAL_FUNC(onOk), app.addr)
 
-#———————————————————————————————————————————————————————————————————————————————————————————————————
-
-let app = newApplication(Application, "Rosetta.UserInput")
-discard app.connect("activate", activate)
-discard app.run()
+app.window.showAll()
+main()

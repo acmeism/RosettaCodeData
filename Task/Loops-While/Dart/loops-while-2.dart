@@ -1,7 +1,7 @@
 void main() {
-  num val = 1024;
+  var val = 1024;
   while (val > 0) {
     print(val);
-    val /= 2;
+    val ~/= 2;
   }
 }

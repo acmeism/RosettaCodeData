@@ -1,0 +1,64 @@
+#ifdef __FB_WIN32__
+    #include once "win/winsock2.bi"
+    Declare Function fbsocket Alias "socket" (af As Long, Type As Long, protocol As Long) As SOCKET
+#else
+    #include once "sys/socket.bi"
+    #include once "netinet/in.bi"
+    #include once "arpa/inet.bi"
+    #include once "netdb.bi"
+    Declare Function fbsocket Alias "socket" (af As Long, Type As Long, protocol As Long) As Long
+#endif
+
+Function main() As Integer
+    #ifdef __fb_win32__
+        Dim As WSADATA wsaData
+        WSAStartup(MAKEWORD(2, 2), @wsaData)
+    #endif
+
+    ' Create socket
+    Dim As Long sock = fbsocket(AF_INET, SOCK_STREAM, 0)
+
+    ' Get host info
+    Dim As hostent Ptr host = gethostbyname("www.example.com")
+
+    ' Set up address structure
+    Dim As sockaddr_in addr
+    addr.sin_family = AF_INET
+    addr.sin_port = htons(443)
+    addr.sin_addr = *Cast(in_addr Ptr, host->h_addr)
+
+    ' Connect
+    connect(sock, Cast(sockaddr Ptr, @addr), Sizeof(sockaddr_in))
+
+    ' Send request
+    Dim As String request = "GET / HTTP/1.1" & Chr(13, 10) & _
+    "Host: www.example.com" & Chr(13, 10) & _
+    Chr(13, 10)
+    send(sock, request, Len(request), 0)
+
+    ' Receive response
+    Dim As String response
+    Dim As String buffer = Space(4096)
+    Dim As Integer bytes
+
+    Do
+        bytes = recv(sock, buffer, 4096, 0)
+        If bytes > 0 Then response &= Left(buffer, bytes)
+    Loop While bytes > 0
+
+    Print response
+
+    ' Cleanup
+    #ifdef __fb_win32__
+        closesocket(sock)
+        WSACleanup()
+    #Else
+        Close(sock)
+    #endif
+
+    Return 0
+End Function
+
+main()
+
+Sleep

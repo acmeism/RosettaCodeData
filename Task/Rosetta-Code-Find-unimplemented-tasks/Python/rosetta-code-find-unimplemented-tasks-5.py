@@ -60,6 +60,10 @@ def category_members(category: str, url: str = URL) -> Iterable[PageInfo]:
     response.raise_for_status()
     data = response.json()
 
+    if not data.get("query"):
+        # Empty category
+        return
+
     for page in data["query"]["pages"]:
         yield PageInfo(**{k: v for k, v in page.items() if k in PageInfo._fields})
 
@@ -87,28 +91,37 @@ def omitted_tasks(language: str) -> Set[PageInfo]:
     return set(category_members(f"Category:{language}/Omit"))
 
 
-def unimplemented_tasks(lang_tasks: Set[PageInfo], omitted: Set[PageInfo]) -> Set[str]:
+def unimplemented_tasks(
+    lang_tasks: Set[PageInfo], omitted: Set[PageInfo]
+) -> Set[PageInfo]:
     tasks = set(category_members("Category:Programming Tasks"))
     return tasks.difference(lang_tasks).difference(omitted)
 
 
 def unimplemented_draft_tasks(
     lang_tasks: Set[PageInfo], omitted: Set[PageInfo]
-) -> Set[str]:
+) -> Set[PageInfo]:
     tasks = set(category_members("Category:Draft Programming Tasks"))
     return tasks.difference(lang_tasks).difference(omitted)
 
 
 def display(title: str, pages: Iterable[PageInfo]) -> None:
     print(title)
-    for page in pages:
+    for page in sorted(pages, key=lambda p: p.title):
         print("  ", page.title, page.canonicalurl)
     print("")
 
 
 if __name__ == "__main__":
-    lang = lang_tasks("Python")
-    omitted = omitted_tasks("Python")
-    display("Programming Tasks", unimplemented_tasks(lang, omitted))
-    display("Draft Programming Tasks", unimplemented_draft_tasks(lang, omitted))
+    import sys
+
+    if len(sys.argv) > 1:
+        language = sys.argv[1]
+    else:
+        language = "Python"
+
+    tasks = lang_tasks(language)
+    omitted = omitted_tasks(language)
+    display("Programming Tasks", unimplemented_tasks(tasks, omitted))
+    display("Draft Programming Tasks", unimplemented_draft_tasks(tasks, omitted))
     display("Omitted Tasks", omitted)

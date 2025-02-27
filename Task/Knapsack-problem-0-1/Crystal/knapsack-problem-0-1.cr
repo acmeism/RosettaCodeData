@@ -26,7 +26,7 @@ class Knapsack
     candidate = items[candidate_index]
     # candidate is a best of available items, so if we fill remaining value with it
     # and still don't reach the threshold, the branch is wrong
-    return nil if taken.total_value + 1.0 * candidate.value / candidate.weight * remaining_weight < @threshold_value
+    return nil if taken.total_value + 1.0 * candidate.value / candidate.weight * remaining_weight <= @threshold_value
     # now recursively check both variants
     mask = taken.mask.clone
     mask[candidate_index] = true

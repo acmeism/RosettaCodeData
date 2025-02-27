@@ -1,32 +1,23 @@
+import "./ansi" for Screen, Cursor
 import "timer" for Timer
-import "io" for Stdout
 
-System.write("\e[2J")     // clear terminal
-System.write("\e[12;40H") // move to (12, 40)
-Stdout.flush()
+Screen.clear()        // clear terminal
+Cursor.move(12, 40)   // move to (12, 40)
 Timer.sleep(2000)
-System.write("\e[D")      // move left
-Stdout.flush()
+Cursor.left           // move left
 Timer.sleep(2000)
-System.write("\e[C")      // move right
-Stdout.flush()
+Cursor.right          // move right
 Timer.sleep(2000)
-System.write("\e[A")      // move up
-Stdout.flush()
+Cursor.up             // move up
 Timer.sleep(2000)
-System.write("\e[B")      // move down
-Stdout.flush()
+Cursor.down           // move down
 Timer.sleep(2000)
-System.write("\e[G")      // move to beginning of line
-Stdout.flush()
+Cursor.column         // move to beginning of line
 Timer.sleep(2000)
-System.write("\e[79C")    // move to end of line (assuming 80 column terminal)
-Stdout.flush()
+Cursor.column(80)     // move to end of line (assuming 80 column terminal)
 Timer.sleep(2000)
-System.write("\e[1;1H")   // move to top left corner
-Stdout.flush()
+Cursor.home           // move to top left corner
 Timer.sleep(2000)
-System.write("\e[24;80H") // move to bottom right corner (assuming 80 x 24 terminal)
-Stdout.flush()
+Cursor.move(24, 80)   // move to bottom right corner (assuming 80 x 24 terminal)
 Timer.sleep(2000)
-System.write("\e[1;1H")   // home cursor again before quitting
+Cursor.home           // home cursor again before quitting

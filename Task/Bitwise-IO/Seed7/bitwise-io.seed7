@@ -1,14 +1,7 @@
 $ include "seed7_05.s7i";
   include "bitdata.s7i";
-  include "strifile.s7i";
 
-const proc: initWriteAscii (inout file: outFile, inout integer: bitPos) is func
-  begin
-    outFile.bufferChar := '\0;';
-    bitPos := 0;
-  end func;
-
-const proc: writeAscii (inout file: outFile, inout integer: bitPos, in string: ascii) is func
+const proc: writeAscii (inout msbOutBitStream: outStream, in string: ascii) is func
   local
     var char: ch is ' ';
   begin
@@ -16,42 +9,38 @@ const proc: writeAscii (inout file: outFile, inout integer: bitPos, in string: a
       if ch > '\127;' then
         raise RANGE_ERROR;
       else
-        putBitsMsb(outFile, bitPos, ord(ch), 7);
+        putBits(outStream, ord(ch), 7);
       end if;
     end for;
   end func;
 
-const proc: finishWriteAscii (inout file: outFile, inout integer: bitPos) is func
+const proc: finishWriteAscii (inout msbOutBitStream: outStream) is func
   begin
-    putBitsMsb(outFile, bitPos, 0, 7);  # Write a terminating NUL char.
-    write(outFile, chr(ord(outFile.bufferChar)));
+    putBits(outStream, 0, 7);  # Write a terminating NUL char.
+    flush(outStream);
   end func;
 
-const func string: readAscii (inout msbBitStream: aBitStream) is func
+const func string: readAscii (inout msbInBitStream: inStream) is func
   result
     var string: stri is "";
   local
     var char: ch is ' ';
   begin
-    while ch <> '\0;' do
-      ch := chr(getBits(aBitStream, 7));
+    repeat
+      ch := chr(getBits(inStream, 7));
       if ch <> '\0;' then
         stri &:= ch;
       end if;
-    end while;
+    until ch = '\0;';
   end func;
 
 const proc: main is func
   local
-    var file: aFile is STD_NULL;
-    var integer: bitPos is 0;
-    var msbBitStream: aBitStream is msbBitStream.value;
+    var msbOutBitStream: outStream is msbOutBitStream.value;
+    var msbInBitStream: inStream is msbInBitStream.value;
   begin
-    aFile := openStriFile;
-    initWriteAscii(aFile, bitPos);
-    writeAscii(aFile, bitPos, "Hello, Rosetta Code!");
-    finishWriteAscii(aFile, bitPos);
-    seek(aFile, 1);
-    aBitStream := openMsbBitStream(aFile);
-    writeln(literal(readAscii(aBitStream)));
+    writeAscii(outStream,  "Hello, Rosetta Code!");
+    finishWriteAscii(outStream);
+    inStream := openMsbInBitStream(getBytes(outStream));
+    writeln(literal(readAscii(inStream)));
   end func;

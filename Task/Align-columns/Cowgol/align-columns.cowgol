@@ -1,0 +1,134 @@
+include "cowgol.coh";
+include "strings.coh";
+include "file.coh";
+include "argv.coh";
+
+interface ColumnCb(colnum: uint8, col: [uint8], isLast: uint8);
+sub ForEachColumn(fcb: [FCB], colfn: ColumnCb, colsep: uint8) is
+    var linebuf: uint8[256];
+    var bufptr := &linebuf[0];
+
+    sub HandleColumns() is
+        var colbuf: uint8[256];
+        var col: uint8 := 0;
+        var lineptr := &linebuf[0];
+        var colptr := &colbuf[0];
+
+        while [lineptr] != 0 loop
+            if [lineptr] == colsep or [lineptr] == '\n' then
+                [colptr] := 0;
+                colptr := &colbuf[0];
+                if [lineptr] == '\n' then
+                    colfn(col, colptr, 1);
+                else
+                    colfn(col, colptr, 0);
+                end if;
+                col := col + 1;
+            else
+                [colptr] := [lineptr];
+                colptr := @next colptr;
+            end if;
+            lineptr := @next lineptr;
+        end loop;
+    end sub;
+
+    var len := FCBExt(fcb);
+    FCBSeek(fcb, 0);
+
+    while len > 0 loop
+        var ch := FCBGetChar(fcb);
+        [bufptr] := ch;
+        bufptr := @next bufptr;
+        len := len - 1;
+
+        if ch == '\n' then
+            [bufptr] := 0;
+            HandleColumns();
+            bufptr := &linebuf[0];
+        end if;
+    end loop;
+end sub;
+
+var columnWidths: uint8[256];
+sub FindColumnMaxWidths(fcb: [FCB], colsep: uint8) is
+    sub FindColumnMaxWidth implements ColumnCb is
+        var len := StrLen(col) as uint8;
+        if columnWidths[colnum] < len then
+            columnWidths[colnum] := len;
+        end if;
+    end sub;
+
+    ForEachColumn(fcb, FindColumnMaxWidth, colsep);
+end sub;
+
+sub Pad(padding: uint8) is
+    while padding > 0 loop
+        print_char(' ');
+        padding := padding - 1;
+    end loop;
+end sub;
+
+interface Alignment(padding: uint8, string: [uint8]);
+sub Left implements Alignment is
+    print(string);
+    Pad(padding);
+end sub;
+
+sub Right implements Alignment is
+    Pad(padding);
+    print(string);
+end sub;
+
+sub Center implements Alignment is
+    Pad(padding >> 1);
+    print(string);
+    Pad((padding >> 1) + (padding & 1));
+end sub;
+
+sub PrintColumnsAligned(fcb: [FCB], colsep: uint8, alignment: Alignment) is
+    sub PrintColumnAligned implements ColumnCb is
+        var len := StrLen(col) as uint8;
+        var padding := columnWidths[colnum] - len;
+        alignment(padding, col);
+        if isLast != 0 then
+            print_nl();
+        else
+            print_char(' ');
+        end if;
+    end sub;
+
+    ForEachColumn(fcb, PrintColumnAligned, colsep);
+end sub;
+
+ArgvInit();
+var filename := ArgvNext();
+if filename == 0 as [uint8] then
+    print("No filename given\n");
+    ExitWithError();
+end if;
+
+var align := ArgvNext();
+if align == 0 as [uint8] then
+    print("No alignment given\n");
+    ExitWithError();
+end if;
+
+var alignment: Alignment;
+case [align] & ~32 is
+    when 'L': alignment := Left;
+    when 'R': alignment := Right;
+    when 'C': alignment := Center;
+    when else:
+        print("Alignment must be L(eft), R(ight), or C(enter)\n");
+        ExitWithError();
+end case;
+
+var file: FCB;
+if FCBOpenIn(&file, filename) != 0 then
+    print("Cannot open file\n");
+    ExitWithError();
+end if;
+
+const separator := '$';
+FindColumnMaxWidths(&file, separator);
+PrintColumnsAligned(&file, separator, alignment);

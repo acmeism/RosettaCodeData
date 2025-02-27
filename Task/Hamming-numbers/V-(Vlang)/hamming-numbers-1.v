@@ -1,9 +1,7 @@
 import math.big
 
 fn min(a big.Integer, b big.Integer) big.Integer {
-    if a < b {
-        return a
-    }
+    if a < b {return a}
     return b
 }
 

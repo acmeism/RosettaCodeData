@@ -53,7 +53,7 @@ BEGIN # Sierpinski Arrowhead Curve in SVG                                    #
 
             put( svg file, ( "'/>", newline, "</svg>", newline ) );
             close( svg file )
-         FI # sierpinski square # ;
+         FI # sierpinski arrowhead curve # ;
 
     sierpinski arrowhead curve( "sierpinski_arrowhead.svg", 1200, 12, 6, 200, 700 )
 

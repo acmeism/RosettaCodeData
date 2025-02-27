@@ -1,56 +1,86 @@
-sudoku = [
-    # cell value                # cell number
-    0, 0, 4, 0, 5, 0, 0, 0, 0,  #  0,  1,  2,  3,  4,  5,  6,  7,  8,
-    9, 0, 0, 7, 3, 4, 6, 0, 0,  #  9, 10, 11, 12, 13, 14, 15, 16, 17,
-    0, 0, 3, 0, 2, 1, 0, 4, 9,  # 18, 19, 20, 21, 22, 23, 24, 25, 26,
-    0, 3, 5, 0, 9, 0, 4, 8, 0,  # 27, 28, 29, 30, 31, 32, 33, 34, 35,
-    0, 9, 0, 0, 0, 0, 0, 3, 0,  # 36, 37, 38, 39, 40, 41, 42, 43, 44,
-    0, 7, 6, 0, 1, 0, 9, 2, 0,  # 45, 46, 47, 48, 49, 50, 51, 52, 53,
-    3, 1, 0, 9, 7, 0, 2, 0, 0,  # 54, 55, 56, 57, 58, 59, 60, 61, 62,
-    0, 0, 9, 1, 8, 2, 0, 0, 3,  # 63, 64, 65, 66, 67, 68, 69, 70, 71,
-    0, 0, 0, 0, 6, 0, 1, 0, 0,  # 72, 73, 74, 75, 76, 77, 78, 79, 80
-    # zero = empty.
-]
+# Sudoku Solver
+# Recursive backtracking algorithm
+# Usage: python3 sudoku.py [puzzle.txt]
 
-numbers = {1,2,3,4,5,6,7,8,9}
+import sys
 
-def options(cell,sudoku):
-    """ determines the degree of freedom for a cell. """
-    column = {v for ix, v in enumerate(sudoku) if ix % 9 == cell % 9}
-    row = {v for ix, v in enumerate(sudoku) if ix // 9 == cell // 9}
-    box = {v for ix, v in enumerate(sudoku) if (ix // (9 * 3) == cell // (9 * 3)) and ((ix % 9) // 3 == (cell % 9) // 3)}
-    return numbers - (box | row | column)
+grid0 = [[0,0,8,0,0,0,0,1,6],  # Data type for sudoku puzzles:
+         [5,0,0,0,9,2,0,0,8],  # a list of 9 lists, each of 9 digits.
+         [0,0,0,1,0,0,0,0,0],
+         [9,0,0,3,0,0,8,2,0],  # grid0 is a global variable used by readFile()
+         [0,2,0,0,0,0,0,7,0],
+         [0,8,4,0,0,6,0,0,5],  # This sudoku is solved when there is no
+         [0,0,0,0,0,3,0,0,0],  # filename argument on the command line.
+         [4,0,0,9,6,0,0,0,2],
+         [1,6,0,0,0,0,7,0,0]]
 
-initial_state = sudoku[:]  # the sudoku is our initial state.
+def readFile():
+    '''Parses a textfile containing a sudoku puzzle;
+       returns this puzzle as 'grid', a list of 9 lists of 9 digits.
+       Returns grid0 if no filename is given on the command line.
+    '''
+    if len(sys.argv) == 1:  # No command line argument
+        return grid0
+    else:
+        name = sys.argv[1]  # A filename or path/filename of a sudoku textfile
+    file = open(name)
+    grid = []
+    while True:
+        txt = file.readline()
+        if txt == "": break
+        row = []
+        for ch in txt:                      # In the sudoku textfile:
+            if ch == "#":    break          #   a '#' can be used for comments,
+            if ch == ".":    row.append(0)  #   '.' or '0' stand for empty cells
+            if ch == "_":    row.append(0)  #   '_' or '-'
+            if ch == "-":    row.append(0)  #   could also be used for this.
+            if ch.isdigit(): row.append(int(ch))
+        if row != []:  # all lines without digits or empty cell characters give []
+            if len(row) != 9:
+                print("Sudoku file configuration error: not 9 columns");
+                file.close; exit()          # Halt the program
+            grid.append(row)
+    file.close()
+    if len(grid) != 9:
+        print("Sudoku file configuration error: not 9 rows"); exit()
+    else:
+        return grid
 
-job_queue = [initial_state]  # we need the jobqueue in case of ambiguity of choice.
+def printGrid (grid):
+    for i in range(0, 9):
+        if i > 0 and i % 3 == 0:
+            print("------+-------+------", end="")
+            print()
+        for j in range(0, 9):
+            if j > 0 and j % 3 == 0: print("| ", end="")
+            n = grid[i][j]
+            c = "." if n == 0 else str(n)
+            print(c, end=" ")
+        print()
 
-while job_queue:
-    state = job_queue.pop(0)
-    if not any(i==0 for i in state):  # no missing values means that the sudoku is solved.
-        break
+def valid (row, col, n):
+    res = True
+    for i in range(0, 9):
+        for j in range(0, 9):
+            if ( i == row or j == col or
+                 i // 3 == row // 3 and j // 3 == col // 3 ):  # square
+                if grid[i][j] == n: res = False
+    return res
 
-    # determine the degrees of freedom for each cell.
-    degrees_of_freedom = [0 if v!=0 else len(options(ix,state)) for ix,v in enumerate(state)]
-    # find cell with least freedom.
-    least_freedom = min(v for v in degrees_of_freedom if v > 0)
-    cell = degrees_of_freedom.index(least_freedom)
+def solve():
+    for row in range(0, 9):
+        for col in range(0, 9):
+            if grid[row][col] == 0:
+                for n in (range(1, 10)):
+                    if valid(row, col, n):
+                        grid[row][col] = n
+                        solve()             # recursive call
+                        grid[row][col] = 0  # backtracking step
+                return
+    printGrid(grid)  # The solved sudoku
+    input("\nPress enter to check for more solutions\n")
 
-    for option in options(cell, state):  # for each option we add the new state to the queue.
-        new_state = state[:]
-        new_state[cell] = option
-        job_queue.append(new_state)
-
-# finally - print out the solution
-for i in range(9):
-    print(state[i*9:i*9+9])
-
-# [2, 6, 4, 8, 5, 9, 3, 1, 7]
-# [9, 8, 1, 7, 3, 4, 6, 5, 2]
-# [7, 5, 3, 6, 2, 1, 8, 4, 9]
-# [1, 3, 5, 2, 9, 7, 4, 8, 6]
-# [8, 9, 2, 5, 4, 6, 7, 3, 1]
-# [4, 7, 6, 3, 1, 8, 9, 2, 5]
-# [3, 1, 8, 9, 7, 5, 2, 6, 4]
-# [6, 4, 9, 1, 8, 2, 5, 7, 3]
-# [5, 2, 7, 4, 6, 3, 1, 9, 8]
+grid = readFile()    # valid() and solve() use this global variable
+printGrid(grid)      # The unsolved sudoku
+print()
+solve()

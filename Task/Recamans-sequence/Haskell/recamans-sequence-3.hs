@@ -1,47 +1,42 @@
-import Data.List (find, findIndex, nub)
-import Data.Maybe (fromJust)
-import Data.Set (Set, fromList, insert, isSubsetOf, member)
+import Data.Set (Set, fromList, insert, isSubsetOf, member, size)
+import Data.Bool (bool)
 
---- INFINITE STREAM OF RECAMAN SERIES OF GROWING LENGTH --
-rSeries :: [[Int]]
-rSeries =
-  scanl
-    ( \rs@(r : _) i ->
-        let back = r - i
-            nxt
-              | 0 > back || elem back rs = r + i
-              | otherwise = back
-         in nxt : rs
-    )
-    [0]
-    [1 ..]
+firstNRecamans :: Int -> [Int]
+firstNRecamans n = reverse $ recamanUpto (\(_, i, _) -> n == i)
 
------------ INFINITE STREAM OF RECAMAN-GENERATED ---------
---------------- INTEGER SETS OF GROWING SIZE -------------
-rSets :: [(Set Int, Int)]
-rSets =
-  scanl
-    ( \(seen, r) i ->
-        let back = r - i
-            nxt
-              | 0 > back || member back seen = r + i
-              | otherwise = back
-         in (insert nxt seen, nxt)
-    )
-    (fromList [0], 0)
-    [1 ..]
+firstDuplicateR :: Int
+firstDuplicateR = head $ recamanUpto (\(rs, _, set) -> size set /= length rs)
 
---------------------------- TEST -------------------------
+recamanSuperset :: Set Int -> [Int]
+recamanSuperset setInts =
+  tail $ recamanUpto (\(_, _, setR) -> isSubsetOf setInts setR)
+
+recamanUpto :: (([Int], Int, Set Int) -> Bool) -> [Int]
+recamanUpto p = rs
+  where
+    (rs, _, _) =
+      until
+        p
+        (\(rs@(r:_), i, seen) ->
+            let n = nextR seen i r
+            in (n : rs, succ i, insert n seen))
+        ([0], 1, fromList [0])
+
+nextR :: Set Int -> Int -> Int -> Int
+nextR seen i r =
+  let back = r - i
+  in bool back (r + i) (0 > back || member back seen)
+
+-- TEST ---------------------------------------------------------------
 main :: IO ()
-main = do
-  let setK = fromList [0 .. 1000]
+main =
   (putStrLn . unlines)
-    [ "First 15 Recamans:",
-      show . reverse . fromJust $ find ((15 ==) . length) rSeries,
-      [],
-      "First duplicated Recaman:",
-      show . head . fromJust $ find ((/=) <$> length <*> (length . nub)) rSeries,
-      [],
-      "Length of Recaman series required to include [0..1000]:",
-      show . fromJust $ findIndex (\(setR, _) -> isSubsetOf setK setR) rSets
+    [ "First 15 Recamans:"
+    , show $ firstNRecamans 15
+    , []
+    , "First duplicated Recaman:"
+    , show firstDuplicateR
+    , []
+    , "Length of Recaman series required to include [0..1000]:"
+    , (show . length . recamanSuperset) $ fromList [0 .. 1000]
     ]

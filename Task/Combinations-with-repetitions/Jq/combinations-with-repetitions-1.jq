@@ -6,3 +6,5 @@ def pick(n):
     else ([.[m]] + pick(n-1; m)), pick(n; m+1)
     end;
   pick(n;0) ;
+
+def count(s): reduce s as $_ (0; .+1);

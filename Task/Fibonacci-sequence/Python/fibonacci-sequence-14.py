@@ -1,8 +1,6 @@
 '''Fibonacci accumulation'''
 
-from itertools import accumulate, chain
-from operator import add
-
+from itertools import accumulate
 
 # fibs :: Integer :: [Integer]
 def fibs(n):
@@ -10,22 +8,16 @@ def fibs(n):
        the Fibonacci series. The accumulator is a
        pair of the two preceding numbers.
     '''
-    def go(ab, _):
-        return ab[1], add(*ab)
-
-    return [xy[1] for xy in accumulate(
-        chain(
-            [(0, 1)],
-            range(1, n)
-        ),
-        go
-    )]
+    return [
+        a
+        for a, b in accumulate(
+            range(1, n),  # we don't actually use these numbers
+            lambda acc, _: (acc[1],  sum(acc)),
+            initial = (0, 1)
+        )
+    ]
 
 
 # MAIN ---
 if __name__ == '__main__':
-    print(
-        'First twenty: ' + repr(
-            fibs(20)
-        )
-    )
+    print(f'First twenty: {fibs(20)}')

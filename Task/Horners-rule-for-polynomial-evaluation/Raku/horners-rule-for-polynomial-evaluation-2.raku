@@ -1,6 +1,5 @@
-multi horner(Numeric $c, $) { $c }
-multi horner(Pair $c, $x) {
-    $c.key + $x * horner( $c.value, $x )
+multi horner(@c, $x) {
+    @c > 1 ?? @c.head + $x * samewith(@c.tail(*-1), $x) !! @c.pick
 }
 
-say horner( [=>](-19, 7, -4, 6 ), 3 );
+say horner( [-19, 7, -4, 6 ], 3 );

@@ -4,17 +4,12 @@
   begin
     2dup dup * >=
   while
-    0 >r
-    begin
-      2dup mod 0=
-    while
-      r> 1+ dup 1 > if
-        2drop drop false exit
-      then
-      >r
+    2dup mod 0= if
       tuck / swap
-    repeat
-    rdrop
+      2dup mod 0= if
+        2drop false exit
+      then
+    then
     2 +
   repeat
   2drop true ;

@@ -10,7 +10,7 @@ proc adjacent txt$ n . .
          .
       .
    .
-   res$ = strjoin res$[]
+   res$ = strjoin res$[] ""
    print "result: " & res$
    print ""
 .

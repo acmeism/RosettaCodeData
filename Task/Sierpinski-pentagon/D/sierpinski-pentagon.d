@@ -89,7 +89,7 @@ struct Point {
     }
 }
 
-/// Mock turtle implementation sufficiant to handle "drawing" the pentagons
+/// Mock turtle implementation sufficient to handle "drawing" the pentagons
 class Turtle {
     /////////////////////////////////
     private:

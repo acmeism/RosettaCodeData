@@ -5,4 +5,4 @@ move=. pos ($:@][echo@'no')`(-@turn@], turn@]`[`(board@])})@.open ]
 outcome=. 'tie'"_`(' wins',~ {&'.XO'@-@turn)@.won
 show=. [ ''echo@, '',~ (,' '&,)/"1@({&'.XO')@(3 3$board)
 won=. [: +./ 3 = [: | +/"1@(],|:,(<@0 1|:]),:<@0 1|:|.)@(3 3$board)
-ttt=: [: outcome [: [F.(show@move[_2:Z:won+.full) 10&{.@_1
+ttt=: [: outcome [: show@move^:(won-.@+.full)^:_. (10&{.@_1)

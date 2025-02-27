@@ -10,5 +10,5 @@ begin
   WriteLn('diversity:     ', AverageSquareDiff(average, predictions));
 end;
 
-DiversityTheorem(49.0, |48.0, 47.0, 51.0|);
-DiversityTheorem(49.0, |48.0, 47.0, 51.0, 42.0|)
+DiversityTheorem(49.0, [48.0, 47.0, 51.0]);
+DiversityTheorem(49.0, [48.0, 47.0, 51.0, 42.0])

@@ -1,5 +1,5 @@
 s$ = "Hello world! "
-textsize 16
+textsize 14
 lg = len s$
 on timer
    color 333
@@ -7,13 +7,13 @@ on timer
    rect 80 20
    color 999
    move 12 24
-   text s$
-   if forw = 0
+   text substr s$ 1 9
+   if forw = 1
       s$ = substr s$ lg 1 & substr s$ 1 (lg - 1)
    else
       s$ = substr s$ 2 (lg - 1) & substr s$ 1 1
    .
-   timer 0.2
+   timer 0.4
 .
 on mouse_down
    if mouse_x > 10 and mouse_x < 90

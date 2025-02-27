@@ -1,6 +1,6 @@
 require'misc'
-deal=: 1 + ? bind 9 9 9 9
-rules=: smoutput bind 'see http://en.wikipedia.org/wiki/24_Game'
+deal=: 1 + ? @ 9 9 9 9
+rules=: echo @ 'see http://en.wikipedia.org/wiki/24_Game'
 input=: prompt @ ('enter 24 expression using ', ":, ': '"_)
 
 wellformed=: (' '<;._1@, ":@[) -:&(/:~)  '(+-*%)' -.&;:~ ]

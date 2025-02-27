@@ -1,12 +1,11 @@
-import "io" for Stdout
+import "./ansi" for Screen
 import "timer" for Timer
 
-System.write("\e[?1049h\e[H")
+Screen.enableAltBuffer()
 System.print("Alternate screen buffer")
 for (i in 5..1) {
     var s = (i != 1) ? "s" : ""
-    System.write("\rGoing back in %(i) second%(s)...")
-    Stdout.flush()
+    Screen.fwrite("\rGoing back in %(i) second%(s)...")
     Timer.sleep(1000)
 }
-System.write("\e[?1049l")
+Screen.disableAltBuffer()

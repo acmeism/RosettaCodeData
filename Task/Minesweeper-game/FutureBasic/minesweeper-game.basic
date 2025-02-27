@@ -1,0 +1,148 @@
+_sizeX   = 6    // SET BOARD WIDTH HERE
+_sizey   = 4    // SET BOARD HEIGHT HERE
+_minePct = 20   // SET MINES PERCENT HERE
+
+begin enum
+  _mine   = 0x10
+  _flag   = 0x20
+  //miss < _safe
+  _safe   = 0x30
+  _show   = 0x40
+  //nums  < 0x50
+  //mine  = 0x50
+  //miss  < 0x60
+  _boom   = 0x80
+
+  _mines  = _sizeX * _sizeY * _minePct / 100
+  _quit   = 1001    // NSAlertSecondButtonReturn
+  _cmdOpt = 1572864 // NSEventModifierFlagOption+NSEventModifierFlagCommand
+end enum
+
+begin globals
+  uint8 flags, count, miss, board( _sizeX+1, _sizeY+1 )
+  bool  start = YES
+end globals
+
+void local fn show
+  int x, y, cell
+  cls
+  text @"Helvetica",15,_zGray
+  print @"\t  Click to Clear\r    \U00002318-Click to flag"
+  text @"Menlo bold",14,,_zClear
+  for y = 20 to _sizeY * 20 step 20 : for x = 20 to _sizeX * 20 step 20
+    cell = board( x/20, y/20 )
+    rect fill (x, y+20, 19, 19),(cell & _show) ? _zGray : _zLightGray
+    select cell
+      case <  _flag                                         //ignore
+      case <= _safe : print %(x+6, y+17)@"\U0001F6A9"       // 🚩︎
+      case <  _show+_mine : text,,(cell & 15)
+        print %(x+5, y+18) mid(@" 12345678", (cell & 15), 1)// num
+      case    _show+_mine :rect fill (x,y+20,19,19),_zRed
+        print %(x-1, y+19)@"\U0001F4A3"                     // 💣
+      case <  _show+_safe : print %(x+1, y+19)@"\U0000274C" // ❌
+      case    _show+_boom : text ,24
+        print %(x-5, y+10)@"\U0001F4A5" : text ,14          // 💥
+        //case else : stop hex$(cell)
+    end select
+  next : next
+  text ,15,_zBlack,_zRed
+  printf %(20,_sizeY * 20 + 50)@"  MINES: %d  ",_mines - flags
+  text ,,,fn ColorClear
+end fn
+
+void local fn newBoard        // make edge cells inaccessible
+  fn blockfill(@board(0, 0), (_sizeX + 2) * (_sizey + 2), _show)
+  for int y = 1 to _sizeY : for int x = 1 to _sizeX
+    board(x, y) = 0      // set all clickable cells to 0
+  next : next
+  count = _sizeX * _sizeY
+  flags = 0 : miss = 0
+  fn show
+end fn
+
+void local fn endGame
+  int x, y
+  for y = 1 to _sizeY : for x = 1 to _sizeX
+    select board(x, y) & _safe
+      case _safe :
+      case _mine : board(x, y) |= (miss) ? _show : _flag
+      case else  : board(x, y) |= _show
+    end select
+  next : next
+  if !miss then flags = _mines
+
+  fn show
+
+  if miss
+    x = alert 1,,@"Yikes! Bad move!\nNew assignment, or R&R?",,@"New (again);R&R (quit)"
+  else
+    x = alert 1,,@"WHEW! SAFE!\nNew assignment, or R&R?",,@"New (again);R&R (quit)"
+  end if
+  if x == _quit then end
+  fn newBoard
+  start = YES
+end fn
+
+void local fn click( x as int, y as int, cmd as bool )
+  if (x < 1 || y < 1 || x > _sizeX || y > _sizeY) then exit fn
+  int c, r
+  if start
+    int m = _mines, xx, yy
+    start = NO
+    fn newBoard
+    while m
+      c = rnd(_sizeX) : r = rnd(_sizeY)
+      // REM NEXT LINE TO ALLOW MINE OR NUMBER UNDER FIRST CLICK
+      if abs( x-c ) < 2 & abs( y-r ) < 2 then continue //start on empty cell
+      if board(c,r) == _mine then continue
+      board(c,r) = _mine : m--                   // place mine
+      for xx = c-1 to c+1 : for yy = r-1 to r+1  // mark proximity
+        if board(xx, yy) <> _mine then board(xx, yy)++
+      next : next
+    wend
+  end if
+
+  ^uint8 cell = @board(x, y)
+  select
+    case *cell & _show                          // ignore
+    case cmd
+      if *cell & _flag
+        flags-- : if *cell < _safe then miss--
+      else
+        flags++ : if *cell < _mine then miss++
+      end if
+      *cell  ^^= _flag                          // toggle flag
+    case *cell & _mine : *cell = _boom       // hit mine
+      miss ++ : fn endGame
+    case *cell < 9 : *cell |= _show : count-- // open cell
+      if *cell == _show                         // if no adjacent flags,
+        for  c = x-1 to x+1 : for  r = y-1 to y+1 // click adjacent cells
+          if board(c, r) < 9 then fn click(c, r, NO)
+        next : next
+      end if
+  end select
+end fn
+
+void local fn MINESWEEPER
+  subclass window 1, @"Minesweeper", (0,0,_sizeX * 20 + 40, _sizeY * 20 + 80)
+  WindowMakeFirstResponder( 1, _WindowContentViewTag)
+  fn newBoard
+end fn
+
+void local fn doDialog( evt as long )
+  select evt
+    case _windowMouseUp
+      CGPoint pt  = fn EventLocationInView( _WindowContentViewTag )
+      bool    cmd = sgn( fn EventModifierFlags & _cmdOpt )
+      fn click( pt.x / 20, _sizeY -(pt.y / 20 ) +3, cmd )
+      fn show //:   NSLog(@"%d, %d, %d",flags, _mines, count )
+      if flags == _mines || count == _mines then fn endgame
+    case _windowWillClose : end
+  end select
+
+end fn
+
+on dialog fn doDialog
+fn MINESWEEPER
+
+handleevents

@@ -1,0 +1,168 @@
+Type FreqPair
+    As String * 1 c
+    As Double freq
+End Type
+
+Function frequency(inputText() As Integer, inputLen As Integer) As FreqPair Ptr
+    Dim As FreqPair Ptr result = Callocate(26 * Sizeof(FreqPair))
+    Dim As Integer i
+
+    For i = 0 To 25
+        result[i].c = Chr(65 + i)
+        result[i].freq = 0.0
+    Next
+
+    For i = 0 To inputLen - 1
+        result[inputText(i) - 65].freq += 1
+    Next
+
+    Return result
+End Function
+
+Function correlation(inputText() As Integer, inputLen As Integer, sorted_targets() As Double) As Double
+    Dim As FreqPair Ptr freq = frequency(inputText(), inputLen)
+    Dim As Integer i, j
+    Dim As Double result = 0.0
+
+    'Sort freq by frequency
+    For i = 0 To 24
+        For j = i + 1 To 25
+            If freq[j].freq > freq[i].freq Then Swap freq[j], freq[i]
+        Next
+    Next
+
+    For i = 0 To 25
+        result += freq[i].freq * sorted_targets(i)
+    Next
+
+    Deallocate(freq)
+    Return result
+End Function
+
+Sub vigenereDecrypt(targetFreqs() As Double, encoded As String, Byref outKey As String, Byref outText As String)
+    Dim As Integer cleaned(Len(encoded))
+    Dim As Integer cleanedLen = 0
+    Dim As Integer i, j, k
+
+    'Clean inputText
+    For i = 1 To Len(encoded)
+        Dim As String c = Mid(encoded, i, 1)
+        If c >= "A" And c <= "Z" Then
+            cleaned(cleanedLen) = Asc(c)
+            cleanedLen += 1
+        End If
+    Next
+
+    'Sort target frequencies
+    Dim As Double sorted_targets(25)
+    For i = 0 To 25
+        sorted_targets(i) = targetFreqs(i)
+    Next
+    For i = 0 To 24
+        For j = i + 1 To 25
+            If sorted_targets(j) > sorted_targets(i) Then Swap sorted_targets(j), sorted_targets(i)
+        Next
+    Next
+
+    'Find best key length
+    Dim As Integer bestLen = 0
+    Dim As Double bestCorr = -100.0
+
+    For keyLen As Integer = 2 To cleanedLen \ 20
+        Dim As Integer pieces(cleanedLen)
+        Dim As Integer pieceLens(keyLen)
+
+        For j = 0 To cleanedLen - 1
+            pieces(j) = cleaned(j)
+            pieceLens(j Mod keyLen) += 1
+        Next
+
+        Dim As Double corr = -0.5 * keyLen
+        For i = 0 To keyLen - 1
+            Dim As Integer currentPiece(cleanedLen)
+            Dim As Integer currentLen = 0
+
+            For j = i To cleanedLen - 1 Step keyLen
+                currentPiece(currentLen) = pieces(j)
+                currentLen += 1
+            Next
+
+            corr += correlation(currentPiece(), currentLen, sorted_targets())
+        Next
+
+        If corr > bestCorr Then
+            bestLen = keyLen
+            bestCorr = corr
+        End If
+    Next
+
+    'Find key
+    outKey = ""
+    For i = 0 To bestLen - 1
+        Dim As Integer piece(cleanedLen)
+        Dim As Integer pieceLen = 0
+
+        For j = i To cleanedLen - 1 Step bestLen
+            piece(pieceLen) = cleaned(j)
+            pieceLen += 1
+        Next
+
+        Dim As Double maxCorr = 0.0
+        Dim As Integer bestShift = 0
+
+        For shift As Integer = 0 To 25
+            Dim As Double corr = 0.0
+            For j = 0 To pieceLen - 1
+                k = (piece(j) - 65 - shift + 26) Mod 26
+                corr += targetFreqs(k)
+            Next
+            If corr > maxCorr Then
+                maxCorr = corr
+                bestShift = shift
+            End If
+        Next
+
+        outKey += Chr(bestShift + 65)
+    Next
+
+    'Decrypt
+    outText = ""
+    For i = 0 To cleanedLen - 1
+        k = Asc(Mid(outKey, (i Mod bestLen) + 1, 1)) - 65
+        outText &= Chr(((cleaned(i) - 65 - k + 26) Mod 26) + 65)
+    Next
+End Sub
+
+'Main program
+Dim As Double english_freqs(25) = { _
+0.08167, 0.01492, 0.02782, 0.04253, 0.12702, 0.02228, 0.02015, _
+0.06094, 0.06966, 0.00153, 0.00772, 0.04025, 0.02406, 0.06749, _
+0.07507, 0.01929, 0.00095, 0.05987, 0.06327, 0.09056, 0.02758, _
+0.00978, 0.02360, 0.00150, 0.01974, 0.00074 }
+
+Dim As String encoded = _
+"MOMUD EKAPV TQEFM OEVHP AJMII CDCTI FGYAG JSPXY ALUYM NSMYH" & _
+"VUXJE LEPXJ FXGCM JHKDZ RYICU HYPUS PGIGM OIYHF WHTCQ KMLRD" & _
+"ITLXZ LJFVQ GHOLW CUHLO MDSOE KTALU VYLNZ RFGBX PHVGA LWQIS" & _
+"FGRPH JOOFW GUBYI LAPLA LCAFA AMKLG CETDW VOELJ IKGJB XPHVG" & _
+"ALWQC SNWBU BYHCU HKOCE XJEYK BQKVY KIIEH GRLGH XEOLW AWFOJ" & _
+"ILOVV RHPKD WIHKN ATUHN VRYAQ DIVHX FHRZV QWMWV LGSHN NLVZS" & _
+"JLAKI FHXUF XJLXM TBLQV RXXHR FZXGV LRAJI EXPRV OSMNP KEPDT" & _
+"LPRWM JAZPK LQUZA ALGZX GVLKL GJTUI ITDSU REZXJ ERXZS HMPST" & _
+"MTEOE PAPJH SMFNB YVQUZ AALGA YDNMP AQOWT UHDBV TSMUE UIMVH" & _
+"QGVRW AEFSP EMPVE PKXZY WLKJA GWALT VYYOB YIXOK IHPDS EVLEV" & _
+"RVSGB JOGYW FHKBL GLXYA MVKIS KIEHY IMAPX UOISK PVAGN MZHPW" & _
+"TTZPV XFCCD TUHJH WLAPF YULTB UXJLN SIJVV YOVDJ SOLXG TGRVO" & _
+"SFRII CTMKO JFCQF KTINQ BWVHG TENLH HOGCS PSFPV GJOKM SIFPR" & _
+"ZPAAS ATPTZ FTPPD PORRF TAXZP KALQA WMIUD BWNCT LEFKO ZQDLX" & _
+"BUXJL ASIMR PNMBF ZCYLV WAPVF QRHZV ZGZEF KBYIO OFXYE VOWGB" & _
+"BXVCB XBAWG LQKCM ICRRX MACUO IKHQU AJEGL OIJHH XPVZW JEWBA" & _
+"FWAML ZZRXJ EKAHV FASMU LVVUT TGK"
+
+Dim As String key, decoded
+vigenereDecrypt(english_freqs(), encoded, key, decoded)
+
+Print "Key: "; key
+Print !"\nDecoded text: "; decoded
+
+Sleep

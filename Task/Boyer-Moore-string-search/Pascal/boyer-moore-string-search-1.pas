@@ -1,0 +1,2 @@
+FindMatchesBoyerMooreCaseInSensitive;
+FindMatchesBoyerMooreCaseSensitive;

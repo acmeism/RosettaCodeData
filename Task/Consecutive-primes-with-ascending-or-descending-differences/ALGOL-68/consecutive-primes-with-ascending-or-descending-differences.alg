@@ -17,7 +17,7 @@ BEGIN # find sequences of primes where the gaps between the elements #
             FOR i TO n DO IF p[ i ] = yes THEN p[ p pos +:= 1 ] := i FI OD;
             p[ 1 : p pos ]
          END # prime list # ;
-    # shos the results of a search #
+    # shows the results of a search #
     PROC show sequence = ( []INT primes, STRING seq name, INT seq start, seq length )VOID:
          BEGIN
             print( ( "    The longest sequence of primes with "

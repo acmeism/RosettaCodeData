@@ -1,8 +1,5 @@
--- product of [a,a+1..b]
-productFromTo a b =
-  if a>b then 1
-  else if a == b then a
-  else productFromTo a c * productFromTo (c+1) b
-  where c = (a+b) `div` 2
-
-factorial = productFromTo 1
+fac n
+    | n >= 0    = go 1 n
+    | otherwise = error "Negative factorial!"
+        where go acc 0 = acc
+              go acc n = go (acc * n) (n - 1)

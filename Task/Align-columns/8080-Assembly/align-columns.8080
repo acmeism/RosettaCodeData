@@ -1,0 +1,212 @@
+putc    equ     2
+puts    equ     9
+fopen   equ     15
+fclose  equ     16
+fread   equ     20
+FCB1    equ     5Ch
+FCB2    equ     6Ch
+DTA     equ     80h
+COLSEP  equ     '$'
+        org     100h
+
+        ;;;     Check arguments
+        lxi     d,argmsg
+        lda     FCB1+1          ; Check file argument
+        cpi     ' '
+        jz      prmsg
+        lda     FCB2+1          ; Check alignment argument
+        cpi     'L'
+        jz      setal
+        cpi     'R'
+        jz      setar
+        cpi     'C'
+        jnz     prmsg
+        lxi     h,center        ; Set alignment function to run
+        jmp     setfn
+setal:  lxi     h,left
+        jmp     setfn
+setar:  lxi     h,right
+setfn:  shld    alnfn+1
+
+        ;;;     Initialize column lengths to 0
+        xra     a
+        lxi     h,colw
+inicol: mov     m,a
+        inr     l
+        jnz     inicol
+
+        ;;;     Open file
+        lxi     d,FCB1
+        mvi     c,fopen
+        call    5
+        inr     a
+        jz      efile           ; FF = error
+
+        ;;;     Process file
+        lxi     h,maxw          ; Find maximum widths
+        call    rdlins
+        lxi     h,alnlin        ; Read lines and align columns
+        call    rdlins
+
+        ;;;     Close file
+        lxi     d,FCB1
+        mvi     c,fclose
+        jmp     5
+
+        ;;;     Update maximum widths of columns, given line
+maxw:   lxi     h,colw          ; Column widths
+        lxi     d,linbuf
+mcol:   mvi     b,0FFh          ; B = column width
+mscan:  inr     b
+        ldax    d               ; Get current item
+        inx     d               ; Next item
+        call    colend          ; End of column?
+        jc      mscan
+        push    psw             ; Keep column comparison
+        mov     a,m             ; Current width
+        cmp     b               ; Compare to new width
+        jnc     mnxcol
+        mov     m,b             ; New one is bigger
+mnxcol: inr     l               ; Next column
+        pop     psw             ; Restore column comparison
+        jz      mcol            ; Keep going if not end of line
+        ret
+
+        ;;;     Align and print columns of line
+alnlin: lxi     h,colw
+        lxi     b,linbuf
+alncol: lxi     d,colbuf-1
+alnscn: inx     d               ; Copy current column to buffer
+        ldax    b
+        stax    d
+        inx     b
+        call    colend
+        jc      alnscn
+        push    psw
+        push    h
+        push    b
+alncal: xra     a               ; Zero-terminate the buffer
+        stax    d
+        mov     a,m             ; Current max column length
+        sub     e               ; Minus length of this column
+        mov     b,a             ; Set B = current padding needed
+alnfn:  call    0               ; Call selected alignment
+        pop     b
+        pop     h
+        inr     l
+        pop     psw
+        jz      alncol          ; Next column, if any
+        lxi     d,newlin        ; End line
+        mvi     c,puts
+        jmp     5
+
+        ;;;     Align column left and print
+left:   push    b               ; Save padding needed
+        lxi     h,colbuf        ; Print column
+        call    print0
+        pop     b               ; Restore padding
+        inr     b               ; Plus one, for separator between columns
+
+        ;;;     Print B spaces as padding
+pad:    xra     a
+        ora     b
+        rz                      ; No padding
+padl:   push    b
+        mvi     e,' '
+        mvi     c,putc
+        call    5
+        pop     b
+        dcr     b
+        jnz     padl
+        ret
+
+        ;;;     Align column right and print
+right:  call    pad             ; Padding first
+        lxi     h,colbuf
+        call    print0          ; Then column
+        mvi     b,1
+        jmp     pad             ; Separator space
+
+        ;;;     Align column in the center and print
+center: mov     a,b             ; Split padding in half
+        rar
+        mov     b,a
+        aci     0
+        mov     c,a
+        push    b               ; Keep both parts
+        call    pad             ; Left padding
+        lxi     h,colbuf        ; Print column
+        call    print0
+        pop     b               ; Restore padding
+        mov     b,c             ; Right padding
+        inr     b               ; Plus one for the separator
+        jmp     pad
+
+        ;;;     Print 0-terminated string at HL
+print0: mov     a,m
+        ana     a
+        rz
+        push    h
+        mov     e,m
+        mvi     c,putc
+        call    5
+        pop     h
+        inx     h
+        jmp     print0
+
+        ;;;     Does character in A end a column?
+        ;;;     C clear if so. Z clear if also end of line.
+colend: cpi     32              ; End of line?
+        cmc
+        rnc
+        cpi     COLSEP          ; Separator?
+        rz
+        stc                     ; If neither, set carry and return
+        ret
+
+        ;;;     Process file in FCB1 line by line
+        ;;;     HL = line callback
+rdlins: shld    linecb+1        ; Set callback
+        xra     a               ; Start at beginning of file
+        sta     FCB1+0Ch        ; EX
+        sta     FCB1+0Eh        ; S2
+        sta     FCB1+0Fh        ; RC
+        sta     FCB1+20h        ; AL
+        lxi     d,linbuf        ; Start write pointer at line buffer
+rdrec:  push    d               ; Keep write pointer
+        lxi     d,FCB1          ; Read next record
+        mvi     c,fread
+        call    5
+        pop     d               ; Restore write pointer
+        dcr     a               ; 1 = EOF
+        rz
+        inr     a
+        jnz     efile           ; Otherwise, <>0 = error
+        lxi     h,DTA           ; Reset read pointer to DTA
+cpydat: mov     a,m             ; Copy byte to line buffer
+        stax    d
+        inx     d
+        cpi     26              ; EOF -> done
+        rz
+        cpi     10              ; (\r)\n -> EOL
+        jnz     cnexb
+        push    h               ; Keep record pointer
+linecb: call    0               ; Call callback routine
+        pop     h               ; Restore record pointer
+        lxi     d,linbuf        ; Reset line pointer
+cnexb:  inr     l               ; Next byte
+        jz      rdrec           ; Next record
+        jmp     cpydat
+efile:  lxi     d,filerr
+prmsg:  mvi     c,puts
+        jmp     5
+
+        ;;;     Messages
+argmsg: db      'ALIGN FILE.TXT L/R/C$'
+filerr: db      'FILE ERROR$'
+newlin: db      13,10,'$'
+
+        ;;;     Variables
+colw    equ     ($/256+1)*256   ; Column widths (page-aligned)
+colbuf  equ     colw+256        ; Column buffer
+linbuf  equ     colbuf+256      ; Line buffer

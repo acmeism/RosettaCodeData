@@ -18,4 +18,4 @@ repeat
 randins "Q" 1 8 b1
 randins "N" 1 8 b1
 randins "N" 1 8 b1
-print strjoin t$[]
+print strjoin t$[] ""

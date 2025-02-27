@@ -1,19 +1,19 @@
 from itertools import islice, cycle
 
-def fiblike(tail):
-    for x in tail:
-        yield x
-    for i in cycle(xrange(len(tail))):
+def fiblike(init_values=(0, 1)):
+    tail = list(init_values)
+    yield from tail
+    for i in cycle(range(len(tail))):
         tail[i] = x = sum(tail)
         yield x
 
-fibo = fiblike([1, 1])
-print list(islice(fibo, 10))
+print([*islice(fiblike(), 10)])
 lucas = fiblike([2, 1])
-print list(islice(lucas, 10))
+print([*islice(lucas, 10)])
 
-suffixes = "fibo tribo tetra penta hexa hepta octo nona deca"
-for n, name in zip(xrange(2, 11), suffixes.split()):
-    fib = fiblike([1] + [2 ** i for i in xrange(n - 1)])
+suffixes = dict(enumerate('fibo tribo tetra penta hexa hepta octo nona deca'.split(), start=2))
+
+for name, n in suffixes.items():
+    fib = fiblike([1] + [2 ** i for i in range(n-1)])
     items = list(islice(fib, 15))
-    print "n=%2i, %5snacci -> %s ..." % (n, name, items)
+    print(f'n={n:>2}, {name:>5}nacci -> {items} ...')

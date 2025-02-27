@@ -3,82 +3,74 @@
 import math
 import times
 
-import gintro/[gobject, gdk, gtk, gio, cairo]
-import gintro/glib except Pi
+import gtk2 except update
+import gdk2, glib2, cairo
 
 type
 
   # Description of the simulation.
-  Simulation = ref object
-    area: DrawingArea       # Drawing area.
+  Simulation = object
+    area: PDrawingArea      # Drawing area.
     length: float           # Pendulum length.
     g: float                # Gravity (should be positive).
     time: Time              # Current time.
     theta0: float           # initial angle.
-    theta: float            # Current angle.
+    theta: float            # Current drawangle.
     omega: float            # Angular velocity = derivative of theta.
     accel: float            # Angular acceleration = derivative of omega.
     e: float                # Total energy.
 
-#---------------------------------------------------------------------------------------------------
 
-proc newSimulation(area: DrawingArea; length, g, theta0: float): Simulation {.noInit.} =
-  ## Allocate and initialize the simulation object.
+proc initSimulation(area: PDrawingArea; length, g, theta0: float): Simulation {.noInit.} =
+  ## Initialize a simulation object.
 
-  new(result)
-  result.area = area
-  result.length = length
-  result.g = g
-  result.time = getTime()
-  result.theta0 = theta0
-  result.theta = theta0
-  result.omega = 0
-  result.accel = -g / length * sin(theta0)
-  result.e = g * length * (1 - cos(theta0))    # Total energy = potential energy when starting.
+  result = Simulation(
+             area: area, length: length, g: g, time: getTime(),
+             theta0: theta0, theta: theta0, omega: 0,
+             accel: -g / length * sin(theta0),
+             e: g * length * (1 - cos(theta0))) # Total energy = potential energy when starting.
 
-#---------------------------------------------------------------------------------------------------
 
 template toFloat(dt: Duration): float = dt.inNanoseconds.float / 1e9
 
-#---------------------------------------------------------------------------------------------------
 
 const Origin = (x: 320.0, y: 100.0)   # Pivot coordinates.
 const Scale = 300                     # Coordinates scaling constant.
 
-proc draw(sim: Simulation; context: cairo.Context) =
+
+proc draw(sim: var Simulation; context: ptr Context) =
   ## Draw the pendulum.
 
-  # Compute coordinates in drawing area.
+  # Compute coordinates in drawing draw.
   let x = Origin.x + sin(sim.theta) * Scale
   let y = Origin.y + cos(sim.theta) * Scale
 
-  # Clear the region.
+  # Clear the region.draw
   context.moveTo(0, 0)
-  context.setSource(0.0, 0.0, 0.0)
+  context.setSourceRgb(0.0, 0.0, 0.0)
   context.paint()
 
   # Draw pendulum.
   context.moveTo(Origin.x, Origin.y)
-  context.setSource(0.3, 1.0, 0.3)
+  context.setSourceRgb(0.3, 1.0, 0.3)
   context.lineTo(x, y)
   context.stroke()
 
   # Draw pivot.
-  context.setSource(0.3, 0.3, 1.0)
+  context.setSourceRgb(0.3, 0.3, 1.0)
   context.arc(Origin.x, Origin.y, 8, 0, 2 * Pi)
   context.fill()
 
   # Draw mass.
-  context.setSource(1.0, 0.3, 0.3)
+  context.setSourceRgb(1.0, 0.3, 0.3)
   context.arc(x, y, 8, 0, 2 * Pi)
   context.fill()
 
-#---------------------------------------------------------------------------------------------------
 
-proc update(sim: Simulation): gboolean =
+proc update(sim: var Simulation): gboolean =
   ## Update the simulation state.
 
-  # compute time interval.
+  # Compute time interval.
   let nextTime = getTime()
   let dt = (nextTime - sim.time).toFloat
   sim.time = nextTime
@@ -100,26 +92,25 @@ proc update(sim: Simulation): gboolean =
 
   sim.draw(sim.area.window.cairoCreate())
 
-#---------------------------------------------------------------------------------------------------
 
-proc activate(app: Application) =
-  ## Activate the application.
+proc onDestroyEvent(widget: PWidget; data: pointer): gboolean {.cdecl.} =
+  ## Quit the application.
+  mainQuit()
 
-  let window = app.newApplicationWindow()
-  window.setSizeRequest(640, 480)
-  window.setTitle("Pendulum simulation")
 
-  let area = newDrawingArea()
-  window.add(area)
+nimInit()
 
-  let sim = newSimulation(area, length = 5, g = 9.81, theta0 = PI / 3)
+let window = windowNew(WINDOW_TOPLEVEL)
+window.setSizeRequest(640, 480)
+window.setTitle("Pendulum simulation")
 
-  timeoutAdd(10, update, sim)
+let area = drawingAreaNew()
+window.add area
+discard window.signalConnect("destroy", SIGNAL_FUNC(onDestroyEvent), nil)
 
-  window.showAll()
+var sim = initSimulation(area, length = 5, g = 9.81, theta0 = PI / 3)
 
-#———————————————————————————————————————————————————————————————————————————————————————————————————
+discard timeoutAdd(10, cast[gtk2.TFunction](update), sim.addr)
 
-let app = newApplication(Application, "Rosetta.pendulum")
-discard app.connect("activate", activate)
-discard app.run()
+window.showAll()
+main()

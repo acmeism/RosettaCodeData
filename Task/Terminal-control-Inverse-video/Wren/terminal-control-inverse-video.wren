@@ -1,2 +1,4 @@
-System.print("\e[7mInverse")
-System.print("\e[0mNormal")
+import "./ansi" for Style
+
+System.print(Style.inverse("Inverse"))
+System.print("Normal")

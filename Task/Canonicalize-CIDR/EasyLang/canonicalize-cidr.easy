@@ -1,23 +1,15 @@
 func$ can_cidr s$ .
-   n[] = number strsplit s$ "./"
-   if len n[] <> 5
-      return ""
-   .
+   n[] = number strtok s$ "./"
+   if len n[] <> 5 : return ""
    for i to 4
-      if n[i] < 0 or n[i] > 255
-         return ""
-      .
+      if n[i] < 0 or n[i] > 255 : return ""
       ad = ad * 256 + n[i]
    .
-   if n[5] > 31 or n[5] < 1
-      return ""
-   .
+   if n[5] > 31 or n[5] < 1 : return ""
    mask = bitnot (bitshift 1 (32 - n[5]) - 1)
    ad = bitand ad mask
    for i to 4
-      if r$ <> ""
-         r$ = "." & r$
-      .
+      if r$ <> "" : r$ = "." & r$
       r$ = ad mod 256 & r$
       ad = ad div 256
    .

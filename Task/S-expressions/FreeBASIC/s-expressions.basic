@@ -1,0 +1,132 @@
+Type Token
+    tokenType As Integer    '1=lbr, 2=rbr, 3=string, 4=number, 5=symbol
+    value As String
+    numValue As Double
+End Type
+
+Type TokenList
+    tokens(1000) As Token
+    cnt As Integer
+End Type
+
+Function isNumber(word As String) As Boolean
+    For i As Integer = 1 To Len(word)
+        If (Mid(word, i, 1) < "0" Or Mid(word, i, 1) > "9") And Mid(word, i, 1) <> "." Then Return False
+    Next
+    Return True
+End Function
+
+Function ParseSExpr(cad As String) As TokenList
+    Dim As TokenList tlist
+    Dim As Integer state = 1 '1=token_start, 2=read_quoted_string, 3=read_string_or_number
+    Dim As String word = ""
+
+    For i As Integer = 1 To Len(cad)
+        Select Case state
+        Case 1 'token_start
+            Select Case Mid(cad, i, 1)
+            Case "("
+                tlist.tokens(tlist.cnt).tokenType = 1
+                tlist.cnt += 1
+            Case ")"
+                tlist.tokens(tlist.cnt).tokenType = 2
+                tlist.cnt += 1
+            Case " ", Chr(9), Chr(10), Chr(13)
+            Case """"
+                state = 2 : word = ""
+            Case Else
+                state = 3 : word = Mid(cad, i, 1)
+            End Select
+
+        Case 2 'read_quoted_string
+            If Mid(cad, i, 1) = """" Then
+                tlist.tokens(tlist.cnt).tokenType = 3
+                tlist.tokens(tlist.cnt).value = word
+                tlist.cnt += 1
+                state = 1
+            Else
+                word &= Mid(cad, i, 1)
+            End If
+
+        Case 3 'read_string_or_number
+            If Instr(" " & Chr(9) & Chr(10) & Chr(13) & ")", Mid(cad, i, 1)) Then
+                tlist.tokens(tlist.cnt).tokenType = Iif(isNumber(word), 4, 5)
+                If isNumber(word) Then
+                    tlist.tokens(tlist.cnt).numValue = Val(word)
+                Else
+                    tlist.tokens(tlist.cnt).value = word
+                End If
+                tlist.cnt += 1
+                If Mid(cad, i, 1) = ")" Then
+                    tlist.tokens(tlist.cnt).tokenType = 2
+                    tlist.cnt += 1
+                End If
+                state = 1
+            Else
+                word &= Mid(cad, i, 1)
+            End If
+        End Select
+    Next
+    Return tlist
+End Function
+
+Function ArrayToString(tlist As TokenList, startIdx As Integer, Byref endIdx As Integer) As String
+    Dim As String result = ""
+    Dim As Integer i = startIdx
+
+    If startIdx = 0 Then result = "["
+
+    While i < tlist.cnt
+        Select Case tlist.tokens(i).tokenType
+        Case 1 'lbr
+            result &= "["
+            i += 1
+            result &= ArrayToString(tlist, i, i)
+        Case 2 'rbr
+            endIdx = i
+            Return result & "]"
+        Case 3 'string
+            result &= """" & tlist.tokens(i).value & """"
+        Case 4 'number
+            result &= Rtrim(Str(tlist.tokens(i).numValue))
+        Case 5 'symbol
+            result &= ":" & tlist.tokens(i).value
+        End Select
+        If i < tlist.cnt - 1 Andalso tlist.tokens(i+1).tokenType <> 2 Then result &= ", "
+        i += 1
+    Wend
+    Return result
+End Function
+
+Function ToSExpr(tlist As TokenList) As String
+    Dim As String result = ""
+    For i As Integer = 0 To tlist.cnt - 1
+        Select Case tlist.tokens(i).tokenType
+            Case 1: result &= "("
+            Case 2: result &= ")"
+            Case 3: result &= """" & tlist.tokens(i).value & """"
+            Case 4: result &= Rtrim(Str(tlist.tokens(i).numValue))
+            Case 5: result &= tlist.tokens(i).value
+        End Select
+        If i < tlist.cnt - 1 Andalso tlist.tokens(i+1).tokenType <> 2 Andalso tlist.tokens(i).tokenType <> 1 Then result &= " "
+    Next
+    Return result
+End Function
+
+' Main program
+Dim As String inputString = _
+"((data ""quoted data"" 123 4.5)" & Chr(10) & _
+" (data (!@# (4.5) ""(more"" ""data)"")))"
+
+Print "Original S-Expression:"
+Print inputString
+Dim As TokenList tokens = ParseSExpr(inputString)
+
+Print !"\nNative Structure:"
+Dim As Integer dummy
+Print ArrayToString(tokens, 0, dummy)
+
+Print !"\nand back to S-Expression:"
+Print ToSExpr(tokens)
+
+Sleep

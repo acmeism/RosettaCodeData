@@ -5,10 +5,9 @@ namespace ConsoleApplication1
     {
         static void Main(string[] args)
         {
+            // Arrays are initialized to their type default values; the default for bool is false
+            // Use false to indicate closed door
             bool[] doors = new bool[100];
-
-            //Close all doors to start.
-            for (int d = 0; d < 100; d++) doors[d] = false;
 
             //For each pass...
             for (int p = 0; p < 100; p++)//number of passes
@@ -24,7 +23,7 @@ namespace ConsoleApplication1
             }
 
             //Output the results.
-            Console.WriteLine("Passes Completed!!!  Here are the results: \r\n");
+            Console.WriteLine("Passes Completed!!!  Here are the results:");
             for (int d = 0; d < 100; d++)
             {
                 if (doors[d])

@@ -1,0 +1,293 @@
+Type StringArray
+    Dim elements(Any) As String
+    Dim cnt As Integer
+
+    Declare Sub annadir(value As String)
+    Declare Function join(delimiter As String) As String
+End Type
+
+Sub StringArray.annadir(value As String)
+    this.cnt += 1
+    Redim Preserve this.elements(this.cnt - 1)
+    this.elements(this.cnt - 1) = value
+End Sub
+
+Function StringArray.join(delimiter As String) As String
+    Dim result As String = ""
+    For i As Integer = 0 To this.cnt - 1
+        If i > 0 Then result &= delimiter
+        result &= this.elements(i)
+    Next
+    Return result
+End Function
+
+Function Replace(text As String, find As String, replaceWith As String) As String
+    Dim result As String = text
+    Dim posic As Integer = Instr(result, find)
+
+    While posic > 0
+        result = Left(result, posic - 1) & replaceWith & Mid(result, posic + Len(find))
+        posic = Instr(posic + Len(replaceWith), result, find)
+    Wend
+
+    Return result
+End Function
+
+Function trimLeft(text As String, chars As String) As String
+    Dim i As Integer = 1
+    While i <= Len(text) Andalso Instr(chars, Mid(text, i, 1)) > 0
+        i += 1
+    Wend
+    Return Mid(text, i)
+End Function
+
+Function trimRight(text As String, chars As String) As String
+    Dim i As Integer = Len(text)
+    While i > 0 Andalso Instr(chars, Mid(text, i, 1)) > 0
+        i -= 1
+    Wend
+    Return Left(text, i)
+End Function
+
+Sub sortedOutline(originalOutline() As String, ascending As Boolean)
+    Dim As String indent = "", del = Chr(127), sep = Chr(0)
+    Dim As Integer outlineCount = Ubound(originalOutline) + 1
+    Dim As StringArray messages, nodes
+    Dim As Integer i, j
+
+    Dim As String outline(outlineCount - 1)
+    ' Copy original array
+    For i = 0 To outlineCount - 1
+        outline(i) = originalOutline(i)
+    Next
+
+    ' Check first line indentation
+    If trimLeft(outline(0), " " + Chr(9)) <> outline(0) Then
+        Print "    outline structure is unclear"
+        Exit Sub
+    End If
+
+    ' Process indentation
+    For i = 1 To outlineCount - 1
+        Dim As String linea = outline(i)
+        Dim As Integer lc = Len(linea)
+
+        If Left(linea, 2) = "  " Orelse Left(linea, 1) = Chr(9) Then
+            Dim As String trimmedLine = trimLeft(linea, " " + Chr(9))
+            Dim As String currIndent = Left(linea, lc - Len(trimmedLine))
+
+            If indent = "" Then
+                indent = currIndent
+            Else
+                Dim As Boolean correctionNeeded = False
+
+                If (Instr(currIndent, Chr(9)) > 0 Andalso Instr(indent, Chr(9)) = 0) Orelse _
+                    (Instr(currIndent, Chr(9)) = 0 Andalso Instr(indent, Chr(9)) > 0) Then
+                    messages.annadir(indent + "corrected inconsistent whitespace use at line '" + linea + "'")
+                    correctionNeeded = True
+                Elseif (Len(currIndent) Mod Len(indent)) <> 0 Then
+                    messages.annadir(indent + "corrected inconsistent indent width at line '" + linea + "'")
+                    correctionNeeded = True
+                End If
+
+                If correctionNeeded Then
+                    Dim As Integer mult = Int((Len(currIndent) + Len(indent)/2) / Len(indent))
+                    Dim As String newIndent = ""
+                    For j = 1 To mult
+                        newIndent &= indent
+                    Next
+                    outline(i) = newIndent & trimmedLine
+                End If
+            End If
+        End If
+    Next
+
+    ' Create levels array
+    Dim As Integer levels(outlineCount - 1)
+    levels(0) = 1
+    Dim As Integer level = 1
+    Dim As String margin = ""
+
+    Do
+        Dim As Boolean allProcessed = True
+        For i = 0 To outlineCount - 1
+            If levels(i) = 0 Then
+                allProcessed = False
+                Exit For
+            End If
+        Next
+        If allProcessed Then Exit Do
+
+        Dim As Integer mc = Len(margin)
+        For i = 1 To outlineCount - 1
+            If levels(i) = 0 Then
+                If Left(outline(i), mc) = margin Andalso _
+                    Mid(outline(i), mc + 1, 1) <> " " Andalso _
+                    Mid(outline(i), mc + 1, 1) <> Chr(9) Then
+                    levels(i) = level
+                End If
+            End If
+        Next
+        margin += indent
+        level += 1
+    Loop
+
+    ' Sort the outline
+    Dim As String lines(outlineCount - 1)
+    lines(0) = outline(0)
+
+    For i = 1 To outlineCount - 1
+        If levels(i) > levels(i-1) Then
+            If nodes.cnt = 0 Then
+                nodes.annadir(outline(i-1))
+            Else
+                nodes.annadir(sep + outline(i-1))
+            End If
+        Elseif levels(i) < levels(i-1) Then
+            j = levels(i-1) - levels(i)
+            nodes.cnt -= j
+            Redim Preserve nodes.elements(nodes.cnt - 1)
+        End If
+
+        If nodes.cnt > 0 Then
+            lines(i) = nodes.join("") & sep & outline(i)
+        Else
+            lines(i) = outline(i)
+        End If
+    Next
+
+    ' Sort lines
+    If ascending Then
+        For i = 0 To outlineCount - 2
+            For j = i + 1 To outlineCount - 1
+                If lines(i) > lines(j) Then Swap lines(i), lines(j)
+            Next
+        Next
+    Else
+        Dim As Integer maxLen = Len(lines(0))
+        For i = 1 To outlineCount - 1
+            If Len(lines(i)) > maxLen Then maxLen = Len(lines(i))
+        Next
+
+        For i = 0 To outlineCount - 1
+            lines(i) = lines(i) & String(maxLen - Len(lines(i)), del)
+        Next
+
+        For i = 0 To outlineCount - 2
+            For j = i + 1 To outlineCount - 1
+                If lines(i) < lines(j) Then Swap lines(i), lines(j)
+            Next
+        Next
+    End If
+
+    ' Process final lines
+    For i = 0 To outlineCount - 1
+        Dim As String parts()
+        Dim As Integer partCount = 0
+        Dim As String tmp = lines(i)
+
+        ' Split by separator
+        Do
+            Dim As Integer posic = Instr(tmp, sep)
+            If posic = 0 Then
+                partCount += 1
+                Redim Preserve parts(partCount - 1)
+                parts(partCount - 1) = tmp
+                Exit Do
+            End If
+            partCount += 1
+            Redim Preserve parts(partCount - 1)
+            parts(partCount - 1) = Left(tmp, posic - 1)
+            tmp = Mid(tmp, posic + 1)
+        Loop
+
+        lines(i) = parts(partCount - 1)
+        If Not ascending Then lines(i) = trimRight(lines(i), del)
+    Next
+
+    ' Print messages if any
+    If messages.cnt > 0 Then
+        Print messages.join(!"\n")
+        Print
+    End If
+
+    ' Print result
+    For i = 0 To outlineCount - 1
+        Print lines(i)
+    Next
+End Sub
+
+' Main program with test cases
+Dim outline(10) As String
+outline(0) = "zeta"
+outline(1) = "    beta"
+outline(2) = "    gamma"
+outline(3) = "        lambda"
+outline(4) = "        kappa"
+outline(5) = "        mu"
+outline(6) = "    delta"
+outline(7) = "alpha"
+outline(8) = "    theta"
+outline(9) = "    iota"
+outline(10) = "    epsilon"
+
+Print "Four space indented outline, ascending sort:"
+sortedOutline(outline(), True)
+
+Print !"\nFour space indented outline, descending sort:"
+sortedOutline(outline(), False)
+
+' Create outline2 (tab version)
+Dim outline2(10) As String
+For i As Integer = 0 To 10
+    outline2(i) = Replace(outline(i), "    ", Chr(9))
+Next
+
+' Create outline3
+Dim outline3(10) As String
+outline3(0) = "alpha"
+outline3(1) = "    epsilon"
+outline3(2) = "        iota"
+outline3(3) = "    theta"
+outline3(4) = "zeta"
+outline3(5) = "    beta"
+outline3(6) = "    delta"
+outline3(7) = "    gamma"
+outline3(8) = "    " + Chr(9) + "   kappa"
+outline3(9) = "        lambda"
+outline3(10) = "        mu"
+
+' Create outline4
+Dim outline4(10) As String
+outline4(0) = "zeta"
+outline4(1) = "    beta"
+outline4(2) = "   gamma"
+outline4(3) = "        lambda"
+outline4(4) = "         kappa"
+outline4(5) = "        mu"
+outline4(6) = "    delta"
+outline4(7) = "alpha"
+outline4(8) = "    theta"
+outline4(9) = "    iota"
+outline4(10) = "    epsilon"
+
+' Add these test cases after the first two Print calls
+Print !"\nTab indented outline, ascending sort:"
+sortedOutline(outline2(), True)
+
+Print !"\nTab indented outline, descending sort:"
+sortedOutline(outline2(), False)
+
+Print !"\nFirst unspecified outline, ascending sort:"
+sortedOutline(outline3(), True)
+
+Print !"\nFirst unspecified outline, descending sort:"
+sortedOutline(outline3(), False)
+
+Print !"\nSecond unspecified outline, ascending sort:"
+sortedOutline(outline4(), True)
+
+Print !"\nSecond unspecified outline, descending sort:"
+sortedOutline(outline4(), False)
+
+Sleep

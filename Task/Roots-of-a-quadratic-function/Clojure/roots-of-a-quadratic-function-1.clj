@@ -3,7 +3,7 @@
    Returns any of nil, a float, or a vector."
   [a b c]
   (let [sq-d (Math/sqrt (- (* b b) (* 4 a c)))
-        f    #(/ (% b sq-d) (* 2 a))]
+        f    #(/ (% (- b) sq-d) (* 2 a))]
     (cond
        (neg? sq-d)  nil
        (zero? sq-d) (f +)

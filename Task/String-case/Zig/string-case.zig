@@ -5,9 +5,9 @@ pub fn main() !void {
     const string = "alphaBETA";
     var lower: [string.len]u8 = undefined;
     var upper: [string.len]u8 = undefined;
-    for (string) |char, i| {
-        lower[i] = std.ascii.toLower(char);
-        upper[i] = std.ascii.toUpper(char);
+    for (string, &lower, &upper) |char, *lo, *up| {
+        lo.* = std.ascii.toLower(char);
+        up.* = std.ascii.toUpper(char);
     }
     try stdout_wr.print("lower: {s}\n", .{lower});
     try stdout_wr.print("upper: {s}\n", .{upper});

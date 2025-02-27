@@ -1,12 +1,8 @@
 proc trim . s$ .
    a = 1
-   while substr s$ a 1 = " "
-      a += 1
-   .
+   while substr s$ a 1 = " " : a += 1
    b = len s$
-   while substr s$ b 1 = " "
-      b -= 1
-   .
+   while substr s$ b 1 = " " : b -= 1
    s$ = substr s$ a (b - a + 1)
 .
 func$ rev s$ .
@@ -14,7 +10,7 @@ func$ rev s$ .
    for i to len a$[] div 2
       swap a$[i] a$[len a$[] - i + 1]
    .
-   return strjoin a$[]
+   return strjoin a$[] ""
 .
 func$ invert s$ .
    for c$ in strchars s$
@@ -33,16 +29,10 @@ func[] decode_upc upc$ .
          h$ = substr upc$ pos 7
          for dig to 10
             d$ = digs$[dig]
-            if isright = 1
-               d$ = invert d$
-            .
-            if h$ = d$
-               break 1
-            .
+            if isright = 1 : d$ = invert d$
+            if h$ = d$ : break 1
          .
-         if dig = 11
-            return [ ]
-         .
+         if dig = 11 : return [ ]
          dig -= 1
          digs[] &= dig
          sum += dig * sumf
@@ -50,27 +40,17 @@ func[] decode_upc upc$ .
          pos = pos + 7
       .
    .
-   if len upc$ <> 95
-      return [ ]
-   .
-   if substr upc$ 1 3 <> "# #"
-      return [ ]
-   .
+   if len upc$ <> 95 : return [ ]
+   if substr upc$ 1 3 <> "# #" : return [ ]
    pos = 4
    sumf = 3
    getdigs
-   if substr upc$ pos 5 <> " # # "
-      return [ ]
-   .
+   if substr upc$ pos 5 <> " # # " : return [ ]
    pos += 5
    isright = 1
    getdigs
-   if substr upc$ 1 3 <> "# #"
-      return [ ]
-   .
-   if sum mod 10 <> 0
-      return [ ]
-   .
+   if substr upc$ 1 3 <> "# #" : return [ ]
+   if sum mod 10 <> 0 : return [ ]
    return digs[]
 .
 barcodes$[] = [ "         # #   # ##  #  ## #   ## ### ## ### ## #### # # # ## ##  #   #  ##  ## ###  # ##  ## ### #  # #       " "        # # #   ##   ## # #### #   # ## #   ## #   ## # # # ###  # ###  ##  ## ###  # #  ### ###  # # #         " "         # #    # # #  ###  #   #    # #  #   #    # # # # ## #   ## #   ## #   ##   # # #### ### ## # #         " "       # # ##  ## ##  ##   #  #   #  # ###  # ##  ## # # #   ## ##  #  ### ## ## #   # #### ## #   # #        " "         # # ### ## #   ## ## ###  ##  # ##   #   # ## # # ### #  ## ##  #    # ### #  ## ##  #      # #          " "          # #  #   # ##  ##  #   #   #  # ##  ##  #   # # # # #### #  ##  # #### #### # #  ##  # #### # #         " "         # #  #  ##  ##  # #   ## ##   # ### ## ##   # # # #  #   #   #  #  ### # #    ###  # #  #   # #        " "        # # #    # ##  ##   #  # ##  ##  ### #   #  # # # ### ## ## ### ## ### ### ## #  ##  ### ## # #         " "         # # ### ##   ## # # #### #   ## # #### # #### # # #   #  # ###  #    # ###  # #    # ###  # # #       " "        # # # #### ##   # #### # #   ## ## ### #### # # # #  ### # ###  ###  # # ###  #    # #  ### # #         " ]

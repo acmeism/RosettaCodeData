@@ -9,7 +9,8 @@ sub int-bits (Int $a, Int $b) {
     say '';
     say_bit "$a", $a;
     say '';
-    say_bit "2's complement $a", +^$a;
+    say_bit "1's complement (not) $a", +^$a;
+    say_bit "2's complement $a", +^$a + 1;
     say_bit "$a and $b", $a +& $b;
     say_bit "$a or $b",  $a +| $b;
     say_bit "$a xor $b", $a +^ $b;

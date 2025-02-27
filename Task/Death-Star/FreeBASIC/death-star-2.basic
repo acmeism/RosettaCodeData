@@ -1,0 +1,100 @@
+Type vector
+    v(2) As Double
+End Type
+
+Type sphere
+    cx As Integer
+    cy As Integer
+    cz As Integer
+    r As Integer
+End Type
+
+Function dot(x As vector, y As vector) As Double
+    Return x.v(0)*y.v(0) + x.v(1)*y.v(1) + x.v(2)*y.v(2)
+End Function
+
+Sub normalizeVector(v As vector)
+    Dim invLen As Double = 1.0 / Sqr(dot(v, v))
+    v.v(0) *= invLen
+    v.v(1) *= invLen
+    v.v(2) *= invLen
+End Sub
+
+Function hitSphere(s As sphere, x As Integer, y As Integer, z1 As Double Ptr, z2 As Double Ptr) As Boolean
+    Dim xx As Integer = x - s.cx
+    Dim yy As Integer = y - s.cy
+    Dim zsq As Integer = s.r*s.r - (xx*xx + yy*yy)
+
+    If zsq >= 0 Then
+        Dim zsqrt As Double = Sqr(zsq)
+        *z1 = s.cz - zsqrt
+        *z2 = s.cz + zsqrt
+        Return True
+    End If
+    Return False
+End Function
+
+Function createDeathStar(posic As sphere, neg As sphere, k As Double, amb As Double, direc As vector) As Any Ptr
+    Dim As Integer w = posic.r * 4
+    Dim As Integer h = posic.r * 3
+
+    Dim As Any Ptr img = Imagecreate(w, h, Rgb(0,0,0))
+
+    Dim vec As vector
+    Dim As Double z1, z2, zs1, zs2
+
+    For y As Integer = posic.cy - posic.r To posic.cy + posic.r
+        For x As Integer = posic.cx - posic.r To posic.cx + posic.r
+            If hitSphere(posic, x, y, @z1, @z2) Then
+                Dim hit As Boolean = hitSphere(neg, x, y, @zs1, @zs2)
+
+                If hit Then
+                    If zs1 > z1 Then hit = False
+                    If zs2 > z2 Then Continue For
+                End If
+
+                If hit Then
+                    vec.v(0) = neg.cx - x
+                    vec.v(1) = neg.cy - y
+                    vec.v(2) = neg.cz - zs2
+                Else
+                    vec.v(0) = x - posic.cx
+                    vec.v(1) = y - posic.cy
+                    vec.v(2) = z1 - posic.cz
+                End If
+
+                normalizeVector(vec)
+                Dim s As Double = dot(direc, vec)
+                If s < 0 Then s = 0
+
+                Dim lum As Double = 255 * (s^k + amb) / (1 + amb)
+                If lum < 0 Then lum = 0
+                If lum > 255 Then lum = 255
+
+                Dim shade As Integer = lum
+                Pset img, (x + w\2, y + h\2), Rgb(shade, shade, shade)
+            End If
+        Next x
+    Next y
+
+    Return img
+End Function
+
+' Main program
+Screenres 500, 400, 32
+Windowtitle "Death Star FreeBASIC"
+
+Dim direct As vector
+direct.v(0) = 20
+direct.v(1) = -40
+direct.v(2) = -10
+normalizeVector(direct)
+
+Dim posic As sphere = Type(0, 0, 0, 120)
+Dim neg As sphere = Type(-50, -50, -30, 75)
+
+Dim img As Any Ptr = createDeathStar(posic, neg, 1.5, 0.2, direct)
+Put (0, 0), img
+Imagedestroy(img)
+
+Sleep

@@ -4,7 +4,7 @@ function love.load ()
 end
 
 function love.update (dt)
-    incr = (incr + 0.05) % 360
+    incr = (incr + 0.05 * dt) % 360
     x1 = love.graphics.getWidth() / 2
     y1 = love.graphics.getHeight() / 2
     length = 5

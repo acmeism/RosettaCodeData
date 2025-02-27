@@ -53,7 +53,7 @@ BEGIN # Sierpinski Square Curve in SVG - SVG generation translated from the  #
 
             put( svg file, ( "'/>", newline, "</svg>", newline ) );
             close( svg file )
-         FI # sierpinski square # ;
+         FI # sierpinski square curve # ;
 
     sierpinski square curve( "sierpinski_square.svg", 635, 5, 5 )
 

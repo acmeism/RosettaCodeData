@@ -5,3 +5,6 @@
                                 while (/= n 4)
                                 do (format out "~A is ~R, " c (length c))
                                 finally (format out "four is magic.")))))
+(loop for n
+       in '( -1 0 1 2 3 4 5 6 7 8 9 11 21 1995 1000000 1234567890 1100100100100 )
+       do (print (integer-to-text n)))

@@ -1,0 +1,133 @@
+DECLARE SUB printPuzzle ()
+DECLARE SUB buildBoard (level AS INTEGER)
+DECLARE FUNCTION introAndLevel! ()
+DECLARE FUNCTION isMoveValid! (piece AS INTEGER, piecePos AS INTEGER, emptyPos AS INTEGER)
+DECLARE FUNCTION piecePosition! (piece AS INTEGER)
+DECLARE FUNCTION isPuzzleComplete! ()
+
+DIM SHARED d(16) AS INTEGER
+DIM SHARED dbp$(16) ' Board pieces
+DIM SHARED sh(3) AS INTEGER
+DIM level AS INTEGER, x AS INTEGER, y AS INTEGER, z AS INTEGER
+
+' Main Program
+level = introAndLevel
+buildBoard (level)
+DO
+    printPuzzle
+    PRINT "To move a piece, enter its number (0 to quit): "
+    INPUT x
+    IF x = 0 THEN END
+
+    WHILE isMoveValid(x, y, z) = 0
+        PRINT "Wrong move."
+        printPuzzle
+        PRINT "To move a piece, enter its number (0 to quit): "
+        INPUT x
+        IF x = 0 THEN END
+    WEND
+
+    d(z) = x
+    d(y) = 0
+    CLS
+LOOP UNTIL isPuzzleComplete
+PRINT "YOU WON!"
+END
+
+SUB buildBoard (level AS INTEGER)
+    ' Set pieces in correct order first
+    FOR p = 1 TO 15
+        d(p) = p
+    NEXT p
+    d(16) = 0 ' 0 = empty piece/slot
+    z = 16 ' z = empty position
+
+    PRINT
+    PRINT "Shuffling pieces";
+    RANDOMIZE TIMER
+    FOR n = 1 TO sh(level)
+        PRINT ".";
+        DO
+            x = INT(RND * 4) + 1
+            r = 0
+            SELECT CASE x
+                CASE 1: r = z - 4
+                CASE 2: r = z + 4
+                CASE 3: IF (z - 1) MOD 4 <> 0 THEN r = z - 1
+                CASE 4: IF z MOD 4 <> 0 THEN r = z + 1
+            END SELECT
+        LOOP WHILE (r < 1) OR (r > 16)
+        d(z) = d(r)
+        z = r
+        d(z) = 0
+    NEXT n
+    CLS
+END SUB
+
+FUNCTION introAndLevel
+    CLS
+    sh(1) = 10
+    sh(2) = 50
+    sh(3) = 100
+    PRINT "15 PUZZLE GAME": PRINT: PRINT
+    PRINT "Please enter level of difficulty,"
+    DO
+        PRINT "1 (easy), 2 (medium) or 3 (hard): ";
+        INPUT level
+    LOOP WHILE (level < 1) OR (level > 3)
+    introAndLevel = level
+END FUNCTION
+
+FUNCTION isMoveValid (piece AS INTEGER, piecePos AS INTEGER, emptyPos AS INTEGER)
+    mv = 0
+    IF (piece >= 1) AND (piece <= 15) THEN
+        piecePos = piecePosition(piece)
+        emptyPos = piecePosition(0)
+        IF (piecePos - 4 = emptyPos) OR (piecePos + 4 = emptyPos) OR ((piecePos - 1 = emptyPos) AND (emptyPos MOD 4 <> 0)) OR ((piecePos + 1 = emptyPos) AND (piecePos MOD 4 <> 0)) THEN
+            mv = 1
+        END IF
+    END IF
+    isMoveValid = mv
+END FUNCTION
+
+FUNCTION isPuzzleComplete
+    pc = 0
+    p = 1
+    WHILE (p < 16) AND (d(p) = p)
+        p = p + 1
+    WEND
+    IF p = 16 THEN pc = 1
+    isPuzzleComplete = pc
+END FUNCTION
+
+FUNCTION piecePosition (piece AS INTEGER)
+    p = 1
+    WHILE d(p) <> piece
+        p = p + 1
+        IF p > 16 THEN
+            PRINT "UH OH!"
+            STOP
+        END IF
+    WEND
+    piecePosition = p
+END FUNCTION
+
+SUB printPuzzle
+    FOR p = 1 TO 16
+        IF d(p) = 0 THEN
+            dbp$(p) = "     "
+        ELSE
+            dbp$(p) = RIGHT$("  " + LTRIM$(STR$(d(p))), 3) + "  "
+        END IF
+    NEXT p
+
+    PRINT "+-----+-----+-----+-----+"
+    PRINT "|"; dbp$(1); "|"; dbp$(2); "|"; dbp$(3); "|"; dbp$(4); "|"
+    PRINT "+-----+-----+-----+-----+"
+    PRINT "|"; dbp$(5); "|"; dbp$(6); "|"; dbp$(7); "|"; dbp$(8); "|"
+    PRINT "+-----+-----+-----+-----+"
+    PRINT "|"; dbp$(9); "|"; dbp$(10); "|"; dbp$(11); "|"; dbp$(12); "|"
+    PRINT "+-----+-----+-----+-----+"
+    PRINT "|"; dbp$(13); "|"; dbp$(14); "|"; dbp$(15); "|"; dbp$(16); "|"
+    PRINT "+-----+-----+-----+-----+"
+END SUB

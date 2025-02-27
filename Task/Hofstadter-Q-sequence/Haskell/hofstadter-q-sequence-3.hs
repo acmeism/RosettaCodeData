@@ -1,7 +1,21 @@
-Prelude Main> qSeqTest 1000 100000    -- reversals in 100,000
-([1,1,2,3,3,4,5,5,6,6],502,49798)
-(0.09 secs, 18879708 bytes)
+import Data.Array
 
-Prelude Main> qSeqTest 1000000 100000   -- 1,000,000-th item
-([1,1,2,3,3,4,5,5,6,6],512066,49798)
-(2.80 secs, 87559640 bytes)
+qSequence n = arr
+  where
+     arr = listArray (1,n) $ 1:1: map g [3..n]
+     g i = arr!(i - arr!(i-1)) +
+           arr!(i - arr!(i-2))
+
+gradualth m k arr                         -- gradually precalculate m-th item
+        | m <= v = pre `seq` arr!m        --   in steps of k
+  where                                   --     to prevent STACK OVERFLOW
+    pre = foldl1 (\a b-> a `seq` arr!b) [u,u+k..m]
+    (u,v) = bounds arr
+
+qSeqTest m n = let arr = qSequence $ max m n in
+  ( take 10 . elems  $ arr                       -- 10 first items
+  , gradualth m 10000 $ arr                      -- m-th item
+  , length . filter (> 0)                       -- reversals in n items
+     . _S (zipWith (-)) tail . take n . elems $ arr )
+
+_S f g x = f x (g x)

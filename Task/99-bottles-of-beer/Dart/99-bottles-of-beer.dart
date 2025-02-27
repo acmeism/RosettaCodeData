@@ -57,5 +57,3 @@ class BeerSong extends Song {
     return theLyrics;
   }
 }
-
-}

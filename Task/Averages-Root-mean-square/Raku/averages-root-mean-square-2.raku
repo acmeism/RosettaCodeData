@@ -1,1 +1,1 @@
-sub rms { sqrt @_ R/ [+] @_ X** 2 }
+sub rms { sqrt @_ R/ [+] @_».² }

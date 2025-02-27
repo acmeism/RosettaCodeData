@@ -1,6 +1,7 @@
+-- Module Quicksort21.inc - Build 30 Jan 2025
+-- Fast stem sort
+
 default [label]=Quicksort21 [table]=table. [key1]=key1. [key2]=key2. [data1]=data1. [lt]=< [eq]== [gt]=>
--- Sorting procedure - Build 7 Sep 2024
--- (C) Paul van den Eertwegh 2024
 
 [label]:
 -- Sort a stem on 2 key columns, syncing 1 data column

@@ -39,12 +39,22 @@ Module RankLanguagesByPopularity
 
         Dim nextPageEx = New RegEx("<a href=""/wiki/Category:Programming_Languages([?]subcatfrom=[^""]*)""")
         Dim languageStatEx = _
-            New Regex(">([^<]+?)</a>[^<]*<span title=""Contains *[0-9,.]* *[a-z]*, *([0-9,.]*) *page")
+            New Regex(">([^<]+?)</a></bdi> *<span title=""Contains *[0-9,.]* *[a-z]*, *([0-9,.]*) *page")
 
         Do While nextPage <> ""
             Dim wc As New WebClient()
-            Dim page As String = wc.DownloadString(nextPage)
 
+            ' Ensure the WebClient has a User-Agent.
+            Dim hasAgent As Boolean = False
+            for hPos As Integer = 0 To wc.Headers.Count - 1
+                Dim headerKey As String = wc.Headers.GetKey(hPos)
+                hasAgent = hasAgent Or headerKey = "User-Agent"
+            Next hPos
+            If not hasAgent Then
+                wc.Headers.Add("User-Agent", "RC_Tasks_Agent")
+            End If
+
+            Dim page As String = wc.DownloadString(nextPage)
             nextPage = ""
             For Each link In nextPageEx.Matches(page)
                 nextPage = basePage & link.Groups(1).Value
@@ -60,6 +70,12 @@ Module RankLanguagesByPopularity
                     languages.Add(New LanguageStat(lName, lCount))
                 End If
             Next language
+
+            If nextPage <> "" Then
+                ' Sleep for a while to avoid looking like a DOS attack...
+                System.Threading.Thread.Sleep(500)
+            End If
+
         Loop
 
         languages.Sort(AddressOf CompareLanguages)

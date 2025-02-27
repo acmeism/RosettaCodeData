@@ -1,27 +1,25 @@
-import gintro/[glib, gobject, gtk, gio]
-import gintro/gdk except Window
+import gtk2, glib2
+import gdk2 except PWindow
 
-#---------------------------------------------------------------------------------------------------
 
-proc onButtonPress(window: ApplicationWindow; event: Event; data: pointer): bool =
-  echo event.getCoords()
-  result = true
+proc onButtonPress(window: pointer; event: PEventButton; data: pointer): gboolean {.cdecl.} =
+  echo event.x, " ", event.y
+  result = false
 
-#---------------------------------------------------------------------------------------------------
 
-proc activate(app: Application) =
-  ## Activate the application.
+proc onDestroyEvent(widget: PWidget; data: pointer): gboolean {.cdecl.} =
+  ## Quit the application.
+  mainQuit()
 
-  let window = app.newApplicationWindow()
-  window.setTitle("Mouse position")
-  window.setSizeRequest(640, 480)
 
-  discard window.connect("button-press-event", onButtonPress, pointer(nil))
+nimInit()
 
-  window.showAll()
+let window = windowNew(WINDOW_TOPLEVEL)
+window.setTitle("Mouse position")
+window.setSizeRequest(640, 480)
+window.setEvents(BUTTON_PRESS_MASK)
+discard window.signalConnect("destroy", SIGNAL_FUNC(onDestroyEvent), nil)
+discard window.signalConnect("button-press-event", SIGNAL_FUNC(onButtonPress), nil)
+window.showAll()
 
-#———————————————————————————————————————————————————————————————————————————————————————————————————
-
-let app = newApplication(Application, "Rosetta.MousePosition")
-discard app.connect("activate", activate)
-discard app.run()
+main()

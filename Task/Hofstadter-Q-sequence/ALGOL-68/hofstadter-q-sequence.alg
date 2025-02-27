@@ -1,24 +1,16 @@
-#!/usr/local/bin/a68g --script #
+BEGIN
+        [100000]INT q;
 
-INT n = 100000;
-main:
-(
-        INT flip;
-        [n]INT q;
-
+        INT flips := 0;
         q[1] := q[2] := 1;
-
-        FOR i FROM 3 TO n DO
-                q[i] := q[i - q[i - 1]] + q[i - q[i - 2]] OD;
+        FOR i FROM 3 TO UPB q DO
+                q[i] := q[i - q[i - 1]] + q[i - q[i - 2]];
+                IF q[i] < q[i - 1] THEN flips +:= 1 FI
+        OD;
 
         FOR i TO 10 DO
-                printf(($g(0)$, q[i], $b(l,x)$, i = 10)) OD;
+                print((whole(q[i],0), IF i = 10 THEN newline ELSE space FI)) OD;
 
-        printf(($g(0)l$, q[1000]));
-
-        flip := 0;
-        FOR i TO n-1 DO
-                flip +:= ABS (q[i] > q[i + 1]) OD;
-
-        printf(($"flips: "g(0)l$, flip))
-)
+        print((whole(q[1000],0), newline));
+        print(("flips: ", whole(flips,0), newline))
+END

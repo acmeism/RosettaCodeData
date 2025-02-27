@@ -1,16 +1,7 @@
-q = qq (listArray (1,2) [1,1]) 1 where
-    qq ar n    = (arr!n) : qq arr (n+1) where
-        l = snd (bounds ar)
-        step n =arr!(n - (fromIntegral (arr!(n - 1)))) +
-            arr!(n - (fromIntegral (arr!(n - 2))))
-        arr :: Array Int Integer
-        arr | n <= l = ar
-            | otherwise = listArray (1, l*2)$
-                ([ar!i | i <- [1..l]] ++
-                 [step i | i <- [l+1..l*2]])
+Prelude Main> qSeqTest 1000 100000    -- reversals in 100,000
+([1,1,2,3,3,4,5,5,6,6],502,49798)
+(0.09 secs, 18879708 bytes)
 
-main = do
-    putStr("first 10: "); print (take 10 q)
-    putStr("1000-th:  "); print (q !! 999)
-    putStr("flips: ")
-    print $ length $ filter id $ take 100000 (zipWith (>) q (tail q))
+Prelude Main> qSeqTest 1000000 100000   -- 1,000,000-th item
+([1,1,2,3,3,4,5,5,6,6],512066,49798)
+(2.80 secs, 87559640 bytes)

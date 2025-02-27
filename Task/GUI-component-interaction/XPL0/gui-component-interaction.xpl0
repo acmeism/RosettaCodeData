@@ -1,0 +1,147 @@
+\0123456789012345678901234567   template for display layout
+\ Component interaction.  X .   main window
+\    Value:   123456789_    .
+\   [Increment]   [Random]  .
+\ Confirm...............  X .   dialog pop-up
+\   Set to a random value?
+\   [  Yes  ]    [  No   ]
+
+include xpllib;                 \for Ctrl key names, AtoI, ItoA and StrLen
+def  X0=22, Y0=10;              \upper-left corner of main window's position
+def  X1=X0+21, Y1=Y0+5;         \position of dialog pop-up (character cells)
+int  Mouse, Button, X, Y, Ch, I; \all variables are global for simplicity
+def  StrMax = 10;               \max chars in String including underline
+char String(StrMax);            \Value string array
+int  StrInx;                    \index for character to be added to String
+
+proc ShowString;                \Show Value String
+[Attrib($F0);                   \set black on bright white
+Cursor(13+X0, 2+Y0);            \move to Value field position
+for I:= 0 to StrInx-1 do ChOut(6, String(I));
+ChOut(6, ^_);                   \show cursor underline at end of String
+for I:= StrInx+1 to StrMax-1 do ChOut(6, ^ );   \blank rest of line
+];
+
+func GetButton;                 \Return soft button number at mouse pointer
+[Mouse:= GetMouse;
+X:= Mouse(0)/8  - X0;           \convert pixels to 8x16-pixel character cells
+Y:= Mouse(1)/16 - Y0;
+if X>=24 & X<=26 & Y=0 then return 0;   \exit [X]
+if X>= 3 & X<=13 & Y=4 then return 1;   \Increment
+if X>=17 & X<=24 & Y=4 then return 2;   \Random
+X:= Mouse(0)/8  - X1;           \convert pixels to character cells for dialog
+Y:= Mouse(1)/16 - Y1;
+if X>=24 & X<=26 & Y=0 then return 3;   \exit [X]
+if X>= 3 & X<=11 & Y=4 then return 4;   \Yes
+if X>=16 & X<=24 & Y=4 then return 5;   \No
+return -1;                      \mouse is not on any soft button
+];
+
+proc DoDialog;                  \Do pop-up dialog for further information
+[Attrib($70);                   \set black-on-gray color attribute
+SetWind(0+X1, 0+Y1, 27+X1, 5+Y1, 0, \fill\true);        \draw gray rectangle
+Cursor(25+X1, 0+Y1);  ChOut(6, ^X);                     \draw exit button
+Cursor( 3+X1, 2+Y1);  Text(6, "Set to a random value?");
+Attrib($80);                    \set black on dark gray for buttons
+Cursor( 3+X1, 4+Y1);  Text(6, "   Yes   ");
+Cursor(16+X1, 4+Y1);  Text(6, "   No    ");
+Attrib($9F);                    \set bright white on light blue, for title bar
+Cursor(0+X1, 0+Y1);  Text(6, " Confirm               ");
+ShowMouse(true);                        \turn on mouse pointer
+loop    [MoveMouse;                     \make pointer track mouse movements
+        Mouse:= GetMouse;
+        if Mouse(2) then                \a left or right mouse button is down
+            [Button:= GetButton;        \get soft button at mouse pointer
+            while Mouse(2) do           \wait for mouse button to be released
+                [MoveMouse;
+                Mouse:= GetMouse;
+                ];
+            if Button = GetButton then  \if down Button = release button
+                [if Button = 3 then InsertKey(Esc); \insert into keyboard buffer
+                 if Button = 4 then InsertKey(^y);
+                 if Button = 5 then InsertKey(^n);
+                ];
+            ];
+        if KeyHit then                  \key is hit or was inserted in KB buffer
+            [Ch:= ChIn(1);              \get character from non-echoed keyboard
+            if Ch=^y or Ch=^Y then      \set Value to random number
+                [I:= Ran(1_000_000_000);
+                ItoA(I, String);
+                StrInx:= StrLen(String);
+                quit;
+                ]
+            else if Ch=^n or Ch=^N or Ch=Esc then quit;
+            ];
+        ]; \loop
+];
+
+proc DoMain;                            \Do main window interaction
+[ShowMouse(true);                       \turn on mouse pointer
+loop    [MoveMouse;                     \make pointer track mouse movements
+        Mouse:= GetMouse;
+        if Mouse(2) then                \a left or right mouse button is down
+            [Button:= GetButton;        \get soft button at mouse pointer
+            while Mouse(2) do           \wait for mouse button to be released
+                [MoveMouse;
+                Mouse:= GetMouse;
+                ];
+            if Button = GetButton then  \if down Button = release button
+                [if Button = 0 then InsertKey(Esc); \insert into keyboard buffer
+                 if Button = 1 then InsertKey(^i);
+                 if Button = 2 then InsertKey(^r);
+                ];
+            ];
+        if KeyHit then                  \key is hit or was inserted in KB buffer
+            [ShowMouse(false);          \don't draw on top of mouse pointer
+            Ch:= ChIn(1);               \get character from non-echoed keyboard
+            if Ch>=$30 & Ch<=$39 then   \only allow numeric digits for Value
+                [if StrInx < StrMax-1 then      \limit number of digits added
+                    [String(StrInx):= Ch;
+                    StrInx:= StrInx+1;
+                    \handle leading zeros - convert number to its canonical form
+                    String(StrInx):= 0; \append string terminator for AtoI
+                    I:= AtoI(String);   \convert numeric String to an integer
+                    ItoA(I, String);    \convert binary integer back to String
+                    StrInx:= StrLen(String);  \String could have gotten shorter
+                    ];
+                ]
+            else if Ch = BS then        \(backspace) delete back a character
+                [if StrInx > 0 then StrInx:= StrInx-1]
+            else if Ch=^i or Ch=^I then \increment Value
+                [String(StrInx):= 0;    \append terminator for AtoI
+                I:= AtoI(String);
+                ItoA(I+1, String);
+                StrInx:= StrLen(String);  \String could have gotten longer
+                if StrInx > StrMax-1 then \roll all 9's to zero
+                    [String(0):= ^0;  StrInx:= 1];
+                ]
+            else if Ch=^r or Ch=^R then \random Value - go do dialog pop-up
+                quit
+            else if Ch = Esc then
+                [SetVid(3);  exit];     \restore normal text mode before exiting
+            ShowString;
+            ShowMouse(true);
+            ];
+        ]; \loop
+];
+
+[SetVid($12);                   \set 640x480 graphics mode display
+TrapC(true);                    \prevent Ctrl+C from aborting the program
+String(0):= ^0;                 \initialize Value String to zero
+StrInx:= 1;
+loop    [Attrib($70);           \set black-on-gray color attribute
+        SetWind(0+X0, 0+Y0, 27+X0, 5+Y0, 0, \fill\true); \draw gray rectangle
+        Cursor(25+X0, 0+Y0);  ChOut(6, ^X);              \draw exit button
+        Cursor( 4+X0, 2+Y0);  Text(6, "Value:");
+        Attrib($80);            \set black on dark gray for buttons
+        Cursor( 3+X0, 4+Y0);  Text(6, " Increment ");
+        Cursor(17+X0, 4+Y0);  Text(6, " Random ");
+        Attrib($9F);            \set bright white on light blue for title bar
+        Cursor(0+X0, 0+Y0);  Text(6, " Component interaction ");
+        ShowString;
+        DoMain;
+        DoDialog;
+        ShowMouse(false);       \don't overwrite mouse pointer (with Clear)
+        Clear;                  \remove pop-up dialog
+        ];                      \loop back to redraw main window
+]

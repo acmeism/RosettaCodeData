@@ -5,7 +5,7 @@ typealias Complex = Numerics.Complex<Double>
 
 extension Complex {
   var exp: Complex {
-    Complex(cos(imaginary), sin(imaginary)) * Complex(cosh(real), sinh(real))
+    Complex(cos(imaginary), sin(imaginary)) * Complex(cosh(real) + sinh(real), 0)
   }
 
   var pretty: String {

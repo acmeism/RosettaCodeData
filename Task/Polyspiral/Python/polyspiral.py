@@ -1,5 +1,7 @@
 import math
 
+import math
+
 import pygame
 from pygame.locals import *
 
@@ -19,10 +21,10 @@ while running:
 			running = False
 			break
 
-	incr = (incr + 0.05) % 360
+	incr = (incr + 0.0005)
 	x1 = pygame.display.Info().current_w / 2
 	y1 = pygame.display.Info().current_h / 2
-	length = 5
+	length = 10
 	angle = incr
 
 	screen.fill((255,255,255))
@@ -34,6 +36,6 @@ while running:
 		# pygame.draw.aaline(screen, (255,0,0), (x1, y1), (x2, y2)) # Anti-Aliased
 		x1, y1 = x2, y2
 		length += 3
-		angle = (angle + incr) % 360
+		angle = angle + incr
 
 	pygame.display.flip()

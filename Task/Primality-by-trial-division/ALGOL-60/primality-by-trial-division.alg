@@ -3,14 +3,9 @@ begin
 boolean procedure isprime(n);
 value n; integer n;
 begin
-    comment - local procedure tests whether n is even;
-    boolean procedure even(n);
-    value n; integer n;
-    even := entier(n / 2) * 2 = n;
-
     if n < 2 then
         isprime := false
-    else if even(n) then
+    else if n = entier(n / 2) * 2 then
         isprime := (n = 2)
     else
         begin
@@ -26,7 +21,7 @@ begin
                      divisible := true;
                  i := i + 2
               end;
-           isprime := if divisible then false else true;
+           isprime := not divisible;
         end;
 end;
 

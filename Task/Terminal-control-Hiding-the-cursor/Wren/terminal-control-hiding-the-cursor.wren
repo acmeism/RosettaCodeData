@@ -1,6 +1,7 @@
+import "./ansi" for Cursor
 import "timer" for Timer
 
-System.print("\e[?25l")
+Cursor.hide()
 Timer.sleep(3000)
-System.print("\e[?25h")
+Cursor.show()
 Timer.sleep(3000)

@@ -6,30 +6,6 @@
 #include <numbers>
 #include <vector>
 
-std::complex<double> add(const std::complex<double>& c1, const std::complex<double>& c2) {
-    return std::complex<double>(c1.real() + c2.real(), c1.imag() + c2.imag());
-}
-
-std::complex<double> subtract(const std::complex<double>& c1, const std::complex<double>& c2) {
-    return std::complex<double>(c1.real() - c2.real(), c1.imag() - c2.imag());
-}
-
-std::complex<double> multiply(const std::complex<double>& c1, const std::complex<double>& c2) {
-	return std::complex(c1.real() * c2.real() - c1.imag() * c2.imag(),
-			            c1.imag() * c2.real() + c1.real() * c2.imag());
-}
-
-std::complex<double> divide(const std::complex<double>& complex, const int32_t& n) {
-	return std::complex<double>(complex.real() / n, complex.imag() / n);
-}
-
-std::complex<double> divide(const std::complex<double>& c1, const std::complex<double>& c2) {
-	const double rr = c1.real() * c2.real() + c1.imag() * c2.imag();
-	const double ii = c1.imag() * c2.real() - c1.real() * c2.imag();
-	const double norm = c2.real() *c2.real() + c2.imag() * c2.imag();
-	return std::complex<double>(rr / norm, ii / norm);
-}
-
 struct Return_Value {
 	int32_t power_of_two;
 	std::vector<std::complex<double>> list;
@@ -62,7 +38,7 @@ void print_3D_vector(const std::vector<std::vector<std::vector<T>>>& lists) {
 	print_2D_vector(lists.back()); std::cout << "]" << std::endl;
 }
 
-Return_Value padAndComplexify(const std::vector<int32_t>& list, const int32_t& power_of_two) {
+Return_Value pad_and_complexify(const std::vector<int32_t>& list, const int32_t& power_of_two) {
 	const int32_t padded_vector_size = ( power_of_two == 0 ) ?
 		1 << static_cast<int32_t>(std::ceil(std::log(list.size()) / std::log(2))) : power_of_two;
 	std::vector<std::complex<double>> padded_vector(padded_vector_size, std::complex<double>(0.0, 0.0));
@@ -134,10 +110,9 @@ void fft(std::vector<std::complex<double>>& deconvolution1D, std::vector<std::co
 		fft(result, deconvolution1D, power_of_two, 2 * step, start + step);
 		for ( int32_t j = 0; j < power_of_two; j += 2 * step ) {
 			const double theta = -std::numbers::pi * j / power_of_two;
-			std::complex<double> t = multiply(
-				std::complex<double>(std::cos(theta), std::sin(theta)), result[j + step + start]);
-			deconvolution1D[( j / 2 ) + start]                    = add(result[j + start], t);
-			deconvolution1D[( ( j + power_of_two ) / 2 ) + start] = subtract(result[j + start], t);
+			std::complex<double> t = std::complex<double>(std::cos(theta), std::sin(theta)) * result[j + step + start];
+			deconvolution1D[( j / 2 ) + start]                    = result[j + start] + t;
+			deconvolution1D[( ( j + power_of_two ) / 2 ) + start] = result[j + start] - t;
 		}
 	}
 }
@@ -155,9 +130,9 @@ std::vector<int32_t> deconvolution(const std::vector<int32_t>& convolved, const 
 								   const int32_t& convolved_row_size, const int32_t& remain_size) {
 
 	int32_t power_of_two = 0;
-	Return_Value convoluted_result = padAndComplexify(convolved, power_of_two);
+	Return_Value convoluted_result = pad_and_complexify(convolved, power_of_two);
 	std::vector<std::complex<double>> convoluted_padded = convoluted_result.list;
-	Return_Value remove_result = padAndComplexify(remove, convoluted_result.power_of_two);
+	Return_Value remove_result = pad_and_complexify(remove, convoluted_result.power_of_two);
 	std::vector<std::complex<double>> remove_padded = remove_result.list;
 	power_of_two = remove_result.power_of_two;
 
@@ -165,7 +140,7 @@ std::vector<int32_t> deconvolution(const std::vector<int32_t>& convolved, const 
 	fft(remove_padded, power_of_two);
 	std::vector<std::complex<double>> quotient(power_of_two, std::complex<double>(0.0, 0.0));
 	for ( int32_t i = 0; i < power_of_two; ++i ) {
-		quotient[i] = divide(convoluted_padded[i], remove_padded[i]);
+		quotient[i] = convoluted_padded[i] / remove_padded[i];
 	}
 
 	fft(quotient, power_of_two);
@@ -178,8 +153,8 @@ std::vector<int32_t> deconvolution(const std::vector<int32_t>& convolved, const 
 	std::vector<int32_t> remain_vector(remain_size, 0);
 	int32_t i = 0;
 	while ( i > remove_size - convolved_size - convolved_row_size ) {
-		remain_vector[-i] = std::lround(
-			divide(quotient[( i + power_of_two ) % power_of_two], 32.0).real());
+		remain_vector[-i] = std::lround((
+			quotient[( i + power_of_two ) % power_of_two] / std::complex(32.0, 0.0)).real());
 		i -= 1;
 	}
 	return remain_vector;

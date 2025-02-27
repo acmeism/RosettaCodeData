@@ -8,7 +8,7 @@ pub fn abs(a: i32) i32 {
 }
 
 pub fn main() error{NotSupported}!void {
-    if (builtin.zig_version.order(.{ .major = 0, .minor = 11, .patch = 0 }) == .lt) {
+    if (builtin.zig_version.order(.{ .major = 0, .minor = 12, .patch = 1 }) == .lt) {
         std.debug.print("Version {any} is less than 0.11.0, not suitable, exiting!\n", .{builtin.zig_version});
         return error.NotSupported;
     } else {

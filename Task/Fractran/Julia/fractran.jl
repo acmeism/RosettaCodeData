@@ -1,41 +1,29 @@
-# FRACTRAN interpreter implemented as an iterable struct
+using Base.Iterators: filter, map, take
+using Dates: now, seconds
 
-using .Iterators: filter, map, take
-
-struct Fractran
-    rs::Vector{Rational{BigInt}}
-    i₀::BigInt
-    limit::Int
+struct FRACTRAN
+    P::Vector{Rational{BigInt}}
+    i::BigInt
 end
 
-Base.iterate(f::Fractran, i = f.i₀) =
-    for r in f.rs
-        if iszero(i % r.den)
-            i = i ÷ r.den * r.num
-            return i, i
+# a new method for the builtin function 'iterate' to make the Fractran program run
+Base.iterate(ft::FRACTRAN, n = ft.i) =
+    for f in ft.P
+        if iszero(n % f.den)
+            n = n ÷ f.den * f.num
+            return n, n
         end
     end
 
-interpret(f::Fractran) =
-    take(
-        map(trailing_zeros,
-            filter(ispow2, f))
-        f.limit)
+"lazy generation of Fractran output sequence"
+out(ft::FRACTRAN) = map(trailing_zeros, filter(ispow2, ft))
 
-Base.show(io::IO, f::Fractran) =
-    join(io, interpret(f), ' ')
+"convenient Fractran scripting"
+macro P_str(s) eval(Meta.parse(replace("[$s]", "/" => "//"))) end
 
-macro code_str(s)
-   [eval(Meta.parse(replace(t, "/" => "//"))) for t ∈ split(s)]
-end
+primes = FRACTRAN(P"17/91, 78/85, 19/51, 23/38, 29/33, 77/29, 95/23, 77/19, 1/17, 11/13, 13/11, 15/14, 15/2, 55/1", 2)
 
-primes = Fractran(code"17/91 78/85 19/51 23/38 29/33 77/29 95/23
-        77/19 1/17 11/13 13/11 15/14 15/2 55/1", 2, 30)
-
-# Output
-println("First 25 iterations of FRACTRAN program 'primes':\n2 ",
-    join(take(primes, 25), ' '))
-
-println("\nWatch the first 30 primes dropping out within seconds:")
-
-primes
+println("2, ", join(take(primes, 20), ", "), "...")
+t = now()
+join(stdout, take(out(primes), 25), ", ")
+println("...\n25 primes in $(seconds(now() - t)) seconds")

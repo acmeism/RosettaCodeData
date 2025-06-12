@@ -1,4 +1,4 @@
-proc logic a b . .
+proc logic a b .
    if a = 1 and b = 1
       r1 = 1
    .

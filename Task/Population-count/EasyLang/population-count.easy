@@ -5,7 +5,7 @@ func popcnt x .
    .
    return r
 .
-proc show3 . .
+proc show3 .
    write "3^n:"
    bb = 1
    for i = 1 to 30
@@ -14,7 +14,7 @@ proc show3 . .
    .
    print ""
 .
-proc show s$ x . .
+proc show s$ x .
    write s$
    while n < 30
       if popcnt i mod 2 = x

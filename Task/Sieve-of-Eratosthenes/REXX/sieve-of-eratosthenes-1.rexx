@@ -1,12 +1,29 @@
-/*REXX program generates and displays primes  via the  sieve of Eratosthenes  algorithm.*/
-parse arg H .;   if H=='' | H==","  then H= 200  /*optain optional argument from the CL.*/
-w= length(H);    @prime= right('prime', 20)      /*W:   is used for aligning the output.*/
-@.=.                                             /*assume all the numbers are  prime.   */
-#= 0                                             /*number of primes found  (so far).    */
-     do j=2  for H-1;   if @.j==''  then iterate /*all prime integers up to H inclusive.*/
-     #= # + 1                                    /*bump the prime number counter.       */
-     say  @prime right(#,w)  " ───► " right(j,w) /*display the  prime  to the terminal. */
-         do m=j*j  to H  by j;    @.m=;   end    /*strike all multiples as being ¬ prime*/
-     end   /*j*/                                 /*       ───                           */
-say                                              /*stick a fork in it,  we're all done. */
-say  right(#, 1+w+length(@prime) )     'primes found up to and including '       H
+/*REXX program generates primes via sieve of Eratosthenes algorithm.
+* 21.07.2012 Walter Pachl derived from above Rexx version
+*                       avoid symbols @ and # (not supported by ooRexx)
+*                       avoid negations (think positive)
+**********************************************************************/
+  highest=200                       /*define highest number to use.  */
+  is_prime.=1                       /*assume all numbers are prime.  */
+  w=length(highest)                 /*width of the biggest number,   */
+                                    /*  it's used for aligned output.*/
+  Do j=3 To highest By 2,           /*strike multiples of odd ints.  */
+               While j*j<=highest   /* up to sqrt(highest)           */
+      If is_prime.j Then Do
+        Do jm=j*3 To highest By j+j /*start with next odd mult. of J */
+          is_prime.jm=0             /*mark odd mult. of J not prime. */
+          End
+        End
+    End
+  np=0                              /*number of primes shown         */
+  Call tell 2
+  Do n=3 To highest By 2            /*list all the primes found.     */
+    If is_prime.n Then Do
+      Call tell n
+      End
+    End
+  Exit
+tell: Parse Arg prime
+      np=np+1
+      Say '           prime number' right(np,w) " --> " right(prime,w)
+      Return

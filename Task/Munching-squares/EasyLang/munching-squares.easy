@@ -1,9 +1,8 @@
 sc = 100 / 64
-for x range0 64
-   for y range0 64
+for x = 0 to 63
+   for y = 0 to 63
       h = bitand bitxor x y 63 / 63
-      color3 h h h
-      move x * sc y * sc
-      rect sc + 0.1 sc + 0.1
+      gcolor3 h h h
+      grect x * sc y * sc sc + 0.1 sc + 0.1
    .
 .

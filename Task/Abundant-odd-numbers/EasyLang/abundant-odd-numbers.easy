@@ -14,7 +14,7 @@ fastfunc sumdivs n .
    return sum
 .
 n = 1
-numfmt 0 6
+numfmt 6 0
 while cnt < 1000
    sum = sumdivs n
    if sum > n

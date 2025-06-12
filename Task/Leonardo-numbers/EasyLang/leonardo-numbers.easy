@@ -1,4 +1,4 @@
-proc leonardo L0 L1 add . .
+proc leonardo L0 L1 add .
    print "L0:" & L0 & " L1:" & L1 & " add:" & add
    write L0 & " "
    write L1 & " "

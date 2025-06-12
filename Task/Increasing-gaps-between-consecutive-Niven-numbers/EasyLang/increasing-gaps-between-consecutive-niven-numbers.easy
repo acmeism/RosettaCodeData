@@ -12,7 +12,7 @@ func divisible n d .
    .
    return if n mod d = 0
 .
-numfmt 0 8
+numfmt 8 0
 previous = 1
 print " Gap index    Gap  Niven index  Niven number"
 print " ---------    ---  -----------  ------------"

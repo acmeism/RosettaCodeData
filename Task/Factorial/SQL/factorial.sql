@@ -1,0 +1,6 @@
+WITH RECURSIVE f(a, b) AS (
+  VALUES(1, 1)
+  UNION ALL
+  SELECT a * b, b + 1 FROM f WHERE b <= 9
+)
+SELECT MAX(a) FROM f

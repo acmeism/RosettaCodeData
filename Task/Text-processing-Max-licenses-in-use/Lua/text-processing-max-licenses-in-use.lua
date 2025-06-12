@@ -1,24 +1,17 @@
 filename = "mlijobs.txt"
-io.input( filename )
 
 max_out, n_out = 0, 0
 occurr_dates = {}
 
-while true do
-    line = io.read( "*line" )
-    if line == nil then break end
-
-    if string.find( line, "OUT" ) ~= nil then
-        n_out = n_out + 1
-        if n_out > max_out then
+for line in io.lines(filename)
+    local dispensed = string.find( line, "OUT" )
+    n_out = n_out + (dispensed==true and 1 or -1)
+    if dispensed and n_out >= max_out then
+       if n_out > max_out then
             max_out = n_out
             occurr_dates = {}
-            occurr_dates[#occurr_dates+1] = string.match( line, "@ ([%d+%p]+)" )
-        elseif n_out == max_out then
-            occurr_dates[#occurr_dates+1] = string.match( line, "@ ([%d+%p]+)" )
-        end
-    else
-        n_out = n_out - 1
+       end
+       occurr_dates[#occurr_dates+1] = string.match( line, "@ ([%d+%p]+)" )
     end
 end
 

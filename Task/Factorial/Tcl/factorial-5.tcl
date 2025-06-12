@@ -1,11 +1,17 @@
-puts [ifact 30]
-puts [rfact 30]
-puts [ifact_caching 30]
-
-set n 400
-set iterations 10000
-puts "calculate $n factorial $iterations times"
-puts "ifact: [time {ifact $n} $iterations]"
-puts "rfact: [time {rfact $n} $iterations]"
-# for the caching proc, reset the cache between each iteration so as not to skew the results
-puts "ifact_caching: [time {ifact_caching $n; unset -nocomplain fact_cache} $iterations]"
+proc ifact_caching n {
+    global fact_cache
+    if { ! [info exists fact_cache]} {
+        set fact_cache {1 1}
+    }
+    if {$n < [llength $fact_cache]} {
+        return [lindex $fact_cache $n]
+    }
+    set i [expr {[llength $fact_cache] - 1}]
+    set sum [lindex $fact_cache $i]
+    while {$i < $n} {
+        incr i
+        set sum [expr {$sum * $i}]
+        lappend fact_cache $sum
+    }
+    return $sum
+}

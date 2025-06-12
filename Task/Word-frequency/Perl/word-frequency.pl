@@ -14,7 +14,7 @@ my @matcher = (
 );
 
 for my $reg (@matcher) {
-    print "\nTop $top using regex: " . $reg\n";
+    print "\nTop $top using regex: " . $reg . "\n";
     my @matches = $text =~ /$reg/g;
     my %words;
     for my $w (@matches) { $words{$w}++ };

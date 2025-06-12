@@ -1,7 +1,7 @@
 func$ fmt a b .
    return "(" & a & " " & b & ")"
 .
-proc test m1x m1y m2x m2y r . .
+proc test m1x m1y m2x m2y r .
    print "Points: " & fmt m1x m1y & " " & fmt m2x m2y & " Radius: " & r
    if r = 0
       print "Radius of zero gives no circles"

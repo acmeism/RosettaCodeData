@@ -1,0 +1,116 @@
+Module CheckADFGVX_Cipher {
+	Class cipher {
+	Private:
+		buffer a as byte*36
+		b="ADFGVX"
+		key="ABCDEFGHIJK"
+		orderkey="ABCDEFGHIJK"
+		map=list
+		map2=list
+		module preparemaps {
+			for i=0 to 5
+				jj=0
+				for j=i*6 to j+5
+					.map(chr$(.a[j]))=mid$(.b, i+1,1)+mid$(.b,jj+1, 1)
+					.map2(mid$(.b, i+1,1)+mid$(.b,jj+1, 1))=chr$(.a[j])
+					jj++
+				next
+			next			
+		}
+	Public:
+		Module SetRandom (&returnvalue) {
+			return .a, 0:=str$("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+			for i=1 to 100
+				c=random(0, 35):d=c
+				while c=d {d=random(0, 35)}
+				 byte o=.a[c]
+				.a[c]<=.a[d]
+				.a[d]<=o
+			next
+			returnvalue=chr$(eval$(.a)) ' convert to UTF16LE
+			.preparemaps	
+		}
+		Module SetSpecific (that$){
+			return .a, 0:=str$(Ucase$(that$))
+			.preparemaps		
+		}
+		Module SetKey (.key as string) {
+			.key<=ucase$(.key)			
+			if len(.key)<7 or len(.key)>12 then Error "Key has not proper length"
+			if filter$(.key, "ABCDEFGHIJKLMNOPQRSTUVWXYZ")<>"" then
+				Error "Key has bad letters"
+			end if
+			dim aa(1 to len(.key))
+			for i=1 to len(.key):aa(i)=mid$(.key,i,1):next
+			.orderkey<=aa()#sort()#str$("")				
+		}
+		Module Display {
+			Print "The 6 x 6 Polybius square:"		
+			Print "  | A D F G V X"
+			Print "---------------"
+			for i=0 to 5
+				Print mid$(.b,i+1,1)+" | ";
+				jj=0
+				for j=i*6 to j+5
+					print chr$(.a[j]);" ";
+					jj++
+				next
+				print
+			next
+			Print "Key:";.key
+		}
+		Function Encrypt(p as string) {
+			crypted=""
+			for i=1 to len(p)	
+				crypted+=.map$(mid$(p,i,1))
+			next
+			m=1
+			encrypted=""
+			For i = 1 To Len(.key)
+				ch = Mid$(.orderkey, i, 1)			
+				For j = Instr(.key, ch) - 1 To Len(crypted) - 1 Step Len(.key)
+					encrypted += Mid$(crypted, j + 1, 1)
+					if m mod 5=0 then encrypted += " "
+					m++
+				Next
+			Next
+			=encrypted
+		}
+		Function Decrypt(p as string) {
+			p=filter$(p, " ")
+			decrypted=""
+			m=1
+			dim b$(len(p))
+			For i = 1 To Len(.key)
+				ch = Mid$(.orderkey, i, 1)
+				For j = Instr(.key, ch) - 1 To Len(p) - 1 Step Len(.key)
+					b$(j)=mid$(p, m, 1)
+					m++
+				Next
+			Next
+			for i=0 to len(b$())-1 step 2
+				decrypted+=.map2(b$(i)+b$(i+1))	
+			next
+			=decrypted	
+		}
+	}
+	ADFGVX=cipher()
+	for ADFGVX {
+		.SetSpecific "A9GKMF1DQRSBVX8Z0WTEJLOPY5U4CN2H76I3"
+		.SetKey "volcanism"
+		.Display
+		encode=.Encrypt("ATTACKAT1200AM")
+		Print "Encoded: ";encode
+		Print "Decoded: ";.Decrypt(encode)
+		Rem { ' using randomblock
+			thisblock=""
+			.SetRandom	 &thisblock
+			Print "Random Block:";thisblock
+			.Display
+			encode=.Encrypt("ATTACKAT1200AM")
+			Print "Encoded: ";encode
+			Print "Decoded: ";.Decrypt(encode)
+		}	
+	}
+}
+CheckADFGVX_Cipher

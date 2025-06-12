@@ -1,169 +1,121 @@
-#include <stdbool.h>
-#include <stdio.h>
+#include <gmp.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <stdbool.h>
+typedef unsigned long ul;
+#define mpq_for(buf, op, n)\
+do {\
+        size_t i;\
+        for (i = 0; i < (n); ++i)\
+        mpq_##op(buf[i]);\
+} while (0)
 
-int binomial(int n, int k) {
-    int num, denom, i;
-
-    if (n < 0 || k < 0 || n < k) return -1;
-    if (n == 0 || k == 0) return 1;
-
-    num = 1;
-    for (i = k + 1; i <= n; ++i) {
-        num = num * i;
+void mpz_choose_ui(mpz_t rop,ul a,ul b){
+    mpz_set_ui(rop,1);
+    for(ul i=0;i<b;i++){
+        mpz_mul_ui(rop,rop,a-i);
     }
-
-    denom = 1;
-    for (i = 2; i <= n - k; ++i) {
-        denom *= i;
-    }
-
-    return num / denom;
-}
-
-int gcd(int a, int b) {
-    int temp;
-    while (b != 0) {
-        temp = a % b;
-        a = b;
-        b = temp;
-    }
-    return a;
-}
-
-typedef struct tFrac {
-    int num, denom;
-} Frac;
-
-Frac makeFrac(int n, int d) {
-    Frac result;
-    int g;
-
-    if (d == 0) {
-        result.num = 0;
-        result.denom = 0;
-        return result;
-    }
-
-    if (n == 0) {
-        d = 1;
-    } else if (d < 0) {
-        n = -n;
-        d = -d;
-    }
-
-    g = abs(gcd(n, d));
-    if (g > 1) {
-        n = n / g;
-        d = d / g;
-    }
-
-    result.num = n;
-    result.denom = d;
-    return result;
-}
-
-Frac negateFrac(Frac f) {
-    return makeFrac(-f.num, f.denom);
-}
-
-Frac subFrac(Frac lhs, Frac rhs) {
-    return makeFrac(lhs.num * rhs.denom - lhs.denom * rhs.num, rhs.denom * lhs.denom);
-}
-
-Frac multFrac(Frac lhs, Frac rhs) {
-    return makeFrac(lhs.num * rhs.num, lhs.denom * rhs.denom);
-}
-
-bool equalFrac(Frac lhs, Frac rhs) {
-    return (lhs.num == rhs.num) && (lhs.denom == rhs.denom);
-}
-
-bool lessFrac(Frac lhs, Frac rhs) {
-    return (lhs.num * rhs.denom) < (rhs.num * lhs.denom);
-}
-
-void printFrac(Frac f) {
-    printf("%d", f.num);
-    if (f.denom != 1) {
-        printf("/%d", f.denom);
+    for(ul i=1;i<=b;i++){
+        mpz_div_ui(rop,rop,i);
     }
 }
-
-Frac bernoulli(int n) {
-    Frac a[16];
-    int j, m;
-
-    if (n < 0) {
-        a[0].num = 0;
-        a[0].denom = 0;
-        return a[0];
-    }
+void bernoulli(mpq_t rop, unsigned int n){
+    unsigned int m, j;
+    mpq_t *a = malloc(sizeof(mpq_t) * (n + 1));
+    mpq_for(a, init, n + 1);
 
     for (m = 0; m <= n; ++m) {
-        a[m] = makeFrac(1, m + 1);
-        for (j = m; j >= 1; --j) {
-            a[j - 1] = multFrac(subFrac(a[j - 1], a[j]), makeFrac(j, 1));
+        mpq_set_ui(a[m], 1, m + 1);
+        for (j = m; j > 0; --j) {
+            mpq_sub(a[j-1], a[j], a[j-1]);
+            mpq_set_ui(rop, j, 1);
+            mpq_mul(a[j-1], a[j-1], rop);
         }
     }
 
-    if (n != 1) {
-        return a[0];
-    }
-
-    return negateFrac(a[0]);
+    mpq_set(rop, a[0]);
+    mpq_for(a, clear, n + 1);
+    free(a);
+}
+void bernoullip(mpq_t rop,unsigned int n){
+    bernoulli(rop,n);
+    if(n!=1){return;}
+    mpq_neg(rop,rop);
+    return;
 }
 
-void faulhaber(int p) {
-    Frac coeff, q;
-    int j, pwr, sign;
+void mpq_print(mpq_t rop){
+    mpz_t n,d;
+    mpz_inits(n,d,NULL);
+    mpq_get_num(n, rop);
+    mpq_get_den(d, rop);
+    gmp_printf("%Zd/%Zd\n", n, d);
+    mpz_clears(n,d,NULL);
+}
+void mpz_print(mpz_t rop){
 
-    printf("%d : ", p);
-    q = makeFrac(1, p + 1);
-    sign = -1;
-    for (j = 0; j <= p; ++j) {
-        sign = -1 * sign;
-        coeff = multFrac(multFrac(multFrac(q, makeFrac(sign, 1)), makeFrac(binomial(p + 1, j), 1)), bernoulli(j));
-        if (equalFrac(coeff, makeFrac(0, 1))) {
-            continue;
-        }
-        if (j == 0) {
-            if (!equalFrac(coeff, makeFrac(1, 1))) {
-                if (equalFrac(coeff, makeFrac(-1, 1))) {
-                    printf("-");
-                } else {
-                    printFrac(coeff);
-                }
-            }
-        } else {
-            if (equalFrac(coeff, makeFrac(1, 1))) {
-                printf(" + ");
-            } else if (equalFrac(coeff, makeFrac(-1, 1))) {
-                printf(" - ");
-            } else if (lessFrac(makeFrac(0, 1), coeff)) {
-                printf(" + ");
-                printFrac(coeff);
-            } else {
-                printf(" - ");
-                printFrac(negateFrac(coeff));
-            }
-        }
-        pwr = p + 1 - j;
-        if (pwr > 1) {
-            printf("n^%d", pwr);
-        } else {
-            printf("n");
-        }
-    }
-    printf("\n");
+    gmp_printf("%Zd\n",rop);
+}
+void mpq_div_ui(mpq_t op1,mpq_t op2,ul op3){
+    mpq_t tmp;
+    mpq_init(tmp);
+    mpq_set_ui(tmp,op3,1);
+    mpq_div(op1,op2,tmp);
+    mpq_clear(tmp);
 }
 
-int main() {
-    int i;
-
-    for (i = 0; i < 10; ++i) {
-        faulhaber(i);
+void mpq_mul_z(mpq_t op1,mpq_t op2,mpz_t op3){
+    mpq_t tmp;
+    mpq_init(tmp);
+    mpq_set_z(tmp,op3);
+    mpq_mul(op1,op2,tmp);
+    mpq_clear(tmp);
+}
+void mpq_to_mpz(mpz_t rop,mpq_t op){
+    mpz_t tmp;
+    mpz_init(tmp);
+    mpq_get_num(rop,op);
+    mpq_get_den(tmp,op);
+    if(mpz_cmp_ui(tmp,1)!=0){
+        mpz_div(rop,rop,tmp);
     }
-
+    mpz_clear(tmp);
+}
+void faulhaber(mpq_t out,ul n,ul p){
+    mpq_t tmp;
+    mpz_t tmp2,tmp3;
+    mpq_init(tmp);
+    mpz_inits(tmp2,tmp3,NULL);
+    mpq_clear(out);
+    mpq_init(out);
+    for(ul r=0;r<p+1;r++){
+        bernoullip(tmp,r);
+        mpz_choose_ui(tmp3,p+1,r);
+        mpq_mul_z(tmp,tmp,tmp3);//mult by choose
+        mpz_ui_pow_ui(tmp2,n,p+1-r);
+        mpq_mul_z(tmp,tmp,tmp2);//that n thing
+        mpq_add(out,out,tmp);
+    }
+    mpq_div_ui(out,out,p+1);
+    mpz_t zout;
+    mpz_init(zout);
+    mpq_to_mpz(zout,out);
+    mpz_print(zout);
+    mpz_clear(zout);
+    mpz_clears(tmp2,tmp3,NULL);
+    mpq_clear(tmp);
+}
+int main(void)
+{
+    mpq_t rop;
+    mpq_init(rop);
+    for(int p=0;p<=5;p++){
+        printf("sum of p%d\n",p);
+        for (int i = 0; i <= 5;i++) {
+            faulhaber(rop,i,p);
+            //mpq_print(rop);
+        }
+    }
+    mpq_clear(rop);
     return 0;
 }

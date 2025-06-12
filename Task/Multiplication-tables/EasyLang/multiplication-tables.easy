@@ -1,14 +1,10 @@
 n = 12
-numfmt 0 4
+numfmt 4 0
 write "     "
-for i = 1 to n
-   write i
-.
+for i = 1 to n : write i
 print ""
 write "     "
-for i = 1 to n
-   write "----"
-.
+for i = 1 to n : write "----"
 print ""
 for i = 1 to n
    write i

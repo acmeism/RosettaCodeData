@@ -1,9 +1,7 @@
 func average n reps .
    for r to reps
       f[] = [ ]
-      for i to n
-         f[] &= random n
-      .
+      for i to n : f[] &= random n
       seen[] = [ ]
       len seen[] n
       x = 1
@@ -30,8 +28,8 @@ for n to 20
    avg = average n 1e6
    ana = analytical n
    err = (avg - ana) / ana * 100
-   numfmt 0 2
+   numfmt 2 0
    write n
-   numfmt 4 9
+   numfmt 9 4
    print avg & ana & err & "%"
 .

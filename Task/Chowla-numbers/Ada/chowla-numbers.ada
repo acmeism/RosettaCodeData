@@ -35,7 +35,7 @@ procedure Chowla_Numbers is
             Count := Count + 1;
          end if;
          if N mod Power = 0 then
-            Put_Line ("There is " & Count'Image & " primes < " & Power'Image);
+            Put_Line ("There are " & Count'Image & " primes < " & Power'Image);
             Power := Power * 10;
          end if;
       end loop;

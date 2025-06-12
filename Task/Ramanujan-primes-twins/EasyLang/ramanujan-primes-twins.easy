@@ -1,5 +1,5 @@
 global cnt[] .
-proc primcnt limit . .
+proc primcnt limit .
    cnt[] = [ 0 1 1 ]
    for i = 4 step 2 to limit
       cnt[] &= 0

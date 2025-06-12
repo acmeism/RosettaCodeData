@@ -1,52 +1,63 @@
-impl<T> Node<T> {
-    fn new(v: T) -> Node<T> {
-        Node {value: v, next: None, prev: Rawlink::none()}
-    }
+#![feature(linked_list_cursors)]
+
+trait CursorExt<T> {
+    fn insert_between(&mut self, l: &T, elt: T, r: &T);
+    fn rinsert_between(&mut self, l: &T, elt: T, r: &T);
 }
 
-impl<T> Rawlink<T> {
-    fn none() -> Self {
-        Rawlink {p: ptr::null_mut()}
+impl<T: PartialEq> CursorExt<T> for std::collections::linked_list::CursorMut<'_, T> {
+    fn insert_between(&mut self, l: &T, elt: T, r: &T) {
+        // Pointing at the sentinel, move to head
+        if self.current().is_none() {
+            self.move_next();
+        }
+
+        let next = |cursor: &mut Self| {
+            let left = cursor.current()? == a;
+            let right = cursor.peek_next()? == b;
+
+            Some(left && right)
+        };
+
+        while let Some(found) = next(self) {
+            if found {
+                self.insert_after(elt);
+
+                return;
+            }
+        }
     }
 
-    fn some(n: &mut T) -> Rawlink<T> {
-        Rawlink{p: n}
-    }
-}
+    fn rinsert_between(&mut self, l: &T, elt: T, r: &T) {
+        // Pointing at the sentinel, move to tail
+        if self.current().is_none() {
+            self.move_prev();
+        }
 
-impl<'a, T> From<&'a mut Link<T>> for Rawlink<Node<T>> {
-    fn from(node: &'a mut Link<T>) -> Self {
-        match node.as_mut() {
-            None => Rawlink::none(),
-            Some(ptr) => Rawlink::some(ptr)
+        let prev = |cursor: &mut Self| {
+            let left = cursor.peek_prev()? == a;
+            let right = cursor.current()? == b;
+
+            Some(left && right)
+        };
+
+        while let Some(found) = prev(self) {
+            if found {
+                self.insert_before(elt);
+
+                return;
+            }
         }
     }
 }
 
+fn element_insertion() {
+    use std::collections::LinkedList;
 
-fn link_no_prev<T>(mut next: Box<Node<T>>) -> Link<T> {
-    next.prev = Rawlink::none();
-    Some(next)
-}
+    let mut list = LinkedList::from(['A', 'B']);
 
-impl<T> LinkedList<T> {
-    #[inline]
-    fn push_front_node(&mut self, mut new_head: Box<Node<T>>) {
-        match self.list_head {
-            None => {
-                self.list_head = link_no_prev(new_head);
-                self.list_tail = Rawlink::from(&mut self.list_head);
-            }
-            Some(ref mut head) => {
-                new_head.prev = Rawlink::none();
-                head.prev = Rawlink::some(&mut *new_head);
-                mem::swap(head, &mut new_head);
-                head.next = Some(new_head);
-            }
-        }
-        self.length += 1;
-    }
-    pub fn push_front(&mut self, elt: T) {
-        self.push_front_node(Box::new(Node::new(elt)));
-    }
+    list.cursor_front_mut().insert_between(&'A', 'C', &'B');
+    // list.cursor_back_mut().rinsert_between(&'A', 'C', &'B');
+
+    assert_eq!(list, ['A', 'C', 'B'].into());
 }

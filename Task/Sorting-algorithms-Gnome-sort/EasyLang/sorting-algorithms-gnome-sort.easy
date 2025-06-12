@@ -1,4 +1,4 @@
-proc sort . d[] .
+proc sort &d[] .
    i = 2
    j = 3
    while i <= len d[]

@@ -1,42 +1,24 @@
+-- 22 Mar 2025
 include Settings
 
-say version; say 'Cyclops numbers'; say
+say 'CYCLOPS NUMBERS'
+say version
+say
 numeric digits 10; cycl. = 0
-call GetCyclops 115e6
-call Cyclops
+call Cyclops 115e6
+say cycl.0 'cyclops numbers generated < 115 million'; say
+call CyclopsNumbers
 call PrimeCyclops
-call BlindPrimeCyclops
-call PalPrimeCyclops
+call BlindCyclops
+call PalindromicCyclops
 say Format(Time('e'),,3) 'seconds'
 exit
 
-GetCyclops:
-procedure expose cycl.
-arg x
-m = 0; n = 1; cycl.cyclop.1 = 0
-do f = 1
-   h = m+1; m = n
-   do j = 1 to 9
-      do i = h to m
-         a = cycl.cyclop.i
-         do k = 1 to 9
-            b = j||a||k
-            if b > x then
-               leave f
-            n = n+1; cycl.cyclop.n = b
-         end
-      end
-   end
-end
-cycl.0 = n
-say n 'cyclops numbers generated <' x; say
-return
-
-Cyclops:
+CyclopsNumbers:
 procedure expose cycl.
 say 'First 50 cyclop numbers:'
 do i = 1 to cycl.0
-   a = cycl.cyclop.i
+   a = cycl.i
    if i <= 50 then do
       call Charout ,Right(a,8)
       if i//10 = 0 then
@@ -54,7 +36,7 @@ procedure expose cycl.
 say 'First 50 prime cyclop numbers:'
 n = 0
 do i = 2 to cycl.0
-   a = cycl.cyclop.i
+   a = cycl.i
    if Prime(a) then do
       n = n+1
       if n <= 50 then do
@@ -70,12 +52,12 @@ do i = 2 to cycl.0
 end
 return
 
-BlindPrimeCyclops:
+BlindCyclops:
 procedure expose cycl.
 say 'First 50 blind prime cyclop numbers:'
 n = 0
 do i = 2 to cycl.0
-   a = cycl.cyclop.i
+   a = cycl.i
    if Prime(a) then do
       l = Length(a); m = l%2; b = Left(a,m)||Right(a,m)
       if Prime(b) then do
@@ -94,12 +76,12 @@ do i = 2 to cycl.0
 end
 return
 
-PalPrimeCyclops:
+PalindromicCyclops:
 procedure expose cycl.
 say 'First 50 palindromic prime cyclop numbers:'
 n = 0
 do i = 2 to cycl.0
-   a = cycl.cyclop.i
+   a = cycl.i
    if a = Reverse(a) then do
       if Prime(a) then do
          n = n+1
@@ -117,5 +99,7 @@ do i = 2 to cycl.0
 end
 return
 
+include Sequences
 include Numbers
 include Functions
+include Abend

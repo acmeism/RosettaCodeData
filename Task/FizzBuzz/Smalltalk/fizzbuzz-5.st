@@ -1,5 +1,10 @@
-fbz := (1 to: 100) asOrderedCollection.
- 3 to: 100 by:  3 do: [:i | fbz at: i put: 'Fizz'].
- 5 to: 100 by:  5 do: [:i | fbz at: i put: 'Buzz'].
-15 to: 100 by: 15 do: [:i | fbz at: i put: 'FizzBuzz'].
-fbz do: [:i | Transcript show: i; cr].
+1 to: 100 do: [:n | |r|
+	r := n rem: 15.
+	Transcript show: (r isZero
+	   ifTrue:['fizzbuzz']
+	   ifFalse: [(#(3 6 9 12) includes: r)
+		ifTrue:['fizz']
+		ifFalse:[((#(5 10) includes: r))
+			ifTrue:['buzz']
+			ifFalse:[n]]]);
+	cr].

@@ -1,54 +1,65 @@
 #include <stdio.h>
-int main (int argc, char *argv[]) {
-//here we check arguments
-	if (argc < 2) {
-        printf("Enter an argument. Example 1234 or dcba:\n");
-        return 0;
-	}
-//it calculates an array's length
-        int x;
-        for (x = 0; argv[1][x] != '\0'; x++);
-//buble sort the array
-	int f, v, m;
-	 for(f=0; f < x; f++) {
-    	 for(v = x-1; v > f; v-- ) {
-     	 if (argv[1][v-1] > argv[1][v]) {
-	m=argv[1][v-1];
-	argv[1][v-1]=argv[1][v];
-	argv[1][v]=m;
+#include <stdlib.h>
+
+#define ARR_SIZE 4
+
+int ifactorial(int n) {
+    if (n == 0) {
+        return 1;
     }
-  }
+
+    int result = 1;
+
+    for (int i = 1; i <= n; i++) {
+        result *= i;
+    }
+
+    return result;
 }
 
-//it calculates a factorial to stop the algorithm
-    char a[x];
-	int k=0;
-	int fact=k+1;
-             while (k!=x) {
-                   a[k]=argv[1][k];
-               	   k++;
-		  fact = k*fact;
-                   }
-                   a[k]='\0';
-//Main part: here we permutate
-           int i, j;
-           int y=0;
-           char c;
-          while (y != fact) {
-          printf("%s\n", a);
-          i=x-2;
-          while(a[i] > a[i+1] ) i--;
-          j=x-1;
-          while(a[j] < a[i] ) j--;
-      c=a[j];
-      a[j]=a[i];
-      a[i]=c;
-i++;
-for (j = x-1; j > i; i++, j--) {
-  c = a[i];
-  a[i] = a[j];
-  a[j] = c;
-      }
-y++;
-   }
+void swap(char *a, char *b) {
+    char tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
+
+void permutations(char *arr, int arr_size) {
+    int factorial = ifactorial(arr_size);
+
+    int k = 0;
+    while (k < factorial) {
+        printf("%s\n", arr);
+
+        int i = arr_size - 2;
+        while (arr[i] > arr[i + 1]) {
+            i--;
+        }
+
+        int j = arr_size - 1;
+        while (arr[j] < arr[i]) {
+            j--;
+        }
+
+        swap(&arr[j], &arr[i]);
+        i++;
+
+        for (j = arr_size - 1; j > i; i++, j--) {
+            swap(&arr[i], &arr[j]);
+        }
+
+        k++;
+    }
+}
+
+int compare(const void *a, const void *b) {
+    return (int)(*(char *)a - *(char *)b); // ascending order
+}
+
+int main(void) {
+    char arr[ARR_SIZE + 1] = "dbac";
+
+    qsort(arr, ARR_SIZE, sizeof(char), compare); // "abcd"
+    permutations(arr, ARR_SIZE);
+
+    return EXIT_SUCCESS;
 }

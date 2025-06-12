@@ -1,16 +1,16 @@
+-- 8 May 2025
 include Settings
 
-say version; say 'Arithmetic numbers'; say
+say 'ARITHMETIC NUMBERS'
+say version
+say
 numeric digits 9
-divi. = 0; a = 0; c = 0
-do i = 1
-/* Is the number arithmetic? */
+a = 0; c = 0
+do i = 1 to 1e6
    if Arithmetic(i) then do
       a = a+1
-/* Is the number composite? */
-      if divi.0 > 2 then
+      if Composite(i) then
          c = c+1
-/* Output control */
       if a <= 100 then do
          if a = 1 then
             say 'First 100 arithmetic numbers are'
@@ -25,14 +25,12 @@ do i = 1
          say 'Of the first' a 'numbers' c 'are composite'
          say
       end
-/* Max 1m, higher takes too long */
-      if a = 1000000 then
-         leave
    end
 end
 say Format(Time('e'),,3) 'seconds'
-exit
+return
 
 include Numbers
 include Functions
+include Special
 include Abend

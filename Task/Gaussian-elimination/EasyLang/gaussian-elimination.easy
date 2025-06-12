@@ -1,4 +1,4 @@
-proc gauss_elim . a[][] b[] x[] .
+proc gauss_elim &a[][] &b[] &x[] .
    n = len a[][]
    for i to n
       maxr = i

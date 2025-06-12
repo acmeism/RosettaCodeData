@@ -1,0 +1,1 @@
+STDERR.puts "Goodbye, World!"

@@ -17,7 +17,7 @@ func$ expand cp$ .
    h$ = strchar (strcode substr r$ 1 1 - 32)
    return h$ & substr r$ 2 999
 .
-proc main . .
+proc main .
    cp$[] = [ "N" "NbE" "N-NE" "NEbN" "NE" "NEbE" "E-NE" "EbN" "E" "EbS" "E-SE" "SEbE" "SE" "SEbS" "S-SE" "SbE" "S" "SbW" "S-SW" "SWbS" "SW" "SWbW" "W-SW" "WbS" "W" "WbN" "W-NW" "NWbW" "NW" "NWbN" "N-NW" "NbW" ]
    print "Index  Degrees  Compass point"
    print "-----  -------  -------------"

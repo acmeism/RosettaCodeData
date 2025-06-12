@@ -1,4 +1,4 @@
-proc multisplit str$ sep$[] . .
+proc multisplit str$ sep$[] .
    repeat
       min = 1 / 0
       for sep$ in sep$[]

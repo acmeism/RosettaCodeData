@@ -1,4 +1,4 @@
-proc egyptdiv a b . .
+proc egyptdiv a b .
    p2 = 1
    dbl = b
    while dbl <= a

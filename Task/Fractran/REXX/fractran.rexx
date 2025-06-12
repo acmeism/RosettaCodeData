@@ -1,6 +1,8 @@
 include Settings
 
-say version; say 'Fractan'; say
+say 'FRACTRAN - 3 Mar 2025'
+say version
+say
 parse arg n','t
 if n = '' then
    n = 2

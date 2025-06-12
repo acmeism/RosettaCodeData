@@ -1,4 +1,4 @@
-proc combsort . d[] .
+proc combsort &d[] .
    gap = len d[]
    while gap > 1 or swaps = 1
       gap = higher 1 (gap div 1.25)

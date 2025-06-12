@@ -1,6 +1,1 @@
-'`f   b   fb'  =: ('Fizz'"_) ` ('Buzz'"_) ` (f , b)
-'`cm3 cm5 cm15'=: (3&|)      ` (5&|)      ` (15&|)  (0&=@)
-FizzBuzz=: ": ` f @. cm3 ` b @. cm5 ` fb @. cm15  NB. also:
-FizzBuzz=: ": ` f @. cm3 ` b @. cm5 ` (f,b) @. (cm3 *. cm5)
-
-FizzBuzz"0 >: i.100
+> }. (<'FizzBuzz') (I.0=15|n)} (<'Buzz') (I.0=5|n)} (<'Fizz') (I.0=3|n)} ":&.> n=: i.101

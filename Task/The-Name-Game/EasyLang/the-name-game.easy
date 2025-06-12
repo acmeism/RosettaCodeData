@@ -1,4 +1,4 @@
-proc verse x$ . .
+proc verse x$ .
    x1$ = substr x$ 1 1
    y$ = substr x$ 2 99
    if strpos "AEIOU" x1$ <> 0

@@ -1,27 +1,29 @@
-main:(
-  FORMAT compl fmt = $g(-7,5)"⊥"g(-7,5)$;
+BEGIN
 
   PROC compl operations = VOID: (
-    LONG COMPL a = 1.0 ⊥ 1.0;
-    LONG COMPL b = 3.14159 ⊥ 1.2;
+    COMPL a = 1.0 I 1.0;
+    COMPL b = 3.14159 I 1.2;
 
-    LONG COMPL c;
+    COMPL c;
 
-    printf(($x"a="f(compl fmt)l$,a));
-    printf(($x"b="f(compl fmt)l$,b));
+    PROC show compl = ( STRING legend, COMPL v )VOID:
+         print( ( legend, fixed( re OF v, -8, 5 ), " I ", fixed( im OF v, -8, 5 ), newline ) );
+
+    show compl("  a=",a);
+    show compl("  b=",b);
 
     # addition #
     c := a + b;
-    printf(($x"a+b="f(compl fmt)l$,c));
+    show compl("a+b=",c);
     # multiplication #
     c := a * b;
-    printf(($x"a*b="f(compl fmt)l$,c));
+    show compl("a*b=",c);
     # inversion #
     c := 1.0 / a;
-    printf(($x"1/c="f(compl fmt)l$,c));
+    show compl("1/c=",c);
     # negation #
     c := -a;
-    printf(($x"-a="f(compl fmt)l$,c))
+    show compl(" -a=",c)
   );
   compl operations
-)
+END

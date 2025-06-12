@@ -1,7 +1,7 @@
 func log n .
    return log10 n / log10 2.71828182845904523
 .
-proc sundaram np . primes[] .
+proc sundaram np &primes[] .
    nmax = floor (np * (log np + log log np) - 0.9385) + 1
    k = (nmax - 2) / 2
    len marked[] k

@@ -93,20 +93,20 @@ class BoyerMoore {
 }
 
 /*
- * Uses the BoyerMoore class to find the indices of ALL non-overlapping matches of the specified substring
- * and return a list of them. Returns an empty list if it's not a substring.
+ * Uses the BoyerMoore class to find the indices of ALL matches (overlapping or not)
+ *  of the specified substring and return a list of them.
+ *  Returns an empty list if it's not a substring.
  */
 var indicesOf = Fn.new { |haystack, needle|
     var indices = []
     var hc = haystack.bytes.count
-    var bc = needle.bytes.count
     var start = 0
     while (true) {
         var haystack2 = haystack[start..-1]
         var index = BoyerMoore.indexOf(haystack2, needle)
         if (index == -1) return indices
         indices.add(start + index)
-        start = start + index + bc
+        start = start + index + 1
         if (start >= hc) return indices
     }
 }
@@ -117,9 +117,12 @@ var texts = [
     "there would have been a time for such a word",
     "needle need noodle needle",
 "InhisbookseriesTheArtofComputerProgrammingpublishedbyAddisonWesleyDKnuthusesanimaginarycomputertheMIXanditsassociatedmachinecodeandassemblylanguagestoillustratetheconceptsandalgorithmsastheyarepresented",
-    "Nearby farms grew a half acre of alfalfa on the dairy's behalf, with bales of all that alfalfa exchanged for milk."
+    "Nearby farms grew a half acre of alfalfa on the dairy's behalf, with bales of all that alfalfa exchanged for milk.",
+    "Due to a malfunction, alfredo halfheartedly wore calfskin severalfold on behalf of alfa.",
+    "alfalfa",
+    "zzzzzz"
 ]
-var pats = ["TCTA", "TAATAAA", "word", "needle", "put", "and", "alfalfa"]
+var pats = ["TCTA", "TAATAAA", "word", "needle", "put", "and", "alfalfa", "alfa", "alfa", "zzz"]
 for (i in 0...texts.count) System.print("text%(i+1) = %(texts[i])")
 System.print()
 for (i in 0...pats.count) {

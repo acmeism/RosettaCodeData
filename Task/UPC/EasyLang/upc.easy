@@ -1,4 +1,4 @@
-proc trim . s$ .
+proc trim &s$ .
    a = 1
    while substr s$ a 1 = " " : a += 1
    b = len s$
@@ -25,7 +25,7 @@ func$ invert s$ .
 digs$[] = [ "   ## #" "  ##  #" "  #  ##" " #### #" " #   ##" " ##   #" " # ####" " ### ##" " ## ###" "   # ##" ]
 func[] decode_upc upc$ .
    subr getdigs
-      for _ to 6
+      for i to 6
          h$ = substr upc$ pos 7
          for dig to 10
             d$ = digs$[dig]

@@ -1,18 +1,14 @@
-proc sort . d[] .
+proc sort &d[] .
    # radix = 10
    radix = 256
-   max = 0
+   max = -1 / 0
    for di = 1 to len d[]
-      if d[di] > max
-         max = d[di]
-      .
+      max = higher d[di] max
    .
    len buck[][] radix
    pos = 1
    while pos <= max
-      for i = 1 to radix
-         len buck[i][] 0
-      .
+      for i = 1 to radix : len buck[i][] 0
       for di = 1 to len d[]
          h = d[di] div pos mod radix + 1
          buck[h][] &= d[di]

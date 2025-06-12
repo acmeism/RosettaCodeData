@@ -1,4 +1,4 @@
-proc idmat lng . mat[][] .
+proc idmat lng &mat[][] .
    len mat[][] lng
    for i to lng
       len mat[i][] lng

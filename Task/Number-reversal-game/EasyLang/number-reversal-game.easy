@@ -1,24 +1,20 @@
 func sorted s[] .
    for c in s[]
-      if c < last
-         return 0
-      .
+      if c < last : return 0
       last = c
    .
    return 1
 .
 func$ tostr s[] .
-   for s in s[]
-      res$ &= s & " "
-   .
+   for s in s[] : res$ &= s & " "
    return res$
 .
-proc shuffle . s[] .
+proc shuffle &s[] .
    for i = len s[] downto 2
       swap s[i] s[random i]
    .
 .
-proc reverse n . s[] .
+proc reverse n &s[] .
    for i = 1 to n div 2
       swap s[i] s[n - i + 1]
    .

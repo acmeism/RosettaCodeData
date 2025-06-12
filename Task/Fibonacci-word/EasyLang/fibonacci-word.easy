@@ -3,9 +3,7 @@ func log2 x .
 .
 func entropy s$ .
    l = len s$
-   if l <= 1
-      return 0
-   .
+   if l <= 1 : return 0
    for v$ in strchars s$
       cnt0 += if v$ = "0"
    .
@@ -27,7 +25,7 @@ func$ fibword .
    swap a$ b$
    return b$
 .
-numfmt 6 8
+numfmt 8 6
 print "      n   length  entropy"
 print "    ——————————————————————"
 for n to 37

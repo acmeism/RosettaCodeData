@@ -9,9 +9,7 @@ func$ split sec .
    r[5] = sec
    for i = 5 downto 1
       if r[i] <> 0
-         if s$ <> ""
-            s$ &= ", "
-         .
+         if s$ <> "" : s$ &= ", "
          s$ &= r[i] & " " & n$[i]
       .
    .

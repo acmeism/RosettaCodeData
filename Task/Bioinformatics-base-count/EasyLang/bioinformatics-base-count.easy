@@ -1,20 +1,14 @@
 len d[] 26
 pos = 1
-numfmt 0 4
+numfmt 4 0
 repeat
    s$ = input
    until s$ = ""
    for c$ in strchars s$
-      if pos mod 40 = 1
-         write pos & ":"
-      .
-      if pos mod 4 = 1
-         write " "
-      .
+      if pos mod 40 = 1 : write pos & ":"
+      if pos mod 4 = 1 : write " "
       write c$
-      if pos mod 40 = 0
-         print ""
-      .
+      if pos mod 40 = 0 : print ""
       pos += 1
       c = strcode c$
       d[c - 64] += 1

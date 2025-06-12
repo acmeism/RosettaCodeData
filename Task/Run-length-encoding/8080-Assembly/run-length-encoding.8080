@@ -1,0 +1,92 @@
+        org     100h
+        jmp     demo
+
+        ; Encode 0-terminated string at HL, store at DE
+encode: mov     a,m
+        ana     a
+        jz      edone
+        mvi     b,1
+escan:  inx     h
+        cmp     m
+        jnz     ewrite
+        inr     b
+        jnz     escan
+        dcr     b
+ewrite: xchg
+        mov     m,b
+        inx     h
+        mov     m,a
+        inx     h
+        xchg
+        jmp     encode
+edone:  stax    d
+        ret
+
+        ; Decode 0-terminated string at HL, store at DE
+decode: mov     a,m
+        ana     a
+        jz      edone
+        mov     b,a
+        inx     h
+        mov     a,m
+dwrite: stax    d
+        inx     d
+        dcr     b
+        jnz     dwrite
+        inx     h
+        jmp     decode
+
+        ; Show two examples
+demo:   lxi     h,exampl
+        call    show
+        lxi     h,examp2
+show:   push    h
+        call    puts    ; Show start string
+        lxi     h,nl
+        call    puts
+        pop     h
+        lxi     d,buf1  ; Encode string
+        call    encode
+        lxi     h,buf1  ; Show encoded result (as hexadecimal)
+        call    puthex
+        lxi     h,nl
+        call    puts
+        lxi     h,buf1  ; Decode string
+        lxi     d,buf2
+        push    d
+        call    decode
+        pop     h
+        call    puts    ; Show decoded string
+        lxi     h,nl
+        jmp     puts
+
+nl:     db      13,10,0
+exampl: db      'WWWWWWWWWWWWBWWWWWWWWWWWWBBBWWWWWWWWWW'
+        db      'WWWWWWWWWWWWWWBWWWWWWWWWWWWWW',0
+
+        ; Test case with more than 255 repeated items
+examp2: db      'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+        db      'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+        db      'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+        db      'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+        db      'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+        db      'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+        db      'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+        db      'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+        db      'XXXXXXX',0
+
+        ; Print 0-terminated string at HL
+puts:   mov a,m! ora a! rz
+        push h! mvi c,2! mov e,a! call 5! pop h! inx h! jmp puts
+
+        ; Print 0-terminated string at HL as hex
+puthex: mov a,m! ora a! rz
+        push h! call hexout! pop h! inx h! jmp puthex
+
+        ; Print A as hexadecimal
+hexout: push psw! rar! rar! rar! rar! call hexlo! pop psw
+hexlo:  ani 0Fh! cpi 10! jc hexp! adi 7
+hexp:   adi '0'! mvi c,2! mov e,a! jmp 5
+
+buf1    equ     $
+buf2    equ     buf1+256

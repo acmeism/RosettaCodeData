@@ -1,8 +1,1 @@
-fizzbuzz:{
-  v:1+!x
-  i:(&0=)'v!/:3 5 15
-  r:@[v;i 0;{"Fizz"}]
-  r:@[r;i 1;{"Buzz"}]
-  @[r;i 2;{"FizzBuzz"}]}
-
-`0:$fizzbuzz 100
+`0:\:{:[0=#a:{,/$(:[0=x!3;"Fizz"];:[0=x!5;"Buzz"])}@x;$x;a]}'1_!101

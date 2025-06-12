@@ -28,18 +28,16 @@ func aitken p0 .
 func steffAitken p0 tol maxiter .
    for i to maxiter
       p = aitken p0
-      if abs (p - p0) < tol
-         return p
-      .
+      if abs (p - p0) < tol : return p
       p0 = p
    .
    return number "nan"
 .
 for i to 11
-   numfmt 1 0
+   numfmt 0 1
    write "t0 = " & t0 & " : "
    t = steffAitken t0 0.00000001 1000
-   numfmt 3 0
+   numfmt 0 3
    if t <> t
       # nan
       print "no answer"

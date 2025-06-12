@@ -1,6 +1,8 @@
 include Settings
 
-say version; say 'Chernick''s Carmichael numbers'; say
+say 'CHERNICKS'' CARMICHAEL NUMBERS - 3 Mar 2025'
+say version
+say
 numeric digits 80
 say Copies('-',80)
 say 'n   m(n) a(n)'

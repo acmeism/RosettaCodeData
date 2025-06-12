@@ -7,13 +7,21 @@ matrix2(0,0) = 9 : matrix2(0,1) = 2 : matrix2(0,2) = 1
 matrix2(1,0) = -7 : matrix2(1,1) = 3 : matrix2(1,2) = -10
 matrix2(2,0) = 4 : matrix2(2,1) = 5 : matrix2(2,2) = -6
 
-Call multiply_matrix(matrix1,matrix2)
+function getMatrixProduct(firstMatrix,secondMatrix)
+	if ubound(firstMatrix,2) <> ubound(secondMatrix,1) then exit function
+	redim resultMatrix(ubound(firstMatrix,1),ubound(secondMatrix,2))
+	for i = 0 to ubound(firstMatrix,1) : for j = 0 to ubound(secondMatrix,2) : for k = 0 to ubound(firstMatrix,2)
+				resultMatrix(i,j) = resultMatrix(i,j) + (firstMatrix(i,k) * secondMatrix(k,j))
+	next : next : next
+	getMatrixProduct = resultMatrix
+End function
 
-Sub multiply_matrix(arr1,arr2)
-	For i = 0 To UBound(arr1)
-		For j = 0 To 2
-			WScript.StdOut.Write (arr1(i,j) * arr2(i,j)) & vbTab
-		Next
-		WScript.StdOut.WriteLine
-	Next
-End Sub
+dim resultMatrix : resultMatrix = getMatrixProduct(matrix1,matrix2)
+dim outputString
+for a = 0 to ubound(resultMatrix,1)
+	for b = 0 to ubound(resultMatrix,2)
+		outputString = outputString & resultMatrix(a,b) & vbTab
+	next
+	outputString = outputString & vbCrlf
+next
+msgbox outputString

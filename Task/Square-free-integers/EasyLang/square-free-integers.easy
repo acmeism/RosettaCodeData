@@ -6,7 +6,7 @@ fastfunc square_free n .
    .
    return 1
 .
-proc run lo hi show . .
+proc run lo hi show .
    print "From " & lo & " to " & hi & ":"
    for i = lo to hi
       if square_free i = 1

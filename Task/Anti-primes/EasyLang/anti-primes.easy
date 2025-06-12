@@ -11,16 +11,14 @@ func divcnt v .
       p += 1
       tot *= cnt
    .
-   if n > 1
-      tot *= 2
-   .
+   if n > 1 : tot *= 2
    return tot
 .
 while count < 20
    n += 1
    divs = divcnt n
    if divs > max
-      print n
+      write n & " "
       max = divs
       count += 1
    .

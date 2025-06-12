@@ -1,5 +1,5 @@
-Array.prototype.timeoutSort = function (f) {
-	this.forEach(function (n) {
-		setTimeout(function () { f(n) }, 5 * n)
-	});
-}
+Object.defineProperty(Array.prototype, "timeoutSort", {
+    value(f) {
+        this.forEach(n => setTimeout(() => f(n), 5 * n))
+    }
+})

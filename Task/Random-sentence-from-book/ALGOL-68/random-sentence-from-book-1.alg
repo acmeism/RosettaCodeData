@@ -58,7 +58,7 @@ OD;
 
 # delimiter for separating suffixes - must not appear in the text    #
 CHAR   suffix delimiter = REPR 1; # ^A #
-STRING punctuation      = """'@,/;:(){}[]*&^%$£";
+STRING punctuation      = """'@,/;:(){}[]*&^%$";   # NB: exclude " " #
 
 IF  FILE input file;
     open( input file, file name, stand in channel ) /= 0
@@ -239,8 +239,9 @@ ELSE
                         finished := TRUE;
                         # if the line ends with ",;:", remove it         #
                         INT    line end := UPB line;
-                        IF CHAR c = line[ line end ]; c = "," OR c = ";" OR c = ":" THEN
-                            line end -:= 1
+                        IF   CHAR end ch = line[ line end ];
+                             end ch = "," OR end ch = ";" OR end ch = ":"
+                        THEN line end -:= 1
                         FI;
                         # remove trailing spaces                         #
                         WHILE line[ line end ] = " " AND line end > LWB line DO line end -:= 1 OD;

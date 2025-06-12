@@ -1,7 +1,5 @@
 func[] base20 n .
-   if n < 20
-      return [ n ]
-   .
+   if n < 20 : return [ n ]
    r[] = base20 (n div 20)
    r[] &= n mod 20
    return r[]
@@ -24,13 +22,11 @@ func$[] mayan d .
    .
    return r$[]
 .
-proc drawma . mayans$[][] .
+proc drawma &mayans$[][] .
    idx = len mayans$[][]
    write "╔"
    for i to idx
-      for j to 4
-         write "═"
-      .
+      for j to 4 : write "═"
       if i < idx
          write "╦"
       else
@@ -39,16 +35,12 @@ proc drawma . mayans$[][] .
    .
    for i to 4
       write "║"
-      for j to idx
-         write mayans$[j][i] & "║"
-      .
+      for j to idx : write mayans$[j][i] & "║"
       print ""
    .
    write "╚"
    for i to idx
-      for j to 4
-         write "═"
-      .
+      for j to 4 : write "═"
       if i < idx
          write "╩"
       else

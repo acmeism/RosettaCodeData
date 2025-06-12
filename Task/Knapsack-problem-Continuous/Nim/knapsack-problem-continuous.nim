@@ -17,7 +17,7 @@ var items = @[Item(name: "beef", weight: 3.8, price: 36.0),
               Item(name: "salami", weight: 3.0, price: 95.0),
               Item(name: "sausage", weight: 5.9, price: 98.0)
              ]
-                        ]
+
 # Compute unit prices and sort items by decreasing unit price.
 for item in items.mitems:
   item.unitPrice = item.price / item.weight

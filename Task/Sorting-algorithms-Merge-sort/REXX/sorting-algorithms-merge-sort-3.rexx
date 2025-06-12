@@ -1,4 +1,8 @@
-Main:
+include Settings
+
+say 'MERGE SORT - 4 Mar 2025'
+say version
+say
 call Generate
 call Show
 call Mergesort 1,n
@@ -65,3 +69,5 @@ do i = b to e
    stem.i = work.i
 end
 return
+
+include Abend

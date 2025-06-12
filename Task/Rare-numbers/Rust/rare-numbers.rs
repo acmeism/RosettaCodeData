@@ -222,27 +222,22 @@ fn advanced(digit: u8) -> Vec<RareResults> {
     // create a cartesian product for all potential diff numbers
     // for the first use the very short one, for all other the complete 19 element
     let diff_list_iter = (0_u8..(d / 2))
-            .map(|i| match i {
-                0 => diffs1.iter(),
-                _ => all_diffs.iter(),
-            })
-            .multi_cartesian_product()
-            // remove invalid first diff/second diff combinations - custom iterator would be probably better
-            .filter(|x| {
-                if x.len() == 1 {
-                    return true;
-                }
-                match (*x[0], *x[1]) {
-                    (a, b) if (a == 0 && b != 0) => false,
-                    (a, b) if (a == 1 && ![-7, -5, -3, -1, 1, 3, 5, 7].contains(&b)) => false,
-                    (a, b) if (a == 4 && ![-8, -6, -4, -2, 0, 2, 4, 6, 8].contains(&b)) => false,
-                    (a, b) if (a == 5 && ![7, -3].contains(&b)) => false,
-                    (a, b) if (a == 6 && ![-9, -7, -5, -3, -1, 1, 3, 5, 7, 9].contains(&b)) => {
-                        false
-                    }
-                    _ => true,
-                }
-            });
+        .map(|i| match i {
+            0 => diffs1.iter(),
+            _ => all_diffs.iter(),
+        })
+        .multi_cartesian_product()
+        // remove invalid first diff/second diff combinations - custom iterator would be probably better
+        .filter(|x| {
+            match x[..] {
+                [&a, &b] if a == 0 && b != 0 => false,
+                [&a, b] if a == 1 && ![-7, -5, -3, -1, 1, 3, 5, 7].contains(b) => false,
+                [&a, b] if a == 4 && ![-8, -6, -4, -2, 0, 2, 4, 6, 8].contains(b) => false,
+                [&a, b] if a == 5 && ![7, -3].contains(b) => false,
+                [&a, b] if a == 6 && ![-9, -7, -5, -3, -1, 1, 3, 5, 7, 9].contains(b) => false,
+                _ => true,
+            }
+        });
 
     #[cfg(debug_assertions)]
     {

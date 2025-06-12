@@ -1,6 +1,12 @@
-proc ifact n {
-    for {set i $n; set sum 1} {$i >= 2} {incr i -1} {
-        set sum [expr {$sum * $i}]
+# tailcall optimization is standard in tcl8.6
+proc fact { n { result 1. } } {
+    if { $n <= 1 } {
+        return $result
+    } else {
+        tailcall fact [expr {$n-1}] [expr {$n*$result}]
     }
-    return $sum
 }
+
+set  f [fact 10]
+
+puts $f

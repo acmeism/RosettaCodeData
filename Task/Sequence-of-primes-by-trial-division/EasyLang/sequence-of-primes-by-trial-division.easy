@@ -1,21 +1,14 @@
-func prime n .
-   if n mod 2 = 0 and n > 2
-      return 0
-   .
-   i = 3
-   while i <= sqrt n
-      if n mod i = 0
-         return 0
-      .
-      i += 2
+fastfunc isprim num .
+   i = 2
+   while i <= sqrt num
+      if num mod i = 0 : return 0
+      i += 1
    .
    return 1
 .
-proc primeSequ first last . sequ[] .
+proc primeSequ first last &sequ[] .
    for i = first to last
-      if prime i = 1
-         sequ[] &= i
-      .
+      if isprim i = 1 : sequ[] &= i
    .
 .
 primeSequ 2 100 seq[]

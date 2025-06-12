@@ -7,7 +7,7 @@ func step .
       return 0
    .
 .
-proc step_up . .
+proc step_up .
    while step = 0
       step_up
    .

@@ -3,34 +3,23 @@ func sameDigits n b .
    repeat
       n = n div b
       until n = 0
-      if n mod b <> f
-         return 0
-      .
+      if n mod b <> f : return 0
    .
    return 1
 .
 func isBrazilian7 n .
    # n >= 7
-   if n mod 2 = 0
-      return 1
-   .
+   if n mod 2 = 0 : return 1
    for b = 2 to n - 2
-      if sameDigits n b = 1
-         return 1
-      .
+      if sameDigits n b = 1 : return 1
    .
    return 0
 .
 func prime n .
-   if n mod 2 = 0 and n > 2
-      return 0
-   .
+   if n mod 2 = 0 and n > 2 : return 0
    i = 3
-   sq = sqrt n
-   while i <= sq
-      if n mod i = 0
-         return 0
-      .
+   while i <= sqrt n
+      if n mod i = 0 : return 0
       i += 2
    .
    return 1

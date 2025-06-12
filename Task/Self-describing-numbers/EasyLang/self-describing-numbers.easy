@@ -1,20 +1,14 @@
-proc test d[] . .
+proc test d[] .
    cnt[] = [ 0 0 0 0 0 0 0 0 0 0 ]
-   for d in d[]
-      cnt[d + 1] += 1
-   .
+   for d in d[] : cnt[d + 1] += 1
    for i to len d[]
-      if cnt[i] <> d[i]
-         return
-      .
+      if cnt[i] <> d[i] : return
    .
    # found
-   for d in d[]
-      write d
-   .
+   for d in d[] : write d
    print ""
 .
-proc backtr ind max . d[] .
+proc backtr ind max &d[] .
    if ind > len d[]
       test d[]
       return

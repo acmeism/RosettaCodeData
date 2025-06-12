@@ -7,7 +7,7 @@ func angdiff a b .
    .
    return r
 .
-proc pd a b . .
+proc pd a b .
    print b & " " & a & " -> " & angdiff a b
 .
 pd 20 45

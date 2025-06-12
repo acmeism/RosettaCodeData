@@ -1,26 +1,28 @@
-/*REXX program computes the products: dot, cross, scalar triple, and vector triple.*/
-a=   3   4   5
-b=   4   3   5                        /*(positive numbers don't need quotes.)*/
-c= '-5 -12 -13'
-Call tellV 'vector A =', a            /*show the  A  vector, aligned numbers.*/
-Call tellV "vector B =", b            /*  "   "   B     "        "      "    */
-Call tellV "vector C =", c            /*  "   "   C     "        "      "    */
-Say ''
-Call tellV '  dot product [A·B] =',             dot(a,b)
-Call tellV 'cross product [AxB] =',             cross(a,b)
-Call tellV 'scalar triple product [A·(BxC)] =', dot(a,cross(b,c))
-Call tellV 'vector triple product [Ax(BxC)] =', cross(a,cross(b,c))
-Exit                                   /*stick a fork in it, we're all done. */
-/*---------------------------------------------------------------------------*/
-cross: Procedure
-  Arg a b c, u v w
-  Return b*w-c*v c*u-a*w a*v-b*u
-dot: Procedure
-  Arg a b c, u v w
-  Return a*u + b*v + c*w
-/*---------------------------------------------------------------------------*/
-tellV: Procedure
-  Parse Arg name,x y z
-  w=max(4,length(x),length(y),length(z))                 /*max width         */
-  Say right(name,33) right(x,w) right(y,w) right(z,w)    /*show vector.      */
-  Return
+-- 8 May 2025
+include Settings
+
+say 'VECTOR PRODUCTS'
+say version
+say
+a = '3 4 5'; b = '4 3 5'; c = '-5 -12 -13'; d = '1 2 3'
+say 'VALUES'
+say 'A =' Vlst2Form(a)
+say 'B =' Vlst2Form(b)
+say 'C =' Vlst2Form(c)
+say 'D =' Vlst2Form(d)
+say
+say 'BASICS'
+say 'A . B =' Vdot(a,b)/1
+say 'A x B =' Vlst2Form(Vcross(a,b))
+say
+say 'BONUS'
+say 'A . (BxC)     =' VscalTrip(a,b,c)/1
+say 'A x (BxC)     =' Vlst2Form(VvectTrip(a,b,c))
+say '(AxB) . (CxD) =' VscalQuad(a,b,c,d)/1
+say '(AxB) x (CxD) =' Vlst2Form(VvectQuad(a,b,c,d))
+exit
+
+include Vector
+include Functions
+include Constants
+include Abend

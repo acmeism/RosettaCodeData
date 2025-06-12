@@ -1,4 +1,4 @@
-proc sort . d[] .
+proc sort &d[] .
    n = len d[]
    # make heap
    for i = 2 to n
@@ -17,12 +17,8 @@ proc sort . d[] .
       j = 1
       ind = 2
       while ind < i
-         if ind + 1 < i and d[ind + 1] > d[ind]
-            ind += 1
-         .
-         if d[j] < d[ind]
-            swap d[j] d[ind]
-         .
+         if ind + 1 < i and d[ind + 1] > d[ind] : ind += 1
+         if d[j] < d[ind] : swap d[j] d[ind]
          j = ind
          ind = 2 * j
       .

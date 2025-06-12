@@ -11,5 +11,5 @@ while pn <= 5
    pn *= 2
 .
 mypi = (an + bn) * (an + bn) / (tn * 4)
-numfmt 15 0
+numfmt 0 15
 print mypi

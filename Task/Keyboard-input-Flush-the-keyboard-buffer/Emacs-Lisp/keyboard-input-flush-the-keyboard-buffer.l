@@ -1,0 +1,1 @@
+(discard-input)

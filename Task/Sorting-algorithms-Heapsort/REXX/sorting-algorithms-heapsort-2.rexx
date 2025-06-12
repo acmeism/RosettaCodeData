@@ -1,72 +1,62 @@
-/* REXX ***************************************************************
-* Translated from PL/I
-* 27.07.2013 Walter Pachl
-**********************************************************************/
- list='---letters of the modern Greek Alphabet---|'||,
-      '==========================================|'||,
-      'alpha|beta|gamma|delta|epsilon|zeta|eta|theta|'||,
-      'iota|kappa|lambda|mu|nu|xi|omicron|pi|'||,
-      'rho|sigma|tau|upsilon|phi|chi|psi|omega'
- Do i=0 By 1 While list<>''
-   Parse Var list a.i '|' list
-   End
- n=i-1
+include Settings
 
- Call showa 'before sort'
- Call heapsort n
- Call showa ' after sort'
- Exit
+say 'HEAPSORT - 4 Mar 2025'
+say version
+say
+call Generate
+call Show
+call Heapsort
+call Show
+exit
 
- heapSort: Procedure Expose a.
- Parse Arg count
- Call heapify count
- end=count-1
- do while end>0
-   Call swap end,0
-   end=end-1
-   Call siftDown 0,end
-   End
- Return
+Generate:
+call Random,,12345
+n = 10
+do i = 1 to n
+   stem.i = Random()
+end
+stem.0 = n
+return
 
- heapify: Procedure Expose a.
- Parse Arg count
- start=(count-2)%2
- Do while start>=0
-   Call siftDown start,count-1
-   start=start-1
-   End
- Return
+Show:
+do i = 1 to n
+   say right(i,2) right(stem.i,3)
+end
+say
+return
 
- siftDown: Procedure Expose a.
- Parse Arg start,end
- root=start
- Do while root*2+1<= end
-   child=root*2+1
-   sw=root
-   if a.sw<a.child Then
-     sw=child
-   child_1=child+1
-   if child+1<=end & a.sw<a.child_1 Then
-     sw=child+1
-   if sw<>root Then Do
-     Call swap root,sw
-     root=sw
-     End
-   else
-     return
-   End
- Return
+HeapSort:
+procedure expose stem.
+n = stem.0
+if n < 2 then
+   return
+n = stem.0; l = (n%2)+1; s = n
+do while 1
+   if l > 1 then do
+      l = l-1; r = stem.l
+   end
+   else do
+      r = stem.s; stem.s = stem.1; s = s-1
+      if s = 1 then do
+         stem.1 = r
+         leave
+      end
+   end
+   i = l; j = l*2
+   do while j <= s
+      if j < s then do
+         k = j+1
+         if stem.j < stem.k then
+            j = j+1
+      end
+      if r < stem.j then do
+         stem.i = stem.j; i = j; j = j+i
+      end
+      else
+         j = s+1
+   end
+   stem.i = r
+end
+return
 
- swap: Procedure Expose a.
- Parse arg x,y
- temp=a.x
- a.x=a.y
- a.y=temp
- Return
-
- showa: Procedure Expose a. n
- Parse Arg txt
- Do j=0 To n-1
-   Say 'element' format(j,2) txt a.j
-   End
- Return
+include Abend

@@ -1,8 +1,6 @@
-proc countsort min max . d[] .
+proc countsort min max &d[] .
    len count[] max - min + 1
-   for n in d[]
-      count[n - min + 1] += 1
-   .
+   for n in d[] : count[n - min + 1] += 1
    z = 1
    for i = min to max
       while count[i - min + 1] > 0

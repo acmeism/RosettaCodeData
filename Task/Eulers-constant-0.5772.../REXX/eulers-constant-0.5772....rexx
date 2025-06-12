@@ -1,8 +1,11 @@
-arg n; if n = '' then n = 100; numeric digits n
-parse version version; say version; glob. = ''; fact. = 0
-say 'Euler-Mascheroni constant to' n 'decimal places'
+-- 10 Jun 2025
+include Settings
+
+say 'EULER-MASCHERONI CONSTANT'
 say 'Method Brent-McMillan'
+say version
 say
+arg n; if n = '' then n = 100; numeric digits n
 call time('r'); a = Brent(); e = format(time('e'),,3)
 say 'Brent     ' a '('e 'seconds)'
 call time('r'); a = TrueValue(); e = format(time('e'),,3)
@@ -12,7 +15,7 @@ exit
 Brent:
 procedure expose fact. glob. work.
 numeric digits Digits()+2
-/* Brent McMillan */
+-- Brent McMillan
 n = Ceil((Digits()*Ln(10)+Ln(Pi()))*0.25); m = Ceil(2.07*Digits())
 n2 = n*n; ak = -Ln(n); bk = 1; s = ak; v = 1
 do k = 1 to m
@@ -29,4 +32,6 @@ return 0.57721566490153286060651209008240243104215933593992359880576723488486772
 
 include Constants
 include Functions
+include Special
 include Numbers
+include Abend

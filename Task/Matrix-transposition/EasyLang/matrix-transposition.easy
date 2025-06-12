@@ -1,4 +1,4 @@
-proc transpose . m[][] .
+proc transpose &m[][] .
    len n[][] len m[1][]
    for i to len n[][]
       for j to len m[][]

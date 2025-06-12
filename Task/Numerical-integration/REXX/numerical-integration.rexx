@@ -1,48 +1,108 @@
-/*REXX pgm performs numerical integration using 5 different algorithms and show results.*/
-numeric digits 20                                /*use twenty decimal digits precision. */
+-- 8 Jun 2025
+include Settings
+arg digs
+if digs = '' then
+   digs=9
+numeric digits digs
 
-     do test=1  for 4;             say           /*perform the 4 different test suites. */
-     if test==1  then do;    L= 0;     H=    1;     i=     100;     end
-     if test==2  then do;    L= 1;     H=  100;     i=    1000;     end
-     if test==3  then do;    L= 0;     H= 5000;     i= 5000000;     end
-     if test==4  then do;    L= 0;     H= 6000;     i= 6000000;     end
-     say center('test' test, 79, "═")            /*display a header for the test suite. */
-     say '           left rectangular('L", "H', 'i")  ──► "         left_rect(L, H, i)
-     say '       midpoint rectangular('L", "H', 'i")  ──► "     midpoint_rect(L, H, i)
-     say '          right rectangular('L", "H', 'i")  ──► "        right_rect(L, H, i)
-     say '                    Simpson('L", "H', 'i")  ──► "           Simpson(L, H, i)
-     say '                  trapezium('L", "H', 'i")  ──► "         trapezium(L, H, i)
-     end   /*test*/
-exit                                             /*stick a fork in it,  we're all done. */
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-f:   parse arg y;  if test>2   then return y     /*choose the   "as─is"   function.     */
-                   if test==1  then return y**3  /*   "    "     cube     function.     */
-                                    return 1/y   /*   "    "  reciprocal     "          */
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-left_rect:     procedure expose test; parse arg a,b,#;     $= 0;                h= (b-a)/#
-                             do x=a      by h  for #;      $= $ + f(x)
-                             end   /*x*/
-               return $*h/1
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-midpoint_rect: procedure expose test; parse arg a,b,#;     $= 0;                h= (b-a)/#
-                             do x=a+h/2  by h  for #;      $= $ + f(x)
-                             end   /*x*/
-               return $*h/1
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-right_rect:    procedure expose test; parse arg a,b,#;     $= 0;                h= (b-a)/#
-                             do x=a+h    by h  for #;      $= $ + f(x)
-                             end   /*x*/
-               return $*h/1
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-Simpson:       procedure expose test; parse arg a,b,#;                          h= (b-a)/#
-               hh= h/2;                                    $= f(a + hh)
-               @= 0;         do x=1  for #-1; hx=h*x + a;  @= @ + f(hx)
-                                                           $= $ + f(hx + hh)
-                             end   /*x*/
+say 'NUMERICAL INTEGRATION: COMPARE 5 METHODS'
+say version
+say
+w=Digits()+2
+say Left('Function',11) Left( 'Range',w+4) Left('Method',9) Left( 'Steps',7),
+    Left('Result',w) Left('True',w) ' Error'
+say
+call Task 'x**3',       0, 1,      100,     1/4
+call Task '1/x',        1, 100,    1000,    Ln(100)/1
+call Task 'x',          0, 5000,   1000000, 12500000
+call Task 'x',          0, 5000,   4,       12500000
+call Task '4/(x**2+1)', 0, 1,      100,     Pi()/1
+call Task '4/(x**2+1)', 0, 1,      1000,    Pi()/1
+call Task 'Sin(x)',     0, Pi()/1, 100,     2
+call Task 'Sin(x)',     0, Pi()/1, 10000,   2
+call Task 'Cos(x)',     0, Pi()/1, 100,     0
+call Task 'Cos(x)',     0, Pi()/1, 10000,   0
+call Task 'Tan(x)',     0, Pi()/1, 100,     0
+call Task 'Tan(x)',     0, Pi()/1, 10000,   0
+call Task 'Exp(x)',    -3, 3,      100,     Exp(3)-Exp(-3)
+call Task 'Exp(x)',    -3, 3,      10000,   Exp(3)-Exp(-3)
+call Task 'Gamma(x)',   1, 8,      100,     2603.238829328642145
+call Task 'Gamma(x)',   1, 8,      10000,   2603.238829328642145
+call Timer
+exit
 
-               return h * (f(a) + f(b) + 4*$ + 2*@)  /  6
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-trapezium:     procedure expose test; parse arg a,b,#;     $= 0;                h= (b-a)/#
-                             do x=a  by h  for #;          $= $ + (f(x) + f(x+h))
-                             end   /*x*/
-               return $*h/2
+Task:
+procedure expose glob.
+arg ff,aa,bb,steps,true
+w=Digits()+2
+res=LeftRect(ff,aa,bb,steps); diff=res-true
+say Left(ff,11) Left(aa '-' bb,w+4) Left('LeftRect',9) Left(steps,7),
+    Left(Std(res),w) Left(true,w) Format(diff,2,4,,0)
+res=MidRect(ff,aa,bb,steps); diff=res-true
+say Left(ff,11) Left(aa '-' bb,w+4) Left('MidRect',9) Left(steps,7),
+    Left(Std(res),w) Left(true,w) Format(diff,2,4,,0)
+res=RightRect(ff,aa,bb,steps); diff=res-true
+say Left(ff,11) Left(aa '-' bb,w+4) Left('RightRect',9) Left(steps,7),
+    Left(Std(res),w) Left(true,w) Format(diff,2,4,,0)
+res=Trapezoid(ff,aa,bb,steps); diff=res-true
+say Left(ff,11) Left(aa '-' bb,w+4) Left('Trapezoid',9) Left(steps,7),
+    Left(Std(res),w) Left(true,w) Format(diff,2,4,,0)
+res=Simpson(ff,aa,bb,steps); diff=res-true
+say Left(ff,11) Left(aa '-' bb,w+4) Left('Simpson',9) Left(steps,7),
+    Left(Std(res),w) Left(true,w) Format(diff,2,4,,0)
+say
+return
+
+LeftRect:
+procedure expose glob.
+arg ff,aa,bb,steps
+h=(bb-aa)/steps; s=0
+do n = 0 to steps-1
+   s=s+Eval(ff,aa+n*h)
+end
+return s*h
+
+MidRect:
+procedure expose glob.
+arg ff,aa,bb,steps
+h=(bb-aa)/steps; s=0; aa=aa-h/2
+do n = 1 to steps
+   s=s+Eval(ff,aa+n*h)
+end
+return s*h
+
+RightRect:
+procedure expose glob.
+arg ff,aa,bb,steps
+h=(bb-aa)/steps; s=0
+do n = 1 to steps
+   s=s+Eval(ff,aa+n*h)
+end
+return s*h
+
+Trapezoid:
+procedure expose glob.
+arg ff,aa,bb,steps
+h=(bb-aa)/steps; s=0.5*(Eval(ff,aa)+Eval(ff,bb))
+do n = 1 to steps-1
+   s=s+Eval(ff,aa+n*h)
+end
+return s*h
+
+Simpson:
+procedure expose glob.
+arg ff,aa,bb,steps
+h=(bb-aa)/steps; s=Eval(ff,aa)+Eval(ff,bb)
+do n = 1 by 2 to steps-1
+   s=s+4*Eval(ff,aa+n*h)
+end
+do n = 2 by 2 to steps-1
+   s=s+2*Eval(ff,aa+n*h)
+end
+return s*h/3
+
+include Functions
+include Special
+include Constants
+include Helper
+include Abend

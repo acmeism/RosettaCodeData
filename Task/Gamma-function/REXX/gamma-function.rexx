@@ -1,6 +1,9 @@
+-- 8 May 2025
 include Settings
 
-say version; say 'Gamma'; say
+say 'GAMMA'
+say version
+say
 arg n; if n = '' then n = 100; numeric digits n
 say '(Half)integers formulas'
 w = '-99.5 -10.5 -5.5 -2.5 -1.5 -0.5 0.5 1 1.5 2 2.5 5 5.5 10 10.5 99 99.5'
@@ -15,13 +18,13 @@ w = '-12.8 -6.4 -3.2 -1.6 -0.8 -0.4 -0.2 -0.1 0.1 0.2 0.4 0.8 1.6 3.2 6.4 12.8'
 do i = 1 to Words(w)
    x = Word(w,i)
    numeric digits Min(60,n)
-   call Time('r'); r = Gamma(x); e = Format(Time('e'),,3)
+   call Time('r'); r = Gamma(x)+0; e = Format(Time('e'),,3)
    say 'Lanczos ' Format(x,4,1) r '('e 'seconds)'
    numeric digits n
-   call Time('r'); r = Gamma(x); e = Format(Time('e'),,3)
+   call Time('r'); r = Gamma(x)+0; e = Format(Time('e'),,3)
    say 'Spouge  ' Format(x,4,1) r '('e 'seconds)'
    if x > 0 then do
-      call Time('r'); r = Stirling(x); e = Format(Time('e'),,3)
+      call Time('r'); r = Stirling(x)+0; e = Format(Time('e'),,3)
       say 'Stirling' Format(x,4,1) r '('e 'seconds)'
    end
 end
@@ -31,25 +34,25 @@ w = '-99.9 99.9'
 do i = 1 to Words(w)
    x = Word(w,i)
    numeric digits Min(60,n)
-   call Time('r'); r = Gamma(x); e = Format(Time('e'),,3)
+   call Time('r'); r = Gamma(x)+0; e = Format(Time('e'),,3)
    say 'Lanczos ' Format(x,4,1) r '('e 'seconds)'
    numeric digits n
-   call Time('r'); r = Gamma(x); e = Format(Time('e'),,3)
+   call Time('r'); r = Gamma(x)+0; e = Format(Time('e'),,3)
    say 'Spouge  ' Format(x,4,1) r '('e 'seconds)'
    if x > 0 then do
-      call Time('r'); r = Stirling(x); e = Format(Time('e'),,3)
+      call Time('r'); r = Stirling(x)+0; e = Format(Time('e'),,3)
       say 'Stirling' Format(x,4,1) r '('e 'seconds)'
    end
 end
 exit
 
 Stirling:
-/* Sterling */
 procedure expose glob. fact.
 arg x
 return Sqrt(2*Pi()/x) * Power(x/e(),x)
 
 include Constants
 include Functions
+include Special
 include Numbers
 include Abend

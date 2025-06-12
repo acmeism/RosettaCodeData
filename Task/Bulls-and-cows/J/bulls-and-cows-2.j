@@ -1,9 +1,9 @@
 U       =. {{u^:(-.@:v)^:_.}}   NB. apply u until v is true
 input   =. 1!:1@1@echo@'Guess: '
 output  =. [ ('Bulls: ',:'Cows: ')echo@,.":@,.
-isdigits=. *./@e.&'0123456789'
+isdigits=. *./@e.&Num_j_
 valid   =. isdigits*.4=#
-guess   =. [:".&>input U(valid@])
+guess   =. 0".&>input U(valid@])
 bulls   =. +/@:=
 cows    =. [:+/e.*.~:
 game    =. ([:output [(bulls,cows) guess)U(4 0-:])

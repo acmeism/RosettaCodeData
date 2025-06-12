@@ -1,0 +1,128 @@
+#include "datetime.bi"
+
+Const filename = "readings.txt"
+Const readings = 24             ' per line
+Const fields = readings*2 + 1   ' per line
+Const dateFormat = "%Y-%m-%d"
+
+Type DateRecord
+    fecha As String
+    hasGoodRecord As Boolean
+End Type
+
+' Array to store unique dates
+Dim Shared As DateRecord dateRecords(Any)
+
+' Function to check if a fecha exists in our array
+Function findDate(dateArray() As DateRecord, dateStr As String, count As Integer) As Integer
+    For i As Integer = 0 To count - 1
+        If dateArray(i).fecha = dateStr Then Return i
+    Next
+    Return -1
+End Function
+
+Sub main()
+    Dim As Integer ff, flag, dateIndex, i, partCount
+    Dim As Integer allGood = 0, uniqueGood = 0, dateCount = 0
+    Dim As String linea, dateStr, currentPart, c
+    Dim As Double value
+    Dim As Boolean good
+
+
+    ff = Freefile
+    If Open(filename For Input As #ff) <> 0 Then
+        Print "Error: Could not open file '" & filename & "'"
+        Exit Sub
+    End If
+
+    ' Process each line
+    While Not Eof(ff)
+        Line Input #ff, linea
+
+        ' Split the line into fields
+        Dim As String parts(0 To fields-1)
+        partCount = 0
+        currentPart = ""
+
+        ' Optimized string parsing
+        For i = 1 To Len(linea)
+            c = Mid(linea, i, 1)
+            If c = " " Or c = Chr(9) Then ' Space or Tab
+                If Len(currentPart) > 0 Then
+                    parts(partCount) = currentPart
+                    partCount += 1
+                    currentPart = ""
+                End If
+            Else
+                currentPart &= c
+            End If
+        Next
+
+        ' Add the last part if it exists
+        If Len(currentPart) > 0 Then
+            parts(partCount) = currentPart
+            partCount += 1
+        End If
+
+        ' Check if we have the expected number of fields
+        If partCount <> fields Then
+            Print "Error: Unexpected format, " & partCount & " fields."
+            Close #ff
+            Exit Sub
+        End If
+
+        ' Get the date
+        dateStr = parts(0)
+
+        ' Check if all readings are good
+        good = True
+        For i = 1 To fields-1 Step 2
+            flag = Val(parts(i+1))
+            If flag > 0 Then
+                value = Val(parts(i))
+                If value = 0 And parts(i) <> "0" And parts(i) <> "0.000" Then
+                    Print "Error: Could not convert '" & parts(i) & "' to integer."
+                    Close #ff
+                    Exit Sub
+                End If
+            Else
+                good = False
+                Exit For
+            End If
+        Next
+
+        If good Then allGood += 1
+
+        dateIndex = findDate(dateRecords(), dateStr, dateCount)
+
+        If dateIndex >= 0 Then
+            Print "Duplicate datestamp: " & dateStr
+            If good And Not dateRecords(dateIndex).hasGoodRecord Then
+                dateRecords(dateIndex).hasGoodRecord = True
+                uniqueGood += 1
+            End If
+        Else
+            ' New date
+            If dateCount > Ubound(dateRecords) Then
+                Redim Preserve dateRecords(Ubound(dateRecords) + 100)
+            End If
+
+            dateRecords(dateCount).fecha = dateStr
+            dateRecords(dateCount).hasGoodRecord = good
+
+            If good Then uniqueGood += 1
+
+            dateCount += 1
+        End If
+    Wend
+
+    Close #ff
+
+    Print !"\nData format valid."
+    Print allGood & " records with good readings for all instruments."
+    Print uniqueGood & " unique dates with good readings for all instruments."
+End Sub
+
+main()
+
+Sleep

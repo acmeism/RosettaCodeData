@@ -4,13 +4,13 @@
 ===Segmented Memory===
 The 8086 uses a segmented memory model, similar to the Super Nintendo Entertainment System. Unlike banked memory models used in the Commodore 64 and late NES games, segment addresses are held in <i>segment registers</i>. These segment registers are 16 bit and get left-shifted by 4 and added to the pointer register of interest to determine the memory address to look up. The 8086 has four in total, but only the <code>DS</code> and <code>ES</code> registers can be used by the programmer. (The other two work with the stack pointer and instruction pointer, and are loaded for you.) On the 8086, you can only load segment registers with the value in a data register, or with the <code>POP</code> command. So first you must load a segment into a data register, THEN into a segment register.
 
-<lang asm>;This is NOT valid code!
+<syntaxhighlight lang="asm">;This is NOT valid code!
 mov ds, @data  ;you're trying to move the data segment location directly into DS. You can't!
 
 
 ;This is the proper way:
 mov ax, @data  ;I chose AX but I could have used BX, CX, or DX.
-mov ds, ax     ;load DS with the data segment.</lang>
+mov ds, ax     ;load DS with the data segment.</syntaxhighlight>
 
 It's important to remember the subtle distinction between a ''segment'' and a ''segment register.'' Your program might have labeled ''segments'' such as <code>.data</code> and <code>.code</code>, but in order to properly read from/write to these sections you'll need to load their memory locations into ''segment registers.''
 
@@ -18,17 +18,17 @@ It's important to remember the subtle distinction between a ''segment'' and a ''
 There are four data registers: <code>AX</code>, <code>BX</code>, <code>CX</code>, and <code>DX</code>. While most commands can use any of them, some only work with particular data registers. System calls in particular are very specific about which registers can be used for what. On [[MS-DOS]], the <code>AX</code> register is used for selecting the desired interrupt to use with the <code>INT</code> command.
 
 Each data register is 16-bit, but has two eight bit halves ending in H or L, e.g. <code>AH, AL</code>. Instructions can be executed using the whole register or just half of it.
-<lang asm>mov ax, 1000h ;move 1000h into AX, or equivalently, move 10h into AH and 00h into AL.</lang>
+<syntaxhighlight lang="asm">mov ax, 1000h ;move 1000h into AX, or equivalently, move 10h into AH and 00h into AL.</syntaxhighlight>
 Moving a value smaller than 16 bits into <code>?X</code> is the same as moving it into <code>?L</code>, and moving 0 into <code>?H</code>. (? represents the data register of your choice. They are all the same in this regard.)
 
-<lang asm>mov ax,0030h
+<syntaxhighlight lang="asm">mov ax,0030h
 ;is the same as:
 mov al, 30h
-mov ah, 0h</lang>
+mov ah, 0h</syntaxhighlight>
 
 Commands that alter the contents of a single register will not affect the other half.
-<lang asm>mov ax,00FFh
-inc al</lang>
+<syntaxhighlight lang="asm">mov ax,00FFh
+inc al</syntaxhighlight>
 If we had executed <code>INC AX</code>, then <code>AX</code> would have been incremented to 0x100. Since we only incremented <code>AL</code>, only <code>AL</code> was incremented in this case, and <code>AH</code> '''still equals 0x00!'''
 
 Generally speaking, the 8086's registers serve the following purposes:
@@ -42,24 +42,24 @@ When writing to or reading from consecutive sections of memory, it is helpful to
 
 The syntax for offsetting an index register will vary depending on your assembler. Many assemblers will often accept multiple different ways of writing it, and it comes down to personal preference.
 
-<lang asm>mov si, offset MyArray
+<syntaxhighlight lang="asm">mov si, offset MyArray
 mov bx,2
 
 mov al,[bx+si] ;loads decimal 30 into AL
 
 MyArray:
-byte 10,20,30,40,50</lang>
+byte 10,20,30,40,50</syntaxhighlight>
 
 ===The Stack===
 As with [[Z80 Assembly]], you can't push 8-bit registers onto the stack. For data registers, you have to push/pop both halves.
-<lang asm>;This is valid code.
+<syntaxhighlight lang="asm">;This is valid code.
 push ax
 push bx
 
 pop bx
 pop ax</lang>
 
-<lang asm>;This is NOT valid code.
+<syntaxhighlight lang="asm">;This is NOT valid code.
 push ah
 push al
 push bh
@@ -69,14 +69,14 @@ push bl
 pop bl
 pop bh
 pop al
-pop ah</lang>
+pop ah</syntaxhighlight>
 
 As with all processors that use a stack, if you push one or more registers and want to restore the backed-up values correctly, you must pop them in the reverse order. You can pop them out of order on purpose to swap registers around. In fact, this is a quick way to move the segment from <code>DS</code> into <code>ES</code>, or vice-versa:
-<lang asm>push DS
-pop ES ;you can't do "mov es, ds" but you can do this!</lang>
+<syntaxhighlight lang="asm">push DS
+pop ES ;you can't do "mov es, ds" but you can do this!</syntaxhighlight>
 
 The proper way to use the stack to preserve registers:
-<lang asm>
+<syntaxhighlight lang="asm">
 call foo
 
 mov ax,4C00h
@@ -91,7 +91,7 @@ push cx
 pop cx
 pop bx
 pop ax
-ret</lang>
+ret</syntaxhighlight>
 
 If one of the push/pop commands in the routine above were missing, the <code>RET</code> instruction would not properly return to where it came from. As long as you pop at the end the same number of registers you pushed at the start, the stack is "balanced" and your return instruction will return correctly. This is because <code>RET</code> is actually <code>POP IP</code> (<code>IP</code> being the instruction pointer, which you can think of as what "line" of code the CPU is on.) The CPU assumes the top of the stack is the correct place to return to, but has no way of actually verifying it. If the function you just wrote causes the CPU to crash or jump to a completely different part of the code, there's a good chance you might have forgotten to balance the stack properly.
 
@@ -107,40 +107,40 @@ One other caveat to mention: On early IBM PCs and compatibles, the 8087 was not 
 ===Looping Constructs===
 The 8086 has a lot more of these than most CPUs. The most obvious one is <code>LOOP</code>, which will subtract 1 from <code>CX</code>, then jump back to a specified label if <code>CX</code> is nonzero after the subtraction. If <code>CX</code> becomes zero after subtracting 1, then no jump will occur and the instruction pointer simply moves to the next instruction.
 
-<lang asm>mov cx,0100h ;set the loop counter's starting value. This must be outside the loop, otherwise you'll loop forever!
+<syntaxhighlight lang="asm">mov cx,0100h ;set the loop counter's starting value. This must be outside the loop, otherwise you'll loop forever!
 
 foo:
 ;; your code that you want to loop goes here
-loop foo </lang>
+loop foo </syntaxhighlight>
 
 It's important not to alter <code>CX</code> inside the loop. It's easy to make a mistake like this if you're in a hurry:
 
-<lang asm>foobar:
+<syntaxhighlight lang="asm">foobar:
 mov cx,1000h
 ;your code goes here
-loop foobar</lang>
+loop foobar</syntaxhighlight>
 
 It may not be obvious at first but the above loop will never end. <code>CX</code> decrements to 0x0FFF with the <code>LOOP</code> instruction but the <code>mov cx,1000h</code> was mistakenly placed ''inside'' the loop, resetting the loop counter back to 0x1000, which means no progress is really being made. The correct way to do this is to set the starting loop counter '''outside''' the loop, like so:
 
-<lang asm>mov cx,1000h
+<syntaxhighlight lang="asm">mov cx,1000h
 foobar:
 ;your code goes here
-loop foobar</lang>
+loop foobar</syntaxhighlight>
 
 Sometimes you'll have to change <code>CX</code> during a loop, like if you want to do bit shifts with a shift amount other than 1, for example. There's a simple fix - use the stack to stash and retrieve the loop counter.
-<lang asm>mov cx,0100h
+<syntaxhighlight lang="asm">mov cx,0100h
 
 foo:
 push cx
    mov cl,2
    ror ax,cl   ;starting with the 80186 you don't need CL for bit shifting.
 pop cx
-loop foo</lang>
+loop foo</syntaxhighlight>
 
 By using <code>PUSH CX</code> and <code>POP CX</code>, you can temporarily use <code>CX</code> for something else, as long as you restore it before the <code>LOOP</code> instruction.
 
 You can use other registers as loop counters as well, but not with the <code>LOOP</code> instruction - it's hardcoded to only work with <code>CX</code>. But you can do this:
-<lang asm>mov dx,0100h
+<syntaxhighlight lang="asm">mov dx,0100h
 baz:
 ;your code goes here
 dec dx
@@ -148,7 +148,7 @@ jnz baz
 ; A minor note for advanced programmers:
 ; If you're expecting the flags to be in a particular state based on the loop body, tough luck!
 ; They'll only reflect the decrement of DX from 1 to 0 at this point in the code.
-; LOOP doesn't change the flags, which makes it more useful for loops meant to compare things.</lang>
+; LOOP doesn't change the flags, which makes it more useful for loops meant to compare things.</syntaxhighlight>
 
 
 Another frequently used looping construct is <code>REP</code>. <code>REP</code> can be combined with certain instructions to repeat that instruction until <code>CX</code> equals zero. However, unlike <code>LOOP</code>, which can be used to repeat a block of instructions, <code>REP</code> can only repeat one. It doesn't work on all instructions, only the "string" instructions which operate on a block of memory. Typically these include <code>MOVSB</code>, <code>LODSB</code>, <code>STOSB</code>, <code>CMPSB</code>, and <code>SCASB</code> (each has a variant that ends in W instead of B, for 16-bit data.) There are also <code>REPZ</code> and <code>REPNZ</code>, which stand for "Repeat if Zero" and "Repeat if Nonzero" respectively. These two only work properly with <code>CMPSB</code> and <code>SCASB</code>, as <code>MOVSB</code>, <code>LODSB</code>, <code>STOSB</code> do not affect the flags. (The CPU doesn't detect whether <code>CX</code> equals zero using the flags, as the flags never reflect this equality to zero like you would expect.)

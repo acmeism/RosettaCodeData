@@ -79,7 +79,13 @@ fn calculate(input: &String, list : &mut [u32;4]) -> f32{
 fn main() {
 
     let mut rng = rand::thread_rng();
-    let mut list :[u32;4]=[rng.gen::<u32>()%10,rng.gen::<u32>()%10,rng.gen::<u32>()%10,rng.gen::<u32>()%10];
+    // each from 1 ──► 9 (inclusive)
+    let mut list :[u32;4]=[
+        rng.gen::<u32>()%9+1,
+        rng.gen::<u32>()%9+1,
+        rng.gen::<u32>()%9+1,
+        rng.gen::<u32>()%9+1
+    ];
 
     println!("form 24 with using + - / * {:?}",list);
     //get user input

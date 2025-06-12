@@ -1,22 +1,22 @@
 BEGIN # show IPv4 addresses in CIDR notation in canonical form #
     # mode to hold an IPv4 address in CIDR notation #
-    MODE CIDR = STRUCT( BITS   address
-                      , INT    network bits
-                      , BOOL   valid
-                      , STRING error
+    MODE CIDR = STRUCT( LONG BITS address
+                      , INT       network bits
+                      , BOOL      valid
+                      , STRING    error
                       );
     # returns a CIDR parsed from address #
     OP TOCIDR = ( STRING address text )CIDR:
          BEGIN
-            STRING addr         = "." + address text + "$";
-            STRING error       := "";
-            BITS   address     := 16r0;
-            INT    bits count  := 0;
-            INT    dot count   := 0;
-            INT    slash count := 0;
-            BOOL   valid       := TRUE;
-            INT    s pos       := LWB addr;
-            INT    s max        = UPB addr;
+            STRING    addr         = "." + address text + "$";
+            STRING    error       := "";
+            LONG BITS address     := 16r0;
+            INT       bits count  := 0;
+            INT       dot count   := 0;
+            INT       slash count := 0;
+            BOOL      valid       := TRUE;
+            INT       s pos       := LWB addr;
+            INT       s max        = UPB addr;
             WHILE s pos < s max AND valid DO
                 IF addr[ s pos ] = "." THEN
                     # must have an octet next #
@@ -70,7 +70,7 @@ BEGIN # show IPv4 addresses in CIDR notation in canonical form #
             address
          ELSE
             # valid address - retain the top most bits #
-            CIDR( address OF address AND (   16rffffffff
+            CIDR( address OF address AND (   LONG 16rffffffff
                                          SHL ( 32 - network bits OF address )
                                          )
                 , network bits OF address
@@ -82,9 +82,9 @@ BEGIN # show IPv4 addresses in CIDR notation in canonical form #
     OP TOSTRING = ( CIDR address )STRING:
          BEGIN
              [ 1 : 4 ]INT octet;
-             BITS addr := address OF address;
+             LONG BITS addr := address OF address;
              FOR o pos FROM UPB octet BY -1 TO LWB octet DO
-                 octet[ o pos ] := ABS ( addr AND 16rff );
+                 octet[ o pos ] := SHORTEN ABS ( addr AND 16rff );
                  addr           := addr SHR 8
              OD;
              STRING result := whole( octet[ LWB octet ], 0 );

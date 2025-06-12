@@ -1,0 +1,64 @@
+BEGIN
+
+% RETURN N MOD M %
+INTEGER FUNCTION MOD(N, M);
+INTEGER N, M;
+BEGIN
+  MOD := N - (N / M) * M;
+END;
+
+% RETURN 1 IF N IS PRIME, OTHERWISE 0 %
+INTEGER FUNCTION ISPRIME(N);
+INTEGER N;
+BEGIN
+  IF N = 2 THEN
+    ISPRIME := 1
+  ELSE IF (N < 2) OR (MOD(N,2) = 0) THEN
+    ISPRIME := 0
+  ELSE % TEST ODD DIVISORS UP TO SQRT OF N %
+    BEGIN
+      INTEGER I, DIVISIBLE;
+      I := 3;
+      DIVISIBLE := 0;
+      WHILE (I * I <= N) AND (DIVISIBLE = 0) DO
+        BEGIN
+          IF MOD(N,I) = 0 THEN DIVISIBLE := 1;
+          I := I + 2;
+        END;
+      ISPRIME := 1 - DIVISIBLE;
+    END;
+END;
+
+% RETURN THE SUM OF THE DIGITS OF N %
+INTEGER FUNCTION SUMDIGITS(N);
+INTEGER N;
+BEGIN
+  INTEGER SUM;
+  SUM := 0;
+  WHILE N > 0 DO
+     BEGIN
+        SUM := SUM + MOD(N, 10);
+        N := N / 10;
+     END;
+  SUMDIGITS := SUM;
+END;
+
+% LOOK FOR ADDITIVE PRIMES IN RANGE 1 TO 500 %
+INTEGER I, S, COUNT;
+COUNT := 0;
+FOR I := 1 STEP 1 UNTIL 500 DO
+  BEGIN
+    IF ISPRIME(I)=1 THEN
+      BEGIN
+        S := SUMDIGITS(I);
+        IF ISPRIME(S)=1 THEN
+          BEGIN
+            WRITEON(I);
+            COUNT := COUNT + 1;
+            IF MOD(COUNT,8) = 0 THEN WRITE("");
+          END;
+      END;
+  END;
+WRITE(COUNT," ADDITIVE PRIMES WERE FOUND");
+
+END

@@ -1,0 +1,247 @@
+#include once "big_int\big_integer.bi"
+
+Const NULL As Any Ptr = 0
+
+Type HashEntry
+    key As Integer
+    value As Integer
+    sgte As HashEntry Ptr
+End Type
+
+Type HashMap
+    buckets(255) As HashEntry Ptr
+
+    Declare Sub put(key As Integer, value As Integer)
+    Declare Function get(key As Integer, defaultValue As Integer = 0) As Integer
+    Declare Function contains(key As Integer) As Boolean
+End Type
+
+Sub HashMap.put(key As Integer, value As Integer)
+    Dim As Integer bucket = key And 255
+    Dim As HashEntry Ptr entry = buckets(bucket)
+
+    ' Check if key already exists
+    While entry <> NULL
+        If entry->key = key Then
+            entry->value = value
+            Exit Sub
+        End If
+        entry = entry->sgte
+    Wend
+
+    ' Create new entry
+    entry = New HashEntry
+    entry->key = key
+    entry->value = value
+    entry->sgte = buckets(bucket)
+    buckets(bucket) = entry
+End Sub
+
+Function HashMap.get(key As Integer, defaultValue As Integer = 0) As Integer
+    Dim As Integer bucket = key And 255
+    Dim As HashEntry Ptr entry = buckets(bucket)
+
+    While entry <> NULL
+        If entry->key = key Then Return entry->value
+        entry = entry->sgte
+    Wend
+
+    Return defaultValue
+End Function
+
+Function HashMap.contains(key As Integer) As Boolean
+    Dim As Integer bucket = key And 255
+    Dim As HashEntry Ptr entry = buckets(bucket)
+
+    While entry <> NULL
+        If entry->key = key Then Return True
+        entry = entry->sgte
+    Wend
+
+    Return False
+End Function
+
+Type IntArray
+    dato As Integer Ptr
+    size As Integer
+    capacity As Integer
+
+    Declare Sub add(value As Integer)
+    Declare Function get(index As Integer) As Integer
+    Declare Function getSize() As Integer
+    Declare Sub clear()
+End Type
+
+Sub IntArray.add(value As Integer)
+    If size >= capacity Then
+        capacity = Iif(capacity = 0, 8, capacity * 2)
+        Dim As Integer Ptr newdato = New Integer[capacity]
+        If dato <> NULL Then
+            For i As Integer = 0 To size - 1
+                newdato[i] = dato[i]
+            Next
+            Delete[] dato
+        End If
+        dato = newdato
+    End If
+
+    dato[size] = value
+    size += 1
+End Sub
+
+Function IntArray.get(index As Integer) As Integer
+    If index >= 0 And index < size Then Return dato[index]
+    Return 0
+End Function
+
+Function IntArray.getSize() As Integer
+    Return size
+End Function
+
+Sub IntArray.clear()
+    size = 0
+End Sub
+
+' Global variables
+Dim Shared As HashMap p
+Dim Shared As IntArray levels(0)  ' Array of levels
+
+' Function to compute the path to n
+Function path(n As Integer) As IntArray
+    Dim As Integer i, j, x, y, sum
+    Dim As IntArray result
+
+    ' Base case
+    If n = 0 Then Return result
+
+    ' Check if we already have a path to n
+    While Not p.contains(n)
+        Dim q As IntArray
+
+        ' Process current level
+        For i = 0 To levels(0).getSize() - 1
+            x = levels(0).get(i)
+
+            ' Get path to x
+            Dim As IntArray xPath = path(x)
+
+            ' Try to extend the path
+            For j = 0 To xPath.getSize() - 1
+                y = xPath.get(j)
+                sum = x + y
+
+                ' Check if we already have a path to sum
+                If p.contains(sum) Then Exit For
+
+                ' Record the path
+                p.put(sum, x)
+                q.add(sum)
+            Next j
+        Next i
+
+        ' Update level
+        levels(0).clear()
+        For i = 0 To q.getSize() - 1
+            levels(0).add(q.get(i))
+        Next i
+
+        ' If we can't make progress, break
+        If q.getSize() = 0 Then Exit While
+    Wend
+
+    ' Reconstruct the path
+    Dim As Integer curr = n
+    Dim As IntArray tempPath
+
+    While curr <> 0
+        tempPath.add(curr)
+        curr = p.get(curr)
+    Wend
+
+    ' Reverse the path
+    For i = tempPath.getSize() - 1 To 0 Step -1
+        result.add(tempPath.get(i))
+    Next i
+
+    Return result
+End Function
+
+' Function to compute x^n using the tree method with BigInteger for integers
+Function treePowBig(x As Integer, n As Integer) As BigInt
+    Dim As BigInt r(0 To n)
+    ' Initialize r[0] = 1 and r[1] = x
+    r(0) = 1
+    r(1) = x
+
+    Dim As Integer i, curr, p = 0
+    Dim As IntArray pathToN = path(n)
+
+    For i = 0 To pathToN.getSize() - 1
+        curr = pathToN.get(i)
+        r(curr) = r(curr - p) * r(p)
+        p = curr
+    Next i
+
+    Return r(n)
+End Function
+
+' Function to compute x^n using the tree method with high precision for decimals
+Function treePowDecimal(x As Double, n As Integer) As Double
+    Dim As Double r(0 To n)
+    ' Initialize r[0] = 1 and r[1] = x
+    r(0) = 1
+    r(1) = x
+
+    Dim As Integer i, curr, p = 0
+    Dim As IntArray pathToN = path(n)
+
+    For i = 0 To pathToN.getSize() - 1
+        curr = pathToN.get(i)
+        r(curr) = r(curr - p) * r(p)
+        p = curr
+    Next i
+
+    Return r(n)
+End Function
+
+' Function to display the power calculation
+Sub showPow(x As Double, n As Integer)
+    Dim As IntArray pathToN = path(n)
+    Dim As String pathStr = ""
+
+    For i As Integer = 0 To pathToN.getSize() - 1
+        If i > 0 Then pathStr &= ", "
+        pathStr &= Str(pathToN.get(i))
+    Next i
+
+    Print n & ": [" & pathStr & "]"
+
+    If Int(x) = x And n > 20 Then
+        ' Use BigInt for large integer powers
+        Dim As BigInt result = treePowBig(Int(x), n)
+        Print x & "^" & n & " = " & result
+    Elseif Int(x) <> x Then
+        ' Use high precision for decimal numbers
+        Dim As Double result = treePowDecimal(x, n)
+        Print Using "##.#^## = ####.######"; x; n; result
+    Else
+        ' Use standard calculation for small integer powers
+        Dim As Double result = treePowDecimal(x, n)
+        Print Using "##^## = &"; Int(x); n; result
+    End If
+    Print
+End Sub
+
+' Initialize
+p.put(1, 0)
+levels(0).add(1)
+
+' Main program
+For i As Integer = 0 To 17
+    showPow(2, i)
+Next i
+
+showPow(1.1, 81)
+showPow(3, 191)
+
+Sleep

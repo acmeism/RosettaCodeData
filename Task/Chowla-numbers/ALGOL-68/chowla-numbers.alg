@@ -1,4 +1,4 @@
-BEGIN # find some Chowla numbers ( Chowla n = sum of divisors of n exclusing n and 1 ) #
+BEGIN # find some Chowla numbers ( Chowla n = sum of divisors of n excluding n and 1 ) #
     # returs the Chowla number of n #
     PROC chowla = ( INT n )INT:
          BEGIN

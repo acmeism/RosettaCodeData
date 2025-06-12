@@ -1,4 +1,4 @@
-numfmt 15 0
+numfmt 0 15
 fact = 1
 n = 2
 e = 2

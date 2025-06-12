@@ -17,13 +17,11 @@ for y = 0 to 1000
             imin = i
          .
       .
-      color nc[imin]
-      move x / 10 - 0.05 y / 10 - 0.05
-      rect 0.11 0.11
+      gcolor nc[imin]
+      grect x / 10 - 0.05 y / 10 - 0.05 0.11 0.11
    .
 .
-color 000
+gcolor 000
 for i to nsites
-   move nx[i] / 10 ny[i] / 10
-   circle 0.5
+   gcircle nx[i] / 10 ny[i] / 10 0.5
 .

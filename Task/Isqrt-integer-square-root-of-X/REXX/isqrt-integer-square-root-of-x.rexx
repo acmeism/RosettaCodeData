@@ -1,46 +1,125 @@
-/*REXX program computes and displays the Isqrt  (integer square root)  of some integers.*/
-numeric digits 200                               /*insure 'nuff decimal digs for results*/
-parse arg range power base .                     /*obtain optional arguments from the CL*/
-if range=='' | range==","  then range= 0..65     /*Not specified?  Then use the default.*/
-if power=='' | power==","  then power= 1..73     /* "      "         "   "   "     "    */
-if base =='' | base ==","  then base =     7     /* "      "         "   "   "     "    */
-parse var  range   rLO  '..'  rHI;     if rHI==''  then rHI= rLO      /*handle a range? */
-parse var  power   pLO  '..'  pHI;     if pHI==''  then pHI= pLO      /*   "   "   "    */
-$=
-            do j=rLO  to rHI  while rHI>0        /*compute Isqrt for a range of integers*/
-            $= $ commas( Isqrt(j) )              /*append the Isqrt to a list for output*/
-            end   /*j*/
-$= strip($)                                      /*elide the leading blank in the list. */
-say center(' Isqrt for numbers: '   rLO   " ──► "  rHI' ',  length($),  "─")
-say strip($)                                     /*$  has a leading blank for 1st number*/
-say
-z= base ** pHI                                   /*compute  max. exponentiation product.*/
-Lp= max(30, length( commas(       z) ) )         /*length of "          "          "    */
-Lr= max(20, length( commas( Isqrt(z) ) ) )       /* "     "    "  "   "  Isqrt of above.*/
-say 'index'   center(base"**index", Lp)       center('Isqrt', Lr)        /*show a title.*/
-say '─────'   copies("─",           Lp)       copies('─',     Lr)        /*  "  " header*/
+-- 8 May 2025
+Main:
+include Settings
 
-            do j=pLO  to pHI  by 2  while pHI>0;                              x= base ** j
-            say center(j, 5)  right( commas(x), Lp)      right( commas( Isqrt(x) ),  Lr)
-            end   /*j*/                          /* [↑]  show a bunch of powers & Isqrt.*/
-exit 0                                           /*stick a fork in it,  we're all done. */
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-commas: parse arg _;  do jc=length(_)-3  to 1  by -3; _=insert(',', _, jc); end;  return _
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-Isqrt: procedure; parse arg x                    /*obtain the only passed argument  X.  */
-       x= x % 1                                  /*convert possible real X to an integer*/     /* ◄■■■■■■■  optional. */
-       q= 1                                      /*initialize the  Q  variable to unity.*/
-                               do until q>x      /*find a  Q  that is greater than  X.  */
-                               q= q * 4          /*multiply   Q   by four.              */
-                               end   /*until*/
-       r= 0                                      /*R:    will be the integer sqrt of X. */
-                 do while q>1                    /*keep processing while  Q  is > than 1*/
-                 q= q % 4                        /*divide  Q  by four  (no remainder).  */
-                 t= x - r - q                    /*compute a temporary variable.        */
-                 r= r % 2                        /*divide  R  by two   (no remainder).  */
-                 if t >= 0  then do              /*if   T  is non─negative  ...         */
-                                 x= t            /*recompute the value of  X            */
-                                 r= r + q        /*    "      "    "    "  R            */
-                                 end
-                 end   /*while*/
-       return r                                  /*return the integer square root of X. */
+say 'ISQRT (INTEGER SQUARE ROOT)'
+say version
+say
+call Task1 65
+call Task2 1,2,73,'Q'
+call Task2 123,1,123,'Q'
+call Task2 123,1,123,'I'
+call Task2 123,1,123,'F'
+call Task2 1234,1,1234,'Q'
+call Task2 1234,1,1234,'I'
+call Task2 1234,1,1234,'F'
+call Task2 12345,1,12345,'Q'
+call Task2 12345,1,12345,'I'
+call Task2 12345,1,12345,'F'
+exit
+
+Task1:
+procedure
+arg xx
+call time('r')
+say 'Integer square root for n = 0...'xx
+do n = 0 to xx
+   call Charout ,QuadraticResidue(n)' '
+end
+say
+call Timer
+return
+
+Task2:
+procedure
+arg xx,yy,zz,mm
+call Time('r')
+select
+   when mm = 'Q' then
+      t = 'Quadratic residue'
+   when mm = 'I' then
+      t = 'Integer division'
+   when mm = 'F' then
+      t = 'Floating square root'
+end
+say Right('n',5) Left('7^n',40) Left('Isqrt(7^n) using' t,60)
+numeric digits zz
+do n = xx by yy to zz
+   p = 7**n+0
+   pl = Length(p)
+   select
+      when mm = 'Q' then
+         r = QuadraticResidue(p)
+      when mm = 'I' then
+         r = WikiPedia(p)
+      when mm = 'F' then
+         r = Std(Floor(Sqrt(p))/1)
+   end
+   rl = Length(r)
+   if pl > 20 then
+      p = Left(p,10)'...'Right(p,10) '['pl 'digits]'
+   else
+      p = p '['pl 'digits]'
+   if rl > 20 then
+      r = Left(r,10)'...'Right(r,10) '['rl 'digits]'
+   else
+      r = r '['rl 'digits]'
+   say Right(n,5) Left(p,40) Left(r,40)
+end
+call Timer
+return
+
+QuadraticResidue:
+procedure
+arg xx
+-- First power of 4 > x
+q = 1
+do until q > xx
+   q = q*4
+end
+-- Iterate back to 1 using integer division
+zz = 0
+do while q > 1
+   q = q%4; t = xx-zz-q; zz = zz%2
+   if t >= 0  then do
+      xx = t; zz = zz+q
+   end
+end
+return zz
+
+WikiPedia:
+procedure
+arg xx
+-- Reduce argument to 1...100
+e = Xpon(xx)%2; a = -2*e; a = xx'E'a
+-- First guess and undo reduce
+select
+   when a < 4 then
+      zz = 2'E'e
+   when a < 9 then
+      zz = 3'E'e
+   when a < 16 then
+      zz = 4'E'e
+   when a < 25 then
+      zz = 5'E'e
+   when a < 36 then
+      zz = 6'E'e
+   when a < 49 then
+      zz = 7'E'e
+   when a < 64 then
+      zz = 8'E'e
+   when a < 81 then
+      zz = 9'E'e
+   otherwise
+      zz = 10'E'e
+end
+-- Loop by integer division
+z = (zz+xx%zz)%2
+do while z < zz
+   zz = z; z = (zz+xx%zz)%2
+end
+return zz
+
+include Functions
+include Helper
+include Abend

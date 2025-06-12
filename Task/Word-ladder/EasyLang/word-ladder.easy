@@ -14,7 +14,7 @@ func hammingdist w1$ w2$ .
    .
    return cnt
 .
-proc ladder a$ b$ . .
+proc ladder a$ b$ .
    # BFS
    h = len a$
    for w$ in words$[]

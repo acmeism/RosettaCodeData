@@ -1,6 +1,9 @@
+-- 8 May 2025
 include Settings
 
-say version; say 'Meissel-Mertens constant'; say
+say 'MEISSEL-MERTENS CONSTANT'
+say version
+say
 arg n
 if n = '' then
    n = 16
@@ -30,11 +33,11 @@ numeric digits Digits()-2
 return y+0
 
 UsingSieve:
-procedure expose glob. prim.
+procedure expose glob. prim. flag.
 numeric digits Digits()+2
 n = Primes(1000000); y = 0
 do i = 1 to n
-   q = 1/prim.prime.i; t = Ln(1-q)+q; y = y+t
+   q = 1/prim.i; t = Ln(1-q)+q; y = y+t
 end
 y = Euler()+y
 numeric digits Digits()-2
@@ -63,4 +66,7 @@ return 0.26149721284764278375542683860869585905156664826119920619206421392492451
 
 include Constants
 include Functions
+include Special
 include Numbers
+include Sequences
+include Abend

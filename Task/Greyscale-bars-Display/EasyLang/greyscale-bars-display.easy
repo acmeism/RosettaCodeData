@@ -6,9 +6,8 @@ for row = 0 to 3
       if row mod 2 = 1
          c = 1 - c
       .
-      color3 c c c
-      move sz * i 75 - row * 25
-      rect sz + 1 25
+      gcolor3 c c c
+      grect sz * i 75 - row * 25 sz + 1 25
       sleep 0.02
    .
    n *= 2

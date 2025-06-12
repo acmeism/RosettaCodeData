@@ -1,33 +1,62 @@
-/*REXX program finds & displays  N  Sundaram primes, or displays the Nth Sundaram prime.*/
-parse arg n cols .                               /*get optional number of primes to find*/
-if    n=='' |    n==","  then    n= 100          /*Not specified?   Then assume default.*/
-if cols=='' | cols==","  then cols=  10          /* "      "          "     "       "   */
-@.= .;                             lim= 16 * n   /*default value for array; filter limit*/
-       do    j=1  for n;   do k=1  for n  until _>lim;  _= j + k + 2*j*k;  @._=
-                           end   /*k*/
-       end      /*j*/
-w= 10                                            /*width of a number in any column.     */
-                                     title= 'a list of '   commas(N)   " Sundaram primes"
-if cols>0  then say ' index │'center(title,  1 + cols*(w+1)     )
-if cols>0  then say '───────┼'center(""   ,  1 + cols*(w+1), '─')
-#= 0;                         idx= 1             /*initialize # of Sundaram primes & IDX*/
-$=                                               /*a list of Sundaram primes  (so far). */
-       do j=1  until #==n                        /*display the output (if cols > 0).    */
-       if @.j\==.  then iterate                  /*Is the number not prime?  Then skip. */
-       #= # + 1                                  /*bump number of Sundaram primes found.*/
-       a= j                                      /*save J for calculating the Nth prime.*/
-       if cols<=0  then iterate                  /*Build the list  (to be shown later)? */
-       c= commas(j + j + 1)                      /*maybe add commas to  Sundaram  prime.*/
-       $= $  right(c, max(w, length(c) ) )       /*add Sundaram prime──►list, allow big#*/
-       if #//cols\==0  then iterate              /*have we populated a line of output?  */
-       say center(idx, 7)'│'  substr($, 2);  $=  /*display what we have so far  (cols). */
-       idx= idx + cols                           /*bump the  index  count for the output*/
-       end   /*j*/
-
-if $\==''  then say center(idx, 7)"│"  substr($, 2)  /*possible display residual output.*/
-if cols>0  then say '───────┴'center(""   ,  1 + cols*(w+1), '─')
+-- 25 Apr 2025
+include Settings
+arg xx
+say 'THE SIEVE OF SUNDARAM'
+say version
 say
-say 'found ' commas(#)  " Sundaram primes, and the last Sundaram prime is "  commas(a+a+1)
-exit 0                                           /*stick a fork in it,  we're all done. */
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-commas: parse arg ?;  do jc=length(?)-3  to 1  by -3; ?=insert(',', ?, jc); end;  return ?
+call Collect 16e6
+call Task100
+call Task1e6
+call Timer
+exit
+
+Collect:
+procedure expose prim. work.
+arg xx
+say 'Collecting primes up to' xx'...'
+work. = 1
+k = (xx-3)%2+1; m = (Isqrt(xx-3))%2+1
+do i = 0 to m
+   p = 2*i+3; s = (p*p-3)%2
+   do j = s by p to k
+      work.j = 0
+   end
+end
+prim. = 0; n = 0
+do i = 0 to k
+   if work.i then do
+      p = i+i+3
+      if p > xx then
+         leave i
+      n = n+1; prim.n = p
+   end
+end
+prim.0 = n
+say n 'found'
+say
+return n
+
+Task100:
+procedure expose prim.
+say 'First 100 Sundaram primes (excluding 2)...'
+do i = 1 to 100
+   call Charout ,Right(prim.i,4)
+   if i//10 = 0 then
+      say
+end
+say
+return
+
+Task1e6:
+procedure expose prim.
+say '1 millionth Sundaram prime (excluding 2)...'
+say prim.1000000
+say
+return
+
+include Sequences
+include Helper
+include Numbers
+include Functions
+include Constants
+include Abend

@@ -12,7 +12,7 @@ fastfunc totient n .
    if n > 1 : tot -= tot div n
    return tot
 .
-numfmt 0 3
+numfmt 3 0
 print "  N Prim Phi"
 for n = 1 to 25
    tot = totient n

@@ -3,7 +3,7 @@ begin
   if N = 1 then
     Result := False
   else Result := True;
-  for var i:=2 to N.Sqrt.Round do
+  for var i:=2 to N.Sqrt.Trunc do
     if N.Divs(i) then
     begin
       Result := False;

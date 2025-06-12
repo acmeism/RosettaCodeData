@@ -1,4 +1,4 @@
-proc mkfibs n . fib[] .
+proc mkfibs n &fib[] .
    fib[] = [ ]
    last = 1
    current = 1
@@ -19,9 +19,7 @@ func$ zeckendorf n .
          zeck$ &= "0"
       .
    .
-   if zeck$ = ""
-      return "0"
-   .
+   if zeck$ = "" : return "0"
    return zeck$
 .
 for n = 0 to 20

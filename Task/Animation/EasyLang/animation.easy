@@ -1,13 +1,11 @@
 s$ = "Hello world! "
-textsize 14
+gtextsize 14
 lg = len s$
 on timer
-   color 333
-   move 10 20
-   rect 80 20
-   color 999
-   move 12 24
-   text substr s$ 1 9
+   gcolor 333
+   grect 10 20 80 20
+   gcolor 999
+   gtext 12 24 substr s$ 1 9
    if forw = 1
       s$ = substr s$ lg 1 & substr s$ 1 (lg - 1)
    else

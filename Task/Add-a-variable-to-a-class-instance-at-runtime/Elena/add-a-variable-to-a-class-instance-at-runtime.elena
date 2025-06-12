@@ -19,7 +19,7 @@ public program()
 
    object.foo := "bar";
 
-   console.printLine(object,".foo=",object.foo);
+   Console.printLine(object,".foo=",object.foo);
 
-   console.readChar()
+   Console.readChar()
 }

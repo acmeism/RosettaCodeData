@@ -1,1 +1,1 @@
-ttt=: [: outcome [: show@move Until (won+.full) 10&{.@_1
+wm`tm`$:@.(1:i.~w,0-.@e.b)@([d)@m 10{._1

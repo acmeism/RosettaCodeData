@@ -1,4 +1,4 @@
-proc best_shuffle s$ . r$ diff .
+proc best_shuffle s$ &r$ &diff .
    l = len s$
    for c$ in strchars s$
       s[] &= strcode c$

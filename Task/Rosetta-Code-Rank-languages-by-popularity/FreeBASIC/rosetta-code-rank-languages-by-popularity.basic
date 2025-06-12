@@ -1,0 +1,88 @@
+#include "windows.bi"
+#include "win/wininet.bi"
+
+Type Category
+    lenguaje As String
+    numEntrada As Integer
+End Type
+
+Function DownloadString(url As String) As String
+    Const BUFFER_SIZE As Integer = 8192
+    Dim As HINTERNET hInternet, hConnect
+    Dim As String resultado
+    Dim As ZString Ptr buffer = Allocate(BUFFER_SIZE)
+    Dim As DWORD bytesRead
+
+    hInternet = InternetOpen("FreeBASIC", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0)
+    If hInternet = 0 Then Return ""
+
+    hConnect = InternetOpenUrl(hInternet, Strptr(url), NULL, 0, INTERNET_FLAG_RELOAD, 0)
+    If hConnect = 0 Then
+        InternetCloseHandle(hConnect)
+        Return ""
+    End If
+
+    Do
+        If InternetReadFile(hConnect, buffer, BUFFER_SIZE - 1, @bytesRead) = 0 Then Exit Do
+        If bytesRead = 0 Then Exit Do
+        resultado &= Left(*buffer, bytesRead)
+    Loop
+
+    InternetCloseHandle(hConnect)
+    InternetCloseHandle(hInternet)
+    Deallocate(buffer)
+
+    Return resultado
+End Function
+
+Sub PrintTopCategories(url As String)
+    Dim As String content = DownloadString(url)
+    Dim As Integer startPos, endPos, numEntrada
+    Dim As String categoria, memberStr
+    Dim As Category categorias(999)
+    Dim As Integer cnt = 0
+    Dim As Integer i, j
+
+    startPos = Instr(content, "<a href=")
+    While startPos > 0
+        startPos = Instr(startPos, content, ">") + 1
+        endPos = Instr(startPos, content, "</a>")
+        categoria = Mid(content, startPos, endPos - startPos)
+
+        startPos = Instr(endPos, content, "(") + 1
+        endPos = Instr(startPos, content, " member")
+        memberStr = Mid(content, startPos, endPos - startPos)
+
+        numEntrada = 0
+        For i = 1 To Len(memberStr)
+            If Mid(memberStr, i, 1) <> "," Then
+                numEntrada = numEntrada * 10 + Val(Mid(memberStr, i, 1))
+            End If
+        Next i
+
+        If Left(categoria, 5) <> "Pages" Then
+            categorias(cnt).lenguaje = categoria
+            categorias(cnt).numEntrada = numEntrada
+            cnt += 1
+        End If
+
+        startPos = Instr(endPos, content, "<a href=")
+    Wend
+
+    ' Sort categorias by numEntrada in descending order
+    For i = 0 To cnt - 2
+        For j = i + 1 To cnt - 1
+            If categorias(i).numEntrada < categorias(j).numEntrada Then
+                Swap categorias(i), categorias(j)
+            End If
+        Next j
+    Next i
+
+    For i = 0 To Min(cnt - 1, 14)
+        Print Using "Rank: ## (#### entries)  &"; i + 1; categorias(i).numEntrada; categorias(i).lenguaje
+    Next i
+End Sub
+
+PrintTopCategories("https://rosettacode.org/wiki/Special:Categories?limit=5000")
+
+Sleep

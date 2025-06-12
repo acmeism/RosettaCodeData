@@ -1,17 +1,22 @@
-/*REXX program calculates the  Nth root  of  X,  with  DIGS  (decimal digits) accuracy. */
+-- 8 May 2025
 include Settings
 
-say version; say 'Nth root'; say
-parse arg x root digs .                          /*obtain optional arguments from the CL*/
-if    x=='' |    x==","   then    x= 2           /*Not specified?  Then use the default.*/
-if root=='' | root==","   then root= 2           /* "       "        "   "   "      "   */
-if digs=='' | digs==","   then digs=65           /* "       "        "   "   "      "   */
-numeric digits digs                              /*set the  decimal digits  to   DIGS.  */
-say '       x = '    x                           /*echo the value of   X.               */
-say '    root = '    root                        /*  "   "    "    "   ROOT.            */
-say '  digits = '    digs                        /*  "   "    "    "   DIGS.            */
-say '  answer = '    Nroot(x, root)              /*show the value of   ANSWER.          */
-exit                                             /*stick a fork in it,  we're all done. */
+say 'NTH ROOT'
+say version
+say
+parse arg x','root','digs
+if x = '' then
+   x = 2
+if root = '' then
+   root = 5
+if digs = '' then
+   digs = 65
+numeric digits digs
+say '     x = ' x
+say '  root = ' root
+say 'digits = ' digs
+say 'answer = ' Nroot(x,root)
+exit
 
 include Numbers
 include Functions

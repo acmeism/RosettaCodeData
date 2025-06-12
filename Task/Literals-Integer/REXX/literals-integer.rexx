@@ -1,31 +1,53 @@
-/*REXX pgm displays an  integer  (expressed in the pgm as a literal)  in different bases*/
-                                      /*────────── expressing decimal numbers ──────────*/
-ddd =  123                            /*a decimal number  (expressed as a literal).     */
-ddd = '123'                           /*this is exactly the same as above.              */
-ddd = "123"                           /*this is exactly the same as above also.         */
-                                      /*────────── expressing hexadecimal numbers ──────*/
-hhh = '7b'x                           /*a value,  expressed as a hexadecimal literal.   */
-hhh = '7B'x                           /* (same as above)  using a capital  "B".         */
-hhh = '7B'X                           /* (same as above)  using a capital  "X".         */
-cow = 'dead beef'x                    /*another value,    with a blank for the eyeballs.*/
-cow = 'de ad be ef'x                  /* (same as above)  with  blanks for the eyeballs.*/
-                                      /*────────── expressing binary numbers ───────────*/
-bbb =  '1111011'b                     /*a value,  expressed as a binary literal.        */
-bbb = '01111011'b                     /* (same as above)  with a full 8 binary digits.  */
-bbb = '0111 1011'b                    /* (same as above)  with a blank for the eyeballs.*/
+-- 19 May 2025
+include Settings
 
-say '    base  10='            ddd
-say '    base   2='  x2b( d2x( ddd ) )
-say '    base  16='       d2x( ddd )
-say '    base 256='       d2c( ddd )  /*the output displayed is ASCII (or maybe EBCDIC).*/
+say 'LITERALS INTEGER'
+say version
+say
+say 'The standard precision (numeric digits) is 9'
+say
+say 'Assigments are as string...'
+a = 6666666666666; say a
+say 'until you do a calculation'
+say a/1
+say
+say 'Decimal...'
+l = 8
+a = 0123; say left(a,l) '=' a/1
+a = 123; say left(a,l) '=' a/1
+a = 123.; say left(a,l) '=' a/1
+a = 123.0; say left(a,l) '=' a/1
+a = "123"; say left(a,l) '=' a/1
+a = '123'; say left(a,l) '=' a/1
+a = ' 123 '; say left(a,l) '=' a/1
+a = +123; say left(a,l) '=' a/1
+a = '+123'; say left(a,l) '=' a/1
+a = ' + 123 '; say left(a,l) '=' a/1
+a = .0123E4; say left(a,l) '=' a/1
+a = 12.3E1; say left(a,l) '=' a/1
+a = '12.3e1'; say left(a,l) '=' a/1
+a = 1230E-1; say left(a,l) '=' a/1
+a = 1230E-01; say left(a,l) '=' a/1
+say
+say 'Hexadecimal...'
+say 'Blanks to separate words and bytes are allowed'
+l = 14
+say left("'5a'x",l) '=' '5a'x
+say left("'5A'x",l) '=' '5A'x
+say left("'5A'X",l) '=' '5A'X
+say left("'50515253'X",l) '=' '50515253'X
+say left("'5051 5253'X",l) '=' '5051 5253'X
+say left("'50 51 52 53'X",l) '=' '50 51 52 53'X
+say
+say 'Binary...'
+say 'Blanks to separate words, bytes and nibbles are allowed'
+l = 42
+say left("'1010000010100010101001001010011'B",l) '=' '1010000010100010101001001010011'B
+say left("'01010000010100010101001001010011'B",l) '=' '01010000010100010101001001010011'B
+say left("'0101000001010001 0101001001010011'B",l) '=' '0101000001010001 0101001001010011'B
+say left("'01010000 01010001 01010010 01010011'B",l) '=' '01010000 01010001 01010010 01010011'B
+say left("'0101 0000 0101 0001 0101 0010 0101 0011'B",l) '=' '0101 0000 0101 0001 0101 0010 0101 0011'B
+exit
 
-thingy1=  +123                        /*╔══════════════════════════════════════════════╗*/
-thingy2= '+123'                       /*║ All of the THINGYs variables aren't strictly ║*/
-thingy3= ' 123'                       /*║ (exactly)  equal to the  DDD  variable,  but ║*/
-thingy4=   123.                       /*║ they do compare numerically equal.   When    ║*/
-thingy5=    12.3e+1                   /*║ compared numerically, numbers are rounded to ║*/
-thingy6=  1230e-1                     /*║ the current setting of  NUMERIC DIGITS.  The ║*/
-thingy7=  1230E-0001                  /*║ default for  (decimal)  NUMERIC DIGITS is  9 ║*/
-thingy8= ' +     123  '               /*╚══════════════════════════════════════════════╝*/
-
-                                                 /*stick a fork in it,  we're all done. */
+include Helper
+include Abend

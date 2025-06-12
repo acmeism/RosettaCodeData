@@ -5,10 +5,7 @@ dates = {}
 duplicated, bad_format = {}, {}
 num_good_records, lines_total = 0, 0
 
-while true do
-    line = io.read( "*line" )
-    if line == nil then break end
-
+for line in io.lines() do
     lines_total = lines_total + 1
 
     date = string.match( line, "%d+%-%d+%-%d+" )

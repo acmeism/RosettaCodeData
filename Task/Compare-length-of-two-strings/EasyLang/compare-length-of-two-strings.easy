@@ -1,4 +1,4 @@
-proc scmp a$ b$ . .
+proc scmp a$ b$ .
    if len a$ < len b$
       swap a$ b$
    .

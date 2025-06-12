@@ -1,4 +1,4 @@
-proc insort item$ . arr$[] .
+proc insort item$ &arr$[] .
    mid = 1
    lo = 0
    hi = len arr$[] + 1

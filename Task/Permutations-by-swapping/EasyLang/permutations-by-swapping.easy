@@ -1,6 +1,6 @@
 # Heap's Algorithm
 sig = 1
-proc generate k . ar[] .
+proc generate k &ar[] .
    if k = 1
       print ar[] & "  " & sig
       sig = -sig

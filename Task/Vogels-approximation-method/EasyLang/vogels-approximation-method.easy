@@ -74,7 +74,7 @@ func[] nextcell .
       .
    .
 .
-proc main . .
+proc main .
    for v in supply[]
       supplyleft += v
       results[][] &= [ ]

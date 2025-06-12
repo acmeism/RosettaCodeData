@@ -1,6 +1,8 @@
 include Settings
 
-say version; say 'Miller-Rabin primality test'; say
+say 'MILLER-RABIN PRIMALITY TEST - 4 Mar 2025'
+say version
+say
 numeric digits 1000
 say '25 numbers of the form 2^n-1, mostly Mersenne primes'
 say 'Up to about 25 digits deterministic, above probabilistic'

@@ -1,0 +1,91 @@
+#Include once "mysql/mysql.bi"
+#Include once "md5.bas"
+'[https://rosettacode.org/wiki/MD5/Implementation#FreeBASIC]
+#Include once "crt.bi"
+
+' Declare MySQL object
+Dim Shared As MYSQL Ptr miSQL
+Dim Shared As MYSQL_RES Ptr result
+Dim Shared As String pass_salt, pass_md5
+
+Function generate_salt() As String
+    Dim As String salt = ""
+    For i As Integer = 1 To 16
+        salt &= Chr(Int(Rnd * 256)) ' Generate a random byte
+    Next i
+    Return salt
+End Function
+
+Function generar_hash(Byval salt As String, Byval password As String) As String
+    Return MD5(salt & password)
+End Function
+
+Sub connect_db()
+    miSQL = mysql_init(NULL)
+    ' Modify these parameters with your real connection data
+    If mysql_real_connect(miSQL, "localhost", "username", "password", "database", 0, NULL, 0) = NULL Then
+        Print "Connection error: "; mysql_error(miSQL)
+        Sleep: End 1
+    Else
+        Print "Conexión exitosa a MySQL!"
+    End If
+End Sub
+
+Sub create_user(Byval username As String, Byval password As String)
+    Dim As String query = "INSERT INTO users (username, pass_salt, pass_md5) VALUES ('" & safe_username & "', '" & pass_salt & "', '" & pass_md5 & "')"
+
+    If mysql_query(miSQL, query) <> 0 Then
+        Print "Query error: "; mysql_error(miSQL)
+    Else
+        Print "Usuario creado exitosamente!"
+    End If
+End Sub
+
+Function authenticate_user(Byval username As String, Byval password As String) As Boolean
+    Dim As String query = "SELECT * FROM users WHERE username = '" & username & "'"
+
+    If mysql_query(miSQL, query) <> 0 Then
+        Print "Query error: "; mysql_error(miSQL)
+        Return False
+    End If
+
+    result = mysql_store_result(miSQL)
+
+    If result <> NULL Then
+        If mysql_num_rows(result) > 0 Then
+            Dim As MYSQL_ROW row = mysql_fetch_row(result)
+            Dim As String stored_salt = *row[1]  ' Assuming pass_salt is in column 1
+            Dim As String stored_hash = *row[2]  ' Assuming pass_md5 is in column 2
+
+            Dim As String calculated_hash = generar_hash(stored_salt, password)
+
+            mysql_free_result(result)
+
+            If calculated_hash = stored_hash Then
+                Return True ' Authenticated user
+            End If
+        End If
+
+        mysql_free_result(result)
+    End If
+
+    Return False ' Authentication failed
+End Function
+
+' Main program
+Randomize Timer
+
+pass_salt = generate_salt()
+pass_md5 = generar_hash(pass_salt, "testpassword")
+
+Print "Salt: "; pass_salt
+Print "Hash: "; pass_md5
+
+connect_db()
+create_user("testuser", "testpassword")
+Print "Authentication result: "; authenticate_user("testuser", "testpassword")
+
+' Free up resources
+mysql_close(miSQL)
+
+Sleep

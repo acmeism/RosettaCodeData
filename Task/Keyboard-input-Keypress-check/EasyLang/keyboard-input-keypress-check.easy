@@ -1,6 +1,5 @@
 on key
-   clear
-   move 10 80
+   gclear
    k$ = keybkey
-   text k$
+   gtext 10 80 k$
 .

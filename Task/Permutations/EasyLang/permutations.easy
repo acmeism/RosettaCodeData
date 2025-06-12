@@ -1,4 +1,4 @@
-proc permlist k . list[] .
+proc permlist k &list[] .
    if k = len list[]
       print list[]
       return

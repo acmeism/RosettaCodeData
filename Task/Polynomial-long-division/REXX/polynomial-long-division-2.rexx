@@ -1,5 +1,8 @@
 include Settings
-say version; say 'Polynomial long division'; say
+
+say 'POLYNOMIAL LONG DIVISION - 2 Mar 2025'
+say version
+say
 call Divide '1 -12 0 -42','1 -3'
 call Divide '5 4 1','2 3'
 call Divide '5 0 0 4 0 0 0 0 0 0 1','2 0 2 0 3'

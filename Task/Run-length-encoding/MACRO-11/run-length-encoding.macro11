@@ -1,0 +1,106 @@
+        .TITLE  RLE
+        .MCALL  .TTYOUT,.EXIT
+RLE::   JMP     DEMO
+
+        ; ENCODE 0-TERMINATED STRING AT (R0), STORE AT (R1)
+ENCODE: MOVB    (R0),R2
+        BEQ     3$
+        MOVB    #1,R3
+1$:     INC     R0
+        CMPB    (R0),R2
+        BNE     2$
+        INCB    R3
+        BNE     1$
+        DECB    R3
+2$:     MOVB    R3,(R1)+
+        MOVB    R2,(R1)+
+        BR      ENCODE
+3$:     CLRB    (R1)
+        RTS     PC
+
+        ; DECODE 0-TERMINATED STRING AT (R0), STORE AT (R1)
+DECODE: MOVB    (R0)+,R2
+        BEQ     2$
+        MOVB    (R0)+,R3
+        BIC     #^C377,R2
+1$:     MOVB    R3,(R1)+
+        SOB     R2,1$
+        BR      DECODE
+2$:     CLRB    (R1)
+        RTS     PC
+
+        ; TESTS
+DEMO:   MOV     #TEST1,R5
+        JSR     PC,1$
+        MOV     #TEST2,R5
+        JSR     PC,1$
+        .EXIT
+1$:     MOV     R5,R1
+        JSR     PC,PRINT
+        MOV     #NL,R1
+        JSR     PC,PRINT
+        MOV     R5,R0
+        MOV     #BUFR1,R1
+        JSR     PC,ENCODE
+        MOV     #BUFR1,R1
+        JSR     PC,PRHEXS
+        MOV     #NL,R1
+        JSR     PC,PRINT
+        MOV     #BUFR1,R0
+        MOV     #BUFR2,R1
+        JSR     PC,DECODE
+        MOV     #BUFR2,R1
+        JSR     PC,PRINT
+        MOV     #NL,R1
+        JSR     PC,PRINT
+        RTS     PC
+
+NL:     .BYTE   15,12,0
+
+TEST1:  .ASCII  /WWWWWWWWWWWWBWWWWWWWWWWWWBBBWWWWWWWWWW/
+        .ASCIZ  /WWWWWWWWWWWWWWBWWWWWWWWWWWWWW/
+
+TEST2:  .ASCII  /XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/
+        .ASCII  /XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/
+        .ASCII  /XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/
+        .ASCII  /XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/
+        .ASCII  /XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/
+        .ASCII  /XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/
+        .ASCII  /XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/
+        .ASCII  /XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX/
+        .ASCIZ  /XXXXXXX/
+
+        .EVEN
+
+        ; PRINT STRING AT R1
+PRINT:  MOVB    (R1)+,R0
+        .TTYOUT
+        BNE     PRINT
+        RTS     PC
+
+        ; PRINT HEX BYTE R0
+PRHEXB: MOV     R0,-(SP)
+        ROR     R0
+        ROR     R0
+        ROR     R0
+        ROR     R0
+        JSR     PC,1$
+        MOV     (SP)+,R0
+1$:     BIC     #^C17,R0
+        CMP     R0,#^D10
+        BLO     2$
+        ADD     #7,R0
+2$:     ADD     #'0,R0
+        .TTYOUT
+        RTS     PC
+
+        ; PRINT HEX STRING R1
+PRHEXS: MOVB    (R1)+,R0
+        BEQ     1$
+        JSR     PC,PRHEXB
+        BR      PRHEXS
+1$:     RTS     PC
+
+BUFR1:  .BLKB   400
+BUFR2:  .BLKB   400
+        .END    RLE

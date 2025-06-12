@@ -8,19 +8,15 @@ for n = 2 to 1000
 .
 print "First 99 Mertens numbers:"
 write "   "
-numfmt 0 2
+numfmt 2 0
 for n = 1 to 99
    write mertens[n] & " "
-   if n mod 10 = 9
-      print ""
-   .
+   if n mod 10 = 9 : print ""
 .
 for n = 1 to 1000
    if mertens[n] = 0
       zeros += 1
-      if mertens[n - 1] <> 0
-         crosses += 1
-      .
+      if mertens[n - 1] <> 0 : crosses += 1
    .
 .
 print ""

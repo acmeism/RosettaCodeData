@@ -24,13 +24,13 @@ func evaluate code .
    .
    return value
 .
-proc init . .
+proc init .
    for i = 0 to nexpr
       f[i] = evaluate i
    .
 .
 call init
-proc out code . .
+proc out code .
    a = 19683
    b = 6561
    for k = 1 to 9

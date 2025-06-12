@@ -1,720 +1,380 @@
-UNIT MRF;
-{$mode Delphi} {$H+} {$J-} {$R+} (*)  https://www.freepascal.org/docs-html/prog/progch1.html   (*)
+======================================================================
+(*)
+    Save to ShortNotation.inc
+    Use {$INCLUDE ShortNotation.inc} in order to load this file
+    Load before any other .inc file
+(*)
+
+{$MACRO ON}
+(*)     Shorthand mainly for lambdas (anonymous functions) (*)
+
+    {$DEFINE Fn     :=   function }
+    {$DEFINE Proc   :=  procedure }
+    {$DEFINE spec   := specialize }
+    {$DEFINE ref    :=  reference }
+    {$DEFINE _      :=      begin }
+    {$DEFINE __     :=        end }
+
+(*)     defs for WriteLn    (*)
+    {$DEFINE nl := #13#10}
+    {$DEFINE tab := #9}
+======================================================================
+(*)
+    Save to CompilerSwitches.inc
+    Use {$INCLUDE CompilerSwitches.inc} in order to load this file
+(*)
+
+{$IFDEF FPC}
+    {$MODE OBJFPC}
+    {$M+}
+    {$LONGSTRINGS ON}
+    {$ASMMODE INTEL}
+    {$Q+}
+    {$RANGECHECKS ON}
+    {$S+}
+    {$TYPEDADDRESS ON}
+    {$MODESWITCH EXCEPTIONS}
+    {$MODESWITCH ADVANCEDRECORDS}
+    {$MODESWITCH TYPEHELPERS}
+    {$MODESWITCH FUNCTIONREFERENCES}
+    {$MODESWITCH ANONYMOUSFUNCTIONS}
+{$ELSE}
+    {$APPTYPE CONSOLE}
+{$ENDIF}
+
+
+{$WARNINGS OFF W1033}
+{$WARN 6058 OFF}
+======================================================================
+unit MRF3 ;
 
 (*)
 
-        Free Pascal Compiler version 3.2.0 [2020/06/14] for x86_64
-        The free and readable alternative at C/C++ speeds
-        compiles natively to almost any platform, including raspberry PI *
-        Can run independently from DELPHI / Lazarus
 
-        For debian Linux: apt -y install fpc
-        It contains a text IDE called fp
+    (c) 2025 jpd - Free to use, experimental
 
-        https://www.freepascal.org/advantage.var
+    Free Pascal Compiler version 3.3.1 [2025/03/18] for x86_64
+
+    Map Reduce Filter version with chaining, generics and lambdas
+
+    https://www.freepascal.org/advantage.var
+
 
 (*)
 
+{$INCLUDE ShortNotation.inc}
 
-INTERFACE
+{$INCLUDE CompilerSwitches.inc}
 
-    USES
-    Math,
+interface
+
+uses
+
+    Generics.Collections,
+    Generics.Defaults,
+    StrUtils,
     SysUtils,
-    variants;
-    {$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined} // Use for variants
+    Variants
+     ;
+
+type
+
+    V = Variant ;
+    L = specialize TList<V> ;
+
+    TMapperFunc     = ref to Fn  ( item: V ; index: Integer ): V ;
+    TPredicateFunc  = ref to Fn  ( item: V ; index: Integer ): Boolean ;
+    TFolderFunc     = ref to Fn  ( Acc: V ; item: V ; index: Integer ): V ;
+    TCompareFunc    = ref to Fn  ( const A, B: V ): Integer ;
+
+    TCollPipe = record
+    private
+        FData: L ;
+    public
+        constructor Create( Data: L ) ;
+        Fn   Count: Integer;
+        Fn   GroupBy(KeyFunc: TMapperFunc): spec TDictionary<V, L>;
+        Fn   ForAll(Predicate: TPredicateFunc): Boolean;
+        Fn   Map    ( Func: TMapperFunc )    : TCollPipe ;
+        Fn   Filter ( Func: TPredicateFunc ) : TCollPipe ;
+        Fn   Reduce ( Func: TFolderFunc ; initial: V ): V ;
+        Fn   Sort   ( Compare: TCompareFunc ): TCollPipe ;
+        Fn   Debug  ( const Msg: String )    : TCollPipe ;
+        Fn   ToArray: L ;
+    end ;
+
+    Fn   List( const Elements: array of V ): L ;
+    Fn   Pipe( Data: L ): TCollPipe ; inline ;
+    proc DebugList(const List: L; const Msg: String);
+    Fn SortAndDebug(const List: L; Compare: TCompareFunc; const Msg: String): L;
+
+    (*)     Core FP Functions   (*)
+
+    Fn   Map    ( const Arr: L ; Func: TMapperFunc ):       L ;
+    Fn   Filter ( const Arr: L ; Func: TPredicateFunc ):    L ;
+    Fn   Reduce ( const Arr: L ; Func: TFolderFunc ; initial: V ): V ;
+
+
+
+implementation
+
+    proc DebugList(const List: L; const Msg: String);
+    begin
+      Pipe(List).Debug(Msg); // Convert TList<V> to TCollPipe once
+    end;
+
+    Fn SortAndDebug(const List: L; Compare: TCompareFunc; const Msg: String): L;
+    _
+      Result := Pipe(List)
+        .Sort(Compare)
+        .Debug(Msg)
+        .ToArray;
+    __;
+
+    Fn TCollPipe.Count: Integer;
+    _
+        Result := FData.Count;
+    __;
+
+    Fn TCollPipe.GroupBy(KeyFunc: TMapperFunc): spec TDictionary<V, L>;
+    var
+        i: Integer;
+        key: V;
+        group: L;
+    _
+        Result := spec TDictionary<V, L>.Create;
+        for i := 0 to FData.Count - 1 do
+        _
+            key := KeyFunc(FData[i], i);
+            if not Result.TryGetValue(key, group) then
+            _
+                group := L.Create;
+                Result.Add(key, group);
+            __;
+            group.Add(FData[i]);
+        __;
+    __;
 
-    TYPE
+    Fn TCollPipe.ForAll(Predicate: TPredicateFunc): Boolean;
+    var
+        i: Integer;
+    _
+        Result := True;
+        for i := 0 to FData.Count - 1 do
+        _
+            if not Predicate(FData[i], i) then
+            _
+                Result := False;
+                Exit;
+            __;
+        __;
+    __;
 
-        Varyray  = array of variant ;
 
-        FunA  = FUNCTION     ( x   : variant   ) : variant   ;
-        FunB  = PROCEDURE    ( x   : variant   ) ;
-        FunC  = FUNCTION     ( x,y : variant   ) : variant   ;
-        FunD  = FUNCTION     ( x,y : longint   ) : longint   ;
-        FunE  = FUNCTION     ( x,y : variant   ) : variant   ;
+    Fn   List( const Elements: array of V ): L ;
 
+        var    elem: V ;
+        _
+            Result := L.Create ;
+            for elem in Elements do
+                Result.Add( elem ) ;
+        __ ;
 
-        PROCEDURE   Show          ( x :               variant ) ;
-        FUNCTION    Reverse       ( x : Varyray ) :   Varyray ;
-        FUNCTION    Head          ( x : Varyray ) :   variant ;
-        FUNCTION    Last          ( x : Varyray ) :   variant ;
-        FUNCTION    Tail          ( x : Varyray ) :   Varyray ;
-        FUNCTION    Take          ( y : variant ; x : Varyray ) : Varyray ;
-        FUNCTION    Map           ( f : FunA ; x:     Varyray ) : Varyray ; overload ;
-        PROCEDURE   Map           ( f : FunB ; x:     Varyray ) ;           overload ;
-        FUNCTION    Map           ( f : FunC ; x, y:  Varyray ) : Varyray ; overload ;
-        FUNCTION    Map           ( f : FunD ; x, y:  Varyray ) : Varyray ; overload ;
-        FUNCTION    Filter        ( f : FunA ; x:     Varyray ) : Varyray ; overload ;
-        FUNCTION    Filter        ( f : FunE ; y:     variant; x: Varyray ) : Varyray ; overload ;
-        FUNCTION    FoldL         ( f : FunC ; x:     Varyray ) : variant ; overload ;
-        FUNCTION    FoldL         ( f : FunD ; x:     Varyray ) : variant ; overload ;
-        FUNCTION    FoldL         ( f : FunE ; y:     variant; x: Varyray ) : variant ; overload ;
-        FUNCTION    Reduce        ( f : FunC ; x:     Varyray ) : variant ; overload ;
-        FUNCTION    Reduce        ( f : FunD ; x:     Varyray ) : variant ; overload ;
-        FUNCTION    Reduce        ( f : FunE ; y:     variant; x: Varyray ) : variant ; overload ;
-        FUNCTION    FoldR         ( f : FunC ; x:     Varyray ) : variant ; overload ;
-        FUNCTION    FoldR         ( f : FunD ; x:     Varyray ) : variant ; overload ;
 
-(*) FOR TESTING (*)
 
-        FUNCTION    RandFillInt   ( x:              variant ) : variant ;
-        FUNCTION    RandFillReal  ( x:              variant ) : variant ;
+    constructor TCollPipe.Create( Data: L ) ;
+        _
+            FData := L.Create ;
+            FData.AddRange( Data ) ;
+        __ ;
 
-        FUNCTION    AND_xy        ( x, y:           variant ) : variant ;
-        FUNCTION    OR_xy         ( x, y:           variant ) : variant ;
-        FUNCTION    AVG           ( x:              Varyray ) : variant ;
-        FUNCTION    All           ( f: FunA ; x:    Varyray ) : variant ;
-        FUNCTION    Any           ( f: FunA ; x:    Varyray ) : variant ;
 
-        FUNCTION    Add           ( x, y:           variant ) : variant ;
-        FUNCTION    Mult          ( x, y:           variant ) : variant ;
-        FUNCTION    contain       ( x, y:           variant ) : variant ;
-        FUNCTION    delete        ( x, y:           variant ) : variant ;
 
-        FUNCTION    Add1          ( x:              variant ) : variant ;
-        FUNCTION    sine          ( x:              variant ) : variant ;
-        FUNCTION    cosine        ( x:              variant ) : variant ;
-        FUNCTION    cotangens     ( x:              variant ) : variant ;
-        FUNCTION    Is_Even       ( x:              variant ) : variant ;
-        FUNCTION    Is_Odd        ( x:              variant ) : variant ;
+    Fn   TCollPipe.Map( Func: TMapperFunc ): TCollPipe ;
+        _
+            Result := TCollPipe.Create( MRF3.Map( FData, Func ) ) ;
+        __ ;
 
 
 
-IMPLEMENTATION
+    Fn   TCollPipe.Filter( Func: TPredicateFunc ): TCollPipe ;
+        _
+            Result := TCollPipe.Create( MRF3.Filter( FData, Func ) ) ;
+        __ ;
 
 
-    PROCEDURE  Show ( x: variant ) ;
-         BEGIN write( x, ' ' ) ; END ;
 
+    Fn   TCollPipe.Reduce( Func: TFolderFunc ; initial: V ): V ;
+        _
+            Result := MRF3.Reduce( FData, Func, initial ) ;
+        __ ;
 
 
-    FUNCTION    Reverse ( x : Varyray ) : Varyray ;
 
-        VAR
-            __  : varyray ;
-            k   : integer ;
+    Fn TCollPipe.Sort( Compare: TCompareFunc ): TCollPipe;
+    var
+        NewList: L;
+    _
+        NewList := L.Create;
+        NewList.AddRange(FData);
+        NewList.Sort(spec TComparer<V>.Construct(Compare));
+        Result := TCollPipe.Create(NewList);
+    __ ;
 
-        BEGIN
 
-            IF length ( x ) < Low ( x ) + 2  THEN Exit ;
 
-            Setlength ( __,  length ( x ) );
+    Fn   TCollPipe.Debug( const Msg: String ): TCollPipe ;
 
-            FOR k := Low  ( x ) to High ( x ) DO
-                    __ [ k ] := x [ High ( x ) - k ] ;
+        var
+            i: Integer ;
+            s: String ;
+        _
+            s := Msg + ' [ ' ;
 
-            result := __ ;
+            if FData.Count > 1 then
+                for i := 0 to FData.Count - 2 do
+                    s := s + VarToStr( FData[ i ] ) + ', '
+            else
+                i := -1 ;
 
-            Setlength ( __,  0 );
+            Writeln( s + VarToStr( FData[ i + 1 ] ), ' ]' ) ;
+            Result := Self ;
+        __ ;
 
-        END;
 
 
+    Fn   TCollPipe.ToArray: L ;
+        _
+            Result := L.Create ;
+            Result.AddRange( FData ) ;
+        __ ;
 
-    FUNCTION    Head ( x : Varyray ) : variant ;
-        BEGIN result := x [ Low ( x ) ] ; END;
 
 
+    Fn   Pipe( Data: L ): TCollPipe ;
+        _
+            Result := TCollPipe.Create( Data ) ;
+        __ ;
 
-    FUNCTION    Last ( x : Varyray ) : variant ;
-        BEGIN result := x [ High ( x ) ] ; END;
 
 
+    Fn   Map( const Arr: L ; Func: TMapperFunc ): L ;
 
-    FUNCTION    Tail ( x : Varyray ) : Varyray ;
+        var    i: Integer ;
+        _
+            Result := L.Create ;
+            for i := 0 to Arr.Count - 1 do
+                Result.Add( Func( Arr[ i ], i ) ) ;
+        __ ;
 
-        VAR
-            __  : varyray ;
-            k   : integer ;
 
-        BEGIN
 
-            Setlength ( __, High ( x ) );
+    Fn   Filter( const Arr: L ; Func: TPredicateFunc ): L ;
 
-            FOR k := Low  ( x ) + 1 to High ( x ) DO
-                    __ [ k - 1 ] := x [ k ] ;
+        var    i: Integer ;
+        _
+            Result := L.Create ;
+            for i := 0 to Arr.Count - 1 do
+                if Func( Arr[ i ], i ) then
+                    Result.Add( Arr[ i ] ) ;
+        __ ;
 
-            result := __ ;
 
-            Setlength ( __,  0 );
 
-        END;
+    Fn   Reduce( const Arr: L ; Func: TFolderFunc ; initial: V ): V ;
 
+        var    i: Integer ;
+        _
+            Result := initial ;
+            for i := 0 to Arr.Count - 1 do
+                Result := Func( Result, Arr[ i ], i ) ;
+        __ ;
 
+end.    ( * )     unit MRF3   ( * )
 
-    FUNCTION    Take ( y : variant ; x : Varyray ) : Varyray ;
+======================================================================
+program testMRF3;
 
-        VAR
-            __  : varyray ;
-            k   : integer ;
+{$include ShortNotation.inc}
 
-        BEGIN
+{$INCLUDE CompilerSwitches.inc}
 
+uses
 
-            Setlength ( __, y );
+    Math,
+    MRF3,
+    StrUtils,
+    SysUtils,
+    Variants
+    ;
 
-            FOR k := Low  ( x ) to y - 1 DO
-                    __ [ k ] := x [ k ] ;
 
-            result := __ ;
+ Fn  IsNumber( item: V ): Boolean ;
 
-            Setlength ( __,  0 );
+    _
+        Result := VarIsNumeric( item ) and not VarIsBool( item ) ;
+    __;
 
-        END;
 
+ Fn  CompareVariants( const A, B: V ): Integer ;
 
+    _
 
-     FUNCTION   Map ( f: FunA ;  x: Varyray ) : Varyray ;  overload ;
+        if VarIsNumeric( A ) and VarIsNumeric( B ) then
+            Exit( CompareValue( Double( A ), Double( B ) ) ) ;
 
-        VAR
+        if VarIsStr( A ) and VarIsStr( B ) then
+            Exit( CompareText( A, B ) ) ;
 
-            Ar  :   array of variant ;
-            k   :   integer          ;
+        (*) Fallback: priority ( booleans < numbers < strings < )  (*)
 
-        BEGIN
+        Result := ( Ord( VarIsStr( A ) ) - Ord( VarIsStr( B ) ) );
+    __;
 
-            SetLength ( Ar, length ( x ) ) ;
-            result  := Ar ;
+(*)         MAIN Line       (*)
 
-            FOR k := Low ( Ar ) TO High ( Ar )  DO
-                Ar [ k ] := f ( x [ k ] ) ;
+    var
+        Data :      L ;
+        Total: Double ;
 
-            result  := Ar ;
+    _
+        try
+            Writeln( '=== MRF3 Unit Test ===' ) ;
 
-            Setlength ( Ar,  0 );
+            Data := List( [ 15, 2.5, 'Apple', True, 7, 'banana', False ] ) ;
 
-        END;
+            Pipe( Data )
+                .Debug( 'Original:' )
+                .Sort( @CompareVariants )
+                .Debug( 'Sorted:' ) ;
 
+            Total := Pipe( Data )
 
+           .Filter (   Fn ( item: V; index: Integer ) : Boolean
+                            _   Result := IsNumber( item ) ;
+                            __
+                    )
 
-    PROCEDURE   Map ( f: FunB ;  x: Varyray ) ; overload ;
+           .Map    (   Fn ( item: V; index: Integer ) : V
+                            _   Result := Double( item ) * 2 ;
+                            __
+                    )
 
-        VAR
+           .Reduce (   Fn ( Acc: V; item: V; index: Integer ): V
+                            _   Result := Double( Acc ) + Double( item ) ;
+                            __
+                    , 0.0
+                    )
+            ;
 
-            k   :   integer ;
+            Writeln( 'Numeric sum x2: ', Total:0:2 ) ;
 
-        BEGIN
-                FOR k := Low ( x ) TO High ( x )  DO f ( x [ k ] ) ;
-        END;
+        except
+            on E: Exception do
+                Writeln( 'Error: ', E.Message ) ;
+        end;
 
+        Readln;
 
-
-    FUNCTION    Map ( f: FunC ;  x, y: Varyray ) : Varyray ; overload ;
-
-        VAR
-
-            Ar  :   array of variant ;
-            k   :   integer          ;
-
-        BEGIN
-
-            SetLength ( Ar, min ( length ( x ) , length ( y ) ) ) ;
-
-            FOR k := Low ( Ar ) TO High ( Ar )  DO
-                Ar [ k ] := f ( x [ k ] , y [ k ] ) ;
-
-            result  := Ar ;
-
-            Setlength ( Ar,  0 );
-
-        END;
-
-
-
-    FUNCTION    Map ( f: FunD ;  x, y: Varyray ) : Varyray ; overload ;
-
-        VAR
-
-            Ar  :   array of variant ;
-            k   :   integer          ;
-
-        BEGIN
-
-            SetLength ( Ar, min ( length ( x ) , length ( y ) ) ) ;
-
-            FOR k := Low ( Ar ) TO High ( Ar )  DO
-                Ar [ k ] := f ( x [ k ] , y [ k ] ) ;
-
-            result  := Ar ;
-
-            Setlength ( Ar,  0 );
-
-        END;
-
-
-
-    FUNCTION    Map ( f: FunE ;  x: variant; y: Varyray ) : Varyray ; overload ;
-
-        VAR
-
-            Ar  :   array of variant ;
-            k   :   integer          ;
-
-        BEGIN
-
-            SetLength ( Ar, min ( length ( x ) , length ( y ) ) ) ;
-
-            FOR k := Low ( Ar ) TO High ( Ar )  DO
-                Ar [ k ] := f ( x , y [ k ] ) ;
-
-            result  := Ar ;
-
-            Setlength ( Ar,  0 );
-
-        END;
-
-
-
-     FUNCTION   Filter ( f: FunA ;  x: Varyray ) : Varyray ; overload ;
-
-        VAR
-
-            Ar  :   array of variant ;
-            __  :   variant          ;
-            k   :   integer          ;
-            len :   integer          ;
-
-        BEGIN
-
-            SetLength ( Ar, 0 ) ;
-            result  := Ar ;
-
-            FOR k := Low ( x ) TO High ( x )  DO
-                BEGIN
-
-                    __ := f ( x [ k ] ) ;
-
-                    IF __ <> False THEN
-
-                        BEGIN
-
-                            len := Length ( Ar ) ;
-                            SetLength ( Ar, len + 1 ) ;
-                            Ar [ len ] := __ ;
-
-                        END ;
-
-                END ;
-
-            result  := Ar ;
-
-            Setlength ( Ar,  0 );
-        END;
-
-
-
-     FUNCTION   Filter ( f: FunE ;  y: variant; x: Varyray ) : Varyray ; overload ;
-
-        VAR
-
-            Ar  :   array of variant ;
-            __  :   variant          ;
-            k   :   integer          ;
-            len :   integer          ;
-
-        BEGIN
-
-            SetLength ( Ar, 0 ) ;
-            result  := Ar ;
-
-            FOR k := Low ( x ) TO High ( x )  DO
-                BEGIN
-
-                    __ := f ( y, x [ k ] ) ;
-
-                    IF __ <> False THEN
-
-                        BEGIN
-
-                            len := Length ( Ar ) ;
-                            SetLength ( Ar, len + 1 ) ;
-                            Ar [ len ] := __ ;
-
-                        END ;
-
-                END ;
-
-            result  := Ar ;
-
-            Setlength ( Ar,  0 );
-        END;
-
-
-
-     FUNCTION   FoldL ( f: FunC ; x: Varyray ) : variant ; overload ;
-
-        VAR
-
-            k   :   integer ;
-
-        BEGIN
-
-            result := x [ Low ( x ) ] ;
-
-            FOR k := Low ( x ) + 1 TO High ( x ) DO
-                result :=  f ( result , x [ k ] ) ;
-
-        END ;
-
-
-
-     FUNCTION   FoldL ( f: FunD ; x: Varyray ) : variant ; overload ;
-
-        VAR
-
-            k   :   integer ;
-
-        BEGIN
-
-            result := x [ Low ( x ) ] ;
-
-            FOR k := Low ( x ) + 1 TO High ( x ) DO
-                result :=  f ( result , x [ k ] ) ;
-
-        END ;
-
-
-
-     FUNCTION   FoldL ( f: FunE ; y: variant; x: Varyray ) : variant ; overload ;
-
-        VAR
-
-            k   :   integer ;
-
-        BEGIN
-
-
-            FOR k := Low ( x ) TO High ( x ) DO
-                result :=  f ( y , x [ k ] ) ;
-
-        END ;
-
-
-
-     FUNCTION   Reduce ( f: FunC ; x: Varyray ) : variant ; overload ;
-           BEGIN result := FoldL ( f , x ) ; END ;
-
-
-
-     FUNCTION   Reduce ( f: FunD ; x: Varyray ) : variant ; overload ;
-           BEGIN result := FoldL ( f , x ) ; END ;
-
-
-
-     FUNCTION   Reduce ( f: FunE ; y: variant; x: Varyray ) : variant ; overload ;
-           BEGIN result := FoldL ( f , y, x ) ; END ;
-
-
-
-     FUNCTION   FoldR ( f: FunC ; x: Varyray ) : variant ; overload ;
-
-        VAR
-
-            k   :   integer ;
-
-        BEGIN
-
-            result := x [ High ( x ) ] ;
-
-            FOR k := High ( x ) - 1 DOWNTO Low ( x ) DO
-                result :=  f (  result, x [ k ] ) ;
-
-        END ;
-
-
-
-     FUNCTION   FoldR ( f: FunD ; x: Varyray ) : variant ; overload ;
-
-        VAR
-
-            k   :   integer ;
-
-        BEGIN
-
-
-            result := x [ High ( x ) ];
-
-            FOR k := High ( x ) - 1 DOWNTO Low ( x ) DO
-                result :=  f ( result, x [ k ] ) ;
-
-        END ;
-
-
-
-        (*)         TEST Functions                              (*)
-
-(*)
-
-        Special thanks to PascalDragon , winni & BobDog ( FreePascal.org ),
-        who explained the specifics of the compiler.
-
-(*)
-
-
-    FUNCTION    Add  ( x, y: variant ) : variant ;
-        BEGIN  result := x + y ; END ;
-
-
-
-    FUNCTION    Add1 ( x: variant ) : variant ;
-        BEGIN result := x + 1 ; END ;
-
-
-
-    FUNCTION    AND_xy  ( x, y: variant ) : variant ;
-        BEGIN  result := ( x and y ) = True ; END ;
-
-
-
-    FUNCTION    AVG ( x: Varyray ) : variant ;
-
-        VAR
-
-            k   :   integer ;
-
-        BEGIN
-
-            result := 0.0 ;
-
-            FOR k := Low ( x )  TO High ( x ) DO
-                result :=  result + ( x [ k ] - result ) / ( k + 1 );
-
-        END ;
-
-
-
-    FUNCTION    Cosine  ( x: variant ) : variant ;
-        BEGIN result := cos ( x ); END ;
-
-
-
-    FUNCTION    Cotangens  ( x: variant ) : variant ;
-
-        BEGIN
-
-            IF ( x = 0 ) Then Exit ( 'Inf');
-
-            result := cot ( x );
-
-        END ;
-
-
-
-    FUNCTION    Is_Even ( x: variant ) : variant ;
-
-        BEGIN
-
-                IF ( ( x mod 2 ) = 0 ) THEN
-                    result := x
-                ELSE
-                    result := False
-
-        END;
-
-
-
-    FUNCTION    Mult( x, y: variant ) : variant ;
-        BEGIN  result := x * y ; END ;
-
-
-
-    FUNCTION    Contain ( x, y: variant ) : variant ;
-        BEGIN  result := x = y ; END ;
-
-
-
-    FUNCTION    Delete  ( x, y: variant ) : variant ;
-
-        BEGIN
-
-            IF ( x = y ) THEN Exit ( False ) ;
-
-            result := y;
-
-        END ;
-
-
-    FUNCTION    Is_Odd ( x: variant ) : variant ;
-
-        BEGIN
-
-                IF ( ( x mod 2 ) <> 0 ) THEN
-                    result := x
-                ELSE
-                    result := False
-
-        END;
-
-
-
-    FUNCTION    OR_xy  ( x, y: variant ) : variant ;
-        BEGIN  result := ( x or y ) = True; END ;
-
-
-
-    FUNCTION    RandFillInt   ( x: variant ) : variant ;
-        BEGIN result := Random (  100 ) ; END ;
-
-
-
-    FUNCTION    RandFillReal ( x: variant ) : variant ;
-
-        VAR
-            tmp :   real = 100.0 ;
-
-        BEGIN result := ( Random (  ) ) * tmp  ; END ;
-
-
-
-    FUNCTION    sine    ( x: variant ) : variant ;
-        BEGIN result := sin ( x ); END ;
-
-
-
-     FUNCTION All  ( f: FunA ; x: Varyray ) : variant ;
-
-        VAR
-
-            k   :   integer ;
-
-        BEGIN
-
-            result := True ;
-
-            FOR k := Low ( x ) TO High ( x ) DO
-                result :=  AND_xy ( result , f ( x [ k ] ) ) ;
-
-        END ;
-
-
-
-     FUNCTION Any    ( f: FunA ; x: Varyray ) : variant ;
-
-        VAR
-
-            k   :   integer ;
-
-        BEGIN
-
-            result := False ;
-
-            FOR k := Low ( x ) TO High ( x ) DO
-                result :=  OR_xy ( result , f ( x [ k ] ) ) ;
-
-        END ;
-END.
-
-
-(*) === How to use in a program === (*)
-
-
-program testMRF.pas;
-{$mode Delphi} {$H+} {$J-} {$R+} (*)  https://www.freepascal.org/docs-html/prog/progch1.html   (*)
-USES
-    MRF,
-       Math,
-       SysUtils,
-       Variants;
-       {$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined} // Use for variants
-
-VAR
-
-    a,b,c   :   array of variant ;
-
-    Acc     :   variant ;
-
-BEGIN
-
-    Randomize ;
-
-    setlength ( a, 6  ) ;
-    setlength ( b, 4  ) ;
-    setlength ( c, 6 ) ;
-
-    a       :=  Map     ( RandFillInt   , a     ) ;
-                Map     ( show          , a     ) ;
-                writeln ;
-
-    b       :=  Map     ( RandFillInt   , b     ) ;
-                Map     ( show          , b     ) ;
-                writeln ;
-
-    c       :=  Map     ( RandFillInt   , c     ) ;
-                Map     ( show          , c     ) ;
-                writeln ;
-
-    Acc     :=  FoldL   ( add           , a     ) ;
-                WriteLn ( 'Sum = '      , Acc   ) ;
-                writeln ;
-
-    Acc     :=  Reduce  ( contain       , 31, a ) ;
-                WriteLn ( 'contains = ' , Acc   ) ;
-                writeln ;
-
-    c       :=  Filter  ( delete        , 31, a ) ;
-                WriteLn ( 'del c :' ) ;
-                Map     ( show          , c     ) ;
-                writeln ;
-
-    a       :=  Reverse ( c ) ;
-                WriteLn ( 'reverse c :' ) ;
-                Map     ( show          , a     ) ;
-                writeln ;
-
-    Acc     :=  avg     ( b ) ;
-                WriteLn ( 'avg = '      , Acc   ) ;
-                writeln ;
-
-    c       :=  Map     ( cotangens     , b     ) ;
-                writeln ( 'cot : ' ) ;
-                Map     ( show          , c     ) ;
-                writeln ;
-
-    Acc     :=  FoldR   ( min           , b     ) ;
-                WriteLn ( 'min = '      , Acc  );
-                writeln ;
-
-    Acc     :=  FoldR   ( max           , b     ) ;
-                WriteLn ( 'max = '      , Acc  );
-                writeln ;
-
-                Map     ( show          , b     ) ;
-    Acc     :=  All     ( Is_Odd        , b     ) ;
-                writeln ;
-                WriteLn ( 'All Is_Odd = '   , Acc   ) ;
-                writeln ;
-
-                Map     ( show           , b    ) ;
-    Acc     :=  Any     ( Is_Even        , b    ) ;
-                writeln ;
-                WriteLn ( 'Any Is_Even = '  , Acc   ) ;
-                writeln ;
-
-    Acc     :=  Head    ( b ) ;
-                WriteLn ( 'Head = '      , Acc   ) ;
-
-    Acc     :=  Last    ( b ) ;
-                WriteLn ( 'Last = '      , Acc   ) ;
-
-                Map     ( show          , b     ) ;
-    a       :=  Tail ( b ) ;
-                writeln ;
-                WriteLn ( 'Tail of b :' ) ;
-                Map     ( show          , a     ) ;
-                writeln ;
-
-                Map     ( show          , b     ) ;
-    a       :=  Take ( 2, b ) ;
-                writeln ;
-                WriteLn ( 'Take 2 from b :' ) ;
-                Map     ( show          , a     ) ;
-                writeln ;
-
-    setlength ( c, 0 ) ;
-    setlength ( b, 0 ) ;
-    setlength ( a, 0 ) ;
-
-
-
-END.
+end.    (*)     program testMRF3    (*)
+======================================================================

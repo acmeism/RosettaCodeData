@@ -1,0 +1,248 @@
+#include once "sqlite3.bi"
+#include once "string.bi"
+#include once "crt.bi"
+
+' Callback para SQLite
+Function callback Cdecl (Byval NotUsed As Any Ptr, Byval argc As Integer, _
+    Byval argv As ZString Ptr Ptr, Byval colName As ZString Ptr Ptr) As Integer
+
+    For i As Integer = 0 To argc - 1
+        If argv[i] <> NULL Then
+            Print *colName[i] & ": " & *argv[i] & " ";
+        Else
+            Print *colName[i] & ": NULL ";
+        End If
+    Next
+    Print
+
+    Return 0
+End Function
+
+Sub createCSVfiles()
+    Dim As Integer ff
+
+    If Dir("patients.csv") = "" Then
+        ff = Freefile
+        Open "patients.csv" For Output As #ff
+        Print #ff, "PATIENT_ID,LASTNAME"
+        Print #ff, "1001,Hopper"
+        Print #ff, "4004,Wirth"
+        Print #ff, "3003,Kemeny"
+        Print #ff, "2002,Gosling"
+        Print #ff, "5005,Kurtz"
+        Close #ff
+    End If
+
+    If Dir("visits.csv") = "" Then
+        ff = Freefile
+        Open "visits.csv" For Output As #ff
+        Print #ff, "PATIENT_ID,VISIT_DATE,SCORE"
+        Print #ff, "2002,2020-09-10,6.8"
+        Print #ff, "1001,2020-09-17,5.5"
+        Print #ff, "4004,2020-09-24,8.4"
+        Print #ff, "2002,2020-10-08,"
+        Print #ff, "1001,,6.6"
+        Print #ff, "3003,2020-11-12,"
+        Print #ff, "4004,2020-11-05,7.0"
+        Print #ff, "1001,2020-11-19,5.3"
+        Close #ff
+    End If
+End Sub
+
+Sub createTableHeaders(db As sqlite3 Ptr)
+    Dim As ZString Ptr errMsg = NULL
+
+    ' Create the patient and visit table
+    sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS patients (PATIENT_ID INT, LASTNAME TEXT);", Cast(Any Ptr, @callback), NULL, @errMsg)
+    If errMsg <> NULL Then
+        Print "Error creating patients table: " & *errMsg
+        sqlite3_free(errMsg)
+    End If
+
+    sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS visits (PATIENT_ID INT, VISIT_DATE TEXT, SCORE NUMERIC(4,1));", Cast(Any Ptr, @callback), NULL, @errMsg)
+    If errMsg <> NULL Then
+        Print "Error creating visits table: " & *errMsg
+        sqlite3_free(errMsg)
+    End If
+End Sub
+
+Sub fillTablesFromCSV(db As sqlite3 Ptr)
+    Dim As Integer ff, i
+    Dim As String lineaCSV, query
+    Dim As ZString Ptr errMsg = NULL
+
+    ff = Freefile
+    Open "patients.csv" For Input As #ff
+    Line Input #ff, lineaCSV  ' Saltar la cabecera
+
+    While Not Eof(ff)
+        Line Input #ff, lineaCSV
+        Dim As String id = "", lastname = ""
+
+        i = 1
+        While i <= Len(lineaCSV) And Mid(lineaCSV, i, 1) <> ","
+            id += Mid(lineaCSV, i, 1)
+            i += 1
+        Wend
+        i += 1  ' Skip the comma
+
+        While i <= Len(lineaCSV)
+            lastname += Mid(lineaCSV, i, 1)
+            i += 1
+        Wend
+
+        query = "INSERT INTO patients VALUES (" & id & ", '" & lastname & "');"
+
+        sqlite3_exec(db, query, NULL, NULL, @errMsg)
+        If errMsg <> NULL Then
+            Print "Error inserting patient: " & *errMsg
+            sqlite3_free(errMsg)
+        End If
+    Wend
+    Close #ff
+
+    ff = Freefile
+    Open "visits.csv" For Input As #ff
+    Line Input #ff, lineaCSV  ' Skip header
+
+    While Not Eof(ff)
+        Line Input #ff, lineaCSV
+        Dim As String id = "", dateStr = "", score = ""
+        Dim As Integer fieldNum = 0
+
+        For i = 1 To Len(lineaCSV)
+            If Mid(lineaCSV, i, 1) = "," Then
+                fieldNum += 1
+            Else
+                Select Case fieldNum
+                    Case 0: id += Mid(lineaCSV, i, 1)
+                    Case 1: dateStr += Mid(lineaCSV, i, 1)
+                    Case 2: score += Mid(lineaCSV, i, 1)
+                End Select
+            End If
+        Next i
+
+        query = "INSERT INTO visits VALUES (" & id & ", "
+
+        If dateStr = "" Then
+            query &= "NULL, "
+        Else
+            query &= "'" & dateStr & "', "
+        End If
+
+        If score = "" Then
+            query &= "NULL);"
+        Else
+            query &= score & ");"
+        End If
+
+        sqlite3_exec(db, query, NULL, NULL, @errMsg)
+        If errMsg <> NULL Then
+            Print "Error inserting visit: " & *errMsg
+            sqlite3_free(errMsg)
+        End If
+    Wend
+    Close #ff
+End Sub
+
+Function joinTablesAndGroup(db As sqlite3 Ptr) As String
+    Dim As sqlite3_stmt Ptr stmt
+    Dim As String result = ""
+    Dim As ZString Ptr errMsg = NULL
+
+    Dim As String query = _
+    "SELECT " & _
+    "   p.PATIENT_ID, " & _
+    "   p.LASTNAME, " & _
+    "   MAX(v.VISIT_DATE) AS LAST_VISIT, " & _
+    "   SUM(v.SCORE) AS SCORE_SUM, " & _
+    "   ROUND(AVG(v.SCORE), 1) AS SCORE_AVG " & _
+    "FROM " & _
+    "   patients p " & _
+    "LEFT JOIN " & _
+    "   visits v ON p.PATIENT_ID = v.PATIENT_ID " & _
+    "GROUP BY " & _
+    "   p.PATIENT_ID, p.LASTNAME " & _
+    "ORDER BY " & _
+    "   p.PATIENT_ID;"
+
+    If sqlite3_prepare_v2(db, query, -1, @stmt, NULL) <> SQLITE_OK Then
+        Print "Error preparing statement: " & *sqlite3_errmsg(db)
+        Return "Error"
+    End If
+
+    result = "| PATIENT_ID | LASTNAME | LAST_VISIT | SCORE_SUM | SCORE_AVG |" & Chr(10)
+    result &= "|------------|----------|------------|-----------|-----------|" & Chr(10)
+
+    While sqlite3_step(stmt) = SQLITE_ROW
+        Dim As String row = "| "
+
+        ' PATIENT_ID
+        If sqlite3_column_type(stmt, 0) <> SQLITE_NULL Then
+            row &= "   " & Trim(Str(sqlite3_column_int(stmt, 0))) & "    | "
+        Else
+            row &= Space(10) & "| "
+        End If
+
+        ' LASTNAME
+        If sqlite3_column_type(stmt, 1) <> SQLITE_NULL Then
+            Dim As String lastname = *Cast(ZString Ptr, sqlite3_column_text(stmt, 1))
+            row &= lastname & Space(9 - Len(lastname)) & "| "
+        Else
+            row &= "        | "
+        End If
+
+        ' LAST_VISIT
+        If sqlite3_column_type(stmt, 2) <> SQLITE_NULL Then
+            Dim As String visit_date = *Cast(ZString Ptr, sqlite3_column_text(stmt, 2))
+            row &= visit_date & Space(11 - Len(visit_date)) & "| "
+        Else
+            row &= "   None    | "
+        End If
+
+        ' SCORE_SUM
+        If sqlite3_column_type(stmt, 3) <> SQLITE_NULL Then
+            Dim As Double score_sum = sqlite3_column_double(stmt, 3)
+            row &= "   " & Format(score_sum, "#00.#") & "   | "
+        Else
+            row &= "   None   | "
+        End If
+
+        ' SCORE_AVG
+        If sqlite3_column_type(stmt, 4) <> SQLITE_NULL Then
+            Dim As Double score_avg = sqlite3_column_double(stmt, 4)
+            row &= "   " & Format(score_avg, "##.#") & "    |"
+        Else
+            row &= "   None   |"
+        End If
+
+        result &= row & Chr(10)
+    Wend
+
+    sqlite3_finalize(stmt)
+    Return result
+End Function
+
+' Main program
+Dim As sqlite3 Ptr db
+Dim As Integer rc
+
+createCSVfiles()
+
+rc = sqlite3_open(":memory:", @db)
+If rc <> SQLITE_OK Then
+    Print "Error opening database: " & *sqlite3_errmsg(db)
+    sqlite3_close(db)
+    Sleep: End 1
+End If
+
+createTableHeaders(db)
+
+fillTablesFromCSV(db)
+
+Dim As String result = joinTablesAndGroup(db)
+Print result
+
+sqlite3_close(db)
+
+Sleep

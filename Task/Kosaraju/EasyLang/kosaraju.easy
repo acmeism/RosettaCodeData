@@ -6,7 +6,7 @@ len vis[] gc
 len l[] gc
 x = gc
 len t[][] gc
-proc visit u . .
+proc visit u .
    if vis[u] = 0
       vis[u] = 1
       for v in g[u][]
@@ -21,7 +21,7 @@ for i range0 gc
    visit i
 .
 len c[] gc
-proc assign u root . .
+proc assign u root .
    if vis[u] = 1
       vis[u] = 0
       c[u] = root

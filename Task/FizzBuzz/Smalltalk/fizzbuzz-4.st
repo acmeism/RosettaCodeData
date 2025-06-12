@@ -1,10 +1,12 @@
-1 to: 100 do: [:n | |r|
-	r := n rem: 15.
-	Transcript show: (r isZero
-	   ifTrue:['fizzbuzz']
-	   ifFalse: [(#(3 6 9 12) includes: r)
-		ifTrue:['fizz']
-		ifFalse:[((#(5 10) includes: r))
-			ifTrue:['buzz']
-			ifFalse:[n]]]);
-	cr].
+0 to: 100 do: [ :i |
+    (i \\ 3 = 0 and: [ i \\ 5 = 0 ])
+        ifTrue: [ Transcript show: 'FizzBuzz'; cr. ]
+        ifFalse: [
+            (i \\ 3 = 0)
+                ifTrue: [ Transcript show: 'Fizz'; cr. ].
+            (i \\ 5 = 0)
+                ifTrue: [ Transcript show: 'Buzz'; cr. ].
+            ((i \\ 3 ~= 0) and: [ i \\ 5 ~= 0 ])
+                ifTrue: [ Transcript show: i printString; cr. ].
+        ].
+].

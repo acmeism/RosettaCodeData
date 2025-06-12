@@ -1,4 +1,4 @@
-proc shellsort . a[] .
+proc shellsort &a[] .
    inc = len a[] div 2
    while inc > 0
       for i = inc to len a[]

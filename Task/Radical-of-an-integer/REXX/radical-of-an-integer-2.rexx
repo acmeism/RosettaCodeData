@@ -1,11 +1,14 @@
+-- 8 May 2025
 include Settings
 
-say version; say 'Radical of an integer'; say
+say 'RADICAL OF AN INTEGER'
+say version
+say
 arg n
 if n = '' then
    n = 1000000
 numeric digits 100
-say 'Radicals for 1..50:'
+say 'Radicals for 1..50...'
 ol = ''
 do i = 1 to 50
    ol = ol||Right(Radical(i),5)
@@ -14,13 +17,13 @@ do i = 1 to 50
    end
 end
 say
-say 'Radicals for:'
+say 'Radicals for...'
 say '99999  =' Radical(99999)
 say '499999 =' Radical(499999)
 say '999999 =' Radical(999999)
 say
-m = n/10; r = Isqrt(n); radi. = 0
 say 'Getting distribution list...'
+m = n/10; r = Isqrt(n); radi. = 0
 call Time('r')
 do i = 1 to n
    call Radical(i)
@@ -32,7 +35,7 @@ do i = 1 to n
    end
 end
 say
-say 'Distribution for first' n 'radicals over Number of Factors:'
+say 'Distribution for first' n 'radicals over Number of Factors...'
 do i = 0 to 10
    if radi.i > 0 then
       say Right(i,2)':' Right(radi.i,6)
@@ -47,7 +50,7 @@ say 'Getting powers of Primes up to' r'...'
 call Time('r')
 pw = 0
 do i = 1
-   p1 = prim.Prime.i
+   p1 = prim.i
    if p1 > r then
       leave
    p2 = p1
@@ -66,20 +69,8 @@ say '        -----'
 say 'Total ' Format(pr+pw,6)
 exit
 
-Radical:
-/* Radical = product of unique prime factors */
-procedure expose ufac.
-arg x
-/* Get unique factors */
-n = Ufactors(x)
-/* Calculate product */
-y = 1
-do i = 1 to n
-   y = y*ufac.factor.i
-end
-return y
-
 include Functions
+include Special
 include Numbers
 include Sequences
 include Abend

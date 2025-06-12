@@ -1,29 +1,146 @@
-def queens_lex(n: int):
+'''N Queens problem'''
 
-    def sub(i: int):
-        if i < n:
-            for k in range(i, n):
-                j = a[k]
-                a[i], a[k] = a[k], a[i]
-                if b[i + j] and c[i - j]:
-                    b[i + j] = c[i - j] = False
-                    yield from sub(i + 1)
-                    b[i + j] = c[i - j] = True
-            a[i:(n - 1)], a[n - 1] = a[(i + 1):n], a[i]
-        else:
-            yield a
-
-    a = list(range(n))
-    b = [True] * (2 * n - 1)
-    c = [True] * (2 * n - 1)
-    yield from sub(0)
+from functools import reduce
+from itertools import chain
 
 
-next(queens(31))
-[0, 2, 4, 1, 3, 8, 10, 12, 14, 6, 17, 21, 26, 28, 25, 27, 24, 30, 7, 5, 29, 15, 13, 11, 9, 18, 22, 19, 23, 16, 20]
+# queenPuzzle :: Int -> Int -> [[Int]]
+def queenPuzzle(nCols):
+    '''All board patterns of this dimension
+       in which no two Queens share a row,
+       column, or diagonal.
+    '''
+    def go(nRows):
+        lessRows = nRows - 1
+        return reduce(
+            lambda a, xys: a + reduce(
+                lambda b, iCol: b + [xys + [iCol]] if (
+                    safe(lessRows, iCol, xys)
+                ) else b,
+                enumFromTo(1)(nCols),
+                []
+            ),
+            go(lessRows),
+            []
+        ) if 0 < nRows else [[]]
+    return go
 
-next(queens_lex(31))
-[0, 2, 4, 1, 3, 8, 10, 12, 14, 5, 17, 22, 25, 27, 30, 24, 26, 29, 6, 16, 28, 13, 9, 7, 19, 11, 15, 18, 21, 23, 20]
 
-#Compare to A065188
-#1, 3, 5, 2, 4, 9, 11, 13, 15, 6, 8, 19, 7, 22, 10, 25, 27, 29, 31, 12, 14, 35, 37, ...
+# safe :: Int -> Int -> [Int] -> Bool
+def safe(iRow, iCol, pattern):
+    '''True if no two queens in the pattern
+       share a row, column or diagonal.
+    '''
+    def p(sc, sr):
+        return (iCol == sc) or (
+            sc + sr == (iCol + iRow)
+        ) or (sc - sr == (iCol - iRow))
+    return not any(map(p, pattern, range(0, iRow)))
+
+
+# ------------------------- TEST -------------------------
+# main :: IO ()
+def main():
+    '''Number of solutions for boards of various sizes'''
+
+    n = 5
+    xs = queenPuzzle(n)(n)
+
+    print(
+        str(len(xs)) + ' solutions for a {n} * {n} board:\n'.format(n=n)
+    )
+    print(showBoards(10)(xs))
+
+    print(
+        fTable(
+            '\n\n' + main.__doc__ + ':\n'
+        )(str)(lambda n: str(n).rjust(3, ' '))(
+            lambda n: len(queenPuzzle(n)(n))
+        )(enumFromTo(1)(10))
+    )
+
+
+# ---------------------- FORMATTING ----------------------
+
+# showBoards :: Int -> [[Int]] -> String
+def showBoards(nCols):
+    '''String representation, with N columns
+       of a set of board patterns.
+    '''
+    def showBlock(b):
+        return '\n'.join(map(intercalate('  '), zip(*b)))
+
+    def go(bs):
+        return '\n\n'.join(map(
+            showBlock,
+            chunksOf(nCols)([
+                showBoard(b) for b in bs
+            ])
+        ))
+    return go
+
+
+# showBoard :: [Int] -> String
+def showBoard(xs):
+    '''String representation of a Queens board.'''
+    lng = len(xs)
+
+    def showLine(n):
+        return ('.' * (n - 1)) + '♛' + ('.' * (lng - n))
+    return map(showLine, xs)
+
+
+# fTable :: String -> (a -> String) ->
+#                     (b -> String) -> (a -> b) -> [a] -> String
+def fTable(s):
+    '''Heading -> x display function -> fx display function ->
+                     f -> xs -> tabular string.
+    '''
+    def go(xShow, fxShow, f, xs):
+        ys = [xShow(x) for x in xs]
+        w = max(map(len, ys))
+        return s + '\n' + '\n'.join(map(
+            lambda x, y: y.rjust(w, ' ') + ' -> ' + fxShow(f(x)),
+            xs, ys
+        ))
+    return lambda xShow: lambda fxShow: lambda f: lambda xs: go(
+        xShow, fxShow, f, xs
+    )
+
+
+# ----------------------- GENERIC ------------------------
+
+# enumFromTo :: (Int, Int) -> [Int]
+def enumFromTo(m):
+    '''Integer enumeration from m to n.'''
+    return lambda n: range(m, 1 + n)
+
+
+# chunksOf :: Int -> [a] -> [[a]]
+def chunksOf(n):
+    '''A series of lists of length n, subdividing the
+       contents of xs. Where the length of xs is not evenly
+       divible, the final list will be shorter than n.
+    '''
+    return lambda xs: reduce(
+        lambda a, i: a + [xs[i:n + i]],
+        range(0, len(xs), n), []
+    ) if 0 < n else []
+
+
+# intercalate :: [a] -> [[a]] -> [a]
+# intercalate :: String -> [String] -> String
+def intercalate(x):
+    '''The concatenation of xs
+       interspersed with copies of x.
+    '''
+    return lambda xs: x.join(xs) if isinstance(x, str) else list(
+        chain.from_iterable(
+            reduce(lambda a, v: a + [x, v], xs[1:], [xs[0]])
+        )
+    ) if xs else []
+
+
+# MAIN ---
+if __name__ == '__main__':
+    main()

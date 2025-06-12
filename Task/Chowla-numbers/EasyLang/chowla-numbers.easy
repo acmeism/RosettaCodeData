@@ -1,5 +1,4 @@
 fastfunc chowla n .
-   sum = 0
    i = 2
    while i * i <= n
       if n mod i = 0
@@ -14,7 +13,7 @@ fastfunc chowla n .
    .
    return sum
 .
-proc sieve . c[] .
+proc sieve &c[] .
    i = 3
    while i * 3 <= len c[]
       if c[i] = 0
@@ -29,23 +28,22 @@ proc sieve . c[] .
       i += 2
    .
 .
-proc commatize n . s$ .
+func$ comma n .
    s$[] = strchars n
    s$ = ""
    l = len s$[]
    for i = 1 to len s$[]
-      if i > 1 and l mod 3 = 0
-         s$ &= ","
-      .
+      if i > 1 and l mod 3 = 0 : s$ &= ","
       l -= 1
       s$ &= s$[i]
    .
+   return s$
 .
 print "chowla number from 1 to 37"
 for i = 1 to 37
    print "  " & i & ": " & chowla i
 .
-proc main . .
+proc main .
    print ""
    len c[] 10000000
    count = 1
@@ -53,13 +51,9 @@ proc main . .
    power = 100
    i = 3
    while i <= len c[]
-      if c[i] = 0
-         count += 1
-      .
+      if c[i] = 0 : count += 1
       if i = power - 1
-         commatize power p$
-         commatize count c$
-         print "There are " & c$ & " primes up to " & p$
+         print "There are " & comma count & " primes up to " & comma power
          power *= 10
       .
       i += 2
@@ -74,15 +68,13 @@ proc main . .
       p = k * kk
       until p > limit
       if chowla p = p - 1
-         commatize p s$
-         print s$ & " is a perfect number"
+         print comma p & " is a perfect number"
          count += 1
       .
       k = kk + 1
       kk += k
       i += 1
    .
-   commatize limit s$
-   print "There are " & count & " perfect mumbers up to " & s$
+   print "There are " & count & " perfect mumbers up to " & comma limit
 .
 main

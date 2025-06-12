@@ -1,1 +1,12 @@
-print(*((lambda x=x: ''.join(chr(c) for c in (102, 105)) + (2 * chr(122)) + ''.join(chr(c) for c in (98, 117)) + (2 * chr(122)) + '\n' if x % (30 >> 1) == 0 else ''.join(chr(c) for c in (102, 105)) + (2 * chr(122)) + '\n' if x % (6 >> 1) == 0 else ''.join(chr(c) for c in (98, 117)) + (2 * chr(122)) + '\n' if x % (10 >> 1) == 0 else str(x) + '\n')() for x in range(1, 101)))
+def numsum(n):
+	''' The recursive sum of all digits in a number
+        unit a single character is obtained'''
+	res = sum([int(i) for i in str(n)])
+	if res < 10: return res
+	else : return numsum(res)
+	
+for n in range(1,101):
+	response = 'Fizz'*(numsum(n) in [3,6,9]) + \
+                   'Buzz'*(str(n)[-1] in ['5','0'])\
+	            or n
+	print(response)

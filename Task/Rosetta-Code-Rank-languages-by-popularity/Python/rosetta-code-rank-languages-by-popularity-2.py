@@ -2,7 +2,7 @@ import requests
 import operator
 import re
 
-api_url    = 'http://rosettacode.org/mw/api.php'
+api_url    = 'http://rosettacode.org/w/api.php'
 languages  = {}
 
 parameters = {
@@ -16,8 +16,12 @@ parameters = {
     'prop':         'categoryinfo'
 }
 
+headers = {
+  'User-Agent': 'Rosetta Code Task bot'
+}
+
 while(True):
-    response = requests.get(api_url, params=parameters).json()
+    response = requests.get(api_url, params=parameters, headers=headers).json()
     for k,v in response['query']['pages'].items():
         if 'title' in v and 'categoryinfo' in v:
           languages[v['title']]=v['categoryinfo']['size']

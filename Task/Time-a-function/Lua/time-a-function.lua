@@ -1,12 +1,14 @@
-function Test_Function()
-    for i = 1, 10000000 do
-        local s = math.log( i )
-        s = math.sqrt( s )
-    end
+function bench(Function, ...)
+ local t = os.time()
+ local clock1 = os.clock()
+ Function(...)
+ local c = os.clock()-clock
+ return os.time()-t, c
 end
 
-t1 = os.clock()
-    Test_Function()
-t2 = os.clock()
+function sleep(n)
+ local start = os.time()
+ repeat until os.time()-start==n
+end
 
-print( os.difftime( t2, t1 ) )
+print( bench(sleep, 2) )

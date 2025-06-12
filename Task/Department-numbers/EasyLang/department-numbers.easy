@@ -1,4 +1,4 @@
-numfmt 0 3
+numfmt 3 0
 for pol = 2 step 2 to 6
    for san = 1 to 7
       for fire = 1 to 7

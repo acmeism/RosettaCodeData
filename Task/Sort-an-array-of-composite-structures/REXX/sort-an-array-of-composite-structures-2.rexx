@@ -1,16 +1,18 @@
-Main:
+include Settings
+
+say 'SORT COMPOSITE ARRAY - 5 Mar 2025'
+say version
+say
 call Create
 call Show 'Not ordered'
 call SortStateCity
 call Show 'By state and city'
 call SortPopCityN
 call Show 'By pop (numeric desc) and city'
-table = 'states.'
-keys = 'pop. state.'; data = 'city.'
+table = 'states.'; keys = 'pop. state.'; data = 'city.'
 call SortPopCityS table,keys,data
 call Show 'By pop (string) and city'
-table = 'states.'
-keys = 'city. state.'; data = 'pop.'
+table = 'states.'; keys = 'city. state.'; data = 'pop.'
 call SortCityState table,keys,data
 call Show 'By city and state'
 return

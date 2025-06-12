@@ -1,34 +1,74 @@
-/*REXX program  simulates a number of trials  of a  random digit  and show it's skew %. */
-parse arg func times delta seed .                /*obtain arguments (options) from C.L. */
-if  func=='' |  func==","   then  func= 'RANDOM' /*function not specified?  Use default.*/
-if times=='' | times==","   then times= 1000000  /*times     "      "        "     "    */
-if delta=='' | delta==","   then delta=   1/2    /*delta%    "      "        "     "    */
-if datatype(seed, 'W')  then call random ,,seed  /*use some RAND seed for repeatability.*/
-highDig= 9                                       /*use this var for the highest digit.  */
-!.= 0                                            /*initialize all possible random trials*/
-      do times                                   /* [↓]  perform a bunch of trials.     */
-      if func=='RANDOM'  then ?= random(highDig)                  /*use RANDOM function.*/
-                         else interpret '?=' func "(0,"highDig')' /* " specified   "    */
-      !.?= !.? + 1                                        /*bump the invocation counter.*/
-      end   /*times*/                            /* [↑]  store trials ───► pigeonholes. */
-                                                 /* [↓]  compute the digit's skewness.  */
-g= times /  (1 + highDig)                        /*calculate number of each digit throw.*/
-w= max(9, length( commas(times) ) )              /*maximum length of  number  of trials.*/
-pad= left('', 9)                                 /*this is used for output indentation. */
-say pad  'digit'   center(" hits", w)    ' skew '    "skew %"    'result'     /*header. */
-say sep                                          /*display a separator line.            */
-                                                 /** [↑]  show header and the separator.*/
-        do k=0  to highDig                       /*process each of the possible digits. */
-        skew= g - !.k                            /*calculate the  skew   for the digit. */
-        skewPC= (1 - (g - abs(skew)) / g) * 100  /*    "      "    "  percentage for dig*/
-        say pad center(k, 5)               right( commas(!.k), w)     right(skew, 6)  ,
-            right( format(skewPC, , 3), 6) center( word('ok skewed', 1+(skewPC>delta)), 6)
-        end   /*k*/
-say sep                                          /*display a separator line.            */
-y= 5+1+w+1+6+1+6+1+6                                                      /*width + seps*/
-say pad center(" (with  "  commas(times)   '  trials)'  , y)              /*# trials.   */
-say pad center(" (skewed when exceeds "      delta'%)'  , y)              /*skewed note.*/
-exit 0                                           /*stick a fork in it,  we're all done. */
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-commas: parse arg _;  do jc=length(_)-3  to 1  by -3; _=insert(',', _, jc); end;  return _
-sep:    say pad  '─────'   center('', w, '─')   '──────'    "──────"    '──────'; return
+-- 8 May 2025
+include Settings
+parse arg xx','yy','zz
+if xx = '' then
+   xx = 'Random'
+if yy = '' then
+   yy = 1e6
+if zz = '' then
+   zz = 0.3
+
+say 'VERIFY DISTRIBUTION UNIFORMITY / NAIVE'
+say version
+say
+call Parameters xx,yy,zz
+call Get xx,yy
+call Check yy,zz
+call Timer
+exit
+
+Parameters:
+procedure
+parse arg xx,yy,zz
+say 'Generator :' xx
+say 'Count     :' yy
+say 'Tolerance :' zz'%'
+say
+return
+
+Get:
+procedure expose work. coun. glob.
+parse arg xx,yy
+say 'Get uniform distributed integers 1 thru 7...'
+work. = 0; coun. = 0
+do n = 1 to yy
+   interpret 'r =' xx'(1,7)'
+   work.n = r; coun.r = coun.r+1
+end
+work.0 = yy
+say 'Done'
+say
+return
+
+Check:
+procedure expose coun.
+arg xx,yy
+say 'And Verify them...'
+a = xx%7
+say 'Per bin about' a 'expected'
+say '-------------------------------'
+say 'n   count  skew    skew% test? '
+say '-------------------------------'
+v = 1
+do n = 1 to 7
+   b = coun.n-a; c = Round(100*b/a,3)
+   if Abs(c) > yy then do
+      d = 'Failed'; v = 0
+   end
+   else
+      d = 'Passed'
+   say n Right(coun.n,7) Right(b,5) Right(c'%',8) d
+end
+say '-------------------------------'
+if v then
+   e = 'did'
+else
+   e = 'did not'
+say 'The set' e 'pass the test'
+say
+return
+
+include Functions
+include Constants
+include Helper
+include Abend

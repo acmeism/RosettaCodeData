@@ -1,5 +1,5 @@
 len t$[] 8
-proc randins c$ l r . pos .
+proc randins c$ l r &pos .
    repeat
       pos = random (r - l + 1) + l - 1
       until t$[pos] = ""

@@ -1,8 +1,11 @@
-set ary {}
+# empty list
+set arr {}
 
-lappend ary 1
-lappend ary 3
+# 10 integers
+set arr [list 1 2 3 4 5 6 7 8 9 10 ]
 
-lset ary 0 2
 
-puts [lindex $ary 0]
+lappend arr 11
+lappend arr 12
+
+puts stdout  "$arr"

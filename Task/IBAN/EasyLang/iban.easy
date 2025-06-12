@@ -47,7 +47,7 @@ func isvalid hiban$ .
    .
    return if mod97 t$ = 1
 .
-proc check s$ . .
+proc check s$ .
    write s$ & " is "
    if isvalid s$ = 1
       print "valid"

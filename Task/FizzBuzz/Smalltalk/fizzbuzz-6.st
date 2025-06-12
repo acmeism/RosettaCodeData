@@ -1,5 +1,5 @@
-1 to: 100 do: [:i | |fb s|
-	fb := {i isDivisibleBy: 3. i isDivisibleBy: 5. nil}.
-	fb at: 3 put: (fb first | fb second) not.
-	s := '<1?Fizz:><2?Buzz:><3?{1}:>' format: {i printString}.
-	Transcript show: (s expandMacrosWithArguments: fb); cr].
+fbz := (1 to: 100) asOrderedCollection.
+ 3 to: 100 by:  3 do: [:i | fbz at: i put: 'Fizz'].
+ 5 to: 100 by:  5 do: [:i | fbz at: i put: 'Buzz'].
+15 to: 100 by: 15 do: [:i | fbz at: i put: 'FizzBuzz'].
+fbz do: [:i | Transcript show: i; cr].

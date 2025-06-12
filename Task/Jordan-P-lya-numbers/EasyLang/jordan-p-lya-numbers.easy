@@ -11,9 +11,7 @@ fastfunc jpnum m .
       repeat
          q = n div fac
          if n mod fac = 0
-            if q = 1
-               return 1
-            .
+            if q = 1 : return 1
             n = q
          else
             fac = fac / i
@@ -22,13 +20,11 @@ fastfunc jpnum m .
          until i = 1
       .
       limite -= 1
-      if limite = 0
-         return 0
-      .
+      if limite = 0 : return 0
       n = m
    .
 .
-numfmt 0 5
+numfmt 5 0
 write 1
 c = 1
 n = 2
@@ -37,9 +33,7 @@ repeat
       c += 1
       if c <= 50
          write n
-         if c mod 8 = 0
-            print ""
-         .
+         if c mod 8 = 0 : print ""
       .
       sn = n
    .

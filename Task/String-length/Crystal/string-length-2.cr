@@ -1,1 +1,1 @@
-"J̲o̲s̲é̲".chars.length
+"J̲o̲s̲é̲".size  #=> 8

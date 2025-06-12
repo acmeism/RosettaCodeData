@@ -1,23 +1,19 @@
 maxn = 100000
 len sieve[] maxn
 global prim[] .
-proc mksieve . .
+proc mksieve .
    max = sqrt len sieve[]
    for d = 2 to max
       if sieve[d] = 0
-         for i = d * d step d to len sieve[]
-            sieve[i] = 1
-         .
+         for i = d * d step d to len sieve[] : sieve[i] = 1
       .
    .
    for n = 2 to len sieve[]
-      if sieve[n] = 0
-         prim[] &= n
-      .
+      if sieve[n] = 0 : prim[] &= n
    .
 .
 mksieve
-proc find n k start . found res[] .
+proc find n k start &found &res[] .
    found = 0
    if k = 0
       if n = 0
@@ -28,9 +24,7 @@ proc find n k start . found res[] .
    .
    for i = start to len prim[]
       p = prim[i]
-      if p > n
-         return
-      .
+      if p > n : return
       find (n - p) (k - 1) (i + 1) found r[]
       if found = 1
          swap res[] r[]
@@ -45,9 +39,7 @@ for i to len test[][]
    find test[i][1] test[i][2] 1 f res[]
    write test[i][1] & "(" & test[i][2] & ") = "
    if f = 1
-      for j = len res[] downto 2
-         write res[j] & " + "
-      .
+      for j = len res[] downto 2 : write res[j] & " + "
       print res[1]
    else
       print "not possible"

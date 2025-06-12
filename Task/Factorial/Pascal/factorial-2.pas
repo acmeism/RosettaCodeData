@@ -1,32 +1,45 @@
 {$mode objFPC}{R+}
-FUNCTION Factorial ( n : qword ) : qword;
+FUNCTION Fact(n: qword): qword;
 
-    (*)
-           Update for version 3.2.0
-           Factorial works until 20! , which is good enough for me for now
-           replace qword with dword and rax,rcx with eax, ecx for 32-bit
-           for Factorial until 12!
-    (*)
+VAR
+    F: qword;
 
-    VAR
-	
-	F:	qword;
-	
-    BEGIN
+BEGIN
+    if n > 20 then
+    begin
+        WriteLn('This function is only accurate up to 20!');
+        exit(0);
+    end;
 
-	asm
-	
-		mov		$1,	%rax
-		mov		 n,	%rcx
-		
-	.Lloop1:
-			imul	%rcx,	%rax
-			loopnz	.Lloop1
-		
-		mov	%rax,   F
+    asm
+        (*) Initialize result = 1 (0! = 1 case handled automatically) (*)
 
-	end;
+        mov     $1, %rax          (*)  RAX = 1 (initial result)       (*)
+        mov      n, %rcx          (*)  RCX = input number (counter)   (*)
 
-	Result := F ;
-	
-    END;
+        test    %rcx, %rcx        (*)  Check if n=0                   (*)
+        jz      .Lstore_result    (*)  Skip loop if n=0               (*)
+
+    .Lloop1:
+        imul    %rcx, %rax        (*)  RAX = RAX * RCX (signed mul)   (*)
+        dec     %rcx              (*)  Decrement RCX                  (*)
+        jnz     .Lloop1           (*)  Loop while RCX != 0            (*)
+
+    .Lstore_result:
+        mov     %rax, F           (*)  Store result in F              (*)
+    end ['rax', 'rcx'];           (*)  Tell compiler register change  (*)
+
+    Result := F;
+
+END;
+
+
+var
+    N       : integer = 20 ;
+
+begin
+
+    writeln;
+    writeln( BasicFact(N));
+
+end.        (*)    Function Fact    (*)

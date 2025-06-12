@@ -1,4 +1,4 @@
-proc run code$ . .
+proc run code$ .
    for c$ in strchars code$
       if c$ = "Q"
          print code$

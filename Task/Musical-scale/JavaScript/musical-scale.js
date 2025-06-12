@@ -1,36 +1,36 @@
-<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Sample Page</title>
-<script>
-function musicalScale(freqArr){
-    // create web audio api context
-    var AudioContext = window.AudioContext || window.webkitAudioContext;
-    var audioCtx = new AudioContext();
+const SEMITONE = 2 ** (1 / 12)
 
-    // create oscillator and gain node
-    var oscillator = audioCtx.createOscillator();
-    var gainNode = audioCtx.createGain();
-
-    // connect oscillator to gain node to speakers
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-
-    // set frequencies to play
-    duration = 0.5   // seconds
-    freqArr.forEach(function (freq, i){
-        oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime + i * duration);
-    });
-
-    // start playing!
-    oscillator.start();
-    // stop playing!
-    oscillator.stop(audioCtx.currentTime + freqArr.length * duration);
+function incrementSemitones(root) {
+    return (n) => root * SEMITONE ** n
 }
-</script>
-</head>
-<body>
-<button onclick="musicalScale([261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25]);">Play scale</button>
-</body>
-</html>
+
+function playNotes(root, notes, { seconds, wave } = {}) {
+    const ctx = new AudioContext()
+    const oscillator = ctx.createOscillator()
+    const freqs = notes.map(incrementSemitones(root))
+
+    oscillator.connect(ctx.createGain().connect(ctx.destination))
+    oscillator.type = wave ?? 'sine'
+
+    const duration = seconds ?? 0.3
+
+    for (const [i, freq] of freqs.entries()) {
+        oscillator.frequency.setValueAtTime(freq, ctx.currentTime + i * duration)
+    }
+
+    oscillator.start()
+    oscillator.stop(ctx.currentTime + freqs.length * duration)
+
+    return new Promise((res) => oscillator.addEventListener('ended', res))
+}
+
+const A = 440
+const C = incrementSemitones(A)(-9) // ~= 261.63
+
+const major = [0, 2, 4, 5, 7, 9, 11, 12]
+const minor = [0, 2, 3, 5, 7, 8, 10, 12]
+
+void (async function main() {
+    await playNotes(C, major, { seconds: 0.3, wave: 'sine' })
+    await playNotes(A, minor, { seconds: 0.1, wave: 'triangle' })
+})()

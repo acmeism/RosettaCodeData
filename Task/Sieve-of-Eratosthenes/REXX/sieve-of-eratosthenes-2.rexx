@@ -1,24 +1,68 @@
-/*REXX program generates primes via a  wheeled  sieve of Eratosthenes  algorithm.       */
-parse arg H .;   if H==''  then H=200            /*let the highest number be specified. */
-tell=h>0;     H=abs(H);    w=length(H)           /*a negative H suppresses prime listing*/
-if 2<=H & tell  then say right(1, w+20)'st prime   ───► '      right(2, w)
-@.= '0'x                                         /*assume that  all  numbers are prime. */
-cw= length(@.)                                   /*the cell width that holds numbers.   */
-#= w<=H                                          /*the number of primes found  (so far).*/
-!=0                                              /*skips the top part of sieve marking. */
-    do j=3  by 2  for (H-2)%2;  b= j%cw          /*odd integers up to   H   inclusive.  */
-    if substr(x2b(c2x(@.b)),j//cw+1,1)  then iterate              /*is  J  composite ?  */
-    #= # + 1                                     /*bump the prime number counter.       */
-    if tell  then say right(#, w+20)th(#)    'prime   ───► '      right(j, w)
-    if !     then iterate                        /*should the top part be skipped ?     */
-    jj=j * j                                     /*compute the square of  J.         ___*/
-    if jj>H  then !=1                            /*indicates skip top part  if  j > √ H */
-      do m=jj  to H  by j+j;   call . m;   end   /* [↑]  strike odd multiples  ¬ prime  */
-    end   /*j*/                                  /*             ───                     */
+-- 12 Apr 2025
+include Settings
 
-say;             say  right(#, w+20)      'prime's(#)    "found up to and including "  H
-exit                                             /*stick a fork in it,  we're all done. */
-/*──────────────────────────────────────────────────────────────────────────────────────────────*/
-.: parse arg n; b=n%cw; r=n//cw+1;_=x2b(c2x(@.b));@.b=x2c(b2x(left(_,r-1)'1'substr(_,r+1)));return
-s: if arg(1)==1  then return arg(3);  return word(arg(2) 's',1)            /*pluralizer.*/
-th: procedure; parse arg x; x=abs(x); return word('th st nd rd',1+x//10*(x//100%10\==1)*(x//10<4))
+call Time('r')
+say 'SIEVE OF ERATOSTHENES'
+say version
+say
+call GetBasic 200
+call ShowPrimes 200
+call GetPrimes 200
+call ShowPrimes 200
+say Format(Time('e'),,3) 'seconds'; say
+exit
+
+GetBasic:
+procedure expose prim.
+arg xx
+say 'Basic sieve up to' xx'...'
+call Basic xx
+say prim.0 'found'
+say
+return
+
+Basic:
+procedure expose prim. work.
+arg xx
+work. = 1
+do i = 2 while i*i <= xx
+   if work.i then do
+      do j = i*i by i to xx
+         work.j = 0
+      end
+   end
+end
+zz = 0
+do i = 2 to xx
+   if work.i then do
+      zz = zz+1; prim.zz = i
+   end
+end
+prim.0 = zz
+return zz
+
+GetPrimes:
+procedure expose prim. flag.
+arg xx
+say 'Wheeled sieve up to' xx'...'
+call Primes xx
+say prim.0 'found'
+say
+return
+
+ShowPrimes:
+procedure expose prim.
+arg xx
+say 'Primes up to' xx
+do i = 1 to prim.0
+   call Charout ,right(prim.i,4)
+   if i//10 = 0 then
+      say
+end
+say
+say
+return
+
+include Sequences
+include Functions
+include Abend

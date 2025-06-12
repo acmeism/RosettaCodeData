@@ -1,1 +1,1 @@
-   ]F.(echo@'SPAM')0
+echo@'SPAM'F.] ''

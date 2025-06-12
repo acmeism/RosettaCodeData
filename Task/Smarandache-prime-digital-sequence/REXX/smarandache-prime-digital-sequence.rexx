@@ -1,30 +1,65 @@
-/*REXX program lists a  sequence of  SPDS  (Smarandache prime-digital sequence)  primes.*/
-parse arg n q                                    /*get optional number of primes to find*/
-if n=='' | n==","  then n=  25                   /*Not specified?  Then use the default.*/
-if q=''            then q= 100  1000             /* "      "         "   "   "     "    */
-say '═══listing the first'     n     "SPDS primes═══"
-call spds n
-             do i=1  for words(q)+1;     y=word(q, i);    if y=='' | y==","   then iterate
-             say
-             say '═══listing the last of '    y     "SPDS primes═══"
-             call spds -y
-             end   /*i*/
-exit                                             /*stick a fork in it,  we're all done. */
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-spds: parse arg x 1 ox;  x= abs(x)               /*obtain the limit to be used for list.*/
-      c= 0                                       /*C  number of SPDS primes found so far*/
-      #= 0                                       /*#  number of      primes found so far*/
-            do j=1  by 2  while  c<x;    z= j    /*start: 1st even prime, then use odd. */
-            if z==1  then z= 2                   /*handle the even prime (special case) */
-                                                 /* [↓]  divide by the primes.   ___    */
-                    do k=2  to #  while  k*k<=z  /*divide  Z  with all primes ≤ √ Z     */
-                    if z//@.k==0  then iterate j /*÷ by prev. prime?  ¬prime     ___    */
-                    end   /*j*/                  /* [↑]   only divide up to     √ Z     */
-            #= # + 1;             @.#= z         /*bump the prime count;  assign prime #*/
-            if verify(z, 2357)>0  then iterate j /*Digits ¬prime?  Then skip this prime.*/
-            c= c + 1                             /*bump the number of SPDS primes found.*/
-            if ox<0  then iterate                /*don't display it, display the last #.*/
-            say right(z, 21)                     /*maybe display this prime ──► terminal*/
-            end   /*j*/                          /* [↑]  only display N number of primes*/
-      if ox<0  then say right(z, 21)             /*display one  (the last)  SPDS prime. */
-      return
+-- 12 Apr 2025
+include Settings
+numeric digits 12
+
+call Time('r')
+say 'SMARANDACHE PRIME-DIGITAL SEQUENCE'
+say version
+say
+call Task1
+call Task2
+say Format(Time('e'),,3) 'seconds'
+exit
+
+Task1:
+procedure expose prim.
+say 'First 25 SPDS primes...'
+n = 0
+do i = 1 until n = 25
+   if PrimeDigits(i) then do
+      if Prime(i) then do
+         n = n+1
+         call Charout ,Right(i,9)
+         if n //10 = 0 then
+            say
+      end
+   end
+end
+say
+say
+return
+
+Task2:
+procedure expose prim.
+say 'Higher in the sequence...'
+n = 4; t = 0
+do i = 23 by 2 until n = 23e3
+   if Pos(Right(i,1),37) > 0 then do
+      if PrimeDigits(i) then do
+         t = t+1
+         if Prime(i) then do
+            n = n+1
+            if n//1000 = 0 then do
+               say n'th is' i
+            end
+         end
+      end
+   end
+end
+say t 'prime tests performed'
+say
+return
+
+PrimeDigits:
+procedure
+arg xx
+a = Verify(xx,2357)
+if a > 0 then
+   return 0
+else
+   return 1
+
+include Numbers
+include Sequences
+include Functions
+include Abend

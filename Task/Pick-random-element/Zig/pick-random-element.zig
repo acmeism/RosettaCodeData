@@ -1,11 +1,11 @@
 const std = @import("std");
 
 const debug = std.debug;
-const rand = std.rand;
+const rand = std.Random;
 const time = std.time;
 
-test "pick random element" {
-    var pcg = rand.Pcg.init(time.milliTimestamp());
+pub fn main() void {
+    var pcg = rand.Pcg.init(@intCast(time.milliTimestamp()));
 
     const chars = [_]u8{
         'A', 'B', 'C', 'D',
@@ -18,13 +18,13 @@ test "pick random element" {
         '<', '>', '(', ')',
     };
 
-    var i: usize = 0;
-    while (i < 32) : (i += 1) {
+
+    for(0..32) |i| {
         if (i % 4 == 0) {
-            debug.warn("\n  ", .{});
+            debug.print("\n  ", .{});
         }
-        debug.warn("'{c}', ", .{chars[pcg.random.int(usize) % chars.len]});
+        debug.print("'{c}', ", .{chars[pcg.random().uintLessThan(usize, chars.len)]});
     }
 
-    debug.warn("\n", .{});
+    debug.print("\n", .{});
 }

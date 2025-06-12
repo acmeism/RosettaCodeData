@@ -19,7 +19,7 @@ func divsum n alldiv .
    .
    return s1
 .
-proc ruth_aaron alldiv . .
+proc ruth_aaron alldiv .
    n = 2
    repeat
       s = divsum n alldiv

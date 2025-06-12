@@ -1,8 +1,5 @@
-print "The first 100 arithmetic numbers are:"
-numfmt 0 3
-n = 1
-while aricnt <= 1e5
-   divi = 1 ; divcnt = 0 ; sum = 0
+proc arith n &ari &comp .
+   divi = 1
    repeat
       quot = n div divi
       until quot < divi
@@ -17,20 +14,29 @@ while aricnt <= 1e5
       .
       divi += 1
    .
-   if sum mod divcnt = 0
-      aricnt += 1
-      if aricnt <= 100
-         write n & " "
-         if aricnt mod 10 = 0
-            print ""
-         .
-      .
-      if divcnt > 2
-         compcnt += 1
-      .
-      if aricnt = 1e3 or aricnt = 1e4 or aricnt = 1e5
+   ari = if sum mod divcnt = 0
+   comp = if divcnt > 2
+.
+print "The first 100 arithmetic numbers are:"
+n = 1
+while cnt < 100
+   arith n ari comp
+   if ari = 1
+      write n & " "
+      cnt += 1
+      compcnt += comp
+   .
+   n += 1
+.
+print ""
+while cnt < 1e5
+   arith n ari comp
+   if ari = 1
+      cnt += 1
+      compcnt += comp
+      if cnt = 1e3 or cnt = 1e4 or cnt = 1e5
          print ""
-         print aricnt & "th arithmetic number: " & n
+         print cnt & "th arithmetic number: " & n
          print "Composite arithmetic numbers: " & compcnt
       .
    .

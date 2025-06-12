@@ -5,10 +5,7 @@ file_sum, file_cnt_data, file_lines = 0, 0, 0
 max_rejected, n_rejected = 0, 0
 max_rejected_date, rejected_date = "", ""
 
-while true do
-    data = io.read("*line")
-    if data == nil then break end
-
+for data in io.lines() do
     date = string.match( data, "%d+%-%d+%-%d+" )
     if date == nil then break end
 	
@@ -24,9 +21,9 @@ while true do
     	    cnt = cnt + 1
     	    n_rejected = 0
     	else
-	    if n_rejected == 0 then
-	        rejected_date = date
-  	    end
+	        if n_rejected == 0 then
+	            rejected_date = date
+  	        end
     	    n_rejected = n_rejected + 1
     	    if n_rejected > max_rejected then
     	        max_rejected = n_rejected

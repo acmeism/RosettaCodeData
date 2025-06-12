@@ -1,6 +1,9 @@
-Main:
+-- 22 Mar 2025
 include Settings
-say version; say 'Legendre Prime counter (sieving)'; say
+
+say 'LEGENDRE PRIME COUNTER (SIEVING)'
+say version
+say
 numeric digits 10
 do n = 0 to 8
    call Time('r')

@@ -1,4 +1,4 @@
-proc mean . v[] a g h .
+proc mean &v[] &a &g &h .
    prod = 1
    for v in v[]
       sum += v

@@ -1,8 +1,6 @@
 func[][] mkarr s .
    len q[][] s
-   for i = 1 to s
-      len q[i][] s
-   .
+   for i = 1 to s : len q[i][] s
    return q[][]
 .
 func[][] mk_oms s .
@@ -12,13 +10,9 @@ func[][] mk_oms s .
    for p = 1 to s * s
       q[r][c] = p
       tc = c + 1
-      if tc > s
-         tc = 1
-      .
+      if tc > s : tc = 1
       tr = r - 1
-      if tr < 1
-         tr = s
-      .
+      if tr < 1 : tr = s
       if q[tr][tc] <> 0
          tc = c
          tr = r + 1
@@ -59,5 +53,6 @@ func[][] mk_sems s .
    .
    return q[][]
 .
-numfmt 0 2
-print mk_sems 6
+numfmt 2 0
+r[][] = mk_sems 6
+for i to len r[][] : print r[i][]

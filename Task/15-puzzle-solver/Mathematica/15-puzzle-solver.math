@@ -1,0 +1,178 @@
+(* Constants for the correct ordering and board position mapping *)
+correctOrder = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0};
+rowOf = {0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3} + 1; (* +1 because Mathematica uses 1-based indexing *)
+colOf = {0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3} + 1; (* +1 because Mathematica uses 1-based indexing *)
+
+(* Function to estimate remaining moves using Manhattan distance *)
+EstimateMoves[board_] := Module[{h = 0},
+  Do[
+    (* Skip the empty tile (0) *)
+    If[board[[i]] != 0,
+      (* Find where this tile should be in the correct order *)
+      correctPos = Position[correctOrder, board[[i]]][[1, 1]];
+      (* Calculate Manhattan distance: |current_row - correct_row| + |current_col - correct_col| *)
+      h += Abs[rowOf[[i]] - rowOf[[correctPos]]] + Abs[colOf[[i]] - colOf[[correctPos]]];
+    ],
+    {i, 1, 16}
+  ];
+  h
+]
+
+(* Find the position of the blank tile (0) *)
+FindBlankPosition[board_] := Position[board, 0][[1, 1]]
+
+(* Generate possible moves from current state *)
+GenerateMoves[board_, movesSoFar_] := Module[
+  {blankPos, possibleMoves = {}, newBoard, newMoves},
+
+  blankPos = FindBlankPosition[board];
+
+  (* Check if we can move left (blank goes right) *)
+  If[Mod[blankPos, 4] != 1,
+    newBoard = board;
+    newBoard[[blankPos]] = newBoard[[blankPos - 1]];
+    newBoard[[blankPos - 1]] = 0;
+    newMoves = movesSoFar <> "r";
+    AppendTo[possibleMoves, {newBoard, newMoves, Length[newMoves] + EstimateMoves[newBoard]}];
+  ];
+
+  (* Check if we can move right (blank goes left) *)
+  If[Mod[blankPos, 4] != 0,
+    newBoard = board;
+    newBoard[[blankPos]] = newBoard[[blankPos + 1]];
+    newBoard[[blankPos + 1]] = 0;
+    newMoves = movesSoFar <> "l";
+    AppendTo[possibleMoves, {newBoard, newMoves, Length[newMoves] + EstimateMoves[newBoard]}];
+  ];
+
+  (* Check if we can move up (blank goes down) *)
+  If[blankPos > 4,
+    newBoard = board;
+    newBoard[[blankPos]] = newBoard[[blankPos - 4]];
+    newBoard[[blankPos - 4]] = 0;
+    newMoves = movesSoFar <> "d";
+    AppendTo[possibleMoves, {newBoard, newMoves, Length[newMoves] + EstimateMoves[newBoard]}];
+  ];
+
+  (* Check if we can move down (blank goes up) *)
+  If[blankPos <= 12,
+    newBoard = board;
+    newBoard[[blankPos]] = newBoard[[blankPos + 4]];
+    newBoard[[blankPos + 4]] = 0;
+    newMoves = movesSoFar <> "u";
+    AppendTo[possibleMoves, {newBoard, newMoves, Length[newMoves] + EstimateMoves[newBoard]}];
+  ];
+
+  possibleMoves
+]
+
+(* A* Search algorithm for solving the puzzle *)
+Solve15Puzzle[startBoard_] := Module[
+  {openSet = {}, closedSet = {}, current, children, bestMoves = {}},
+
+  (* Initialize the priority queue (Mathematica doesn't have a built-in priority queue,
+     so we'll use a list and sort it each time) *)
+  openSet = {{startBoard, "", EstimateMoves[startBoard]}};
+
+  While[Length[openSet] > 0,
+    (* Sort the open set by total estimated cost *)
+    openSet = Sort[openSet, #1[[3]] < #2[[3]] &];
+
+    (* Get the most promising state *)
+    current = First[openSet];
+    openSet = Rest[openSet];
+
+    (* Check if we've reached the goal state *)
+    If[current[[1]] == correctOrder,
+      Print["Solution found!"];
+      Print["Moves: ", current[[2]]];
+      Print["Number of moves: ", StringLength[current[[2]]]];
+      Print["Open set size: ", Length[openSet]];
+      Print["Closed set size: ", Length[closedSet]];
+
+      (* Format the final board *)
+      Print["Final board:"];
+      Print[Partition[current[[1]], 4]];
+      Return[current[[2]]];
+    ];
+
+    (* Generate all possible moves from current state *)
+    children = GenerateMoves[current[[1]], current[[2]]];
+
+    (* Process each child state *)
+    For[i = 1, i <= Length[children], i++,
+      child = children[[i]];
+      childBoard = child[[1]];
+
+      (* Check if this board is already in the closed set *)
+      If[Not[MemberQ[Map[First, closedSet], childBoard]],
+        (* Check if this board is already in the open set *)
+        existingIdx = Position[Map[First, openSet], childBoard];
+
+        If[existingIdx == {},
+          (* Add to open set if not already there *)
+          AppendTo[openSet, child];
+        ,
+          (* Update if this path is better than existing one *)
+          existingIdx = existingIdx[[1, 1]];
+          If[StringLength[child[[2]]] < StringLength[openSet[[existingIdx, 2]]],
+            openSet[[existingIdx]] = child;
+          ];
+        ];
+      ];
+    ];
+
+    (* Add current state to closed set *)
+    AppendTo[closedSet, current];
+  ];
+
+  Print["No solution found!"];
+  Return[{}];
+]
+
+(* Example usage *)
+startingBoard = {15, 14, 1, 6, 9, 11, 4, 12, 0, 10, 7, 3, 13, 8, 5, 2};
+(* startingBoard = {0, 1, 2, 3, 5, 6, 7, 4, 9, 10, 11, 8, 13, 14, 15, 12}; *)
+
+solution = Solve15Puzzle[startingBoard];
+
+(* Pretty print function to visualize a board *)
+PrintBoard[board_] := Module[{},
+  Grid[Partition[board, 4], Frame -> All]
+]
+
+(* Visualization code to show the solution step by step *)
+VisualizeSolution[startBoard_, moves_] := Module[
+  {currentBoard = startBoard, frames = {PrintBoard[startBoard]}, blankPos},
+
+  Do[
+    blankPos = FindBlankPosition[currentBoard];
+
+    Switch[StringTake[moves, {i}],
+      "l", (* blank moves left *)
+        currentBoard[[blankPos]] = currentBoard[[blankPos - 1]];
+        currentBoard[[blankPos - 1]] = 0,
+
+      "r", (* blank moves right *)
+        currentBoard[[blankPos]] = currentBoard[[blankPos + 1]];
+        currentBoard[[blankPos + 1]] = 0,
+
+      "u", (* blank moves up *)
+        currentBoard[[blankPos]] = currentBoard[[blankPos - 4]];
+        currentBoard[[blankPos - 4]] = 0,
+
+      "d", (* blank moves down *)
+        currentBoard[[blankPos]] = currentBoard[[blankPos + 4]];
+        currentBoard[[blankPos + 4]] = 0
+    ];
+
+    AppendTo[frames, PrintBoard[currentBoard]];
+
+    ,{i, 1, StringLength[moves]}
+  ];
+
+  ListAnimate[frames]
+]
+
+(* Uncomment to visualize the solution *)
+(* If[solution != {}, VisualizeSolution[startingBoard, solution]]; *)

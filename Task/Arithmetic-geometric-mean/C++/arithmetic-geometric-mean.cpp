@@ -1,28 +1,22 @@
-#include<bits/stdc++.h>
-using namespace std;
-#define _cin	ios_base::sync_with_stdio(0);	cin.tie(0);
-#define rep(a, b)	for(ll i =a;i<=b;++i)
+#include <iostream>
+#include <cmath>
 
-double agm(double a, double g)		//ARITHMETIC GEOMETRIC MEAN
-{	double epsilon = 1.0E-16,a1,g1;
-	if(a*g<0.0)
-	{	cout<<"Couldn't find arithmetic-geometric mean of these numbers\n";
-		exit(1);
-	}
-	while(fabs(a-g)>epsilon)
-	{	a1 = (a+g)/2.0;
-		g1 = sqrt(a*g);
-		a = a1;
-		g = g1;
-	}
-	return a;
+double agm(double a, double g, double tolerance = 1e-16) {
+    double an = a;
+    double gn = g;
+
+    an = (a + g) / 2.0;
+    gn = std::sqrt(a*g);
+    while (std::abs(an-gn) > tolerance) {
+        an = (an + gn) / 2.0;
+        gn = std::sqrt(an*gn);
+    }
+
+    return an;
 }
 
-int main()
-{	_cin;    //fast input-output
-	double x, y;
-	cout<<"Enter X and Y: ";	//Enter two numbers
-	cin>>x>>y;
-	cout<<"\nThe Arithmetic-Geometric Mean of "<<x<<" and "<<y<<" is "<<agm(x, y);
-return 0;
+int main() {
+    std::cout << "Arithmetic-geometric mean of 1 and 1/√2 is " << agm(1, 1/std::sqrt(2)) << "\n";
+
+    return 0;
 }

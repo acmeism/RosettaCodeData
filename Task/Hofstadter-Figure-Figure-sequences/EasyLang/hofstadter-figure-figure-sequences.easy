@@ -1,5 +1,5 @@
 global rs[] ss[] .
-procdecl RS_append . .
+procdecl RS_append .
 func R n .
    while n > len rs[]
       RS_append
@@ -12,7 +12,7 @@ func S n .
    .
    return ss[n]
 .
-proc RS_append . .
+proc RS_append .
    n = len rs[]
    r = R n + S n
    s = S len ss[]

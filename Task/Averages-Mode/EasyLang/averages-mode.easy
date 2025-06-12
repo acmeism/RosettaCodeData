@@ -1,4 +1,4 @@
-proc modes . in[] r[] .
+proc modes &in[] &r[] .
    r[] = [ ]
    for v in in[]
       for i to len vals[]
@@ -12,9 +12,7 @@ proc modes . in[] r[] .
       cnt[] &= 0
    .
    for i to len cnt[]
-      if cnt[i] = max
-         r[] &= vals[i]
-      .
+      if cnt[i] = max : r[] &= vals[i]
    .
 .
 in[] = [ 1 3 6 6 6 6 7 7 12 12 17 ]

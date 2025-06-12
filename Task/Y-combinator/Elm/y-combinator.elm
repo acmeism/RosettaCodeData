@@ -2,18 +2,14 @@ module Main exposing ( main )
 
 import Html exposing ( Html, text )
 
--- As with most of the strict (non-deferred or non-lazy) languages,
--- this is the Z-combinator with the additional value parameter...
+-- Recursive wrapper Type required for statically-typed languages...
+type Mu a = Roll (Mu a -> a)
+unroll : Mu a -> (Mu a -> a)
+unroll (Roll v) = v
 
--- wrap type conversion to avoid recursive type definition...
-type Mu a b = Roll (Mu a b -> a -> b)
-
-unroll : Mu a b -> (Mu a b -> a -> b) -- unwrap it...
-unroll (Roll x) = x
-
--- note lack of beta reduction using values...
+-- the non-sharing non-recursive implementation of the Z-Combinator...
 fixz : ((a -> b) -> (a -> b)) -> (a -> b)
-fixz f = let g r = f (\ v -> unroll r r v) in g (Roll g)
+fixz f = let g = \ x v -> f (unroll x x) v in g (Roll g)
 
 facz : Int -> Int
 -- facz = fixz <| \ f n -> if n < 2 then 1 else n * f (n - 1) -- inefficient recursion
@@ -23,20 +19,18 @@ fibz : Int -> Int
 -- fibz = fixz <| \ f n -> if n < 2 then n else f (n - 1) + f (n - 2) -- inefficient recursion
 fibz = fixz (\ fn f s i -> if i < 2 then f else fn s (f + s) (i - 1)) 1 1 -- efficient tailcall
 
--- by injecting laziness, we can get the true Y-combinator...
--- as this includes laziness, there is no need for the type wrapper!
+-- the non-sharing non-recursive implementation of fixy with injected laziness...
+-- this works for languages that are "strict" = non-lazy by default...
 fixy : ((() -> a) -> a) -> a
-fixy f = f <| \ () -> fixy f -- direct function recursion
--- the above is not value recursion but function recursion!
--- the below is an attempt at value recursion, but...
--- fixv f = let x = f x in x -- not allowed by task or by Elm!
--- we can make Elm allow it by injecting laziness but...
-fix : ((() -> a) -> a) -> a
-fix f = let xf() = f xf in xf() -- this is just another form of function recursion...
--- the above is what the Haskell `fix` non-sharing fix point combinator actually is
--- because all values are actually non-strict/lazy, meaning they require a "thunk" as
--- above to be evaluated to their actual value, which is equivalent to `xf() ==> x` above!
--- thus, in Haskell, all "boxed" values such as this actually represent function applications!
+fixy f = let g x = f <| \ () -> (unroll x) x in g (Roll g)
+
+{-- } --as Elm allows function recursion, the above is equivalent to the following:
+fixy f = f <| \ () -> fixy f
+--}
+
+-- sharing version if `(() -> a)` is lazy memoizing value of `a` - Elm doesn't have memoization!
+fix : ((() -> a) -> a) -> a -- however, it works as a Y Combinator...
+fix f = let x() = f x in x()
 
 facy : Int -> Int
 -- facy = fixy <| \ f n -> if n < 2 then 1 else n * f () (n - 1) -- inefficient recursion
@@ -46,22 +40,24 @@ fiby : Int -> Int
 -- fiby = fixy <| \ f n -> if n < 2 then n else f () (n - 1) + f (n - 2) -- inefficient recursion
 fiby = fixy (\ fn f s i -> if i < 2 then f else fn () s (f + s) (i - 1)) 1 1 -- efficient tailcall
 
--- something that can be done with a true Y-Combinator that
--- can't be done with the Z combinator...
--- given an infinite Co-Inductive Stream (CIS) defined as...
-type CIS a = CIS a (() -> CIS a) -- infinite lazy stream!
+-- Something that can be done with the true Y-Combinator that can't be done with Z-Combinator...
+
+-- defines a Co-Inductive Lazy (non-memoizing, just deferred) Stream...
+type CIS a = CIS a (() -> CIS a)
 
 mapCIS : (a -> b) -> CIS a -> CIS b -- uses function to map
 mapCIS cf cis =
   let mp (CIS head restf) = CIS (cf head) <| \ () -> mp (restf()) in mp cis
 
--- now we can define a Fibonacci stream as follows...
-fibs : () -> CIS Int
-fibs() = -- two recursive fix's, second already lazy...
-  let fibsgen = fixy (\ fn (CIS (f, s) restf) ->
-        CIS (s, f + s) (\ () -> fn () (restf())))
-  in fixy (\ cisthnk -> fibsgen (CIS (0, 1) cisthnk))
-       |> mapCIS (\ (v, _) -> v)
+iterateCISWithFrom : (CIS a -> CIS a) -> a -> CIS a
+iterateCISWithFrom f v = fixy (\ dfn -> f (CIS v dfn))
+
+fibsfunc : CIS (Int, Int) -> CIS (Int, Int)
+fibsfunc = fixy (\ dfn -> \ (CIS ((cur, nxt) as hd) tlf) ->
+                     CIS hd <| \ () -> dfn () (CIS (nxt, (cur + nxt)) tlf))
+
+fibs : CIS Int
+fibs = iterateCISWithFrom fibsfunc (1, 1) |> mapCIS (\ (v, _) -> v)
 
 nCISs2String : Int -> CIS a -> String -- convert n CIS's to String
 nCISs2String n cis =
@@ -70,12 +66,9 @@ nCISs2String n cis =
         loop (i - 1) (restf()) (rslt ++ " " ++ Debug.toString head)
   in loop n cis "("
 
--- unfortunately, if we need CIS memoization so as
--- to make a true lazy list, Elm doesn't support it!!!
-
 main : Html Never
 main =
   String.fromInt (facz 10) ++ " " ++ String.fromInt (fibz 10)
     ++ " " ++ String.fromInt (facy 10) ++ " " ++ String.fromInt (fiby 10)
-    ++ " " ++ nCISs2String 20 (fibs())
+    ++ " " ++ nCISs2String 20 fibs
       |> text

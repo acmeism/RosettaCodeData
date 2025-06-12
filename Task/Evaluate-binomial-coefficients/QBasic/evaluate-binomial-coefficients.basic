@@ -1,0 +1,45 @@
+DECLARE FUNCTION factorial! (n AS INTEGER)
+DECLARE FUNCTION binomial! (n AS INTEGER, k AS INTEGER)
+
+DIM n AS INTEGER, k AS INTEGER
+
+FOR n = 0 TO 14
+    FOR k = 0 TO n
+        PRINT USING " ####"; binomial(n, k);
+    NEXT k
+    PRINT
+NEXT n
+END
+
+FUNCTION binomial! (n AS INTEGER, k AS INTEGER)
+    ' Special cases
+    IF k = 0 OR k = n THEN binomial = 1
+    IF k < 0 OR k > n THEN binomial = 0
+
+    ' For efficiency, we use the smallest value of k or (n-k)
+    DIM tmp AS INTEGER
+    tmp = k
+    IF tmp > n - tmp THEN tmp = n - tmp
+
+    DIM product AS DOUBLE ' Double to avoid overflow
+    product = 1
+
+    FOR i = 1 TO tmp
+        product = product * (n - tmp + i) / i
+    NEXT i
+
+    binomial = product
+END FUNCTION
+
+FUNCTION factorial (n AS INTEGER)
+    IF n <= 1 THEN factorial = 1
+
+    DIM product AS DOUBLE ' Double to avoid overflow
+    product = 1
+
+    FOR i = 2 TO n
+        product = product * i
+    NEXT i
+
+    factorial = product
+END FUNCTION

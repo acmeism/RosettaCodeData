@@ -1,28 +1,11 @@
-function luhn (n)
-    local revStr, s1, s2, digit, mod = n:reverse(), 0, 0
-    for pos = 1, #revStr do
-        digit = tonumber(revStr:sub(pos, pos))
-        if pos % 2 == 1 then
-            s1 = s1 + digit
-        else
-            digit = digit * 2
-            if digit > 9 then
-                mod = digit % 10
-                digit = mod + ((digit - mod) / 10)
-            end
-            s2 = s2 + digit
-        end
-    end
-    return (s1 + s2) % 10 == 0
-end
+-- Grab luhn function from https://rosettacode.org/wiki/Luhn_test_of_credit_card_numbers#Lua
 
-function checkISIN (inStr)
-    if #inStr ~= 12 then return false end
-    local numStr = ""
-    for pos = 1, #inStr do
-        numStr = numStr .. tonumber(inStr:sub(pos, pos), 36)
-    end
-    return luhn(numStr)
+local function ToBase36(char) return tonumber(char, 36) end
+local function Isin2CCN(isin) return isin:gsub(".", ToBase36) end
+local isinPattern = "^%u%u" .. ("[%d%u]"):rep(9) .. "%d$"
+
+function checkISIN (isin)
+ return isin:match(isinPattern) and luhn(Isin2CCN(isin)) or false
 end
 
 local testCases = {

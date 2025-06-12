@@ -1,4 +1,4 @@
-proc sort . d[] .
+proc sort &d[] .
    for i = 2 to len d[]
       h = d[i]
       j = i - 1

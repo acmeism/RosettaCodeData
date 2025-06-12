@@ -1,4 +1,4 @@
-proc pshuffle . deck[] .
+proc pshuffle &deck[] .
    mp = len deck[] / 2
    in[] = deck[]
    for i = 1 to mp
@@ -6,10 +6,8 @@ proc pshuffle . deck[] .
       deck[2 * i] = in[i + mp]
    .
 .
-proc test size . .
-   for i to size
-      deck0[] &= i
-   .
+proc test size .
+   for i to size : deck0[] &= i
    deck[] = deck0[]
    repeat
       pshuffle deck[]

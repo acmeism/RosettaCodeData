@@ -1,1 +1,3 @@
-proc tcl::mathfunc::fact n {expr {$n < 2? 1: $n*fact($n-1)}}
+proc rfact n {
+    expr {$n < 2 ? 1 : $n * [rfact [incr n -1]]}
+}

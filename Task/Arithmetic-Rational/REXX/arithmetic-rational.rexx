@@ -1,6 +1,8 @@
 include Settings
 
-say version; say 'Rational arithmetic'; say
+say 'RATIONAL ARITHMETIC - 2 Mar 2025'
+say version
+say
 a = '1 2'; b = '-3 4'; c = '5 -6'; d = '-7 -8'; e = 3; f = 1.666666666
 say 'VALUES'
 say 'a =' Rlst2form(a)

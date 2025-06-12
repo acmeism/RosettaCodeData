@@ -1,7 +1,7 @@
 fn stripped(tostrip: &str) -> String {
     return tostrip
         .chars()
-        .filter(|c| (*c as u32) < 127 && *c as u32 > 31)
+        .filter(|c| !c.is_ascii_control() && c.is_ascii())
         .collect();
 }
 

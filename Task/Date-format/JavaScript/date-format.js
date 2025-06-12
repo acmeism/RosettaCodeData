@@ -1,7 +1,13 @@
-var now = new Date(),
-    weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-    months   = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-    fmt1 = now.getFullYear() + '-' + (1 + now.getMonth()) + '-' + now.getDate(),
-    fmt2 = weekdays[now.getDay()] + ', ' + months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
-console.log(fmt1);
-console.log(fmt2);
+const date = new Date('2007-11-23T00:00:00Z')
+
+const concise = date.toISOString().split('T', 1)[0]
+
+const pretty = date.toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+})
+
+console.log({ concise, pretty })

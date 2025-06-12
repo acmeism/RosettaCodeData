@@ -6,6 +6,5 @@ def queens(n: int, i: int, a: list, b: list, c: list):
     else:
         yield a
 
-
 for solution in queens(8, 0, [], [], []):
     print(solution)

@@ -1,4 +1,4 @@
-proc adjacent txt$ n . .
+proc adjacent txt$ n .
    print "n = " & n & ", width = " & len txt$
    print "input:  " & txt$
    txt$[] = strchars txt$

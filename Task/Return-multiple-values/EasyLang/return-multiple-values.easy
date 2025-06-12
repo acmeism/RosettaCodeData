@@ -1,4 +1,4 @@
-proc addSubtract a b . sum diff .
+proc addSubtract a b &sum &diff .
    sum = a + b
    diff = a - b
 .

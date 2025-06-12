@@ -1,17 +1,22 @@
+use Prime::Factor;
+
 sub is_vampire (Int $num) {
+    return Empty unless $num % 9 == 0|4;
     my $digits = $num.comb.sort;
     my @fangs;
-    (10**$num.sqrt.log(10).floor .. $num.sqrt.ceiling).map: -> $this {
-        next if $num % $this;
-        my $that = $num div $this;
-        next if $this %% 10 && $that %% 10;
-        @fangs.push("$this x $that") if ($this ~ $that).comb.sort eq $digits;
+    my @divs = $num.&divisors(:s).grep({.chars == $num.chars div 2});
+    return Empty unless @divs >= 2;
+    @divs.map: -> $this {
+         my $that = $num div $this;
+         next if $this %% 10 && $that %% 10;
+         last if $this > $that;
+         @fangs.push("$this x $that") if ($this ~ $that).comb.sort eq $digits;
     }
     @fangs
 }
 
 constant @vampires = flat (3..*).map: -> $s, $e {
-    (10**$s .. 10**$e).hyper.map: -> $n {
+    (flat (10**$s div 9 .. 10**$e div 9).map({my $v = $_ * 9, $v + 4})).hyper.map: -> $n {
         next unless my @fangs = is_vampire($n);
         "$n: { @fangs.join(', ') }"
     }

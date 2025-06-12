@@ -34,10 +34,10 @@ advance_row:
 	}
 	col = 0;
 try_column:
-	if (!a[col] && !b[col+row-1] && !c[col-row+n]) {
+	if (!a[col] && !b[col+row] && !c[col-row+n-1]) {
 		a[col] = true;
-		b[col+row-1] = true;
-		c[col-row+n] = true;
+		b[col+row] = true;
+		c[col-row+n-1] = true;
 		x[row] = col;
 		row++;
 		goto advance_row;
@@ -51,8 +51,8 @@ backtrack:
 	if (row != 0) {
 		--row;
 		col = x[row];
-		c[col-row+n] = false;
-		b[col+row-1] = false;
+		c[col-row+n-1] = false;
+		b[col+row] = false;
 		a[col] = false;
 		goto try_again;
 	}
@@ -60,9 +60,8 @@ backtrack:
 
 static void *calloc_wrapper(size_t count, size_t bytesize) {
 	void *r;
-	if ((r = calloc(count, bytesize)) == NULL) {
+	if ((r = calloc(count, bytesize)) == NULL)
 		exit(EXIT_FAILURE);
-	}
 	return r;
 }
 

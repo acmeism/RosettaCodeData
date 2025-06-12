@@ -1,6 +1,8 @@
 include Settings
 
-say version; say 'Left truncatable primes'; say
+say 'LEFT TRUNCATABLE PRIME IN GIVEN BASE - 4 Mar 2025'
+say version
+say
 numeric digits 100; work. = 0
 bases = '3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 19 21 23 25'
 do i = 1 to Words(bases)
@@ -16,7 +18,7 @@ end
 say Words(bases) 'bases specified'
 say work.cycle 'digit cycles needed'
 say work.count 'numbers tested for primality'
-say work.prime 'of them were actually prime'
+say work.Prime 'of them were actually prime'
 say Format(Time('e'),,3) 'seconds'
 exit
 
@@ -61,8 +63,8 @@ do i = 1 to work.in.0
    a = work.in.i; b = x**work.digit
    do j = 1 to x-1
       work.count = work.count+1; c = a+b*j
-      if Isprime(c) then do
-         work.prime = work.prime+1; n = n+1; work.out.n = c
+      if Prime(c) then do
+         work.Prime = work.Prime+1; n = n+1; work.out.n = c
       end
    end
 end

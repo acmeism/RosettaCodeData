@@ -1,18 +1,12 @@
-proc sort . d[][] .
+proc sort &d[][] .
    n = len d[][]
-   for i = 1 to n - 1
-      for j = i + 1 to n
-         if d[j][1] < d[i][1]
-            swap d[j][] d[i][]
-         .
-      .
+   for i = 1 to n - 1 : for j = i + 1 to n
+      if d[j][1] < d[i][1] : swap d[j][] d[i][]
    .
 .
 func[][] consolidate a[][] .
    for i to len a[][]
-      if a[i][1] > a[i][2]
-         swap a[i][1] a[i][2]
-      .
+      if a[i][1] > a[i][2] : swap a[i][1] a[i][2]
    .
    sort a[][]
    r[][] &= a[1][]

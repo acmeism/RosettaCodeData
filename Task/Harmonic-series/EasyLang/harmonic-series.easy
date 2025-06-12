@@ -1,4 +1,4 @@
-numfmt 5 2
+numfmt 2 5
 print "The first twenty harmonic numbers are:"
 for n = 1 to 20
    h += 1 / n

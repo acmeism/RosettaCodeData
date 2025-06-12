@@ -1,2 +1,2 @@
-move 10 20
-text "Goodbye, World!"
+gcolor 700
+gtext 10 60 "Goodbye, World!"

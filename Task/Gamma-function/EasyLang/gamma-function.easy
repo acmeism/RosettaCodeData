@@ -5,8 +5,8 @@ func stirling x .
 print " X    Stirling"
 for i to 20
    d = i / 10
-   numfmt 2 4
+   numfmt 4 2
    write d & "    "
-   numfmt 3 4
+   numfmt 4 3
    print stirling d
 .

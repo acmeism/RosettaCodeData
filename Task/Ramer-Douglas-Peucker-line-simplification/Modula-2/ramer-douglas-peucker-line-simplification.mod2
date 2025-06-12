@@ -1,0 +1,100 @@
+MODULE RDPAlgorithm;
+(* Ramer-Douglas-Peucker line simplification *)
+
+FROM STextIO IMPORT
+  WriteString, WriteLn;
+FROM SRealIO IMPORT
+  WriteFixed;
+FROM RealMath IMPORT
+  sqrt;
+
+CONST
+  Len = 10;
+
+TYPE
+  TPoint = RECORD
+    X, Y: LONGREAL;
+  END;
+  TPoints = ARRAY [0 .. Len - 1] OF TPoint;
+
+CONST
+  PointsIn = TPoints{TPoint{0., 0.}, TPoint{1., 0.1}, TPoint{2., -0.1}, TPoint{3., 5.}, TPoint{4., 6.},
+             TPoint{5., 7.}, TPoint{6., 8.1}, TPoint{7., 9.}, TPoint{8., 9.}, TPoint{9., 9.}};
+
+VAR
+  PointsOut: TPoints;
+  N        : CARDINAL;
+
+PROCEDURE WritePoints(Points: TPoints; N: CARDINAL);
+VAR
+  I: CARDINAL;
+BEGIN
+  WriteString('(');
+  WriteFixed(Points[0].X, 2, 1);
+  WriteString(', ');
+  WriteFixed(Points[0].Y, 2, 1);
+  WriteString(')');
+  FOR I := 1 TO N - 1 DO
+    WriteString(' (');
+    WriteFixed(Points[I].X, 2, 1);
+    WriteString(', ');
+    WriteFixed(Points[I].Y, 2, 1);
+    WriteString(')');
+  END;
+  WriteLn;
+END WritePoints;
+
+(* Returns the distance from point P to the line between P1 and P2 *)
+PROCEDURE PerpDist(P, P1, P2: TPoint): LONGREAL;
+VAR
+  DX, DY, D: LONGREAL;
+BEGIN
+  DX := P2.X - P1.X;
+  DY := P2.Y - P1.Y;
+  D := sqrt(DX * DX + DY * DY);
+  RETURN ABS(P.X * DY - P.Y * DX + P2.X * P1.Y - P2.Y * P1.X) / D;
+END PerpDist;
+
+(* Simplify an array of points using the Ramer-Douglas-Peucker algorithm. *)
+(* Returns the number of output points. *)
+PROCEDURE RDP(Src: TPoints; SrcFrom, SrcLen: CARDINAL; Eps: LONGREAL;
+              VAR OUT Dest: TPoints; DestFrom, DestLen: CARDINAL): CARDINAL;
+VAR
+  Dist, MaxDist             : LONGREAL;
+  N1, N2, I, MaxDistI, SrcTo: CARDINAL;
+  Src1Len, Src2Len, Src2From: CARDINAL;
+BEGIN
+  MaxDist := 0.;
+  MaxDistI := SrcFrom;
+  SrcTo := SrcFrom + SrcLen - 1;
+  FOR I := SrcFrom + 1 TO SrcTo - 1 DO
+    Dist := PerpDist(Src[I], Src[SrcFrom], Src[SrcTo]);
+    IF Dist >= MaxDist THEN
+      MaxDist := Dist;
+      MaxDistI := I
+    END;
+  END;
+  Src2From := MaxDistI;
+  Src1Len := MaxDistI - SrcFrom + 1;
+  Src2Len := SrcLen - Src1Len + 1;
+  IF MaxDist > Eps THEN
+    N1 := RDP(Src, SrcFrom, Src1Len, Eps, Dest, DestFrom, DestLen);
+    IF DestLen >= N1 - 1 THEN
+      N2 := RDP(Src, Src2From, Src2Len, Eps, Dest, DestFrom + N1 - 1, DestLen - N1 + 1)
+    ELSE
+      N2 := RDP(Src, Src2From, Src2Len, Eps, Dest, DestFrom, 0)
+    END;
+    RETURN N1 + N2 - 1;
+  ELSE
+    IF DestLen > 1 THEN
+      Dest[DestFrom] := Src[SrcFrom];
+      Dest[DestFrom + 1] := Src[SrcTo];
+    END;
+    RETURN 2;
+  END;
+END RDP;
+
+BEGIN
+  N := RDP(PointsIn, 0, Len, 1.0, PointsOut, 0, Len);
+  WritePoints(PointsOut, N)
+END RDPAlgorithm.

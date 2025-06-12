@@ -11,7 +11,7 @@ fastfunc nprim num .
 .
 prim = 2
 primcnt = 1
-proc nextprim . .
+proc nextprim .
    prim = nprim (prim + 1)
    primcnt += 1
 .

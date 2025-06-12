@@ -1,4 +1,4 @@
-numfmt 6 0
+numfmt 0 6
 y = 1
 for i = 0 to 100
    t = i / 10

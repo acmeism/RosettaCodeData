@@ -37,7 +37,8 @@ BEGIN # Kernighan's large earthquake problem - show lines from data.txt that #
                                          TRUE
                                      END
                      );
-                get( real value, ( result ) )
+                get( real value, ( result ) );
+                close( real value )
             FI;
             result
          END # real field # ;

@@ -1,7 +1,7 @@
 subr init
    symt$[] = strchars "abcdefghijklmnopqrstuvwxyz"
 .
-proc rot k . .
+proc rot k .
    c$ = symt$[k]
    for j = k downto 2
       symt$[j] = symt$[j - 1]

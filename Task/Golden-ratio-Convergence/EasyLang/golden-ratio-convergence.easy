@@ -5,7 +5,7 @@ repeat
    phi0 = phi
    iter += 1
 .
-numfmt 10 0
+numfmt 0 10
 print "Iterations: " & iter
 print "Result: " & phi
 print "Error: " & phi - (1 + sqrt 5) / 2

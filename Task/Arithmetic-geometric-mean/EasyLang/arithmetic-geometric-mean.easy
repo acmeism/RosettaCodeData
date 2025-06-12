@@ -7,5 +7,5 @@ func agm a g .
    .
    return a
 .
-numfmt 16 0
+numfmt 0 16
 print agm 1 sqrt 0.5

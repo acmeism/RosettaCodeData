@@ -1,4 +1,4 @@
-proc pritchard limit . primes[] .
+proc pritchard limit &primes[] .
    len members[] limit
    members[1] = 1
    steplength = 1
@@ -23,19 +23,13 @@ proc pritchard limit . primes[] .
       mcpy[] = members[]
       for w to nlimit
          if mcpy[w] = 1
-            if np = 5 and w > prime
-               np = w
-            .
+            if np = 5 and w > prime : np = w
             n = prime * w
-            if n > nlimit
-               break 1
-            .
+            if n > nlimit : break 1
             members[n] = 0
          .
       .
-      if np < prime
-         break 1
-      .
+      if np < prime : break 1
       primes[] &= prime
       if prime = 2
          prime = 3
@@ -45,9 +39,7 @@ proc pritchard limit . primes[] .
       nlimit = lower (steplength * prime) limit
    .
    for i = 2 to len members[]
-      if members[i] = 1
-         primes[] &= i
-      .
+      if members[i] = 1 : primes[] &= i
    .
 .
 pritchard 150 p[]

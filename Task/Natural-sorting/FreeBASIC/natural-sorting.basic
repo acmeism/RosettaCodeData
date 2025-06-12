@@ -1,0 +1,156 @@
+Enum Kind
+    KIND_STRING
+    KIND_NUMBER
+End Enum
+
+Type KeyItem
+    tipo As Kind
+    txt As String
+    num As Integer
+End Type
+
+Function NormalizeString(txt As String) As String
+    Dim As String res = Trim(txt)
+    Dim As Integer i, l = Len(res)
+    Dim As String c, tmp = ""
+    Dim As Boolean last_space = False
+
+    For i = 1 To l
+        c = Mid(res, i, 1)
+        If c = " " Or c = Chr(9) Or c = Chr(10) Or c = Chr(13) Or c = Chr(11) Or c = Chr(12) Then
+            If Not last_space Then
+                tmp &= " "
+                last_space = True
+            End If
+        Else
+            tmp &= Lcase(c)
+            last_space = False
+        End If
+    Next
+    res = tmp
+    If Left(res, 4) = "the " Then res = Mid(res, 5)
+
+    Return res
+End Function
+
+Sub NatOrderKey(txt As String, result() As KeyItem)
+    Dim As String normalized = NormalizeString(txt)
+    Dim As Integer idx = 1, l = Len(normalized)
+    Dim As Integer cnt = 0
+    Redim result(-1)
+
+    While idx <= l
+        Dim As Integer e = idx
+        ' Process text
+        While e <= l And Not (Mid(normalized, e, 1) >= "0" And Mid(normalized, e, 1) <= "9")
+            e += 1
+        Wend
+        If e > idx Then
+            Redim Preserve result(cnt)
+            result(cnt).tipo = KIND_STRING
+            result(cnt).txt = Mid(normalized, idx, e - idx)
+            result(cnt).num = 0
+            cnt += 1
+            idx = e
+        End If
+
+        ' Process number
+        While e <= l And (Mid(normalized, e, 1) >= "0" And Mid(normalized, e, 1) <= "9")
+            e += 1
+        Wend
+        If e > idx Then
+            Redim Preserve result(cnt)
+            result(cnt).tipo = KIND_NUMBER
+            result(cnt).txt = ""
+            result(cnt).num = Val(Mid(normalized, idx, e - idx))
+            cnt += 1
+            idx = e
+        End If
+    Wend
+End Sub
+
+Function scmp(s1 As String, s2 As String) As Integer
+    If s1 < s2 Then Return -1
+    If s1 > s2 Then Return 1
+    Return 0
+End Function
+
+Function NaturalCompare(sa As String, sb As String) As Integer
+    Dim As KeyItem a(), b()
+    NatOrderKey(sa, a())
+    NatOrderKey(sb, b())
+
+    ' Check for empty arrays
+    Dim As Integer la = Ubound(a), lb = Ubound(b)
+
+    ' Handle case where one or both arrays might be empty
+    If la < 0 And lb < 0 Then Return 0
+    If la < 0 Then Return -1
+    If lb < 0 Then Return 1
+
+    Dim As Integer n = Iif(la < lb, la, lb)
+
+    For i As Integer = 0 To n
+        Dim As KeyItem ai = a(i)
+        Dim As KeyItem bi = b(i)
+
+        If ai.tipo = bi.tipo Then
+            Dim As Integer result
+            If ai.tipo = KIND_STRING Then
+                result = scmp(ai.txt, bi.txt)
+            Else
+                result = Sgn(ai.num - bi.num) ' Use Sgn to get -1, 0, or 1
+            End If
+            If result <> 0 Then Return result
+        Else
+            Return Iif(ai.tipo = KIND_STRING, 1, -1)
+        End If
+    Next
+
+    If la < lb Then Return -1
+    If la > lb Then Return 1
+    Return 0
+End Function
+
+Sub test(title As String, arr() As String)
+    Print title
+    Dim As Integer i, j, n = Ubound(arr)
+
+    Dim As String sorted(n)
+    For i = 0 To n
+        sorted(i) = arr(i)
+    Next
+
+    ' Bubble sort
+    For i = 0 To n - 1
+        For j = 0 To n - i - 1
+            If NaturalCompare(sorted(j), sorted(j + 1)) > 0 Then Swap sorted(j), sorted(j + 1)
+        Next
+    Next
+
+    For i = 0 To n
+        Print "'" & sorted(i) & "'"
+    Next
+    Print
+End Sub
+
+' tests
+Dim arr1(3) As String = {"ignore leading spaces:  2-2", " ignore leading spaces:  2-1", "  ignore leading spaces:  2+0", "   ignore leading spaces:  2+1"}
+test("Ignoring leading spaces.", arr1())
+
+Dim arr2(3) As String = {"ignore MAS spaces:  2-2", "ignore MAS  spaces:  2-1", "ignore MAS   spaces:  2+0", "ignore MAS    spaces:  2+1"}
+test("Ignoring multiple adjacent spaces (MAS).", arr2())
+
+Dim arr3(5) As String = {"Equiv.  spaces:     3-3", "Equiv. " & Chr(13) & "spaces:    3-2", "Equiv. " & Chr(12) & "spaces:  3-1", "Equiv. " & Chr(11) & "spaces:  3+0", "Equiv. " & Chr(10) & "spaces:    3+1", "Equiv. " & Chr(9) & "spaces:    3+2"}
+test("Equivalent whitespace characters.", arr3())
+
+Dim arr4(3) As String = {"cASE INDEPENDENT:  3-2", "caSE INDEPENDENT:  3-1", "casE INDEPENDENT:  3+0", "case INDEPENDENT:  3+1"}
+test("Case Independent sort.", arr4())
+
+Dim arr5(3) As String = {"foo100bar99baz0.txt", "foo100bar10baz0.txt", "foo1000bar99baz10.txt", "foo1000bar99baz9.txt"}
+test("Numeric fields as numerics.", arr5())
+
+Dim arr6(3) As String = {"The Wind in the Willows", "The 40th step more", "The 39 steps", "Wanda"}
+test("Title sorts.", arr6())
+
+Sleep

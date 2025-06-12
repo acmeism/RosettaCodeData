@@ -1,12 +1,38 @@
-/*REXX version of the  ooRexx  program (the code was modified to run with Classic REXX).*/
-      do i=1  to 10000                                 /*statement changed:  LOOP ──► DO*/
-      if perfectNumber(i)  then say  i   "is a perfect number"
-      end
+-- 25 Mar 2025
+include Settings
+
+say 'PERFECT NUMBERS'
+say version
+say
+numeric digits 100
+call Show 1,34000000
+call Show 137438691328
+call Show 2658455991569831744654692615953842176
+call Show 9658455991569831744654692615953842176
 exit
 
-perfectNumber: procedure; parse arg n                  /*statements changed: ROUTINE,USE*/
-sum=0
-             do i=1  to n%2                            /*statement changed:  LOOP ──► DO*/
-             if n//i==0 then sum=sum+i                 /*statement changed:  sum += i   */
-             end
-return sum=n
+Show:
+procedure
+call Time('r')
+arg xx,yy
+if yy = '' then
+   yy = xx
+interpret 'xx =' xx'+0'; interpret 'yy =' yy'+0'
+say 'Perfect numbers between' xx 'and' yy'...'
+xx = xx+Odd(xx); yy = yy-Odd(yy)
+n = 0
+do i = xx to yy by 2
+   if Perfect(i) then do
+      n = n+1
+      call Charout ,i' '
+   end
+end
+say
+say n 'such numbers found'
+say Format(Time('e'),,3) 'seconds'
+say
+return
+
+include Numbers
+include Functions
+include Abend

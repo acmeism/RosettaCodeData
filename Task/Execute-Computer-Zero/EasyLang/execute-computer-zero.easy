@@ -1,4 +1,4 @@
-proc run name$ mem[] . .
+proc run name$ mem[] .
    write name$ & ": "
    pc = 1
    len mem[] 32

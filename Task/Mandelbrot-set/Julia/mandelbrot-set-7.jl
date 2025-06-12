@@ -1,3 +1,4 @@
+using Base.Threads
 using Plots
 gr(aspect_ratio=:equal, axis=true, ticks=true, legend=false, dpi=200)
 
@@ -26,21 +27,45 @@ end
 x = range(0, 2, length=d+1)
 y = range(0, 2 * h / d, length=h+1)
 
-A, B = collect(x) .* pi, collect(y) .* pi
-C = 8.0 .* exp.((A' .+ B .* im) .* im)
+A, B = collect(Float64, x) .* pi, collect(Float64, y) .* pi
+C = (- 8.0) .* exp.((A' .+ B .* im) .* im)
 
-E, Z, dZ = zero(C), zero(C), zero(C)
-D, I, J = zeros(size(C)), ones(Int64, size(C)), ones(Int64, size(C))
+function iteration(C)
+    E, I, J = zero(C), ones(Int64, size(C)), ones(Int64, size(C))
+    Z, dZ = zero(C), zero(C)
 
-for k in 1:n
-    M, R = abs2.(Z) .< abs2(r), abs2.(Z) .< abs2.(E)
-    E[R], I[R] = Z[R], J[R]  # rebase when z is closer to zero
-    E[M], I[M] = (2 .* S[I[M]] .+ E[M]) .* E[M] .+ C[M], I[M] .+ 1
-    Z[M], dZ[M] = S[I[M]] .+ E[M], 2 .* Z[M] .* dZ[M] .+ 1
+    function iterate(E, I, Z, dZ, C)
+        E, I = (2 .* S[I] .+ E) .* E .+ C, I .+ 1
+        Z, dZ = S[I] .+ E, 2 .* Z .* dZ .+ 1
+        return E, I, Z, dZ
+    end
+
+    for k in 1:n
+        M = abs2.(Z) .< abs2.(E)
+        E[M], I[M] = Z[M], J[M]  # rebase when z is closer to zero
+        M = abs2.(Z) .< abs2(r)
+        E[M], I[M], Z[M], dZ[M] = iterate(E[M], I[M], Z[M], dZ[M], C[M])
+    end
+
+    return E, I, Z, dZ
 end
+
+function calculation(C)
+    E, I = zero(C), ones(Int64, size(C))
+    Z, dZ = zero(C), zero(C)
+
+    @threads for j in 1:size(C)[2]
+        E[:,j], I[:,j], Z[:,j], dZ[:,j] = iteration(C[:,j])
+    end
+
+    return E, I, Z, dZ
+end
+
+E, I, Z, dZ = calculation(C)
+D = zeros(Float64, size(C))
 
 N = abs.(Z) .> 2  # exterior distance estimation
 D[N] = log.(abs.(Z[N])) .* abs.(Z[N]) ./ abs.(dZ[N])
 
-heatmap(D' .^ 0.015, c=:nipy_spectral)
+heatmap(D' .^ 0.015, c=:gist_ncar)
 savefig("Mercator_Mandelbrot_deep_map.png")

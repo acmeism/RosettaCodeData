@@ -2,7 +2,7 @@ b$[][] = [ [ "B" "O" ] [ "X" "K" ] [ "D" "Q" ] [ "C" "P" ] [ "N" "A" ] [ "G" "T"
 len b[] len b$[][]
 global w$[] cnt .
 #
-proc backtr wi . .
+proc backtr wi .
    if wi > len w$[]
       cnt += 1
       return

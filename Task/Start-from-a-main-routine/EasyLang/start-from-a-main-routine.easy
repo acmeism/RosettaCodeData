@@ -1,4 +1,4 @@
-proc main . .
+proc main .
    print "Hello from main!"
 .
 main

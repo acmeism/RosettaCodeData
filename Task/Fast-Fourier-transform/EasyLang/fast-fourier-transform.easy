@@ -15,7 +15,7 @@ func[] cexp a[] .
 func cabs a[] .
    return sqrt (a[1] * a[1] + a[2] * a[2])
 .
-proc fft x[] . y[][] .
+proc fft x[] &y[][] .
    n = len x[]
    if n = 1
       y[][] = [ [ x[1] 0 ] ]

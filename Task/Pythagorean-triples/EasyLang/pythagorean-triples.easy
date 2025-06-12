@@ -1,5 +1,5 @@
 global total prim maxperi .
-proc newtri s0 s1 s2 . .
+proc newtri s0 s1 s2 .
    p = s0 + s1 + s2
    if p <= maxperi
       prim += 1

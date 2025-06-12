@@ -6,7 +6,7 @@ func fairshare ind base .
    r = r mod base
    return r
 .
-proc sequence n base . .
+proc sequence n base .
    write base & ": "
    for ind range0 n
       write (fairshare ind base) & " "

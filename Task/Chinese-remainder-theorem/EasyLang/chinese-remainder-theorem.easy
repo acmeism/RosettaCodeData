@@ -1,4 +1,4 @@
-func mul_inv a b .
+func mulinv a b .
    b0 = b
    x1 = 1
    if b <> 1
@@ -11,25 +11,21 @@ func mul_inv a b .
          x0 = x1 - q * x0
          x1 = t
       .
-      if x1 < 0
-         x1 += b0
-      .
+      if x1 < 0 : x1 += b0
    .
    return x1
 .
-proc remainder . n[] a[] r .
+func remainder &n[] &a[] .
    prod = 1
-   sum = 0
    for i = 1 to len n[]
       prod *= n[i]
    .
    for i = 1 to len n[]
       p = prod / n[i]
-      sum += a[i] * (mul_inv p n[i]) * p
-      r = sum mod prod
+      sum += a[i] * (mulinv p n[i]) * p
    .
+   return sum mod prod
 .
 n[] = [ 3 5 7 ]
 a[] = [ 2 3 2 ]
-remainder n[] a[] h
-print h
+print remainder n[] a[]

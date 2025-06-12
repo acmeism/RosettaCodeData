@@ -1,0 +1,370 @@
+#define BUFFER_SIZE 4096
+
+' Token constants
+Enum TokensCtes
+    tk_EOI, tk_Mul, tk_Div, tk_Mod, tk_Add, tk_Sub, tk_Negate, tk_Not, tk_Lss, tk_Leq, tk_Gtr
+    tk_Geq, tk_Eql, tk_Neq, tk_Assign, tk_And, tk_Or, tk_If, tk_Else, tk_While, tk_Print
+    tk_Putc, tk_Lparen, tk_Rparen, tk_Lbrace, tk_Rbrace, tk_Semi, tk_Comma, tk_Ident
+    tk_Integer, tk_String
+End Enum
+
+' Node types
+Enum NodeTypes
+    nd_Ident, nd_String, nd_Integer, nd_Sequence, nd_If, nd_Prtc, nd_Prts, nd_Prti, nd_While
+    nd_Assign, nd_Negate, nd_Not, nd_Mul, nd_Div, nd_Mod, nd_Add, nd_Sub, nd_Lss, nd_Leq
+    nd_Gtr, nd_Geq, nd_Eql, nd_Neq, nd_And, nd_Or
+End Enum
+
+' Token info structure
+Type TokenInfo
+    nombre As String
+    rightAssoc As Boolean
+    isBinary As Boolean
+    isUnary As Boolean
+    precedence As Integer
+    nodeType As Integer
+    Declare Constructor()
+    Declare Constructor(n As String, ra As Boolean, ib As Boolean, iu As Boolean, p As Integer, nt As Integer)
+End Type
+
+Constructor TokenInfo()
+    nombre = ""
+    rightAssoc = False
+    isBinary = False
+    isUnary = False
+    precedence = 0
+    nodeType = 0
+End Constructor
+
+Constructor TokenInfo(n As String, ra As Boolean, ib As Boolean, iu As Boolean, p As Integer, nt As Integer)
+    nombre = n
+    rightAssoc = ra
+    isBinary = ib
+    isUnary = iu
+    precedence = p
+    nodeType = nt
+End Constructor
+
+' Node structure
+Type Node
+    nodeType As Integer
+    izda As Node Ptr
+    dcha As Node Ptr
+    value As String
+End Type
+
+' Global variables
+Dim Shared As Integer ff, errLine, errCol, tok
+Dim Shared As String tokText, tokOther
+Dim Shared As TokenInfo tokens(30)
+
+Declare Function ParseExpr(p As Integer) As Node Ptr
+
+' Initialize token info
+Sub InitTokens()
+    tokens(tk_EOI) = TokenInfo("EOI", False, False, False, -1, -1)
+    tokens(tk_Mul) = TokenInfo("*", False, True, False, 13, nd_Mul)
+    tokens(tk_Div) = TokenInfo("/", False, True, False, 13, nd_Div)
+    tokens(tk_Mod) = TokenInfo("%", False, True, False, 13, nd_Mod)
+    tokens(tk_Add) = TokenInfo("+", False, True, False, 12, nd_Add)
+    tokens(tk_Sub) = TokenInfo("-", False, True, False, 12, nd_Sub)
+    tokens(tk_Negate) = TokenInfo("-", False, False, True, 14, nd_Negate)
+    tokens(tk_Not) = TokenInfo("!", False, False, True, 14, nd_Not)
+    tokens(tk_Lss) = TokenInfo("<", False, True, False, 10, nd_Lss)
+    tokens(tk_Leq) = TokenInfo("<=", False, True, False, 10, nd_Leq)
+    tokens(tk_Gtr) = TokenInfo(">", False, True, False, 10, nd_Gtr)
+    tokens(tk_Geq) = TokenInfo(">=", False, True, False, 10, nd_Geq)
+    tokens(tk_Eql) = TokenInfo("==", False, True, False, 9, nd_Eql)
+    tokens(tk_Neq) = TokenInfo("!=", False, True, False, 9, nd_Neq)
+    tokens(tk_Assign) = TokenInfo("=", False, False, False, -1, nd_Assign)
+    tokens(tk_And) = TokenInfo("&&", False, True, False, 5, nd_And)
+    tokens(tk_Or) = TokenInfo("||", False, True, False, 4, nd_Or)
+    tokens(tk_If) = TokenInfo("if", False, False, False, -1, nd_If)
+    tokens(tk_Else) = TokenInfo("else", False, False, False, -1, -1)
+    tokens(tk_While) = TokenInfo("while", False, False, False, -1, nd_While)
+    tokens(tk_Print) = TokenInfo("print", False, False, False, -1, -1)
+    tokens(tk_Putc) = TokenInfo("putc", False, False, False, -1, -1)
+    tokens(tk_Lparen) = TokenInfo("(", False, False, False, -1, -1)
+    tokens(tk_Rparen) = TokenInfo(")", False, False, False, -1, -1)
+    tokens(tk_Lbrace) = TokenInfo("{", False, False, False, -1, -1)
+    tokens(tk_Rbrace) = TokenInfo("}", False, False, False, -1, -1)
+    tokens(tk_Semi) = TokenInfo(";", False, False, False, -1, -1)
+    tokens(tk_Comma) = TokenInfo(",", False, False, False, -1, -1)
+    tokens(tk_Ident) = TokenInfo("Ident", False, False, False, -1, nd_Ident)
+    tokens(tk_Integer) = TokenInfo("Integer", False, False, False, -1, nd_Integer)
+    tokens(tk_String) = TokenInfo("String", False, False, False, -1, nd_String)
+End Sub
+
+' show error and exit
+Sub ShowError(msg As String)
+    Print "(" & errLine & ", " & errCol & ") " & msg
+    End 1
+End Sub
+
+' Get next token
+Sub GetToken()
+    Static As String linea
+    If Eof(ff) Then
+        tok = tk_EOI
+        Exit Sub
+    End If
+    Line Input #ff, linea
+    If Len(linea) = 0 Then ShowError("empty line")
+
+    Dim As Integer numParts = 0
+    Dim As String parts(0 To 3)
+    Dim As String currentPart = ""
+    Dim As Boolean inQuotes = False
+
+    For i As Integer = 1 To Len(linea)
+        Dim As String c = Mid(linea, i, 1)
+        If c = """" Then
+            inQuotes = Not inQuotes
+            currentPart &= c
+        Elseif (Cbool((c = " ") Or (c = Chr(9))) Andalso (inQuotes = False)) Then
+            If Len(currentPart) > 0 Then
+                parts(numParts) = currentPart
+                numParts += 1
+                currentPart = ""
+            End If
+        Else
+            currentPart &= c
+        End If
+    Next
+    If Len(currentPart) > 0 Then
+        parts(numParts) = currentPart
+        numParts += 1
+    End If
+
+    errLine = Valint(parts(0))
+    errCol = Valint(parts(1))
+    tokText = parts(2)
+    tok = -1
+
+    Select Case tokText
+        Case "End_of_input":   tok = tk_EOI
+        Case "Op_multiply":    tok = tk_Mul
+        Case "Op_divide":      tok = tk_Div
+        Case "Op_mod":         tok = tk_Mod
+        Case "Op_add":         tok = tk_Add
+        Case "Op_subtract":    tok = tk_Sub
+        Case "Op_negate":      tok = tk_Negate
+        Case "Op_not":         tok = tk_Not
+        Case "Op_less":        tok = tk_Lss
+        Case "Op_lessequal":   tok = tk_Leq
+        Case "Op_greater":     tok = tk_Gtr
+        Case "Op_greaterequal":tok = tk_Geq
+        Case "Op_equal":       tok = tk_Eql
+        Case "Op_notequal":    tok = tk_Neq
+        Case "Op_assign":      tok = tk_Assign
+        Case "Op_and":         tok = tk_And
+        Case "Op_or":          tok = tk_Or
+        Case "Keyword_if":     tok = tk_If
+        Case "Keyword_else":   tok = tk_Else
+        Case "Keyword_while":  tok = tk_While
+        Case "Keyword_print":  tok = tk_Print
+        Case "Keyword_putc":   tok = tk_Putc
+        Case "LeftParen":      tok = tk_Lparen
+        Case "RightParen":     tok = tk_Rparen
+        Case "LeftBrace":      tok = tk_Lbrace
+        Case "RightBrace":     tok = tk_Rbrace
+        Case "Semicolon":      tok = tk_Semi
+        Case "Comma":          tok = tk_Comma
+        Case "Identifier":     tok = tk_Ident
+        Case "Integer":        tok = tk_Integer
+        Case "String":         tok = tk_String
+    End Select
+
+    If tok = -1 Then ShowError("Unknown token " & tokText)
+    If tok = tk_Integer Or tok = tk_Ident Or tok = tk_String Then
+        tokOther = Iif(numParts >= 4, parts(3), "")
+    End If
+End Sub
+
+' Create nodes
+Function MakeNode(nodeType As Integer, izda As Node Ptr = 0, dcha As Node Ptr = 0) As Node Ptr
+    Dim As Node Ptr n = New Node
+    With *n
+        .nodeType = nodeType
+        .izda = izda
+        .dcha = dcha
+        .value = ""
+    End With
+
+    Return n
+End Function
+
+Function MakeLeaf(nodeType As Integer, value As String) As Node Ptr
+    Dim As Node Ptr n = New Node
+    n->nodeType = nodeType
+    n->izda = 0
+    n->dcha = 0
+    n->value = value
+
+    Return n
+End Function
+
+Sub Expect(msg As String, s As Integer)
+    If tok = s Then
+        GetToken()
+    Else
+        ShowError(msg & ": Expecting '" & tokens(s).nombre & "', found '" & tokens(tok).nombre & "'")
+    End If
+End Sub
+
+' Main parsing functions
+Function ParenExpr() As Node Ptr
+    Expect("paren_expr", tk_Lparen)
+    Dim As Node Ptr node = ParseExpr(0)
+    Expect("paren_expr", tk_Rparen)
+
+    Return node
+End Function
+
+Function ParseExpr(p As Integer) As Node Ptr
+    Dim As Node Ptr x = 0, node
+    Dim As Integer op, q
+
+    Select Case tok
+    Case tk_Lparen
+        x = ParenExpr()
+    Case tk_Sub, tk_Add
+        op = Iif(tok = tk_Sub, tk_Negate, tk_Add)
+        GetToken()
+        node = ParseExpr(tokens(tk_Negate).precedence)
+        x = Iif(op = tk_Negate, MakeNode(nd_Negate, node), node)
+    Case tk_Not
+        GetToken()
+        x = MakeNode(nd_Not, ParseExpr(tokens(tk_Not).precedence))
+    Case tk_Ident
+        x = MakeLeaf(nd_Ident, tokOther)
+        GetToken()
+    Case tk_Integer
+        x = MakeLeaf(nd_Integer, tokOther)
+        GetToken()
+    Case Else
+        ShowError("Expecting a primary, found: " & tokens(tok).nombre)
+    End Select
+
+    While tokens(tok).isBinary Andalso tokens(tok).precedence >= p
+        op = tok
+        GetToken()
+        q = tokens(op).precedence
+        If Not tokens(op).rightAssoc Then q += 1
+        node = ParseExpr(q)
+        x = MakeNode(tokens(op).nodeType, x, node)
+    Wend
+
+    Return x
+End Function
+
+Function ParseStmt() As Node Ptr
+    Dim As Node Ptr t = 0, e
+
+    Select Case tok
+    Case tk_If
+        GetToken()
+        e = ParenExpr()
+        Dim As Node Ptr s = ParseStmt()
+        Dim As Node Ptr s2 = 0
+        If tok = tk_Else Then
+            GetToken()
+            s2 = ParseStmt()
+        End If
+        t = MakeNode(nd_If, e, MakeNode(nd_If, s, s2))
+    Case tk_Putc
+        GetToken()
+        e = ParenExpr()
+        t = MakeNode(nd_Prtc, e)
+        Expect("Putc", tk_Semi)
+    Case tk_Print
+        GetToken()
+        Expect("Print", tk_Lparen)
+        Do
+            If tok = tk_String Then
+                e = MakeNode(nd_Prts, MakeLeaf(nd_String, tokOther))
+                GetToken()
+            Else
+                e = MakeNode(nd_Prti, ParseExpr(0))
+            End If
+            t = MakeNode(nd_Sequence, t, e)
+            If tok <> tk_Comma Then Exit Do
+            GetToken()
+        Loop
+        Expect("Print", tk_Rparen)
+        Expect("Print", tk_Semi)
+    Case tk_Semi
+        GetToken()
+    Case tk_Ident
+        Dim As Node Ptr v = MakeLeaf(nd_Ident, tokOther)
+        GetToken()
+        Expect("assign", tk_Assign)
+        e = ParseExpr(0)
+        t = MakeNode(nd_Assign, v, e)
+        Expect("assign", tk_Semi)
+    Case tk_While
+        GetToken()
+        e = ParenExpr()
+        Dim As Node Ptr s = ParseStmt()
+        t = MakeNode(nd_While, e, s)
+    Case tk_Lbrace
+        GetToken()
+        While tok <> tk_Rbrace Andalso tok <> tk_EOI
+            t = MakeNode(nd_Sequence, t, ParseStmt())
+        Wend
+        Expect("Lbrace", tk_Rbrace)
+    Case tk_EOI
+        ' Do nothing
+    Case Else
+        ShowError("Expecting start of statement, found: " & tokens(tok).nombre)
+    End Select
+
+    Return t
+End Function
+
+Function Parse() As Node Ptr
+    Dim As Node Ptr tree = 0
+
+    GetToken()
+    While tok <> tk_EOI
+        tree = MakeNode(nd_Sequence, tree, ParseStmt())
+    Wend
+
+    Return tree
+End Function
+
+Sub PrintAST(t As Node Ptr)
+    Dim As String displayNodes(24) = { _
+    "Identifier","String","Integer","Sequence","If","Prtc", _
+    "Prts","Prti","While","Assign","Negate","Not","Multiply","Divide","Mod", _
+    "Add","Subtract","Less","LessEqual","Greater","GreaterEqual","Equal", _
+    "NotEqual","And","Or" }
+
+    If t = 0 Then
+        Print ";"
+    Else
+        Print Left(displayNodes(t->nodeType) & Space(14), 14);
+        Select Case t->nodeType
+        Case nd_Ident, nd_Integer, nd_String
+            Print t->value
+        Case Else
+            Print
+            PrintAST(t->izda)
+            PrintAST(t->dcha)
+        End Select
+    End If
+End Sub
+
+' Main program
+InitTokens()
+If Command(1) <> "" Then
+    ff = Freefile
+    Open Command(1) For Input Access Read As #ff Len = BUFFER_SIZE
+Else
+    ff = 1 ' stdin
+End If
+
+Dim As Node Ptr ast = Parse()
+PrintAST(ast)
+
+Sleep

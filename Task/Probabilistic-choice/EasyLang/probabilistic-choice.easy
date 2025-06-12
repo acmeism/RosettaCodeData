@@ -18,7 +18,7 @@ for i to n
 .
 print "Name   Ratio Expected"
 print "---------------------"
-numfmt 4 6
+numfmt 6 4
 for i to 8
    print name$[i] & " " & act[i] / n & "  " & probs[i]
 .

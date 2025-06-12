@@ -1,11 +1,9 @@
 func det2d t[][] .
    return t[1][1] * (t[2][2] - t[3][2]) + t[2][1] * (t[3][2] - t[1][2]) + t[3][1] * (t[1][2] - t[2][2])
 .
-proc triwind . t[][] .
+proc triwind &t[][] .
    det = det2d t[][]
-   if det < 0
-      swap t[1][] t[2][]
-   .
+   if det < 0 : swap t[1][] t[2][]
 .
 func overlap t1[][] t2[][] .
    triwind t1[][]
@@ -14,13 +12,9 @@ func overlap t1[][] t2[][] .
       for i to 3
          j = (i + 1) mod1 3
          for k to 3
-            if det2d [ t1[i][] t1[j][] t2[k][] ] >= 0
-               break 1
-            .
+            if det2d [ t1[i][] t1[j][] t2[k][] ] >= 0 : break 1
          .
-         if k = 4
-            return 0
-         .
+         if k = 4 : return 0
       .
       swap t1[][] t2[][]
    .

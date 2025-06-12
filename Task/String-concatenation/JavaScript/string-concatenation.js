@@ -1,2 +1,2 @@
 var s = "hello"
-print(s + " there!")
+console.log(s + " there!")

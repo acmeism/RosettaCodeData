@@ -22,7 +22,7 @@ func coord2num row col n .
    return start + offs
 .
 n = 6
-numfmt 0 3
+numfmt 3 0
 for row = 0 to n - 1
    for col = 0 to n - 1
       write coord2num row col n

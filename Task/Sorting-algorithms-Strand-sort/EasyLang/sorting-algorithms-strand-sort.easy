@@ -1,4 +1,4 @@
-proc merge . a[] b[] .
+proc merge &a[] &b[] .
    a = 1 ; b = 1
    while a <= len a[] and b <= len b[]
       if a[a] < b[b]
@@ -19,7 +19,7 @@ proc merge . a[] b[] .
    .
    swap a[] r[]
 .
-proc strand . a[] s[] .
+proc strand &a[] &s[] .
    s[] = [ a[1] ]
    for i = 2 to len a[]
       if a[i] > s[$]
@@ -30,7 +30,7 @@ proc strand . a[] s[] .
    .
    swap a[] an[]
 .
-proc strandsort . a[] .
+proc strandsort &a[] .
    strand a[] out[]
    while len a[] > 0
       strand a[] b[]

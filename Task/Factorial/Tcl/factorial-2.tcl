@@ -1,3 +1,6 @@
-proc rfact n {
-    expr {$n < 2 ? 1 : $n * [rfact [incr n -1]]}
+proc ifact n {
+    for {set i $n; set sum 1} {$i >= 2} {incr i -1} {
+        set sum [expr {$sum * $i}]
+    }
+    return $sum
 }

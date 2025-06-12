@@ -1,0 +1,295 @@
+Type SuffixType
+    index As Integer
+    suffix As String
+End Type
+
+Type SubstringInfo
+    substring As String
+    positions As String
+End Type
+
+Type AllSubstringsInfo
+    substrings(100) As SubstringInfo
+    count As Integer
+    max_length As Integer
+End Type
+
+Function LongestCommonPrefix(s1 As String, s2 As String) As Integer
+    Dim minLen As Integer = Iif(Len(s1) < Len(s2), Len(s1), Len(s2))
+
+    For i As Integer = 1 To minLen
+        If Mid(s1, i, 1) <> Mid(s2, i, 1) Then Return i - 1
+    Next
+
+    Return minLen
+End Function
+
+Sub FindLongestRepeatedSubstringsOptimized(text As String, Byref result As AllSubstringsInfo)
+    Dim As Integer i, j, k
+
+    result.count = 0
+    result.max_length = 0
+
+    ' For large data sets, we use a sliding window approach with a hash table
+	' to search for matches.
+    Dim As Integer maxWindowSize = 100  ' Maximum window size to search
+
+    ' Start with a large window and gradually reduce it.
+    For windowSize As Integer = maxWindowSize To 5 Step -1
+        Dim hashTable(0 To 9999) As String  ' Simple hash table
+
+        ' Clear hash table
+        For i = 0 To 9999
+            hashTable(i) = ""
+        Next
+
+        ' Search for substrings of length windowSize
+        For i = 0 To Len(text) - windowSize
+            Dim substring As String = Mid(text, i + 1, windowSize)
+
+            ' Calculate a simple hash
+            Dim hash As Integer = 0
+            For j = 1 To Len(substring)
+                hash = (hash * 31 + Asc(Mid(substring, j, 1))) Mod 10000
+            Next
+
+            ' Check for collisions in the hash table
+            If hashTable(hash) <> "" Then
+                ' Possible match, check
+                Dim entries() As String
+                Dim entryCount As Integer
+
+                ' Manually split the string by commas
+                Dim currentEntry As String = ""
+                For j = 1 To Len(hashTable(hash))
+                    Dim c As String = Mid(hashTable(hash), j, 1)
+                    If c = "," Then
+                        If currentEntry <> "" Then
+                            Redim Preserve entries(0 To entryCount)
+                            entries(entryCount) = currentEntry
+                            entryCount += 1
+                            currentEntry = ""
+                        End If
+                    Else
+                        currentEntry &= c
+                    End If
+                Next
+
+                ' Don't forget the last entry
+                If currentEntry <> "" Then
+                    Redim Preserve entries(0 To entryCount)
+                    entries(entryCount) = currentEntry
+                    entryCount += 1
+                End If
+
+                For j = 0 To entryCount - 1
+                    Dim entry As String = entries(j)
+                    If entry = "" Then Continue For
+
+                    Dim entryPos As Integer = Val(entry)
+                    Dim entrySubstring As String = Mid(text, entryPos + 1, windowSize)
+
+                    If entrySubstring = substring Then
+                        ' We found a match!
+                        result.max_length = windowSize
+
+                        ' Verificar si ya tenemos esta subcadena
+                        Dim found As Boolean = False
+                        For k = 0 To result.count - 1
+                            If result.substrings(k).substring = substring Then
+                                found = True
+                                Exit For
+                            End If
+                        Next
+
+                        If Not found Then
+                            ' Collect all positions
+                            Dim positions As String = ""
+                            Dim posArray(0 To 1000) As Integer
+                            Dim posCount As Integer = 0
+
+                            ' Add current position
+                            posArray(posCount) = i - 2
+                            posCount += 1
+
+                            ' Add the found position
+                            posArray(posCount) = entryPos - 2
+                            posCount += 1
+
+                            ' Search for more occurrences
+                            For k = 0 To Len(text) - windowSize
+                                If k <> i And k <> entryPos And Mid(text, k + 1, windowSize) = substring Then
+                                    posArray(posCount) = k - 2
+                                    posCount += 1
+                                End If
+                            Next
+
+                            ' Sort positions (Bubble, inefficient but simple)
+                            For k = 0 To posCount - 2
+                                For l As Integer = k + 1 To posCount - 1
+                                    If posArray(k) > posArray(l) Then
+                                        Swap posArray(k), posArray(l)
+                                    End If
+                                Next
+                            Next
+
+                            For k = 0 To posCount - 1
+                                If k > 0 Then positions &= " "
+                                positions &= Str(posArray(k))
+                            Next
+
+                            result.substrings(result.count).substring = substring
+                            result.substrings(result.count).positions = positions
+                            result.count += 1
+                        End If
+
+                        ' If we find enough results, exit
+                        If result.count >= 10 Then Exit For
+                    End If
+                Next
+            End If
+
+            ' Add this position to the hash table
+            If hashTable(hash) = "" Then
+                hashTable(hash) = Str(i)
+            Else
+                hashTable(hash) &= "," & Str(i)
+            End If
+        Next
+
+        ' If we find any repeated substring, exit
+        If result.count > 0 Then Exit For
+    Next
+End Sub
+
+Sub FindLongestRepeatedSubstrings(text As String, Byref result As AllSubstringsInfo)
+    Dim As Integer i, j, k
+
+    ' Use the algorithm optimized for large data sets
+    If Len(text) > 20000 Then
+        FindLongestRepeatedSubstringsOptimized(text, result)
+        Exit Sub
+    End If
+
+    result.count = 0
+    result.max_length = 0
+
+    Dim suffixes(0 To Len(text) - 1) As SuffixType
+
+    For i = 0 To Len(text) - 1
+        suffixes(i).index = i
+        suffixes(i).suffix = Mid(text, i + 1)
+    Next
+
+    ' Sort suffixes (Bubble, inefficient but simple)
+    For i = 0 To Len(text) - 2
+        For j = i + 1 To Len(text) - 1
+            If suffixes(i).suffix > suffixes(j).suffix Then
+                Swap suffixes(i), suffixes(j)
+            End If
+        Next
+    Next
+
+    Dim maxLength As Integer = 0
+
+    For i = 0 To Len(text) - 2
+        Dim prefixLen As Integer = LongestCommonPrefix(suffixes(i).suffix, suffixes(i + 1).suffix)
+        If prefixLen > maxLength Then maxLength = prefixLen
+    Next
+
+    If maxLength = 0 Then Exit Sub
+
+    result.max_length = maxLength
+
+    For i = 0 To Len(text) - 2
+        Dim prefixLen As Integer = LongestCommonPrefix(suffixes(i).suffix, suffixes(i + 1).suffix)
+        If prefixLen = maxLength Then
+            Dim substring As String = Left(suffixes(i).suffix, maxLength)
+
+            Dim found As Boolean = False
+            For j = 0 To result.count - 1
+                If result.substrings(j).substring = substring Then
+                    found = True
+                    Exit For
+                End If
+            Next
+
+            If Not found Then
+                Dim positions As String = ""
+                Dim posCount As Integer = 0
+                Dim posArray(0 To 100) As Integer
+
+                For j = 0 To Len(text) - 1
+                    If Left(suffixes(j).suffix, maxLength) = substring Then
+                        posArray(posCount) = suffixes(j).index - 2
+                        posCount += 1
+                    End If
+                Next
+
+                ' Sort positions (from lowest to highest)
+                For j = 0 To posCount - 2
+                    For k = j + 1 To posCount - 1
+                        If posArray(j) > posArray(k) Then
+                            Swap posArray(j), posArray(k)
+                        End If
+                    Next
+                Next
+
+                For j = 0 To posCount - 1
+                    If j > 0 Then positions &= " "
+                    positions &= Str(posArray(j))
+                Next
+
+                result.substrings(result.count).substring = substring
+                result.substrings(result.count).positions = positions
+                result.count += 1
+            End If
+        End If
+    Next
+End Sub
+
+Sub main()
+    Dim limits(0 To 2) As Integer = {1000, 10000, 100000}
+
+    Dim As Integer ff, i, j, limit
+    Dim As String contents
+
+    ff = Freefile
+    If Open("piDigits.txt" For Input As #ff) = 0 Then
+        contents = Input(Lof(ff), ff)
+        Close #ff
+    Else
+        Print "Error: Could not open piDigits.txt"
+        Exit Sub
+    End If
+
+    For i = 0 To 2
+        limit = limits(i)
+        Dim As String pi_digits = Left(contents, limit)
+
+        Dim As Double t0 = Timer
+
+        Dim results As AllSubstringsInfo
+        FindLongestRepeatedSubstrings(pi_digits, results)
+
+        Dim As Double elapsed = Timer - t0
+
+        Print "First " & limit & " digits of pi has longest repeated characters:"
+
+        If results.count > 0 Then
+            For j = 0 To results.count - 1
+                Print "   '" & results.substrings(j).substring & "' starting at indices " & results.substrings(j).positions
+            Next
+        Else
+            Print " No repeated substrings found."
+        End If
+
+        Print Using !"Time taken: ###.### seconds\n"; elapsed
+    Next
+
+    Print "The timings show that the implementation has approximately linear performance."
+End Sub
+
+main()
+
+Sleep

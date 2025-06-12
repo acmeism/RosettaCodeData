@@ -5,12 +5,10 @@ func dtally x .
    .
    return t
 .
-proc fangs x . f[] .
+proc fangs x &f[] .
    f[] = [ ]
    nd = floor log10 x + 1
-   if nd mod 2 = 1
-      return
-   .
+   if nd mod 2 = 1 : return
    nd = nd div 2
    lo = higher pow 10 (nd - 1) (x + pow 10 nd - 2) div (pow 10 nd - 1)
    hi = lower (x / lo) sqrt x
@@ -22,11 +20,9 @@ proc fangs x . f[] .
       .
    .
 .
-proc show_fangs x f[] . .
+proc show_fangs x f[] .
    write x & " "
-   for f in f[]
-      write " =  " & f & " x " & x div f
-   .
+   for f in f[] : write " =  " & f & " x " & x div f
    print ""
 .
 x = 1

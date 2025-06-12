@@ -1,5 +1,5 @@
 global m[][] s[][] dims[] .
-proc mat_chain_order . .
+proc mat_chain_order .
    n = len dims[] - 1
    m[][] = [ ] ; len m[][] n
    s[][] = [ ] ; len s[][] n
@@ -27,7 +27,7 @@ func$ path a b .
    .
    return "(" & path a s[a][b] & path (s[a][b] + 1) b & ")"
 .
-proc pr_chain_order . .
+proc pr_chain_order .
    print "Order : " & path 1 len s[][]
 .
 dims[][] = [ [ 5 6 3 1 ] [ 1 5 25 30 100 70 2 1 100 250 1 1000 2 ] [ 1000 1 500 12 1 700 2500 3 2 5 14 10 ] ]

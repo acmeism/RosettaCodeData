@@ -1,4 +1,4 @@
-proc initLudicArray n . res[] .
+proc initLudicArray &res[] n .
    len res[] n
    res[1] = 1
    for i = 2 to n
@@ -9,7 +9,7 @@ proc initLudicArray n . res[] .
       res[i] = k + 2
    .
 .
-initLudicArray 2005 arr[]
+initLudicArray arr[] 2005
 for i = 1 to 25
    write arr[i] & " "
 .

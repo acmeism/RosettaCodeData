@@ -15,7 +15,7 @@ Spawn←{i←•rand.Range∘≠⊸⊑(0⊸= /○⥊ ↕∘≢)𝕩 ⋄ (•rand
 Lose←Left∘Right∘Down∘Up⊸≡ # Losing condition, no moves change the board
 Win←∨´·∨˝2048⊸= #  Winning condition, 2048!
 
-Quit←{•Out e∾"[?12l"∾e∾"[?25h" ⋄ •Exit 𝕩} # Restores the terminal and exits
+Quit←{•Out e∾"[?12l"∾e∾"[?25h" ⋄ •term.RawMode 0 ⋄ •Exit 𝕩} # Restores the terminal and exits
 Display←{ # Displays the board, score and controls
     •Out e∾"[H"∾e∾"[2J" # Cursor to origin and clear screen
     •Out "Controls: h: left, j: down, k: up, l: right, q: quit"

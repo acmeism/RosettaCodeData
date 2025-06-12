@@ -1,1 +1,1 @@
-smoutput bind 'SPAM'^:1e99 ''
+echo@'SPAM'^:1e99 ''

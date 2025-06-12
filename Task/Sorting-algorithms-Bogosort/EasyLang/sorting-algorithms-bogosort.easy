@@ -1,22 +1,17 @@
-proc shuffle . l[] .
+proc shuffle &l[] .
    for i = len l[] downto 2
       r = random i
       swap l[i] l[r]
    .
 .
-proc issorted . l[] r .
+func issorted &l[] .
    for i = 2 to len l[]
-      if l[i] < l[i - 1]
-         r = 0
-         return
-      .
+      if l[i] < l[i - 1] : return 0
    .
-   r = 1
+   return 1
 .
-proc bogosort . l[] .
-   repeat
-      issorted l[] r
-      until r = 1
+proc bogosort &l[] .
+   while issorted l[] = 0
       shuffle l[]
    .
 .

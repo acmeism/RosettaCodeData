@@ -1,4 +1,4 @@
-module tree(<Type>);
+module tree {Type};
 
 struct Tree
 {

@@ -1,5 +1,5 @@
 global sb[] .
-proc sternbrocot n . .
+proc sternbrocot n .
    sb[] = [ 1 1 ]
    pos = 2
    repeat

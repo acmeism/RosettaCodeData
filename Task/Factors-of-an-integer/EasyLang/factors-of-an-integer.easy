@@ -1,7 +1,8 @@
-n = 720
-for i = 1 to n
-  if n mod i = 0
-    factors[] &= i
-  .
+func[] factors n .
+   for i = 1 to n
+      if n mod i = 0 : f[] &= i
+   .
+   return f[]
 .
-print factors[]
+print factors 10
+print factors 720

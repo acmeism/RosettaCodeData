@@ -12,7 +12,7 @@ func pow_mod b power modulus .
 for k = 2 step 2 to 10
    numfmt 0 0
    print "First 50 Curzon numbers using a base of " & k & ":"
-   numfmt 0 4
+   numfmt 4 0
    n = 1
    count = 0
    repeat
@@ -22,9 +22,7 @@ for k = 2 step 2 to 10
          count += 1
          if count <= 50
             write " " & n
-            if count mod 9 = 0
-               print ""
-            .
+            if count mod 9 = 0 : print ""
          .
       .
       until count = 1000

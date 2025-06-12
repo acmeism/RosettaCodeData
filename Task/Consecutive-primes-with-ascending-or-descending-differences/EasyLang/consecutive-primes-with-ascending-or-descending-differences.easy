@@ -9,7 +9,7 @@ fastfunc nextprim num .
    .
    return num
 .
-proc getseq dir . maxprim maxcnt .
+proc getseq dir &maxprim &maxcnt .
    maxcnt = 0
    pri = 2
    repeat
@@ -30,7 +30,7 @@ proc getseq dir . maxprim maxcnt .
       .
    .
 .
-proc outseq pri max . .
+proc outseq pri max .
    write pri & " "
    for i to max
       pri = nextprim (pri + 1)

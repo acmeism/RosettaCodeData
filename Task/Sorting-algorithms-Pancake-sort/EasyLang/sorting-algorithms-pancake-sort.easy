@@ -1,5 +1,5 @@
 global a[] .
-proc flip n . .
+proc flip n .
    for i = 1 to n div 2
       swap a[i] a[n - i + 1]
    .
@@ -17,7 +17,7 @@ func[] minmax n .
    .
    return [ pmin pmax ]
 .
-proc pcsort n dir . .
+proc pcsort n dir .
    if n = 1
       return
    .

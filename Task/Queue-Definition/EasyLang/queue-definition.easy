@@ -1,7 +1,7 @@
 prefix qu_
 global q[] head tail .
 #
-proc enq n . .
+proc enq n .
    if tail = 0
       head = 1
    else

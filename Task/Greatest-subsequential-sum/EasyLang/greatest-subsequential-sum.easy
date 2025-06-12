@@ -1,4 +1,4 @@
-proc max_subseq . seq[] start stop maxsum .
+proc max_subseq &seq[] &start &stop &maxsum .
    maxsum = 0
    i = 1
    start = 1
@@ -18,6 +18,4 @@ proc max_subseq . seq[] start stop maxsum .
 a[] = [ -1 -2 3 5 6 -2 -1 4 -4 2 -1 ]
 max_subseq a[] a b sum
 print "Max sum = " & sum
-for i = a to b
-   write a[i] & " "
-.
+for i = a to b : write a[i] & " "

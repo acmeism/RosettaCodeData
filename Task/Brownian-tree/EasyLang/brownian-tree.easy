@@ -1,7 +1,6 @@
-color3 0 1 1
+gcolor3 0 1 1
 len f[] 200 * 200
-move 50 50
-rect 0.5 0.5
+grect 50 50 0.5 0.5
 f[100 * 200 + 100] = 1
 n = 9000
 while i < n
@@ -19,12 +18,11 @@ while i < n
          break 1
       .
       if f[y * 200 + x + 1] = 1
-         move xo / 2 yo / 2
-         rect 0.5 0.5
+         grect xo / 2 yo / 2 0.5 0.5
          f[yo * 200 + xo + 1] = 1
          i += 1
          if i mod 16 = 0
-            color3 0.2 + i / n 1 1
+            gcolor3 0.2 + i / n 1 1
             sleep 0
          .
          break 1

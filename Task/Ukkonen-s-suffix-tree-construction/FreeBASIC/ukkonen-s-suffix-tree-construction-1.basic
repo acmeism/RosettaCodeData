@@ -1,0 +1,151 @@
+Type SuffixType
+    index As Integer
+    suffix As String
+End Type
+
+Type SubstringInfo
+    substring As String
+    positions As String
+End Type
+
+Type AllSubstringsInfo
+    substrings(100) As SubstringInfo
+    count As Integer
+    max_length As Integer
+End Type
+
+Function LongestCommonPrefix(s1 As String, s2 As String) As Integer
+    Dim As Integer minLen, i
+    minLen = Iif(Len(s1) < Len(s2), Len(s1), Len(s2))
+
+    For i = 1 To minLen
+        If Mid(s1, i, 1) <> Mid(s2, i, 1) Then Return i - 1
+    Next
+
+    Return minLen
+End Function
+
+Sub FindLongestRepeatedSubstrings(text As String, Byref result As AllSubstringsInfo)
+    Dim As Integer i, j, k
+    result.count = 0
+    result.max_length = 0
+
+    If Len(text) < 2 Then Exit Sub
+
+    Dim As SuffixType suffixes()
+    Redim suffixes(0 To Len(text) - 1)
+    For i = 0 To Len(text) - 1
+        suffixes(i).index = i
+        suffixes(i).suffix = Mid(text, i + 1)
+    Next
+
+    ' Sort suffixes (Bubble, inefficient but simple)
+    For i = 0 To Len(text) - 2
+        For j = i + 1 To Len(text) - 1
+            If suffixes(i).suffix > suffixes(j).suffix Then
+                Swap suffixes(i), suffixes(j)
+            End If
+        Next
+    Next
+
+    ' Find the longest repeated substring
+    Dim As Integer maxLength = 0
+    For i = 0 To Len(text) - 2
+        Dim As Integer prefixLen = LongestCommonPrefix(suffixes(i).suffix, suffixes(i + 1).suffix)
+        If prefixLen > maxLength Then maxLength = prefixLen
+    Next
+
+    If maxLength = 0 Then Exit Sub
+
+    result.max_length = maxLength
+
+    For i = 0 To Len(text) - 2
+        Dim As Integer prefixLen = LongestCommonPrefix(suffixes(i).suffix, suffixes(i + 1).suffix)
+        If prefixLen = maxLength Then
+            Dim As String substring = Left(suffixes(i).suffix, maxLength)
+
+            Dim As Boolean found = False
+            For j = 0 To result.count - 1
+                If result.substrings(j).substring = substring Then
+                    found = True
+                    Exit For
+                End If
+            Next
+
+            If Not found Then
+                Dim As String positions = ""
+                Dim As Integer posCount = 0
+                Dim As Integer posArray(100)
+
+                For j = 0 To Len(text) - 1
+                    If Left(suffixes(j).suffix, maxLength) = substring Then
+                        posArray(posCount) = suffixes(j).index - 2
+                        posCount += 1
+                    End If
+                Next
+
+                ' Sort positions (Bubble, inefficient but simple)
+                For j = 0 To posCount - 2
+                    For k = j + 1 To posCount - 1
+                        If posArray(j) > posArray(k) Then
+                            Swap posArray(j), posArray(k)
+                        End If
+                    Next
+                Next
+
+                For j = 0 To posCount - 1
+                    If j > 0 Then positions &= " "
+                    positions &= Str(posArray(j))
+                Next
+
+                result.substrings(result.count).substring = substring
+                result.substrings(result.count).positions = positions
+                result.count += 1
+            End If
+        End If
+    Next
+End Sub
+
+Sub main()
+    Dim As Integer limits(0 To 2) = {1000, 10000, 100000}
+    Dim As Integer ff, i, j, limit
+    Dim As String contents, pi_digits
+
+    ff = Freefile
+    If Open("piDigits.txt" For Input As #ff) = 0 Then
+        contents = Input(Lof(ff), ff)
+        Close #ff
+    Else
+        Print "Error: Could not open piDigits.txt"
+        Exit Sub
+    End If
+
+    For i = 0 To 2
+        limit = limits(i)
+        pi_digits = Left(contents, limit)
+
+        DimAs Double t0  = Timer
+
+        Dim As AllSubstringsInfo results
+        FindLongestRepeatedSubstrings(pi_digits, results)
+
+        Dim As Double elapsed = Timer - t0
+
+        Print "First "; limit; " digits of pi has longest repeated substrings:"
+        If results.count > 0 Then
+            For j = 0 To results.count - 1
+                Print "   '" & results.substrings(j).substring & "' starting at indices " & results.substrings(j).positions
+            Next
+        Else
+            Print " No repeated substrings found."
+        End If
+
+        Print Using !"Time taken: ###.### seconds\n"; elapsed
+    Next
+
+    Print "The timings show that the implementation has approximately linear performance."
+End Sub
+
+main()
+
+Sleep

@@ -1,17 +1,12 @@
-/*REXX version of the  PL/I  program  (code was modified to run with Classic REXX).     */
-parse arg low high .                                   /*obtain the specified number(s).*/
-if high=='' & low==''  then high=34000000              /*if no arguments,  use a range. */
-if  low==''            then  low=1                     /*if no   LOW, then assume unity.*/
-if high==''            then high=low                   /*if no  HIGH, then assume  LOW. */
-
-               do i=low  to high                       /*process the single # or range. */
-               if perfect(i)  then say  i  'is a perfect number.'
-               end   /*i*/
+/*REXX version of the  ooRexx  program (the code was modified to run with Classic REXX).*/
+      do i=1  to 10000                                 /*statement changed:  LOOP ──► DO*/
+      if perfectNumber(i)  then say  i   "is a perfect number"
+      end
 exit
 
-perfect: procedure;  parse arg n                       /*get the number to be tested.   */
-sum=0                                                  /*the sum of the factors so far. */
-             do i=1  for n-1                           /*starting at 1, find all factors*/
-             if n//i==0 then sum=sum+i                 /*I is a factor of N,  so add it.*/
-             end   /*i*/
-return sum=n                                           /*if the sum matches N, perfect! */
+perfectNumber: procedure; parse arg n                  /*statements changed: ROUTINE,USE*/
+sum=0
+             do i=1  to n%2                            /*statement changed:  LOOP ──► DO*/
+             if n//i==0 then sum=sum+i                 /*statement changed:  sum += i   */
+             end
+return sum=n

@@ -1,4 +1,4 @@
-proc sort . d[] .
+proc sort &d[] .
    len tmp[] len d[]
    sz = 1
    while sz < len d[]
@@ -7,13 +7,9 @@ proc sort . d[] .
       while left < len d[]
          # merge
          mid = left + sz - 1
-         if mid > len d[]
-            mid = len d[]
-         .
+         if mid > len d[] : mid = len d[]
          right = mid + sz
-         if right > len d[]
-            right = len d[]
-         .
+         if right > len d[] : right = len d[]
          l = left
          r = mid + 1
          for i = left to right

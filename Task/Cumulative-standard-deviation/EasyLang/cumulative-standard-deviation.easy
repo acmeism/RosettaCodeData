@@ -1,12 +1,11 @@
 global sum sum2 n .
-proc sd x . r .
+func sd x .
    sum += x
    sum2 += x * x
    n += 1
-   r = sqrt (sum2 / n - sum * sum / n / n)
+   return sqrt (sum2 / n - sum * sum / n / n)
 .
 v[] = [ 2 4 4 4 5 5 7 9 ]
 for v in v[]
-   sd v r
-   print v & " " & r
+   print v & " " & sd v
 .

@@ -17,29 +17,21 @@ func$ makewk fst lst day .
    .
    for i = fst to lst
       i$ = i
-      if i <= 9
-         i$ = " " & i
-      .
+      if i <= 9 : i$ = " " & i
       wstr$ &= i$ & " "
    .
    return substr wstr$ & blank$ 1 20
 .
-proc dow y . ndow leap .
+proc dow y &ndow &leap .
    leap = 0
-   if y mod 4 = 0
-      leap = 1
-   .
-   if y mod 100 = 0
-      leap = 0
-   .
-   if y mod 400 = 0
-      leap = 1
-   .
+   if y mod 4 = 0 : leap = 1
+   if y mod 100 = 0 : leap = 0
+   if y mod 400 = 0 : leap = 1
    ndow = y * 365 + y div 4 - y div 100 + y div 400 + 1
    ndow = (ndow - leap) mod1 7
 .
 len lin$[] 8
-proc prmonth nmonth newdow monsize . .
+proc prmonth nmonth newdow monsize .
    lin$[1] &= "     " & month$[nmonth] & "       "
    lin$[2] &= wkdays$ & "  "
    lin$[3] &= makewk 1 (8 - newdow) newdow & "  "
@@ -55,17 +47,13 @@ proc prmonth nmonth newdow monsize . .
       .
    .
 .
-for i to pagewide
-   blank$ &= " "
-.
+for i to pagewide : blank$ &= " "
 dow year newdow leap
 print center "[ picture of Snoopy goes here ]"
 print center year
 for i = 1 to 12
    monsize = days[i]
-   if i = 2 and leap = 1
-      monsize = 29
-   .
+   if i = 2 and leap = 1 : monsize = 29
    prmonth i newdow monsize
    newdow = (monsize + newdow) mod1 7
 .

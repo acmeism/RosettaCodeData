@@ -25,18 +25,21 @@ while (1) {
   print "Expression (try ", $try++, "): ";
 
   my $entry = <>;
-  if (!defined $entry || $entry eq 'q')
+  if (!defined $entry || substr($entry,0,1) eq 'q')
     { say "Goodbye.  Sorry you couldn't win."; last; }
-  $entry =~ s/\s+//g;  # remove all white space
+  $entry =~ s/\s+//g;  # remove all white space (newline is whitespace too)
   next if $entry eq '';
 
   my $given_digits = join "", sort @digits;
   my $entry_digits = join "", sort grep { /\d/ } split(//, $entry);
-  if ($given_digits ne $entry_digits ||  # not correct digits
-      $entry =~ /\d\d/ ||                # combined digits
-      $entry =~ m|[-+*/]{2}| ||          # combined operators
-      $entry =~ tr|-0-9()+*/||c)         # Invalid characters
-    { say "That's not valid";  next; }
+  if ($given_digits ne $entry_digits)
+   { say "incorrect digits"; next; }
+  if ($entry =~ /\d\d/)
+    { say "error, combined digits"; next; }
+  if ($entry =~ m|[-+*/]{2}|)
+    { say "error, combined operators"; next; }
+  if ($entry =~ tr|-0-9()+*/||c)
+    { say "invalid characters!"; next; }
 
   my $n = eval $entry;
 

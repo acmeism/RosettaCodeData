@@ -34,5 +34,5 @@ var unconsolidatedSets = [
 ]
 for (sets in unconsolidatedSets) {
     System.print("Unconsolidated: %(sets)")
-    System.print("Cosolidated   : %(consolidateSets.call(sets))\n")
+    System.print("Consolidated  : %(consolidateSets.call(sets))\n")
 }

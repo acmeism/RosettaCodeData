@@ -1,98 +1,152 @@
-from sys import stdout
-neighbours = [[-1, 0], [0, -1], [1, 0], [0, 1]]
-exists = []
-lastNumber = 0
-wid = 0
-hei = 0
+import re
 
 
-def find_next(pa, x, y, z):
-    for i in range(4):
-        a = x + neighbours[i][0]
-        b = y + neighbours[i][1]
-        if wid > a > -1 and hei > b > -1:
-            if pa[a][b] == z:
-                return a, b
+class HidatoPuzzle:
+    """ Generic Hidato type puzzle solver, used here for Numbrix puzzles """
 
-    return -1, -1
+    def __init__(self, board_text: str, allowed_moves: list[list[int]]):
+        """ initialize the puzzle from a board and the move rules
+            . means blocked, 0 or _ means open, numeric > 0 are fixed points
+        """
+        lines = board_text.strip().split('\n')
+        self.nrows, self.ncols = len(lines), len(re.split(r'\s+', lines[0]))
+        self.board = [[-1] * self.ncols for _ in range(self.nrows)]
+        self.allowed_moves = allowed_moves
+        self.starts = []
+        self.fixed = []
+        self.solutions = []
+        self.maxmoves = 0
+        for i, line in enumerate(lines):
+            for j, s in enumerate(re.split(r'\s+', line.strip())):
+                c = s[0]
+                if c == '_' or c == '0' and len(s) == 1:
+                    self.board[i][j] = 0
+                    self.maxmoves += 1
+                elif c == '.':
+                    continue # remains -1, blocked
+                else:  # get digits and add to fixed numeric positions as > 0
+                    self.board[i][j] = int(s)
+                    self.fixed.append(self.board[i][j])
+                    if self.board[i][j] == 1:
+                        self.starts.append((i, j))
+                    self.maxmoves += 1
 
+        self.fixed.sort()
+        if len(self.starts) != 1:  # 1 is not fixed, so we can start at any (0)
+            self.starts = []
+            for i in range(self.nrows):
+                for j in range(self.ncols):
+                    if self.board[i][j] == 0:
+                        self.starts.append((i, j))
 
-def find_solution(pa, x, y, z):
-    if z > lastNumber:
-        return 1
-    if exists[z] == 1:
-        s = find_next(pa, x, y, z)
-        if s[0] < 0:
-            return 0
-        return find_solution(pa, s[0], s[1], z + 1)
+    def solve(self):
+        """ solve puzzle: if start (1) not fixed may give multiple solutions """
+        for xy in self.starts:
+            saved = self.board
+            self.board = [r[:] for r in self.board]
+            if self.dfs(xy[0], xy[1], 1):
+                self.solutions.append(self.board)
+            self.board = saved
 
-    for i in range(4):
-        a = x + neighbours[i][0]
-        b = y + neighbours[i][1]
-        if wid > a > -1 and hei > b > -1:
-            if pa[a][b] == 0:
-                pa[a][b] = z
-                r = find_solution(pa, a, b, z + 1)
-                if r == 1:
-                    return 1
-                pa[a][b] = 0
+        return len(self.solutions) > 0
 
-    return 0
+    def dfs(self, row, col, current_target):
+        """ depth first search for a solution """
+        if current_target > self.maxmoves:
+            return True
+        n = self.board[row][col]
+        if not n in (0, current_target) or n == 0 and current_target in self.fixed:
+            return False
+        backnum = n  # backup board[row][col] value before trying change
+        self.board[row][col] = current_target
+        for move in self.allowed_moves:
+            i, j = row + move[0], col + move[1]
+            if 0 <= i < self.nrows and 0 <= j < self.ncols and \
+               self.dfs(i, j, current_target + 1):
+                return True
 
+        self.board[row][col] = backnum  # restore board to original state
+        return False
 
-def solve(pz, w, h):
-    global lastNumber, wid, hei, exists
+    def print_matrix(self, mat, emptysquare=" 0 ", blocked=" . "):
+        """ pretty print 2D matrix with substitution for 0 or blocked values """
+        d = {-1: blocked, 0: emptysquare, -2: '\n'}
+        for i in range(self.nrows * self.ncols):
+            d[i + 1] = str(i + 1).center(3, ' ')
 
-    lastNumber = w * h
-    wid = w
-    hei = h
-    exists = [0 for j in range(lastNumber + 1)]
-
-    pa = [[0 for j in range(h)] for i in range(w)]
-    st = pz.split()
-    idx = 0
-    for j in range(h):
-        for i in range(w):
-            if st[idx] == ".":
-                idx += 1
-            else:
-                pa[i][j] = int(st[idx])
-                exists[pa[i][j]] = 1
-                idx += 1
-
-    x = 0
-    y = 0
-    t = w * h + 1
-    for j in range(h):
-        for i in range(w):
-            if pa[i][j] != 0 and pa[i][j] < t:
-                t = pa[i][j]
-                x = i
-                y = j
-
-    return find_solution(pa, x, y, t + 1), pa
-
-
-def show_result(r):
-    if r[0] == 1:
-        for j in range(hei):
-            for i in range(wid):
-                stdout.write(" {:0{}d}".format(r[1][i][j], 2))
+        for r in range(self.nrows):
+            for c in range(self.ncols):
+                print(d[mat[r][c]], end='')
             print()
-    else:
-        stdout.write("No Solution!\n")
 
-    print()
+    def print_starting_board(self):
+        """ print input board """
+        self.print_matrix(self.board)
+
+    def is_solved(self):
+        """ true if there is at least 1 solution """
+        return len(self.solutions) > 0
+
+    def print_solution(self, print_all=True):
+        """ print solution board(s) """
+        n_solutions = len(self.solutions)
+        print(f"\n{n_solutions} solution{'s' if n_solutions != 1 else ''} found.")
+        for b in self.solutions:
+            self.print_matrix(b, '__ ')
+            if not print_all:
+                break
+            print()
 
 
-r = solve(". . . . . . . . . . . 46 45 . 55 74 . . . 38 . . 43 . . 78 . . 35 . . . . . 71 . . . 33 . . . 59 . . . 17"
-          " . . . . . 67 . . 18 . . 11 . . 64 . . . 24 21 . 1  2 . . . . . . . . . . .", 9, 9)
-show_result(r)
+if __name__ == '__main__':
+    NUMBRIX_TESTS = [
+        """
+        0  0  0  0  0  0  0  0  0
+        0  0 46 45  0 55 74  0  0
+        0 38  0  0 43  0  0 78  0
+        0 35  0  0  0  0  0 71  0
+        0  0 33  0  0  0 59  0  0
+        0 17  0  0  0  0  0 67  0
+        0 18  0  0 11  0  0 64  0
+        0  0 24 21  0  1  2  0  0
+        0  0  0  0  0  0  0  0  0
+        """,
+        """
+        0  0  0  0  0  0  0  0  0
+        0 11 12 15 18 21 62 61  0
+        0  6  0  0  0  0  0 60  0
+        0 33  0  0  0  0  0 57  0
+        0 32  0  0  0  0  0 56  0
+        0 37  0  1  0  0  0 73  0
+        0 38  0  0  0  0  0 72  0
+        0 43 44 47 48 51 76 77  0
+        0  0  0  0  0  0  0  0  0
+        """,
+        """
+        17 0  0  0 11  0  0  0 59
+        0 15  0  0  6  0  0 61  0
+        0  0  3  0  0  0 63  0  0
+        0  0  0  0 66  0  0  0  0
+        23 24 0 68 67 78  0 54 55
+        0  0  0  0 72  0  0  0  0
+        0  0 35  0  0  0 49  0  0
+        0 29  0  0 40  0  0 47  0
+        31 0  0  0 39  0  0  0 45
+        """,
+        """
+        0  0  0  0  0
+        0  0  0  0  0
+        0  0  0  0  3
+        0  0  0  0  0
+        0  0  0  0  0
+        """,
+    ]
 
-r = solve(". . . . . . . . . . 11 12 15 18 21 62 61 . .  6 . . . . . 60 . . 33 . . . . . 57 . . 32 . . . . . 56 . . 37"
-          " .  1 . . . 73 . . 38 . . . . . 72 . . 43 44 47 48 51 76 77 . . . . . . . . . .", 9, 9)
-show_result(r)
+    NUMBRIX_MOVES = [[-1, 0], [0, -1], [0, 1], [1, 0]]
 
-r = solve("17 . . . 11 . . . 59 . 15 . . 6 . . 61 . . . 3 . . .  63 . . . . . . 66 . . . . 23 24 . 68 67 78 . 54 55"
-          " . . . . 72 . . . . . . 35 . . . 49 . . . 29 . . 40 . . 47 . 31 . . . 39 . . . 45", 9, 9)
-show_result(r)
+    for t in NUMBRIX_TESTS:
+        puzzle = HidatoPuzzle(t.strip(), NUMBRIX_MOVES)
+        print("\nStarting position:")
+        puzzle.print_starting_board()
+        puzzle.solve()
+        puzzle.print_solution()

@@ -1,7 +1,6 @@
--- 8 May 2025
+-- 28 Jul 2025
 include Settings
 
-call Time('r')
 say 'SEQUENCE OF PRIMORIAL PRIMES'
 say version
 say
@@ -11,7 +10,7 @@ say Format(Time('e'),,3) 'seconds'
 exit
 
 GetPrimorials:
-procedure expose prim. prmo. glob.
+procedure expose prim. prmo. Memo.
 arg xx
 say 'Get enough primorials...'
 call Primorials(-xx)
@@ -20,7 +19,7 @@ say
 return
 
 ShowPrimes:
-procedure expose prmo. glob.
+procedure expose prmo. Memo.
 arg xx
 say 'Index of first 15 primorial primes is...'
 n = 0
@@ -42,9 +41,4 @@ say n 'Miller-Rabin primality tests performed'
 say
 return
 
-include Sequences
-include Numbers
-include Functions
-include Special
-include Constants
-include Abend
+include Math

@@ -5,16 +5,16 @@ from itertools import islice # To limit execution if it would generate huge valu
 
 
 data = '''
-start 	stop 	increment 	Comment
--2 	2 	1 	Normal
--2 	2 	0 	Zero increment
--2 	2 	-1 	Increments away from stop value
--2 	2 	10 	First increment is beyond stop value
-2 	-2 	1 	Start more than stop: positive increment
-2 	2 	1 	Start equal stop: positive increment
-2 	2 	-1 	Start equal stop: negative increment
-2 	2 	0 	Start equal stop: zero increment
-0 	0 	0 	Start equal stop equal zero: zero increment
+start   stop    increment   Comment
+-2  2   1   Normal
+-2  2   0   Zero increment
+-2  2   -1  Increments away from stop value
+-2  2   10  First increment is beyond stop value
+2   -2  1   Start more than stop: positive increment
+2   2   1   Start equal stop: positive increment
+2   2   -1  Start equal stop: negative increment
+2   2   0   Start equal stop: zero increment
+0   0   0   Start equal stop equal zero: zero increment
 '''
 
 table = [re.split(r'\s\s+', line.strip()) for line in data.strip().split('\n')]

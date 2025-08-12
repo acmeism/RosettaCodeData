@@ -1,1 +1,2 @@
-draw_point(100, 100);
+draw_set_color(c_red)
+draw_point(100, 100)

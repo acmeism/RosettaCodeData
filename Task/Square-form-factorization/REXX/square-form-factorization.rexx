@@ -1,4 +1,4 @@
--- 8 May 2025
+-- 28 Jul 2025
 include Settings
 numeric digits 40
 
@@ -25,7 +25,7 @@ test.0 = i-1
 return
 
 Selected:
-procedure expose mult. test. glob.
+procedure expose mult. test. Memo.
 call Time('r')
 say 'Find a factor for 28 selected numbers...'
 do t = 1 for test.0
@@ -55,7 +55,7 @@ say
 return
 
 Randomized:
-procedure expose mult. glob.
+procedure expose mult. Memo.
 say 'Find a factor for 28 random numbers...'
 x = 0
 do until x = 28
@@ -89,6 +89,4 @@ end
 say
 return
 
-include Numbers
-include Functions
-include Abend
+include Math

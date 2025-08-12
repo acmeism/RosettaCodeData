@@ -1,1 +1,1 @@
-(printc "Hello World!")
+(print "Hello World!")

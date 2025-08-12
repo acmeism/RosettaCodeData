@@ -1,12 +1,7 @@
-# substitute any array type with a scalar element #
-MODE FLT = REAL;
+BEGIN
+MODE FLT = REAL; # substitute any array type with ">" defined #
 
-# create an exception for the case of an empty array #
-PROC raise empty array = VOID:(
-  GO TO except empty array
-);
-
-PROC max = ([]FLT item)FLT:
+PROC max = ([]FLT item, PROC VOID raise empty array)FLT:
 BEGIN
    IF LWB item > UPB item THEN
       raise empty array; SKIP
@@ -22,9 +17,11 @@ BEGIN
    FI
 END # max #;
 
-test:(
+#test#(
   []FLT buf = (-275.0, -111.19, 0.0, -1234568.0, pi, -pi);
-  print((max(buf),new line)) EXIT
-  except empty array:
-    SKIP
+  # handle an exception for the case of an empty array #
+  PROC have empty array = VOID:print(("empty array", newline));
+
+  print((max(buf,have empty array),new line))
 )
+END

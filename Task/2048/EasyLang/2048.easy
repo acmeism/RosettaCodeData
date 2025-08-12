@@ -142,7 +142,7 @@ proc handle_mup .
 on mouse_up
    handle_mup
 .
-on key
+on key_down
    if stat = 2
       if keybkey = " " : init
       return

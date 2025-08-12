@@ -1,0 +1,90 @@
+with javascript_semantics
+function permuten(integer i, bool bFinal=true)
+    -- generate base i+1 representations of the permutes of tagset(i),
+    --  eg i=3 -> {0(4)123,0(4)132,0(4)213,0(4)231,0(4)312,0(4)321}
+    --  which in decimal would look like this: {27,30,39,45,54,57}
+    -- if bFinal is false (internal/recursive use) each element of
+    --  res is instead a sequence of the individual base i+1 digits.
+    if i=1 then return iff(bFinal?{1}:{{1}}) end if -- (nb i>0 only)
+    sequence s = permuten(i-1,false), res = {}, r = repeat(0,i)
+    integer base = i+1
+    for k=1 to i do
+        r[1] = k
+        for si in s do
+            for j=2 to i do
+                integer sj = si[j-1]
+                r[j] = sj+(sj>=k)
+            end for
+            if bFinal then
+                atom rd = 0
+                for d=1 to i do
+                    rd = rd*base + r[d]
+                end for
+                res &= rd
+            else
+                res = append(res,deep_copy(r))
+            end if
+        end for
+    end for
+    return res
+end function
+
+function flip_base(atom n, integer i, base)
+    -- flip first i digits of n in specified base,
+    --  eg 0(11)123456789a,2,11 => 0(11)213456789a
+    -- aside: round() needed for 64-bit, else
+    --                eg 11^8 is out by ~5e-11
+    atom p = round(power(base,base-i-1)),
+         h = floor(n/p), r = 0
+    for i=1 to i do
+        r = r*base + rmdr(h,base)
+        h = floor(h/base)
+    end for
+    return r*p+rmdr(n,p) -- (eg 21<<lots+3456789a)
+end function
+
+--function flip_seq(sequence s, integer n)
+--  -- reverse the first n elements of s.
+--  integer l = length(s)
+--  sequence r = repeat(0,l)
+--  for i=n+1 to l do r[i] = s[i] end for
+--  for i=1 to n do r[i] = s[n] n -= 1 end for
+--  return r
+--end function
+
+function pancake(integer n)
+    atom t1 = time()+1
+    integer base = n+1
+    sequence p = permuten(n),
+--  sequence p = permutes(tagset(n)),
+         flips = repeat(0,length(p)),
+          todo = repeat(1,length(p))
+    integer tdx = 1
+    for ti=1 to length(todo) do
+        integer t = todo[ti]
+        integer ft = flips[t]+1
+        for i=2 to n do
+            atom flipped = flip_base(p[t],i,base)
+--          sequence flipped = flip_seq(p[t],i)
+            integer fdx = binary_search(flipped,p)
+            if fdx>1 and flips[fdx]=0 then
+                flips[fdx] = ft
+                tdx += 1
+                todo[tdx] = fdx
+                if time()>t1 then
+                    printf(1,"%d/%d...\r",{tdx,length(p)})
+                    t1 = time()+1
+                end if
+            end if
+        end for
+    end for
+    integer max_flips = largest(flips,return_index:=true)
+    return {n,flips[max_flips],sprintf("%a",{{base,p[max_flips]}})}
+--  return {n,flips[max_flips],p[max_flips]}
+end function
+
+atom t0 = time()
+for n=1 to 10 do
+    printf(1,"pancake(%d):%d, eg %v\n",pancake(n))
+end for
+?elapsed(time()-t0)

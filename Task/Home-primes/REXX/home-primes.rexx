@@ -1,17 +1,17 @@
--- 25 Apr 2025
+-- 28 Jul 2025
 include Settings
+numeric digits 50
 
 say 'HOME PRIMES'
 say version
 say
-numeric digits 50
 do i = 1 to 48
    call Home i
 end
 exit
 
 Home:
-procedure expose fact. glob. work.
+procedure expose fact. Memo. work.
 arg xx
 call Time('r')
 if xx = 1 then
@@ -41,8 +41,4 @@ call Timer
 say
 return
 
-include Helper
-include Abend
-include Functions
-include Numbers
-include Sequences
+include Math

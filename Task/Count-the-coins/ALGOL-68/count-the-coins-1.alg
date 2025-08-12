@@ -26,6 +26,5 @@ BEGIN
       sum
     FI
   END;
-  [] INT denoms = (25, 10, 5, 1);
-  print((ways to make change(denoms, 100), newline))
+  print((ways to make change((25, 10, 5, 1), 100), newline))
 END

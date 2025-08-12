@@ -1,4 +1,4 @@
--- 8 Jun 2025
+-- 28 Jul 2025
 include Settings
 arg digs
 if digs = '' then
@@ -32,7 +32,7 @@ call Timer
 exit
 
 Task:
-procedure expose glob.
+procedure expose Memo.
 arg ff,aa,bb,steps,true
 w=Digits()+2
 res=LeftRect(ff,aa,bb,steps); diff=res-true
@@ -50,59 +50,79 @@ say Left(ff,11) Left(aa '-' bb,w+4) Left('Trapezoid',9) Left(steps,7),
 res=Simpson(ff,aa,bb,steps); diff=res-true
 say Left(ff,11) Left(aa '-' bb,w+4) Left('Simpson',9) Left(steps,7),
     Left(Std(res),w) Left(true,w) Format(diff,2,4,,0)
+res=Boole(ff,aa,bb,steps); diff=res-true
+say Left(ff,11) Left(aa '-' bb,w+4) Left('Boole',9) Left(steps,7),
+    Left(Std(res),w) Left(true,w) Format(diff,2,4,,0)
 say
 return
 
 LeftRect:
-procedure expose glob.
+procedure expose Memo.
 arg ff,aa,bb,steps
-h=(bb-aa)/steps; s=0
+h=(bb-aa)/steps
+s=0
 do n = 0 to steps-1
    s=s+Eval(ff,aa+n*h)
 end
 return s*h
 
 MidRect:
-procedure expose glob.
+procedure expose Memo.
 arg ff,aa,bb,steps
-h=(bb-aa)/steps; s=0; aa=aa-h/2
+h=(bb-aa)/steps; aa=aa-h/2
+s=0
 do n = 1 to steps
    s=s+Eval(ff,aa+n*h)
 end
 return s*h
 
 RightRect:
-procedure expose glob.
+procedure expose Memo.
 arg ff,aa,bb,steps
-h=(bb-aa)/steps; s=0
+h=(bb-aa)/steps
+s=0
 do n = 1 to steps
    s=s+Eval(ff,aa+n*h)
 end
 return s*h
 
 Trapezoid:
-procedure expose glob.
+procedure expose Memo.
 arg ff,aa,bb,steps
-h=(bb-aa)/steps; s=0.5*(Eval(ff,aa)+Eval(ff,bb))
+h=(bb-aa)/steps
+s=0.5*(Eval(ff,aa)+Eval(ff,bb))
 do n = 1 to steps-1
    s=s+Eval(ff,aa+n*h)
 end
 return s*h
 
 Simpson:
-procedure expose glob.
+procedure expose Memo.
 arg ff,aa,bb,steps
-h=(bb-aa)/steps; s=Eval(ff,aa)+Eval(ff,bb)
+h=(bb-aa)/steps
+s0=Eval(ff,aa)+Eval(ff,bb); s1=0; s2=0
 do n = 1 by 2 to steps-1
-   s=s+4*Eval(ff,aa+n*h)
+   s1=s1+Eval(ff,aa+n*h)
 end
-do n = 2 by 2 to steps-1
-   s=s+2*Eval(ff,aa+n*h)
+do n = 2 by 2 to steps-2
+   s2=s2+Eval(ff,aa+n*h)
 end
-return s*h/3
+return (s0+4*s1+2*s2)*h/3
 
-include Functions
-include Special
-include Constants
-include Helper
-include Abend
+Boole:
+procedure expose Memo.
+arg ff,aa,bb,steps
+h=(bb-aa)/steps
+s0=7*(Eval(ff,aa)+Eval(ff,bb)); s1=0; s2=0; s3=0
+do n = 1 by 2 to steps-1
+   s1=s1+Eval(ff,aa+n*h)
+end
+do n = 2 by 4 to steps-2
+   s2=s2+Eval(ff,aa+n*h)
+end
+do n = 4 by 4 to steps-4
+   s3=s3+Eval(ff,aa+n*h)
+end
+return (s0+32*s1+12*s2+14*s3)*2*h/45
+
+include Math

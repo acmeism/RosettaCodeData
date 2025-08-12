@@ -1,55 +1,129 @@
-/*REXX program calculates  N  number of Bernoulli numbers expressed as vulgar fractions.*/
-parse arg N .;     if N=='' | N==","  then N= 60 /*Not specified?  Then use the default.*/
-numeric digits max(9, n*2)                       /*increase the decimal digits if needed*/
-w= max(length(N), 4);      Nw= N  + w  +  N % 4  /*used for aligning (output) fractions.*/
-say 'B(n)'   center("Bernoulli numbers expressed as vulgar fractions",  max(78-w, Nw) )
-say copies('─',w)  copies("─", max(78-w,Nw+2*w)) /*display 2nd line of title, separators*/
-!.= .;    do #=0  to  N                          /*process the numbers from  0  ──►  N. */
-          b= bern(#);      if b==0  then iterate /*calculate Bernoulli number, skip if 0*/
-          indent= max(0, nW - pos('/', b) )      /*calculate the alignment (indentation)*/
-          say right(#, w)  left('', indent)  b   /*display the indented Bernoulli number*/
-          end   /*#*/                            /* [↑]  align the Bernoulli fractions. */
-exit 0                                           /*stick a fork in it,  we're all done. */
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-bern: parse arg x; if x==0  then return  '1/1'   /*handle the special case of  zero.    */
-                   if x==1  then return '-1/2'   /*   "    "     "      "   "  one.     */
-                   if x//2  then return   0      /*   "    "     "      "   "  odds > 1.*/
-        do j=2  to x  by 2;      jp= j+1         /*process the positive integers up to X*/
-        sn= 1 - j                                /*define the  numerator.               */
-        sd= 2                                    /*   "    "   denominator.             */
-                   do k=2  to j-1  by 2          /*calculate a  SN/SD  sequence.        */
-                   parse var  @.k    bn  '/'  ad /*get a previously calculated fraction.*/
-                   an= comb(jp, k) * bn          /*use  COMBination  for the next term. */
-                   $lcm= LCM(sd, ad)             /*use Least Common Denominator function*/
-                   sn= $lcm % sd * sn;  sd= $lcm /*calculate the   current  numerator.  */
-                   an= $lcm % ad * an            /*    "      "      next      "        */
-                   sn= sn + an                   /*    "      "    current     "        */
-                   end   /*k*/                   /* [↑]  calculate the  SN/SD  sequence.*/
-        sn= -sn                                  /*flip the sign for the numerator.     */
-        sd= sd * jp                              /*calculate         the denominator.   */
-        if sn\==1  then do;  _= GCD(sn, sd)      /*get the  Greatest Common Denominator.*/
-                            sn= sn%_;   sd= sd%_ /*reduce the numerator and denominator.*/
-                        end                      /* [↑]   done with the reduction(s).   */
-        @.j= sn'/'sd                             /*save the result for the next round.  */
-        end              /*j*/                   /* [↑]  done calculating Bernoulli #'s.*/
-      return sn'/'sd
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-comb: procedure expose !.; parse arg x,y;   if x==y  then return 1
-      if !.C.x.y\==.  then return !.C.x.y                 /*combination computed before?*/
-      if   x-y  <  y  then y= x-y                         /*x-y < y?   Then use a new Y.*/
-      z= perm(x, y);           do j=2  for y-1;  z= z % j
-                               end   /*j*/
-      !.C.x.y= z;     return z                            /*assign memoization & return.*/
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-GCD:  procedure;               parse arg x,y;                     x= abs(x)
-           do  until y==0;     parse value  x//y  y    with    y  x;  end;        return x
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-LCM:  procedure; parse arg x,y      /*X=ABS(X);  Y=ABS(Y)   not needed for Bernoulli #s.*/
-                                    /*IF Y==0 THEN RETURN 0  "    "    "      "       " */
-      $= x * y                                        /*calculate part of the LCM here. */
-                   do  until y==0;   parse  value   x//y  y     with     y  x
-                   end   /*until*/                    /* [↑]  this is a short & fast GCD*/
-      return $ % x                                    /*divide the pre─calculated value.*/
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-perm: procedure expose !.;  parse arg x,y;          if !.P.x.y\==.  then return !.P.x.y
-      z= 1;       do j=x-y+1  to x;     z= z*j;     end;        !.P.x.y= z;       return z
+-- 30 Jul 2025
+include Settings
+numeric digits 16
+arg xx
+if xx = '' then
+   xx=60
+ss=(xx>0); xx=Abs(xx)
+
+say 'BERNOULLI NUMBERS'
+say version
+say
+
+call Time('r')
+call Rational1 xx
+if ss then
+   call ShowFractions xx
+call Timer
+
+call Time('r')
+call Rational2 xx
+if ss then
+   call ShowFractions xx
+call Timer
+
+call Time('r')
+call Decimal1 xx
+if ss then
+   call ShowDecimals xx
+call Timer
+
+call Time('r')
+call Decimal2 xx
+if ss then
+   call ShowDecimals xx
+call Timer
+exit
+
+Rational1:
+procedure expose Memo. Bern.
+arg xx
+say 'Rational arithmetic'
+say 'cf Generating function'
+numeric digits Max(Digits(),3*xx)
+Bern.=0; Bern.0='1 1'; Bern.1='-1 2'
+do n = 2 by 2 to xx
+   s=0
+   do k = 0 to n-1
+      s=Addq(s,Scaleq(Bern.k,Comb(n+1,k)))
+   end k
+   Bern.n=Mulq(Negq(s),Invq(n+1))
+end n
+return
+
+Rational2:
+procedure expose Memo. Bern.
+arg xx
+say 'Numerator and denominator calculations'
+say 'cf Double sum formula optimized'
+numeric digits Max(Digits(),3*xx)
+Bern.=0; Bern.0='1 1'; Bern.1='-1 2'
+do j = 2 by 2 to xx
+   jp=j+1; sn=1-j; sd=2
+   do k = 2 by 2 to j-1
+      bn=bn.k; ad=ad.k; an=Comb(jp,k)*bn; tl=Lcm(sd,ad)
+      sn=tl%sd*sn; sd=tl; an=tl%ad*an; sn=sn+an
+   end k
+   sn=-sn; sd=sd*jp; bn.j=sn; ad.j=sd; g=Gcd(Abs(sn),sd)
+   Bern.j=sn/g sd/g
+end j
+return
+
+ShowFractions:
+procedure expose Bern.
+arg xx
+w=Length(Word(Bern.xx,1))+2
+say ' Bn' Right('Num',w) '/' Left('Den',10) 'Decimal'
+do i = 0 to xx
+   if Bern.i <> 0 then do
+      parse var Bern.i num den
+      say Right(i,3) Right(num,w) '/' Left(den,10) Digit(num/den,16)
+   end
+end i
+return
+
+Decimal1:
+procedure expose Bern. Memo.
+arg xx
+say 'Floating point calculations'
+say 'cf Generating function'
+numeric digits Max(Digits(),2*xx)
+Bern.=0; Bern.0=1; Bern.1='-0.5'
+do n = 2 by 2 to xx
+   s=0
+   do k = 0 to n-1
+      s=s+Bern.k*Comb(n+1,k)
+   end k
+   Bern.n=-s/(n+1)
+end n
+return xx
+
+Decimal2:
+procedure expose Bern. Memo.
+arg xx
+say 'Floating point calculations'
+say 'cf Akiyama-Tanigawa'
+numeric digits Max(Digits(),3*xx)
+Bern.=0; Bern.0=1; Bern.1=-0.5
+do i = 2 by 2 to xx
+   do m = 0 to i
+      a.m=1/(m+1)
+      do j = m by -1 to 1
+         j1=j-1; a.j1=j*(a.j1-a.j)
+      end
+   end m
+   Bern.i=a.0
+end i
+return xx
+
+ShowDecimals:
+procedure expose Bern.
+arg xx
+say ' Bn' 'Decimal'
+do i = 0 to xx
+   if Bern.i <> 0 then
+      say Right(i,3) Digit(Bern.i,16)
+end i
+return
+
+include Math

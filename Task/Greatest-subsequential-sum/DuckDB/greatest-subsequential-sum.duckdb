@@ -1,0 +1,32 @@
+create or replace function list_find_last_nonnegative(lst) as (
+   select first(i)
+   from   range(length(lst), 0, -1) t(i)
+   where  lst[i] > 0
+);
+
+# Return the tuple (start, end, subtotal) for the subsequence lst[start:end]
+# having a maximal subtotal for the given value of `start`.
+# Initial negative numbers are ignored.
+# It is assumed that the caller has taken care of trailing negative numbers.
+create or replace function max_initial_subsequential_sum(lst, start) as (
+  select max_by( (start,i,total), total)
+  from ( SELECT i, list_sum(lst[start:i]) as total
+         FROM range(start, length(lst)+1) t(i)
+         WHERE lst[start] >= 0 )
+);
+
+# If the list is empty or if the items are all negative, return []
+create or replace function subsequence_with_maximal_sum(lst) as (
+  with cte as (select list_find_last_nonnegative(lst) as len)
+  select coalesce(max_by( lst[ mis[1]: mis[2]], mis[3] ), [])
+  from ( SELECT max_initial_subsequential_sum(lst,start) as mis
+         FROM (select unnest(range(1, 1 + len)) as start from cte) )
+);
+
+# Examples
+select s, subsequence_with_maximal_sum(s) as subseq
+from values
+  ([1,2,3,-1, 10]),
+  ([-1,2,3,-1, 10]),
+  ([-1,-2]),
+  ([]) as t(s);

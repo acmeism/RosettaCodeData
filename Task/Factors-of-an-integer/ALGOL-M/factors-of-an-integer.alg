@@ -1,51 +1,28 @@
 BEGIN
 
-COMMENT RETURN P MOD Q;
-INTEGER FUNCTION MOD (P, Q);
-INTEGER P, Q;
+COMMENT RETURN N MOD M;
+INTEGER FUNCTION MOD (N, M);
+INTEGER N, M;
 BEGIN
-    MOD := P - Q * (P / Q);
+    MOD := N - M * (N / M);
 END;
 
-INTEGER I, N, LIMIT, FOUND, START, DELTA;
+INTEGER I, N;
 
 WHILE 1 = 1 DO
   BEGIN
-    WRITE ("NUMBER TO FACTOR (OR 0 TO QUIT):");
+    WRITE("NUMBER TO FACTOR (OR 0 TO QUIT):");
     READ (N);
     IF N = 0 THEN GOTO DONE;
-    WRITE ("THE FACTORS ARE:");
-
-    COMMENT CHECK WHETHER NUMBER IS EVEN OR ODD;
-    IF MOD(N, 2) = 0 THEN
+    WRITE("THE FACTORS ARE:");
+    FOR I := 1 STEP 1 UNTIL N / 2 DO
       BEGIN
-        START := 2;
-        DELTA := 1;
-      END
-    ELSE
-      BEGIN
-        START := 3;
-        DELTA := 2;
+        IF MOD(N, I) = 0 THEN WRITEON(I);
       END;
-
-    COMMENT TEST POTENTIAL DIVISORS;
-    FOUND := 0;
-    I := START;
-    LIMIT := N / I;
-    WHILE I <= LIMIT DO
-      BEGIN
-        IF MOD(N, I) = 0 THEN
-          BEGIN
-            WRITEON (I);
-            FOUND := FOUND + 1;
-          END;
-        I := I + DELTA;
-        IF FOUND = 0 THEN LIMIT := N / I;
-      END;
-    IF FOUND = 0 THEN WRITEON (" NONE - THE NUMBER IS PRIME.");
+    WRITEON(N);
     WRITE("");
   END;
 
-DONE: WRITE ("GOODBYE");
+DONE: WRITE("THANKS FOR CONSULTING THE MATH GURU!");
 
 END

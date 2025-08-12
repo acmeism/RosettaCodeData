@@ -13,13 +13,23 @@ y = np.linspace(0, 2 * h / d, num=h+1)
 A, B = np.meshgrid(x - 1, y - h / d)
 C = (2.0 + 1.0j) * (A + B * 1j) - 0.5
 
-Z, dZ, ddZ = np.zeros_like(C), np.zeros_like(C), np.zeros_like(C)
-D, S, T = np.zeros(C.shape), np.zeros(C.shape), np.zeros(C.shape)
+def iteration(C):
+    S, T = np.zeros(C.shape), np.zeros(C.shape)
+    Z, dZ, ddZ = np.zeros_like(C), np.zeros_like(C), np.zeros_like(C)
 
-for k in range(n):
-    M = abs(Z) < r
-    S[M], T[M] = S[M] + np.sin(density * np.angle(Z[M])), T[M] + 1
-    Z[M], dZ[M], ddZ[M] = Z[M] ** 2 + C[M], 2 * Z[M] * dZ[M] + 1, 2 * (dZ[M] ** 2 + Z[M] * ddZ[M])
+    def iterate(C, S, T, Z, dZ, ddZ):
+        S, T = S + np.sin(density * np.angle(Z)), T + 1
+        Z, dZ, ddZ = Z * Z + C, 2 * Z * dZ + 1, 2 * (dZ * dZ + Z * ddZ)
+        return S, T, Z, dZ, ddZ
+
+    for i in range(n):
+        M = abs(Z) < r
+        S[M], T[M], Z[M], dZ[M], ddZ[M] = iterate(C[M], S[M], T[M], Z[M], dZ[M], ddZ[M])
+
+    return S, T, Z, dZ, ddZ
+
+S, T, Z, dZ, ddZ = iteration(C)
+D = np.zeros(C.shape)
 
 N = abs(Z) >= r  # basic normal map effect and stripe average coloring (potential function)
 P, Q = S[N] / T[N], (S[N] + np.sin(density * np.angle(Z[N]))) / (T[N] + 1)

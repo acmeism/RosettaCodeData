@@ -1,9 +1,11 @@
+-- 28 Jul 2025
 include Settings
+numeric digits 100
 
-say 'LEFT TRUNCATABLE PRIME IN GIVEN BASE - 4 Mar 2025'
+say 'LEFT TRUNCATABLE PRIME IN GIVEN BASE'
 say version
 say
-numeric digits 100; work. = 0
+work. = 0
 bases = '3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 19 21 23 25'
 do i = 1 to Words(bases)
    base = Word(bases,i)
@@ -26,7 +28,7 @@ First:
 procedure expose work.
 arg x
 say 'Base' x'...'
-a = '2 3 5 7 11 13 17 19 23 29'
+a = '2 3 5 7 11 13 17 19 23 25 27 29 31 33 35'
 n = 0; b = 2
 do i = 2 while b <= x
    n = n+1; work.out.n = b; b = Word(a,i)
@@ -43,7 +45,7 @@ if x < 0 then do
       say i work.out.i 'is prime'
    end
 end
-say Right(work.out.0,5) 'candidates with' Right(work.digit,2) 'digits ('Format(Time('e'),3,3)'s)'
+say Right(work.out.0,5) 'candidates with' Right(work.digit,2) 'digits ('Format(Time('e'),,3)'s)'
 return
 
 Copy:
@@ -56,7 +58,7 @@ work.in.0 = work.out.0
 return
 
 Next:
-procedure expose work. glob.
+procedure expose work. Memo.
 arg x
 n = 0
 do i = 1 to work.in.0
@@ -78,10 +80,8 @@ m = 0
 do i = 1 to work.in.0
    m = Max(m,work.in.i)
 end
-say 'Largest left truncatable prime for base' x 'is' m
+say 'Largest left truncatable prime for base' x 'is' m '('BaseNN(m,x)')'
 say
 return
 
-include Functions
-include Numbers
-include Abend
+include Math

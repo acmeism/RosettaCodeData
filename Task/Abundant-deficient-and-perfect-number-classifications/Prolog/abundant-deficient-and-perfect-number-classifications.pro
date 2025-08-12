@@ -3,18 +3,19 @@ proper_divisors(N, [1|L]) :-
 	FSQRTN is floor(sqrt(N)),
 	proper_divisors(2, FSQRTN, N, L).
 
-proper_divisors(M, FSQRTN, _, []) :-
-	M > FSQRTN,
-	!.
-proper_divisors(M, FSQRTN, N, L) :-
-	N mod M =:= 0, !,
-	MO is N//M, % must be integer
-	L = [M,MO|L1], % both proper divisors
-	M1 is M+1,
-	proper_divisors(M1, FSQRTN, N, L1).
-proper_divisors(M, FSQRTN, N, L) :-
-	M1 is M+1,
-	proper_divisors(M1, FSQRTN, N, L).
+proper_divisors(M, FSQRTN, N, [MS|L]) :-
+	between(M, FSQRTN, D1),
+	N mod D1 =:= 0, !,
+	D2 is N//D1, % must be integer
+	( D1 < D2
+	  ->
+	    MS is D1 + D2, % already sum here
+ 	    M2 is D1 + 1,
+	    proper_divisors(M2, FSQRTN, N, L)
+	  ;
+	    MS is D1, L = [] % D1 only once
+	).
+proper_divisors(_, _FSQRTN, _, []) :- !.
 
 dpa(1, [1], [], []) :-
 	!.

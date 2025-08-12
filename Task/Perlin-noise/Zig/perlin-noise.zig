@@ -1,4 +1,4 @@
-// Made for Zig 0.10.0
+// Made for Zig 0.14.1
 // This implementation works with generic float types
 
 const std    = @import("std");
@@ -13,9 +13,9 @@ pub fn noise3D(comptime T: type, x: T, y: T, z: T) T {
     @setRuntimeSafety(false);
 
     // Truncate float to u8 (256 possible values)
-    const x_i = @intCast(u8, @floatToInt(isize, @floor(x)) & 255);
-    const y_i = @intCast(u8, @floatToInt(isize, @floor(y)) & 255);
-    const z_i = @intCast(u8, @floatToInt(isize, @floor(z)) & 255);
+    const x_i: u8 = @truncate(@as(usize, @bitCast(@as(isize, @intFromFloat(@floor(x))))));
+    const y_i: u8 = @truncate(@as(usize, @bitCast(@as(isize, @intFromFloat(@floor(y))))));
+    const z_i: u8 = @truncate(@as(usize, @bitCast(@as(isize, @intFromFloat(@floor(z))))));
 
     // Float remainder of coords (eg: 5.34 -> 0.34)
     const x_r = x - @floor(x);

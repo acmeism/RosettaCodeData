@@ -1,0 +1,142 @@
+#include "SHA_256.bas"
+#include "RIPEMD_160.bas"
+
+Const BITCOIN_SPECIAL_VALUE As String = "04"
+Const BITCOIN_VERSION_NUMBER As String = "00"
+
+Dim Shared base_map(255) As Integer
+
+Sub init_base_map()
+    Dim As Integer i
+    For i = 0 To 255
+        base_map(i) = -1
+    Next
+    For i = 0 To 9
+        base_map(Asc("0") + i) = i
+    Next
+    For i = 0 To 5
+        base_map(Asc("a") + i) = 10 + i
+        base_map(Asc("A") + i) = 10 + i
+    Next
+    For i = 6 To 15
+        base_map(Asc("a") + i) = 10 + i
+        base_map(Asc("A") + i) = 10 + i
+    Next
+End Sub
+
+Sub hex_to_bytes(text As String, bytes() As Integer)
+    Dim As Integer first_digit, second_digit
+    Dim As Integer n = Len(text) \ 2
+    Redim bytes(n - 1)
+
+    For i As Integer = 0 To n - 1
+        first_digit = base_map(Asc(Mid(text, 2 * i + 1, 1)))
+        second_digit = base_map(Asc(Mid(text, 2 * i + 2, 1)))
+        bytes(i) = (first_digit Shl 4) + second_digit
+    Next
+End Sub
+
+Function vector_to_ascii_string(bytes() As Integer) As String
+    Dim As String result = ""
+
+    For i As Integer = 0 To Ubound(bytes)
+        result &= Chr(bytes(i))
+    Next
+
+    Return result
+End Function
+
+Sub compute_message_bytes(text As String, out_bytes() As Integer)
+    Dim As Integer bytes_1()
+    hex_to_bytes(text, bytes_1())
+
+    Dim As String ascii_1 = vector_to_ascii_string(bytes_1())
+    Dim As String hexSHA_256 = SHA_256(ascii_1)
+    Dim As Integer bytes_2()
+    hex_to_bytes(hexSHA_256, bytes_2())
+
+    Dim As String ascii_2 = vector_to_ascii_string(bytes_2())
+    Dim As String hexRIPEMD_160 = BITCOIN_VERSION_NUMBER & RIPEMD_160(ascii_2)
+    hex_to_bytes(hexRIPEMD_160, out_bytes())
+End Sub
+
+Sub compute_checksum(bytes() As Integer, out_checksum() As Integer)
+    Dim As String ascii_1 = vector_to_ascii_string(bytes())
+    Dim As String hex_1 = SHA_256(ascii_1)
+    Dim As Integer bytes_1()
+    hex_to_bytes(hex_1, bytes_1())
+
+    Dim As String ascii_2 = vector_to_ascii_string(bytes_1())
+    Dim As String hex_2 = SHA_256(ascii_2)
+    Dim As Integer bytes_2()
+    hex_to_bytes(hex_2, bytes_2())
+    Redim out_checksum(3)
+
+    For i As Integer = 0 To 3
+        out_checksum(i) = bytes_2(i)
+    Next
+End Sub
+
+Function encode_base_58(bytes() As Integer) As String
+    Const As String ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+    Const As Integer ALPHABET_SIZE = 58
+    Dim As String result = String(34, " ")
+    Dim As Integer i, j, n, c
+    Dim As Integer temp()
+
+    Redim As Integer bytes_copy(Ubound(bytes))
+    For i = 0 To Ubound(bytes)
+        bytes_copy(i) = bytes(i)
+    Next
+
+    For n = Len(result) - 1 To 0 Step -1
+        c = 0
+        For i = 0 To Ubound(bytes_copy)
+            c = c * 256 + bytes_copy(i)
+            bytes_copy(i) = c \ ALPHABET_SIZE
+            c Mod= ALPHABET_SIZE
+        Next
+        Mid(result, n + 1, 1) = Mid(ALPHABET, c + 1, 1)
+    Next
+
+    ' Quitar los '1' iniciales extra
+    While Left(result, 2) = "11"
+        result = Mid(result, 2)
+    Wend
+    Return result
+End Function
+
+Function encode_address(x As String, y As String) As String
+    Dim As String public_point = BITCOIN_SPECIAL_VALUE & x & y
+    If Len(public_point) <> 130 Then
+        Print "Invalid public point string"
+        Exit Function
+    End If
+    Dim As Integer message_bytes()
+    compute_message_bytes(public_point, message_bytes())
+
+    Dim As Integer checksum()
+    compute_checksum(message_bytes(), checksum())
+
+    Dim As Integer i
+    Dim As Integer full_bytes()
+    Redim full_bytes(Ubound(message_bytes) + 4)
+    For i = 0 To Ubound(message_bytes)
+        full_bytes(i) = message_bytes(i)
+    Next
+    For i = 0 To 3
+        full_bytes(Ubound(message_bytes) + 1 + i) = checksum(i)
+    Next
+
+    Return encode_base_58(full_bytes())
+End Function
+
+' Test Program
+init_base_map()
+
+Dim As String x = "50863AD64A87AE8A2FE83C1AF1A8403CB53F53E486D8511DAD8A04887E5B2352"
+Dim As String y = "2CD470243453A299FA9E77237716103ABC11A1DF38855ED6F2EE187E9C582BA6"
+
+Print encode_address(x, y)
+
+Sleep

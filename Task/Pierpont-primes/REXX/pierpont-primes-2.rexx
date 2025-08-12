@@ -1,11 +1,11 @@
--- 11 Apr 2025
+-- 28 Jul 2025
 include Settings
+numeric digits 40
 
 call Time('r')
 say 'PIERPOINT PRIMES (USING 3-SMOOTH NUMBERS)'
 say version
 say
-numeric digits 40
 call GetSmooth
 call GetPierpont
 call ShowPierpont
@@ -21,7 +21,7 @@ say
 return
 
 GetPierpont:
-procedure expose smoo. firs. seco. glob.
+procedure expose smoo. firs. seco. Memo.
 say 'Get Pierpont primes...'
 n1 = 0; firs. = 0; n2 = 0; seco. = 0; p = 0
 do i = 1 to smoo.0
@@ -65,8 +65,4 @@ say seco.250
 say
 return
 
-include Numbers
-include Constants
-include Sequences
-include Functions
-include Abend
+include Math

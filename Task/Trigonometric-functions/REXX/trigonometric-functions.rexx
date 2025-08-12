@@ -1,6 +1,7 @@
+-- 28 Jul 2025
 include Settings
 
-say 'TRIGONOMETRIC FUNCTIONS - 2 Mar 2025'
+say 'TRIGONOMETRIC FUNCTIONS'
 say version
 say
 s = Copies('-',77); w = 18
@@ -39,6 +40,4 @@ end
 say s
 return
 
-include Functions
-include Constants
-include Abend
+include Math

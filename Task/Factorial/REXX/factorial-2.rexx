@@ -1,20 +1,17 @@
--- 8 May 2025
+-- 30 Jul 2025
 include Settings
 
-say 'FACTORIAL'
+say 'Factorial'
 say version
 say
 call First20
-call Imp 10,'1 10 100 1000 10000 100000 1000000 10000000 100000000 130202808'
-call Rec 10,'1 10 100 1000 10000 100000 200000'
-call Imp 100,'69'
-call Imp 1000,'449'
-call Imp 10000,'3248'
-call Imp 100000,'25205'
+call Imp 10, '1 13 71 450 3249 25206 205022 1723508 14842907 130202808'
+call ReC 10, '1 13 71 450 3249 25206 205022'
+call Imp 1E6,'1 13 71 450 3249 25206'
 exit
 
 First20:
-say 'First 20 factorials...'
+say 'First 20 FactorialS...'
 numeric digits 30
 do n = 1 to 20
    say n'! =' Fact(n)
@@ -23,35 +20,35 @@ say
 return
 
 Imp:
-glob. = ''
+call ResetMemo
 call Time('r')
 arg d,p
-numeric digits d; fact. = 0
+numeric digits d; Fact. = 0
 say 'Imperative in' d 'digits precision...'
 do i = 1 to Words(p)
    call Time('r'); f = Word(p,i); h = Fact(f)
    parse var h 'E' e
    if e = '' then
-      say right(f'!',10) 'has exact' right(Length(h),9) 'digits' '('Format(Time('e'),,3)'s)'
+      say Right(f'!',10) 'has exact' Right(Length(h),9) 'digits' '('Format(Time('e'),,3)'s)'
    else
-      say right(f'!',10) 'has about' right(e+1,9) 'digits' '('Format(Time('e'),,3)'s)'
+      say Right(f'!',10) 'has about' Right(e+1,9) 'digits' '('Format(Time('e'),,3)'s)'
 end
 say
 return
 
-Rec:
-glob. = ''
+ReC:
+call ResetMemo
 call Time('r')
 arg d,p
-numeric digits d; fact. = 0
+numeric digits d; Fact. = 0
 say 'Recursive in' d 'digits precision...'
 do i = 1 to Words(p)
    call Time('r'); f = Word(p,i); h = Recursive(f)
    parse var h 'E' e
    if e = '' then
-      say right(f'!',10) 'has exact' right(Length(h),9)  'digits' '('Format(Time('e'),,3)'s)'
+      say Right(f'!',10) 'has exact' Right(Length(h),9)  'digits' '('Format(Time('e'),,3)'s)'
    else
-      say right(f'!',10) 'has about' right(e+1,9) 'digits' '('Format(Time('e'),,3)'s)'
+      say Right(f'!',10) 'has about' Right(e+1,9) 'digits' '('Format(Time('e'),,3)'s)'
 end
 say
 return
@@ -64,6 +61,4 @@ if xx = 0 then
 else
    return xx*Recursive(xx-1)
 
-include Functions
-include Special
-include Abend
+include Math

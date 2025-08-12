@@ -27,37 +27,38 @@ make term(text in file, "$");
 
 on physical file end(text in file, (REF FILE skip)BOOL: stop iteration);
 on logical file end(text in file, (REF FILE skip)BOOL: stop iteration);
+BOOL at eol := FALSE;
+on line end(text in file, (REF FILE skip)BOOL: at eol := TRUE);
 FOR row DO
-  on line end(text in file, (REF FILE skip)BOOL: stop iteration);
-  FOR col DO
-    STRING tok;
+  at eol := FALSE;
+  FOR col WHILE NOT at eol DO
+    STRING tok := "";
     getf(text in file, ($gx$,tok));
-    IF row > 1 UPB page THEN page := flex page(page, row, 2 UPB page) FI;
-    IF col > 2 UPB page THEN page := flex page(page, 1 UPB page, col) FI;
-    page[row,col]:=tok
-  OD;
-  stop iteration:
-    SKIP
+    IF tok NE "" OR NOT at eol THEN
+      IF row > 1 UPB page THEN page := flex page(page, row, 2 UPB page) FI;
+      IF col > 2 UPB page THEN page := flex page(page, 1 UPB page, col) FI;
+      page[row,col]:=tok
+    FI
+  OD
 OD;
 stop iteration:
   SKIP;
 
 BEGIN
-  PROC aligner = (PAGE in page, PROC (STRING,INT)STRING aligner)VOID:(
-    PAGE page := in page;
-    [2 UPB page]INT max width;
+  PROC aligner = (PAGE in page, PROC (STRING,INT)STRING alignf)VOID:(
+    PAGE al page := in page;
     FOR col TO 2 UPB page DO
-      INT max len:=0; FOR row TO UPB page DO IF UPB page[row,col]>max len THEN max len:=UPB page[row,col] FI OD;
-      FOR row TO UPB page DO page[row,col] := aligner(page[row,col], maxlen) OD
+      INT max len:=0; FOR row TO UPB al page DO IF UPB al page[row,col]>max len THEN max len:=UPB al page[row,col] FI OD;
+      FOR row TO UPB al page DO al page[row,col] := alignf(page[row,col], maxlen) OD
     OD;
-    printf(($n(UPB page)(n(2 UPB page -1)(gx)gl)$,page))
+    printf(($n(UPB page)(n(2 UPB page -1)(gx)gl)$,al page))
   );
 
   PROC left = (STRING in, INT len)STRING: in + " "*(len - UPB in),
        right = (STRING in, INT len)STRING: " "*(len - UPB in) + in,
        centre = (STRING in, INT len)STRING: ( INT pad=len-UPB in;  pad%2*" "+ in + (pad-pad%2)*" " );
 
-  []STRUCT(STRING name, PROC(STRING,INT)STRING align) aligners = (("Left",left), ("Left",right), ("Centre",centre));
+  []STRUCT(STRING name, PROC(STRING,INT)STRING align) aligners = (("Left",left), ("right",right), ("Centre",centre));
 
   FOR index TO UPB aligners DO
     print((new line, "# ",name OF aligners[index]," Column-aligned output:",new line));

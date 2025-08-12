@@ -18,10 +18,11 @@ MODULE Conversion
     END DO
   END FUNCTION ToDecimal
 
-  FUNCTION ToBase(base, number)
+  FUNCTION ToBase(base, number_in)
     CHARACTER(31) :: ToBase
-    INTEGER :: base, number, i, rem
+    INTEGER :: base, number_in, number, i, rem
 
+    number = number_in
     ToBase = "                               "
     DO i = 31, 1, -1
       IF(number < base) THEN

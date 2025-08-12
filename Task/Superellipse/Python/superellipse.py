@@ -1,5 +1,4 @@
 # Superellipse drawing in Python 2.7.9
-# pic can see at http://www.imgup.cz/image/712
 
 import matplotlib.pyplot as plt
 from math import sin, cos, pi

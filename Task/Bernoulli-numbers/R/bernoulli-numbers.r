@@ -1,8 +1,6 @@
-library(pracma)
+library(gmp)
 
-for (idx in c(1,2*0:30)) {
-  b <- bernoulli(idx)
-  d <- as.character(denominator(b))
-  n <- as.character(numerator(b))
-  cat("B(",idx,") = ",n,"/",d,"\n", sep = "")
-}
+indices <- c(0,1,2*(1:30))
+bnums <- sapply(indices, BernoulliQ)
+names(bnums) <- paste0("B(", indices, ")")
+print(bnums, initLine=FALSE)

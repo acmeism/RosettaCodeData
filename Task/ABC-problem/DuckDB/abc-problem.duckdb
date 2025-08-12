@@ -1,0 +1,45 @@
+CREATE OR REPLACE FUNCTION matches(block, letter) as (
+  block[1] = letter or block[2] = letter
+);
+
+# permute(lst, n, word) generates sub-permutations, perm (of length n), of the list lst,
+# that satisfy matches(perm[i], word[i]), for i in range(1, n+1).
+# Normally n = length(word).
+# The caller is responsible for ensuring appropriate adjustment of typographical case.
+CREATE OR REPLACE FUNCTION permute(lst, n, word) as table (
+  WITH RECURSIVE permute(perm, remaining) as (
+    -- base case
+    SELECT
+        []::VARCHAR[] as perm,
+        lst::VARCHAR[] as remaining
+    UNION ALL
+    -- recursive case: add one element from remaining to perm and remove it from remaining
+    SELECT
+        (perm || [element]) AS perm,
+        (remaining[1:i-1] || remaining[i+1:]) AS remaining
+    FROM (select *, unnest(remaining) AS element, generate_subscripts(remaining,1) as i
+          FROM permute)
+    WHERE length(perm) < n
+          and matches(element, word[1 + length(perm)])
+  )
+  SELECT perm
+  FROM permute
+  WHERE length(perm) = n
+);
+
+# All solutions
+CREATE OR REPLACE FUNCTION solve(word) as table (
+  from permute(
+    ['BO', 'XK', 'DQ', 'CP', 'NA', 'GT', 'RE', 'TG', 'QD', 'FS',
+     'JW', 'HU', 'VI', 'AN', 'OB', 'ER', 'FS', 'LY', 'PC', 'ZM'],
+    length(word), upper(word) )
+);
+
+CREATE OR REPLACE FUNCTION one_solution(word) as (
+  from solve(word)
+  limit 1
+);
+
+# Examples
+select word, one_solution(word)
+from (select unnest(['','A','BarK','BOOK','TREAT','COMMON','SQUAD','Confuse','abba']) as word);

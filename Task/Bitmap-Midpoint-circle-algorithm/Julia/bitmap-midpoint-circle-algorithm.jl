@@ -1,3 +1,5 @@
+using Images, ImageView
+
 function drawcircle!(img::Matrix{T}, col::T, x0::Int, y0::Int, radius::Int) where T
     x = radius - 1
     y = 0
@@ -24,8 +26,6 @@ function drawcircle!(img::Matrix{T}, col::T, x0::Int, y0::Int, radius::Int) wher
     return img
 end
 
-# Test
-using Images
-
 img = fill(Gray(255.0), 25, 25);
 drawcircle!(img, Gray(0.0), 12, 12, 12)
+imshow(img)

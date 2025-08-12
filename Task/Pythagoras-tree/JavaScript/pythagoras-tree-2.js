@@ -1,4 +1,4 @@
-const base = [[[-200, 0], [200, 0]],];
+var base = [[[-200, 0], [200, 0]],];
 document.documentElement.innerHTML = [...Array(12)].reduce((svg_a, _, lvl) => {
     const rg = step => (80 + (lvl - 2) * step) & 255;
     return svg_a + base.splice(0).reduce((g_a, [a, b]) => {

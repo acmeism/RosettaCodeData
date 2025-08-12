@@ -1,0 +1,31 @@
+# Return a list - just one in the case of a tie
+create or replace function longest_increasing_subsequence(lst) as (
+
+  -- Add a flag to signal the start of a new subsequence
+  with flagged as (
+    select *, if(id = 1, 0, if(c > (lag(c) over ()), 0, 1)) as flag
+    from (select generate_subscripts(lst,1) as id,
+                 unnest(lst) as c)
+  ),
+  partitions as (
+    select *, sum(flag) over (order by id) as partition_number
+    from (select *, if(id=1 or (c > (lag(c) over ())), 1, 0) as flag
+          from flagged)
+    order by id asc
+  ),
+  subseq_number as (
+    select max_by(partition_number, ncount) as n
+      from (select partition_number, count(*) as ncount
+            from partitions
+            group by partition_number)
+  )
+  select array_agg(c order by id)
+        from partitions, subseq_number
+        where partition_number = subseq_number.n
+);
+
+# Examples;
+select l as list, longest_increasing_subsequence(l) as lis
+  from (select [3,2,6,4,5,1] as l union all
+        select [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15] as l union all
+        select [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,20] as l);

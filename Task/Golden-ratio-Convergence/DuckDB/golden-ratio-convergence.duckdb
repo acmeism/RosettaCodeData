@@ -1,0 +1,24 @@
+set variable phi = (1 + sqrt(5)) / 2;
+
+# Output: one row (iterations, phi)
+# This should work even with epsilon = 0
+create or replace function compute_phi(epsilon) as table (
+  with recursive cte as (
+    select 2.0::DOUBLE as oldPhi, 1::DOUBLE as phi, 0 as iterations
+    union all
+    select phi as oldPhi,
+           1 + (1 / phi) as phi,
+           iterations + 1 as iterations
+    from cte
+    where @(phi - oldPhi) > epsilon
+  )
+  select last(iterations order by iterations) as iterations,
+         last(phi order by iterations) as phi
+  from cte
+);
+
+select epsilon,
+       iterations,
+       phi as "final value",
+       @(phi - getvariable('phi')) as "approximate absolute error"
+       from (select unnest([1e-5, 0]) as epsilon), compute_phi(epsilon);

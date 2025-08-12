@@ -1,0 +1,194 @@
+#include "inc/FreeImage.bi"
+
+Type Pixel
+    r As Ubyte
+    g As Ubyte
+    b As Ubyte
+End Type
+
+Type Box
+    startIdx As Integer
+    endIdx As Integer
+End Type
+
+Function loadImagePixels(fname As String, Byref w As Integer, Byref h As Integer, pixels() As Pixel) As Boolean
+    FreeImage_Initialise()
+    Dim As FREE_IMAGE_FORMAT fif = FreeImage_GetFIFFromFilename(fname)
+    If fif = FIF_UNKNOWN Then Return False
+    Dim As FIBITMAP Ptr dib = FreeImage_Load(fif, fname)
+    If dib = 0 Then Return False
+
+    Dim As FIBITMAP Ptr dib24 = FreeImage_ConvertTo24Bits(dib)
+    FreeImage_Unload(dib)
+    If dib24 = 0 Then Return False
+
+    w = FreeImage_GetWidth(dib24)
+    h = FreeImage_GetHeight(dib24)
+    Dim As Integer sz = w * h
+    Redim pixels(0 To sz-1)
+    For y As Integer = 0 To h-1
+        For x As Integer = 0 To w-1
+            Dim As RGBQUAD col
+            FreeImage_GetPixelColor(dib24, x, y, @col)
+            Dim As Integer idx = y * w + x
+            pixels(idx).r = col.rgbRed
+            pixels(idx).g = col.rgbGreen
+            pixels(idx).b = col.rgbBlue
+        Next
+    Next
+    FreeImage_Unload(dib24)
+    FreeImage_DeInitialise()
+
+    Return True
+End Function
+
+Sub savePalettedImage(fname As String, w As Integer, h As Integer, pal() As Pixel, palIdx() As Integer)
+    FreeImage_Initialise()
+    Dim As FIBITMAP Ptr dib = FreeImage_Allocate(w, h, 24)
+    For y As Integer = 0 To h-1
+        For x As Integer = 0 To w-1
+            Dim As Integer idx = y * w + x
+            Dim As RGBQUAD col
+            With pal(palIdx(idx))
+                col.rgbRed = .r
+                col.rgbGreen = .g
+                col.rgbBlue = .b
+                col.rgbReserved = 255
+            End With
+            FreeImage_SetPixelColor(dib, x, y, @col)
+        Next
+    Next
+    FreeImage_Save(FIF_PNG, dib, fname)
+    FreeImage_Unload(dib)
+    FreeImage_DeInitialise()
+End Sub
+
+Function compareChannel(a As Pixel, b As Pixel, ch As Integer) As Integer
+    Select Case ch
+    Case 0: Return a.r - b.r
+    Case 1: Return a.g - b.g
+    Case 2: Return a.b - b.b
+    End Select
+    Return 0
+End Function
+
+Sub sortPixels(pixels() As Pixel, idx() As Integer, first As Integer, last As Integer, ch As Integer)
+    Dim As Integer i = first, j = last
+    Dim As Pixel pivot = pixels(idx((first+last)\2))
+    Do
+        While compareChannel(pixels(idx(i)), pivot, ch) < 0 : i += 1 : Wend
+        While compareChannel(pixels(idx(j)), pivot, ch) > 0 : j -= 1 : Wend
+        If i <= j Then
+            Swap idx(i), idx(j)
+            i += 1 : j -= 1
+        End If
+    Loop While i <= j
+    If first < j Then sortPixels(pixels(), idx(), first, j, ch)
+    If i < last Then sortPixels(pixels(), idx(), i, last, ch)
+End Sub
+
+Function maxRangeChannel(pixels() As Pixel, idx() As Integer, first As Integer, last As Integer) As Integer
+    Dim As Integer minR = 255, maxR = 0, minG = 255, maxG = 0, minB = 255, maxB = 0
+    For i As Integer = first To last
+        Dim As Pixel p = pixels(idx(i))
+        If p.r < minR Then minR = p.r
+        If p.r > maxR Then maxR = p.r
+        If p.g < minG Then minG = p.g
+        If p.g > maxG Then maxG = p.g
+        If p.b < minB Then minB = p.b
+        If p.b > maxB Then maxB = p.b
+    Next
+    Dim As Integer rangeR = maxR-minR, rangeG = maxG-minG, rangeB = maxB-minB
+    If rangeR >= rangeG And rangeR >= rangeB Then Return 0
+    If rangeG >= rangeR And rangeG >= rangeB Then Return 1
+    Return 2
+End Function
+
+' Recursive median cut
+Sub medianCut(pixels() As Pixel, idx() As Integer, boxes() As Box, Byref nBoxes As Integer, maxBoxes As Integer)
+    While nBoxes < maxBoxes
+        Dim As Integer longest = 0, boxIdx = -1
+        For i As Integer = 0 To nBoxes-1
+            Dim As Integer longi = boxes(i).endIdx - boxes(i).startIdx + 1
+            If longi > longest Then
+                longest = longi
+                boxIdx = i
+            End If
+        Next
+        If boxIdx = -1 Or longest < 2 Then Exit While
+        Dim As Integer first = boxes(boxIdx).startIdx, last = boxes(boxIdx).endIdx
+        Dim As Integer ch = maxRangeChannel(pixels(), idx(), first, last)
+        sortPixels(pixels(), idx(), first, last, ch)
+        Dim As Integer middle = (first + last) \ 2
+        boxes(boxIdx).endIdx = middle
+        boxes(nBoxes).startIdx = middle + 1
+        boxes(nBoxes).endIdx = last
+        nBoxes += 1
+    Wend
+End Sub
+
+Sub computePalette(pixels() As Pixel, idx() As Integer, boxes() As Box, nBoxes As Integer, pal() As Pixel)
+    For i As Integer = 0 To nBoxes-1
+        Dim As Integer r = 0, g = 0, b = 0, cnt = 0
+        For j As Integer = boxes(i).startIdx To boxes(i).endIdx
+            With pixels(idx(j))
+                r += .r : g += .g : b += .b
+            End With
+            cnt += 1
+        Next
+        If cnt > 0 Then
+            pal(i).r = r \ cnt
+            pal(i).g = g \ cnt
+            pal(i).b = b \ cnt
+        End If
+    Next
+End Sub
+
+Sub assignPalette(pixels() As Pixel, idx() As Integer, boxes() As Box, nBoxes As Integer, palIdx() As Integer)
+    Dim As Integer i, j, n = Ubound(pixels)
+    For i = 0 To n
+        For j = 0 To nBoxes-1
+            If i >= boxes(j).startIdx And i <= boxes(j).endIdx Then
+                palIdx(idx(i)) = j
+                Exit For
+            End If
+        Next
+    Next
+End Sub
+
+' Test Program
+Dim As String infile = "frog.png", outfile = "frog16.png"
+If Command(1) <> "" Then infile = Command(1)
+If Command(2) <> "" Then outfile = Command(2)
+
+Dim As Integer imgW, imgH
+Dim As Pixel pixels()
+If Not loadImagePixels(infile, imgW, imgH, pixels()) Then Print "Error loading image" : End
+
+Dim As Integer nColors = 16, sz = imgW * imgH
+Dim As Integer idx(0 To sz-1)
+For i As Integer = 0 To sz-1 :  idx(i) = i : Next
+
+Dim As Box boxes(0 To nColors-1)
+boxes(0).startIdx = 0
+boxes(0).endIdx = sz-1
+Dim As Integer nBoxes = 1
+
+medianCut(pixels(), idx(), boxes(), nBoxes, nColors)
+
+Dim As Pixel paleta(0 To nColors-1)
+computePalette(pixels(), idx(), boxes(), nBoxes, paleta())
+
+Dim As Integer palIdx(0 To sz-1)
+assignPalette(pixels(), idx(), boxes(), nBoxes, palIdx())
+
+savePalettedImage(outfile, imgW, imgH, paleta(), palIdx())
+
+Print "Palette:"
+For i As Integer = 0 To nColors-1
+    With paleta(i)
+        Print Using "###: R=### G=### B=###"; i; .r; .g; .b
+    End With
+Next
+
+Sleep

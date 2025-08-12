@@ -1,6 +1,10 @@
-function throw_error_with_argment(argument)
+function throw_error_with_arg(arg)
     return "hello!"
 end
 
-status, errmsg = pcall(throw_error_with_argment, "foobar 123")
-print("errmsg = ", errmsg)
+local status, result = pcall(throw_error_with_arg, "foobar 123")
+if (status ~= 0)
+      print("function returned ", result, ", but had errors.")
+else
+    print("result = ", result)
+end

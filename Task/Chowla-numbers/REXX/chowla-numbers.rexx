@@ -1,17 +1,17 @@
--- 8 May 2025
+-- 28 Jul 2025
 include Settings
+numeric digits 12
 
 say 'CHOWLA NUMBERS'
 say version
 say
-numeric digits 12
 call ChowlaNumbers
 call PrimeCount
 call PerfectNumbers
 exit
 
 ChowlaNumbers:
-procedure expose glob.
+procedure expose Memo.
 call Time('r'); sep = Copies('-',12)
 say sep; say ' n Chowla(n)'; say sep
 m = 37
@@ -24,7 +24,7 @@ say
 return
 
 PrimeCount:
-procedure expose glob. work.
+procedure expose Memo. work.
 call Time('r'); sep = Copies('-',17)
 say sep; say Right('n',8) Right('Primes<n',8); say sep
 d = 1; work. = 1; m = 1e7; n = 0
@@ -72,7 +72,4 @@ say Format(Time('e'),,3) 'seconds'
 say
 return
 
-include Functions
-include Special
-include Numbers
-include Abend
+include Math

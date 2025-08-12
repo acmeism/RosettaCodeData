@@ -17,10 +17,10 @@ BEGIN # find some Humble numbers - numbers with no prime factors above 7      #
         INT m = min( min( min( p2, p3 ), p5 ), p7 );
         h[ n ] := m;
         IF n <= max shown humble THEN print( ( " ", whole( m, 0 ) ) ) FI;
-        IF m = p2 THEN p2 := 2 * h[ last2 := last2 + 1 ] FI;
-        IF m = p3 THEN p3 := 3 * h[ last3 := last3 + 1 ] FI;
-        IF m = p5 THEN p5 := 5 * h[ last5 := last5 + 1 ] FI;
-        IF m = p7 THEN p7 := 7 * h[ last7 := last7 + 1 ] FI;
+        IF m = p2 THEN p2 := 2 * h[ last2 +:= 1 ] FI;
+        IF m = p3 THEN p3 := 3 * h[ last3 +:= 1 ] FI;
+        IF m = p5 THEN p5 := 5 * h[ last5 +:= 1 ] FI;
+        IF m = p7 THEN p7 := 7 * h[ last7 +:= 1 ] FI;
         h count[ IF   m <        10 THEN 1
                  ELIF m <       100 THEN 2
                  ELIF m <     1 000 THEN 3

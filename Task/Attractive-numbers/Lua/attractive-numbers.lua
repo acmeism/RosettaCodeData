@@ -11,11 +11,10 @@ end
 
 -- Compute the prime factors of n
 function factors (n)
-  local facList, divisor, count = {}, 1
+  local facList, divisor = {}, 1
   if n < 2 then return facList end
   while not isPrime(n) do
     while not isPrime(divisor) do divisor = divisor + 1 end
-    count = 0
     while n % divisor == 0 do
       n = n / divisor
       table.insert(facList, divisor)
@@ -28,6 +27,10 @@ function factors (n)
 end
 
 -- Main procedure
+local count = 0
 for i = 1, 120 do
-  if isPrime(#factors(i)) then io.write(i .. "\t") end
+  if isPrime(#factors(i)) then
+     count = count - 1
+     io.write( string.format("%6d", i), ( count % 12 == 0 and "\n" or "" ))
+  end
 end

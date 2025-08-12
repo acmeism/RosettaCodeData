@@ -1,0 +1,20 @@
+# The MAP giving the frequency counts of characters in the given string
+create or replace function spectrum(str) as (
+  select histogram(c)
+  from (select unnest(regexp_extract_all(str,'.')) as c)
+);
+
+# Find the anagram groups having the most members.
+# Each group is sorted, and the groups are sorted by first word in the group.
+with words as (from read_csv('unixdict.txt', header=false) _(word)),
+  histograms as (select word, spectrum(word) as h from words),
+  groups as (select h, count(h) as c from histograms group by h order by c desc),
+  mx as (select max(c) as mx from groups),
+  maximals as (select h from groups, mx where c = mx.mx),
+  results as (select (select array_agg(word).list_sort()
+                      from histograms
+                      where histograms.h = maximals.h ) as anagrams
+              from maximals)
+  select anagrams
+  from results
+  order by anagrams[1] ;

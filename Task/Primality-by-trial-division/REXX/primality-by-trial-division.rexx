@@ -1,4 +1,4 @@
--- 26 Mar 2025
+-- 28 Jul 2025
 include Settings
 numeric digits 15
 
@@ -15,7 +15,7 @@ exit
 
 ShowTrial:
 procedure
-arg xx,yy
+arg xx,yy,zz
 call Time('r')
 say 'Primes between' std(xx) 'and' std(yy) 'by trial division'
 n = 0; w = Xpon(yy)+2
@@ -34,7 +34,7 @@ return
 
 ShowMR:
 procedure
-arg xx,yy
+arg xx,yy,zz
 call Time('r')
 say 'Primes between' std(xx) 'and' std(yy) 'by Miller-Rabin'
 n = 0; w = Xpon(yy)+2
@@ -83,8 +83,4 @@ do i = 3 by 2 to Isqrt(xx)
 end
 return 1
 
-include Sequences
-include Numbers
-include Functions
-include Constants
-include Abend
+include Math

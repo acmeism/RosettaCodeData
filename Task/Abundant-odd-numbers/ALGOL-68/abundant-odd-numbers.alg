@@ -1,7 +1,5 @@
-BEGIN
-    # find some abundant odd numbers - numbers where the sum of the proper    #
-    #                                  divisors is bigger than the number     #
-    #                                  itself                                 #
+BEGIN # find some abundant odd numbers - numbers wose the proper divisor sum  #
+      #                                  is bigger than the number itself     #
 
     # returns the sum of the proper divisors of n                             #
     PROC divisor sum = ( INT n )INT:
@@ -41,34 +39,20 @@ BEGIN
         # 1000th odd abundant number                                          #
         WHILE a count < 1 000 DO
             IF ( d sum := divisor sum( odd number ) ) > odd number THEN
-                a count := a count + 1
+                a count +:= 1
             FI;
             odd number +:= 2
         OD;
-        print( ( "1000th abundant odd number:"
-               , newline
-               , "    "
-               , whole( odd number - 2, 0 )
-               , " proper divisor sum: "
-               , whole( d sum, 0 )
-               , newline
-               )
-             );
+        print( ( "1000th abundant odd number:", newline, "    " ) );
+        print( ( whole( odd number - 2, 0 ), " proper divisor sum: ", whole( d sum, 0 ), newline ) );
         # first odd abundant number > one billion                             #
         odd number := 1 000 000 001;
         BOOL found := FALSE;
         WHILE NOT found DO
             IF ( d sum := divisor sum( odd number ) ) > odd number THEN
                 found  := TRUE;
-                print( ( "First abundant odd number > 1 000 000 000:"
-                       , newline
-                       , "    "
-                       , whole( odd number, 0 )
-                       , " proper divisor sum: "
-                       , whole( d sum, 0 )
-                       , newline
-                       )
-                     )
+                print( ( "First abundant odd number > 1 000 000 000:", newline, "    " ) );
+                print( ( whole( odd number, 0 ), " proper divisor sum: ", whole( d sum, 0 ), newline ) )
             FI;
             odd number +:= 2
         OD

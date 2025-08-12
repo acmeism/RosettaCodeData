@@ -1,0 +1,63 @@
+# Create a table (sign, permutation) where sign is 1 for even parity, and -1 for odd parity
+CREATE OR REPLACE FUNCTION permute(lst) as table (
+  with recursive permute(perm, remaining) as (
+    -- base case
+    select
+        [] as perm,
+        lst as remaining,
+        1 as sign,
+    union all
+    -- recursive case: add one element from remaining to perm and remove it from remaining
+    select
+        (perm || [element]) AS perm,
+        (remaining[1:i-1] || remaining[i+1:]) AS remaining,
+        if (i % 2 = 1, sign, -sign) as sign,
+    from (select *, unnest(remaining) AS element, generate_subscripts(remaining,1) as i
+          FROM permute)
+  )
+  select perm, sign
+  from permute
+  where length(remaining) = 0
+);
+
+# PRODUCT ( m[i, perm(i)] ) where perm is a permutation
+CREATE OR REPLACE FUNCTION det(matrixTable, perm) as table (
+  with recursive MT as (from query_table(matrixTable)),
+  cte as (
+    select 1 as ix, 1 as prod
+    union all
+    select 1+ix as ix,
+           prod * (select first(value) from MT where i = ix and j = perm[ix]) as prod
+    from cte
+    where ix <= length(perm))
+  select last(prod order by ix) as value from cte
+);
+
+# matrixTable should be the name of the table or CTE representing an n x n matrix
+CREATE OR REPLACE FUNCTION determinant(matrixTable, n) as (
+  from permute( range(1, n+1 ) )
+  select array_agg( sign * (select value from det(matrixTable, perm)))
+         .list_sum()
+);
+
+# matrixTable should be the name of the table or CTE representing an n x n matrix
+CREATE OR REPLACE FUNCTION permanent(matrixTable, n) as (
+  from permute( range(1, n+1 ) )
+  select array_agg( (select value from det(matrixTable, perm)))
+         .list_sum()
+);
+
+### Example
+
+create or replace table A (i integer, j integer, value float );
+insert into A values
+  (1, 1, 1),
+  (1, 2, 2),
+  (2, 1, 2),
+  (2, 2, 6);
+
+.print determinant of A should be 6 - 4 =  2
+select determinant('A', 2);
+
+.print permanent of A should be 6 + 4 =  10
+select permanent('A', 2);

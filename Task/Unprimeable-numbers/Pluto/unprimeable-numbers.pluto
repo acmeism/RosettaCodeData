@@ -1,0 +1,97 @@
+do  -- find unprimable numbers - numbers which can't be made into a prime by changing one digit
+
+    local fmt = require( "fmt" )      -- RC Pluto formatting library
+    local int = require( "int" )      -- RC Pluto integer library - inc. some prime utilities
+
+    local maxNumber <const> = 9_999_999        -- maximum number we will consider
+
+    -- sieve the primes up to maxNumber
+    local prime <const> = int.arecomps( maxNumber ):map( | v | -> not v )
+
+    -- returns true if n is unprimeable, false otherwise
+    local function isUnprimeable( n : number ) : boolean
+        local result = false
+        if     n < 100    then return false
+        elseif prime[ n ] then return false
+        else
+            -- need to try changing a digit
+            local lastDigit     <const> = n % 10
+            local leadingDigits <const> = n - lastDigit
+            if     prime[ leadingDigits + 1 ] then return false
+            elseif prime[ leadingDigits + 3 ] then return false
+            elseif prime[ leadingDigits + 7 ] then return false
+            elseif prime[ leadingDigits + 9 ] then return false
+            elseif lastDigit == 2 or lastDigit == 5 then
+                -- the final digit is 2 or 5, changing the other digits can't make a prime
+                -- unless there is only one other digit which we can change to 0
+                local v, dc = leadingDigits // 10, 1
+                while v > 0 do
+                    if v % 10 != 0 then dc += 1 end
+                    v //= 10
+                end
+                return dc != 2
+            elseif lastDigit % 2 == 0  then
+                return true -- last digit is even, changing the other digits won't make a prime
+            else
+                -- last digit is 1, 3, 7, 9 must try changing the other digits
+                local m10, r10 = 10, 100
+                result = true
+                while result and n > r10 do
+                   local base <const> = ( ( n // r10 ) * r10 ) + ( n % m10 )
+                   local i = 0
+                   while result and i < r10 do
+                       result = not prime[ base + i ]
+                       i     += m10
+                   end
+                   m10 *= 10
+                   r10 *= 10
+                end
+                if result then
+                    -- still not unprimeable, try changing the first digit
+                    local base <const> = n % m10
+                    local i = 0
+                    while result and i < r10 do
+                        result = not prime[ base + i ]
+                        i     += m10
+                    end
+                end
+            end
+        end
+        return result
+    end
+
+    -- returns a string representation of n with commas, n must be an integer
+    local function commatise( n : number ) : string
+        local cStr    <const> = tostring( math.abs( n ) ):reverse():gsub( "%d%d%d", "%1," ):reverse()
+        return if n < 0 then "-" else "" end..cStr:gsub( "^,", "" )
+    end
+
+    do -- find unprimeable numbers
+        local uCount, dCount = 0, 0
+        local firstUnprimeable = { [0] = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+        for i = 100, # prime  do
+            if dCount >= 10 then break end
+            if isUnprimeable( i ) then
+                uCount += 1
+                if     uCount ==  1 then
+                    fmt.write( "First 35 unprimeable numbers: %d", i )
+                elseif uCount <= 35 then
+                    fmt.write( " %d", i )
+                elseif uCount == 600 then
+                    fmt.write( "\n600th unprimeable number: %s", commatise( i ) )
+                end
+                local finalDigit <const> = i % 10
+                if firstUnprimeable[ finalDigit ] == 0 then
+                    -- first unprimeable number with this final digit
+                    dCount += 1
+                    firstUnprimeable[ finalDigit ] = i
+                end
+            end
+        end
+        -- show the first unprimeable number that ends with each digit
+        fmt.write( "\n" )
+        for i = 0, 9 do
+            fmt.write( "First unprimeable number ending in %d %s\n", i, commatise( firstUnprimeable[ i ] ) )
+        end
+    end
+end

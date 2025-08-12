@@ -1,4 +1,4 @@
-REBOL [
+Rebol [
   Title: "Web Scraping"
   URL: http://rosettacode.org/wiki/Web_Scraping
 ]

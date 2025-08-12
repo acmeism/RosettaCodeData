@@ -8,8 +8,8 @@ fun main(args: Array<String>) {
                        "arshin", "sazhen", "versta", "milia",
                        "centimeter", "meter", "kilometer")
     val convs = arrayOf(0.0254f, 0.254f, 2.54f, 4.445f, 17.78f, 30.48f,
-                        71.12f, 213.36f, 10668.0f, 74676.0f,
-                        1.0f, 100.0f, 10000.0f)
+                        71.12f, 213.36f, 106680.0f, 746760.0f,
+                        1.0f, 100.0f, 100000.0f)
     var unit: Int
     var value: Float
     var yn : String

@@ -1,0 +1,42 @@
+# Generate the "reverse array" representations of the decimal integer n in base b,
+# where b > 1, i.e. the least significant digit is first.
+# b and all components of the array are decimal integers.
+create or replace function integer_to_base(n, base) as (
+  WITH RECURSIVE cte AS (
+    select (n % base) as digit,
+           (n // base) as k,
+           0 as i
+    union all
+    select k % base as digit,
+           (k // base) as k,
+           i+1 as i
+    from cte
+    where k > 0
+    )
+    select array_agg(digit) from cte
+);
+
+# Using the "reverse array" represententation of the integers up to mx in base b
+# as above, generate a table with each row representing an integer.
+# E.g. for binary: [0], [1], [0,1], [1,1] ...
+# mx should be given as a decimal integer.
+# Due to a bug in DuckDB the CTE name must be distinctive.
+create or replace function integers_in_base(base, mx) as table (
+    WITH RECURSIVE cte1 AS (
+    select 0 as i, [0] as lst
+    union all
+    select i+1 as i, (integer_to_base(i+1, base)) as lst
+    from cte1
+    where i < mx
+    )
+    from cte1
+);
+
+create or replace function fairshare(base, numberOfTerms) as table (
+  select (list_sum(lst) % base) as turn
+  from integers_in_base(base, numberOfTerms - 1)
+);
+
+.print The first 25 terms of the fair share sequences:
+select players, (select array_agg(turn) from fairshare(players, 25) ) as turns
+from unnest( [2,3,5,11] ) as t(players);

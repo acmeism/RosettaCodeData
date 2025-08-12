@@ -1,9 +1,16 @@
--- 22 Mar 2025
-arg count','prec
+-- 7 Aug 2025
 include Settings
+arg count','prec
+if count = '' then
+   count = 1e7
+if prec = '' then
+   prec = 9
+numeric digits prec
 
 say 'TIME A FUNCTION'
 say version
+say
+say 'Part 1: REXX clauses'
 say
 call Parameters
 call DoLoop
@@ -57,19 +64,23 @@ say
 call Stems
 say
 call Average
+say
+say 'Part 2: Profiler'
+say
+call Profiler 'ArcSin(X)',1/3
+call Profiler 'Exp(X)',1/4
+call Profiler 'Gamma(X)',1/5
+call Profiler 'Ln(X)',1/6
+call Profiler 'Pi()'
+call Profiler 'Sin(X)',1/7
+call Profiler 'Sqrt(X)',1/8
+call Profiler 'X',1/9
+call Profiler 'X**5-5/x-1',1/10
+call Profiler 'Zeta(X)',1/11
 return
 
 Parameters:
 start = date() time()
-if count = '' then
-   count = 1e6
-if prec = '' then
-   prec = 9
-parse version version
-say 'Version' version
-say 'Using loop counter' count/1e6 'million and' Digits() 'digits'
-say
-numeric digits prec
 int1 = right(sqrt3(),prec%2); int2 = right(sqrt2(),prec%2)
 if int2 > int1 then
    parse value int2 int1 with int1 int2
@@ -478,6 +489,10 @@ else
    say Left(measure,20) 'cannot perform measure, please try a higher count'
 return
 
-include Functions
-include Constants
-include Abend
+Profiler:
+arg ff,xx,yy,zz
+rr=Profile(ff,xx,yy,zz)
+say left(ff,10) 'takes' right(word(rr,2),4) 'microsec, x =' xx', f =' word(rr,1)/1
+return
+
+include Math

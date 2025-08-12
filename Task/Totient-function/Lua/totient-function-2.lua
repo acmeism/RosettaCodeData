@@ -22,23 +22,20 @@ do
     io.write( " n  phi(n) remarks\n" )
     for n = 1,25 do
         local tn = totient( n )
-        io.write( string.format( "%2d", n ), ": ", string.format( "%5d", tn )
-                , ( tn == n - 1 and tn ~= 0 and "  n is prime" or "" )
-                , "\n"
-                )
+        io.write( string.format( "%2d: %5d%s\n", n, tn, ( tn == n - 1 and tn ~= 0 and "  n is prime" or "" ) ) )
     end
     -- use the totient function to count primes
-    local n100, n1000, n10000, n100000 = 0, 0, 0, 0
+    local n100, n1_000, n10_000, n100_000 = 0, 0, 0, 0
     for n = 1,100000 do
         if totient( n ) == n - 1 then
-            if n <=    100 then    n100 = n100    + 1 end
-            if n <=   1000 then   n1000 = n1000   + 1 end
-            if n <=  10000 then  n10000 = n10000  + 1 end
-            if n <= 100000 then n100000 = n100000 + 1 end
+            if n <=    100 then     n100 = n100     + 1 end
+            if n <=   1000 then   n1_000 = n1_000   + 1 end
+            if n <=  10000 then  n10_000 = n10_000  + 1 end
+            if n <= 100000 then n100_000 = n100_000 + 1 end
         end
     end
-    io.write( "There are ", string.format( "%6d",    n100 ), " primes below      100\n" )
-    io.write( "There are ", string.format( "%6d",   n1000 ), " primes below    1 000\n" )
-    io.write( "There are ", string.format( "%6d",  n10000 ), " primes below   10 000\n" )
-    io.write( "There are ", string.format( "%6d", n100000 ), " primes below  100 000\n" )
+    io.write( string.format( "There are %6d primes below      100\n",     n100 ) )
+    io.write( string.format( "There are %6d primes below    1 000\n",   n1_000 ) )
+    io.write( string.format( "There are %6d primes below   10 000\n",  n10_000 ) )
+    io.write( string.format( "There are %6d primes below  100 000\n", n100_000 ) )
 end

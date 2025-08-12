@@ -1,0 +1,43 @@
+create or replace function odds(lst) as (
+  list_filter(lst, (x,i) -> i%2=1)
+);
+
+create or replace function evens(lst) as (
+  list_filter(lst, (x,i) -> i%2=0)
+);
+
+create or replace function digit_sum(i) as (
+  regexp_extract_all(i::VARCHAR, '.')
+  .list_transform(x -> x::INT)
+  .list_sum()
+);
+
+# Return boolean: true iff the list of digits passes
+create or replace function list_luhn(lst) as (
+  with odds_sum as (
+         select list_reverse(lst).odds().list_sum() as odds_sum),
+       evens_reduce as (
+         select list_reverse(lst).list_transform(x -> digit_sum(2*x))
+                .list_sum() as evens_reduce)
+  select (odds_sum + evens_reduce ) % 10 = 0 as pass
+  from odds_sum, evens_reduce
+);
+
+# The list of the digits of i (an integer or string)
+create or replace function digits(i) as (
+  regexp_extract_all(i::TEXT, '.').list_transform(x -> x::INT)
+);
+
+# i can be an integer or string
+create or replace function luhn(i) as (
+  digits(i).list_luhn()
+);
+
+## Examples::
+select n, luhn(n), luhn(n::TEXT) as "luhn(n::TEXT)"
+from unnest(
+  [49927398716,
+   49927398717,
+   1234567812345678,
+   1234567812345670
+   ]) _(n);

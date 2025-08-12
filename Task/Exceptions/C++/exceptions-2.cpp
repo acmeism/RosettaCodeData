@@ -1,5 +1,4 @@
-#include <exception>
-struct MyException: std::exception
+struct MyException
 {
-  virtual const char* what() const noexcept { return "description"; }
-}
+  // data with info about exception
+};

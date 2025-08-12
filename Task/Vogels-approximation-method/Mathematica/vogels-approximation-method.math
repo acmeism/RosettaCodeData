@@ -1,0 +1,123 @@
+(* Transportation Problem Solver using Vogel's Approximation Method *)
+
+costs = <|
+  "W" -> <|"A" -> 16, "B" -> 16, "C" -> 13, "D" -> 22, "E" -> 17|>,
+  "X" -> <|"A" -> 14, "B" -> 14, "C" -> 13, "D" -> 19, "E" -> 15|>,
+  "Y" -> <|"A" -> 19, "B" -> 19, "C" -> 20, "D" -> 23, "E" -> 50|>,
+  "Z" -> <|"A" -> 50, "B" -> 12, "C" -> 50, "D" -> 15, "E" -> 11|>
+|>;
+
+demand = <|"A" -> 30, "B" -> 20, "C" -> 70, "D" -> 30, "E" -> 60|>;
+cols = Sort[Keys[demand]];
+supply = <|"W" -> 50, "X" -> 60, "Y" -> 50, "Z" -> 50|>;
+
+(* Initialize result matrix *)
+res = AssociationMap[
+  Function[k, AssociationMap[0 &, Keys[demand]]],
+  Keys[costs]
+];
+
+(* Initialize g dictionary for sorting *)
+g = <||>;
+
+(* Sort destinations by cost for each supplier *)
+Do[
+  g[x] = SortBy[Keys[costs[x]], costs[x][#] &];
+  , {x, Keys[supply]}
+];
+
+(* Sort suppliers by cost for each destination *)
+Do[
+  g[x] = SortBy[Keys[costs], costs[#][x] &];
+  , {x, Keys[demand]}
+];
+
+(* Main algorithm loop *)
+While[Length[g] > 0,
+  (* Calculate penalties for demand nodes *)
+  d = <||>;
+  Do[
+    If[KeyExistsQ[demand, x] && Length[g[x]] > 0,
+      d[x] = If[Length[g[x]] > 1,
+        costs[g[x][[2]]][x] - costs[g[x][[1]]][x],
+        costs[g[x][[1]]][x]
+      ];
+    ];
+    , {x, Keys[demand]}
+  ];
+
+  (* Calculate penalties for supply nodes *)
+  s = <||>;
+  Do[
+    If[KeyExistsQ[supply, x] && Length[g[x]] > 0,
+      s[x] = If[Length[g[x]] > 1,
+        costs[x][g[x][[2]]] - costs[x][g[x][[1]]],
+        costs[x][g[x][[1]]]
+      ];
+    ];
+    , {x, Keys[supply]}
+  ];
+
+  (* Find keys with maximum penalties *)
+  fKey = If[Length[d] > 0,
+    First[Keys[d] // SortBy[d[#] &] // Reverse],
+    ""
+  ];
+  tKey = If[Length[s] > 0,
+    First[Keys[s] // SortBy[s[#] &] // Reverse],
+    ""
+  ];
+
+  (* Get the actual maximum values *)
+  maxD = If[Length[d] > 0, d[fKey], 0];
+  maxS = If[Length[s] > 0, s[tKey], 0];
+
+  (* Choose the allocation with higher penalty *)
+  {t, f} = If[maxD > maxS,
+    {fKey, g[fKey][[1]]},
+    {g[tKey][[1]], tKey}
+  ];
+
+  (* Allocate minimum of supply and demand *)
+  v = Min[supply[f], demand[t]];
+  res[f][t] += v;
+  demand[t] -= v;
+
+  (* Update demand and remove if satisfied *)
+  If[demand[t] == 0,
+    Do[
+      If[KeyExistsQ[supply, k] && supply[k] != 0,
+        g[k] = DeleteCases[g[k], t]
+      ];
+      , {k, Keys[supply]}
+    ];
+    g = KeyDrop[g, t];
+    demand = KeyDrop[demand, t];
+  ];
+
+  (* Update supply and remove if exhausted *)
+  supply[f] -= v;
+  If[supply[f] == 0,
+    Do[
+      If[KeyExistsQ[demand, k] && demand[k] != 0,
+        g[k] = DeleteCases[g[k], f]
+      ];
+      , {k, Keys[demand]}
+    ];
+    g = KeyDrop[g, f];
+    supply = KeyDrop[supply, f];
+  ];
+];
+
+(*Display results*)
+Print["Transportation Solution:"];
+
+Dataset[res]
+
+totalCost = 0;
+Do[rowData = Table[
+     totalCost += res[supplier][dest]*costs[supplier][dest];
+     , {dest, cols}];
+  , {supplier, Sort[Keys[costs]]}];
+
+Print["Total Cost = ", totalCost];

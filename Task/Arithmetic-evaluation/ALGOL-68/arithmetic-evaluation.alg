@@ -1,7 +1,11 @@
 INT base=10;
 MODE FIXED = LONG REAL; # numbers in the format 9,999.999 #
 
-#IF build abstract syntax tree and then EVAL tree #
+# set the error handler to the default error handler #
+PROC eval error := ( STRING message )VOID: (print(("****",message,newline)); stop);
+# sets the eval error handler #
+PROC on eval error = ( PROC(STRING)VOID handler )VOID: eval error := handler;
+
 MODE AST = UNION(NODE, FIXED);
 MODE NUM = REF AST;
 MODE NODE = STRUCT(NUM a, PROC (FIXED,FIXED)FIXED op, NUM b);
@@ -9,23 +13,20 @@ MODE NODE = STRUCT(NUM a, PROC (FIXED,FIXED)FIXED op, NUM b);
 OP EVAL = (NUM ast)FIXED:(
   CASE ast IN
     (FIXED num): num,
-    (NODE fork): (op OF fork)(EVAL( a OF fork), EVAL (b OF fork))
+    (NODE tree): (op OF tree)(EVAL(a OF tree), EVAL (b OF tree))
   ESAC
 );
 
-OP + = (NUM a,b)NUM: ( HEAP AST := NODE(a, (FIXED a,b)FIXED:a+b, b) );
-OP - = (NUM a,b)NUM: ( HEAP AST := NODE(a, (FIXED a,b)FIXED:a-b, b) );
-OP * = (NUM a,b)NUM: ( HEAP AST := NODE(a, (FIXED a,b)FIXED:a*b, b) );
-OP / = (NUM a,b)NUM: ( HEAP AST := NODE(a, (FIXED a,b)FIXED:a/b, b) );
-OP **= (NUM a,b)NUM: ( HEAP AST := NODE(a, (FIXED a,b)FIXED:a**b, b) );
+OP + = (NUM a,b)NUM: ( HEAP AST := NODE(a, (FIXED x,y)FIXED:x+y, b) );
+OP - = (NUM a,b)NUM: ( HEAP AST := NODE(a, (FIXED x,y)FIXED:x-y, b) );
+OP * = (NUM a,b)NUM: ( HEAP AST := NODE(a, (FIXED x,y)FIXED:x*y, b) );
+OP / = (NUM a,b)NUM: ( HEAP AST := NODE(a, (FIXED x,y)FIXED:x/y, b) );
+OP **= (NUM a,b)NUM: ( HEAP AST := NODE(a, (FIXED x,y)FIXED:x**y, b) );
 
-#ELSE simply use REAL arithmetic with no abstract syntax tree at all # CO
-MODE NUM = FIXED, AST = FIXED;
-OP EVAL = (FIXED num)FIXED: num;
-#FI# END CO
+AST error value := FIXED(-1);
 
 MODE LEX = PROC (TOK)NUM;
-MODE MONADIC =PROC (NUM)NUM;
+MODE MONADIC = PROC (NUM)NUM;
 MODE DIADIC = PROC (NUM,NUM)NUM;
 
 MODE TOK = CHAR;
@@ -39,8 +40,6 @@ MODE STACKACTION = PROC (REF STACKITEM)VOID;
 
 PROC begin = (REF STACKITEM top)VOID: prio OF op OF top -:= +10;
 PROC end = (REF STACKITEM top)VOID: prio OF op OF top -:= -10;
-
-OP ** = (COMPL a,b)COMPL: complex exp(complex ln(a)*b);
 
 [8]OPITEM op list :=(
 #  OP  PRIO ACTION #
@@ -124,19 +123,19 @@ PROC build ast = (STRING expr)NUM:(
       (MONADIC): SKIP, # not implemented #
       (DIADIC):(
         value := compress ast stack(prio OF this op, value);
-        IF top=UPB stack THEN index error FI;
+        IF top=UPB stack THEN eval error("Stack overflow");GOTO index error FI;
         stack[top+:=1]:=STACKITEM(value, this op);
         value:=NIL
       )
     ESAC
   OD;
   compress ast stack(-max int, value)
+  EXIT index error: error value
 );
 
-test:(
-   printf(($" euler's number is about: "g(-long real width,long real width-2)l$,
-     EVAL build ast("1+1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+1/15)/14)/13)/12)/11)/10)/9)/8)/7)/6)/5)/4)/3)/2")));
-  SKIP EXIT
-  index error:
-    printf(("Stack over flow"))
+#test#(
+   on eval error( (STRING m)VOID: ( print(("EVAL error: ",m,newline));stop ) );
+   FIXED eval result
+       = EVAL build ast("1+1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+(1+1/15)/14)/13)/12)/11)/10)/9)/8)/7)/6)/5)/4)/3)/2");
+   print((" euler's number is about: ", fixed(eval result,-long real width,long real width-2), newline))
 )

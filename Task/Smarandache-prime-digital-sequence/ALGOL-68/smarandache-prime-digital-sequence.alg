@@ -87,16 +87,8 @@ BEGIN
         FI
     OD;
     print( ( newline ) );
-    print( ( "100th Smarandache prime: ", whole( s100, 0 ), newline ) );
-    print( ( "1000th Smarandache prime: ", whole( s1000, 0 ), newline ) );
-    print( ( "Largest Smarandache prime under "
-           , whole( prime max, 0 )
-           , ": "
-           , whole( s last, 0 )
-           , " (Smarandache prime "
-           , whole( p last, 0 )
-           , ")"
-           , newline
-           )
-         )
+    print( ( "  100th Smarandache prime: ", whole( s100,  0 ), newline ) );
+    print( ( " 1000th Smarandache prime: ", whole( s1000, 0 ), newline ) );
+    print( ( "Largest Smarandache prime under ", whole( prime max, 0 ) ) );
+    print( ( ": ", whole( s last, 0 ), " (Smarandache prime ", whole( p last, 0 ), ")", newline ) )
 END

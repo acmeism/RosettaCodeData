@@ -11,7 +11,7 @@ my %cat = (
     'Draft_Programming_Tasks' => 'Draft'
 );
 
-my $client = HTTP::UserAgent.new;
+my $client = HTTP::UserAgent.new(:useragent('Rosetta Code Task bot'));
 $client.timeout = 10;
 
 my $url = 'https://rosettacode.org/w';

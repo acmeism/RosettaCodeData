@@ -19,5 +19,5 @@ BEGIN
          a
       FI
    END;
-   printf (($l(-35,33)l$, agm (LONG 1.0, LONG 1.0 / long sqrt (LONG 2.0))))
+   printf (($lg(-35,33)l$, agm (LONG 1.0, LONG 1.0 / long sqrt (LONG 2.0))))
 END

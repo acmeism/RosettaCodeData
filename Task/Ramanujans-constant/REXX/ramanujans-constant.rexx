@@ -1,6 +1,7 @@
+-- 28 Jul 2025
 include Settings
 
-say 'RAMANUJAN''S CONSTANT - 6 Mar 2025'
+say 'RAMANUJAN''S CONSTANT'
 say version
 say
 call Formula
@@ -28,6 +29,4 @@ end
 say Format(Time('e'),,3) 'seconds'
 return
 
-include Constants
-include Functions
-include Abend
+include Math

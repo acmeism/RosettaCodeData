@@ -1,10 +1,13 @@
--- 8 May 2025
+-- 28 Jul 2025
 include Settings
+arg n
+if n = '' then
+   n = 100
+numeric digits n
 
 say 'GAMMA'
 say version
 say
-arg n; if n = '' then n = 100; numeric digits n
 say '(Half)integers formulas'
 w = '-99.5 -10.5 -5.5 -2.5 -1.5 -0.5 0.5 1 1.5 2 2.5 5 5.5 10 10.5 99 99.5'
 numeric digits n
@@ -47,12 +50,8 @@ end
 exit
 
 Stirling:
-procedure expose glob. fact.
+procedure expose Memo. fact.
 arg x
 return Sqrt(2*Pi()/x) * Power(x/e(),x)
 
-include Constants
-include Functions
-include Special
-include Numbers
-include Abend
+include Math

@@ -57,7 +57,7 @@ public final class MusicalScale {
 	
 	private static SourceDataLine sourceDataLine;
 	
-	private static float SAMPLE_RATE = 8_000.0F;
+	private static final float SAMPLE_RATE = 8_000.0F;
 	private static final int BYTE_OFFSET = 0;
 
 }

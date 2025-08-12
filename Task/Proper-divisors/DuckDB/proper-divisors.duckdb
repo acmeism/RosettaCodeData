@@ -1,0 +1,33 @@
+# A table (i) of distinct BIGINT proper divisors, not necessarily sorted
+create or replace function proper_divisors(n) as table (
+  select 1 where n > 1
+  union all
+  select distinct i
+  from (select unnest( [ j,  n // j]) as i
+        from range(2, 1 + sqrt(n).floor()::BIGINT) as t(j)
+        where (n % j) == 0)
+);
+
+# Still not necessarily sorted
+create or replace function list_of_proper_divisors(n) as (
+  select coalesce(array_agg(i), [])
+  from proper_divisors(n) _(i)
+);
+
+create or replace function maximally_many_proper_divisors(mx) as table (
+  with cte as (
+    select n, length(list_of_proper_divisors(n)) as length
+    from range(1,mx+1) _(n)),
+  maxlength as (select max(length) as maxlength from cte)
+  select n, length
+  from cte, maxlength
+  where length = maxlength.maxlength
+  order by n
+);
+
+.print A sampling of proper divisors:
+from range(1,11) _(n)
+select n, list_of_proper_divisors(n);
+
+.print The positive integers less than or equal to 20,000 with the most distinct proper divisors:
+from maximally_many_proper_divisors(20000);

@@ -2,8 +2,8 @@
 PROC palindrome = (STRING s)BOOL:(
    FOR i TO UPB s OVER 2 DO
      IF s[i] /= s[UPB s-i+1] THEN GO TO return false FI
-   OD;Power
-   else: TRUE EXIT
+   OD;
+   TRUE EXIT
    return false: FALSE
 );
 
@@ -16,7 +16,6 @@ PROC palindrome r = (STRING s)BOOL:
 ;
 
 # Test #
-main:
 (
    STRING t = "ingirumimusnocteetconsumimurigni";
    FORMAT template = $"sequence """g""" "b("is","isnt")" a palindrome"l$;

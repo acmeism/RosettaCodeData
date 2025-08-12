@@ -1,0 +1,100 @@
+testdata = {"127.0.0.1", "127.0.0.1:80", "::1", "[::1]:80",
+           "2605:2700:0:3::4713:93e3", "[2605:2700:0:3::4713:93e3]:80",
+           "::ffff:192.168.173.22", "[::ffff:192.168.173.22]:80",
+           "1::", "[1::]:80", "::", "[::]:80"};
+
+maybev4[ip_] := StringCount[ip, "."] > 0 && StringCount[ip, ":"] < 2
+
+maybev6[ip_] := StringCount[ip, ":"] > 1
+
+parseip[ip_] := Module[{mat, port, ipaddr, iphex, addressspace},
+  (* Try to match IPv6 with brackets and port *)
+  mat = StringCases[ip,
+    RegularExpression["^\\[([:.\\da-fA-F]+)\\]:(\\d+)$"] -> {"$1", "$2"}];
+
+  If[Length[mat] > 0,
+    {ipaddr, port} = First[mat],
+    (* Try to match IPv4 with port *)
+    mat = StringCases[ip,
+      RegularExpression["^([\\d.]+)[:/](\\d+)$"] -> {"$1", "$2"}];
+    If[Length[mat] > 0,
+      {ipaddr, port} = First[mat],
+      (* No port found *)
+      {ipaddr, port} = {ip, "none"}
+    ]
+  ];
+
+  If[maybev4[ipaddr],
+    Print["Processing ip v4 ", ipaddr];
+    (* Convert IPv4 to hex *)
+    Module[{octets, ipint},
+      octets = ToExpression /@ StringSplit[ipaddr, "."];
+      ipint = Total[MapIndexed[#1*256^(4 - First[#2]) &, octets]];
+      iphex = IntegerString[ipint, 16];
+    ];
+    addressspace = "IPv4",
+
+    If[maybev6[ipaddr],
+      Print["Processing ip v6 ", ipaddr];
+      (* Convert IPv6 to hex *)
+      Module[{cleanip, parts, expandedparts, fullhex},
+        cleanip = StringReplace[ipaddr, {"[" -> "", "]" -> ""}];
+
+        (* Handle embedded IPv4 addresses *)
+        If[StringContainsQ[cleanip, "."],
+          Module[{parts, ipv4part, ipv6parts, ipv4octets, ipv4hex},
+            parts = StringSplit[cleanip, ":"];
+            (* Find the part with dots (IPv4) *)
+            ipv4part = SelectFirst[parts, StringContainsQ[#, "."] &];
+            ipv6parts = DeleteCases[parts, ipv4part];
+
+            If[ipv4part =!= Missing["NotFound"],
+              ipv4octets = ToExpression /@ StringSplit[ipv4part, "."];
+              (* Convert IPv4 to two 16-bit hex values *)
+              ipv4hex = {
+                IntegerString[ipv4octets[[1]]*256 + ipv4octets[[2]], 16],
+                IntegerString[ipv4octets[[3]]*256 + ipv4octets[[4]], 16]
+              };
+              cleanip = StringJoin[Riffle[Join[ipv6parts, ipv4hex], ":"]];
+            ]
+          ]
+        ];
+
+        (* Handle :: expansion *)
+        If[StringContainsQ[cleanip, "::"],
+          parts = StringSplit[cleanip, "::"];
+          If[Length[parts] == 2,
+            Module[{left, right, leftparts, rightparts, missing},
+              left = If[parts[[1]] == "", {}, StringSplit[parts[[1]], ":"]];
+              right = If[parts[[2]] == "", {}, StringSplit[parts[[2]], ":"]];
+              missing = 8 - Length[left] - Length[right];
+              expandedparts = Join[left, Table["0", missing], right];
+            ],
+            expandedparts = StringSplit[cleanip, ":"]
+          ],
+          expandedparts = StringSplit[cleanip, ":"]
+        ];
+
+        (* Pad each part to 4 hex digits and join *)
+        expandedparts = StringPadLeft[#, 4, "0"] & /@ expandedparts;
+        fullhex = StringJoin[expandedparts];
+
+        (* Remove leading zeros for final output *)
+        iphex = IntegerString[FromDigits[fullhex, 16], 16];
+      ];
+      addressspace = "IPv6",
+
+      (* Neither IPv4 nor IPv6 *)
+      Throw["Bad IP address argument " <> ipaddr]
+    ]
+  ];
+
+  {iphex, addressspace, port}
+]
+
+(* Test the function *)
+Do[
+  {hx, add, por} = parseip[ip];
+  Print["For input ", ip, ", IP in hex is ", hx, ", address space ", add, ", port ", por, "."],
+  {ip, testdata}
+]

@@ -1,0 +1,90 @@
+do -- "AKS test for promes" task - translated from the Algol 68 sample
+
+   local bigint = require "pluto:bigint"
+   local b0, b1 = new bigint( 0 ), new bigint( 1 )
+ --[[
+   Mathematical preliminaries.
+
+   First note that the homogeneous polynomial (a+b)^n is symmetrical
+   (to see this just swap the variables a and b).  Therefore its
+   coefficients need be calculated only to that of (ab)^{n/2} for even
+   n or (ab)^{(n-1)/2} for odd n.
+
+   Second, the coefficients are the binomial coefficients C(n,k) where
+   the coefficient of a^k b^(n-k) is C(n,k) = n! / k!  (k-1)!.  This
+   leads to an immediate and relatively efficient implementation for
+   which we do not need to compute n! before dividing by k! and (k-1)!
+   but, rather cancel common factors as we go along.  Further, the
+   well-known symmetry identity C(n,k) = C(n, n-k) allows a
+   significant reduction in computational effort.
+
+   Third, (x-1)^n is the value of (a + b)^n when a=x and b = -1.  The
+   powers of -1 alternate between +1 and -1 so we may as well compute
+   (x+1)^n and negate every other coefficient when printing.
+   ]]
+
+   local function choose( n, k )
+      local result  = b1
+      local symK    = if k >= n//2 then n-k else k end   -- Use symmetry
+      if symK > 0 then
+         local iPlus1  = b1
+         local nMinusI = new bigint( n )
+         for _ = 0, symK-1 do
+            result  *= nMinusI
+            result  /= iPlus1
+            iPlus1  += b1
+            nMinusI -= b1
+         end
+      end
+      return result
+   end
+   local function coefficients( n )
+      local a = {}
+      for i = 0, n//2 do
+         a[i]   = choose( n, i )
+         a[n-i] = a[i]                                  -- Use symmetry
+      end
+      return a
+   end
+ --[[
+   First print the polynomials (x-1)^n, remembering to alternate signs
+   and to tidy up the constant term, the x^1 term and the x^n term.
+   This means we must treat (x-1)^0 and (x-1)^1 specially
+   ]]
+   for n = 0,7 do
+      local a = coefficients( n )
+      io.write( "(x-1)^"..n.." = " )
+      switch n do
+         case 0:  io.write( tostring( a[0] ) )             break
+         case 1:  io.write( "x - "..tostring( a[1] ) )     break
+         default: io.write( "x^"..n )
+                  for i = 1,n-2 do
+                     local ai = tostring( a[i] )
+                     io.write( if i % 2 == 1 then " - " else " + " end..ai.."x^"..(n-i) )
+                  end
+                  io.write( if ( n - 1 ) % 2 == 1 then " - " else " + " end..tostring( a[n-1] ).."x" )
+                  io.write( if n % 2 == 1 then " - " else " + " end..tostring( a[n] ) )
+      end
+      io.write( "\n" )
+   end
+ --[[
+   Finally, for the "AKS" portion of the task, the sign of the
+   coefficient has no effect on its divisibility by p so, once again,
+   we may as well use the positive coefficients.  Symmetry clearly
+   reduces the necessary number of tests by a factor of two.
+   ]]
+   local function isPrime( n )
+      local prime = true
+      local bn    = new bigint( n )
+      for i = 1,n//2 do
+         prime = choose( n, i ) % bn == b0
+         if not prime then return false end
+      end
+      return true
+   end
+   io.write( "Primes between   1 and   50 are:" )
+   for n =   2,50   do if isPrime(n) then io.write( " "..n ) end end
+   io.write( "\nPrimes between 900 and 1000 are:")
+   for n = 900,1000 do if isPrime(n) then io.write( " "..n ) end end
+   io.write( "\n" )
+end

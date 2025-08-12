@@ -1,4 +1,4 @@
--- 26 Mar 2025
+-- 28 Jul 2025
 include Settings
 numeric digits 10
 
@@ -14,7 +14,7 @@ end
 exit
 
 ShowWilson:
-procedure expose glob.
+procedure expose Memo.
 arg xx,yy
 call Time('r')
 say 'Primes between' Std(xx) 'and' Std(yy)
@@ -50,7 +50,7 @@ say 'For n between' Right(Std(xx),7) 'and' Right(Std(yy),7),
 return
 
 Isprime:
-procedure expose glob.
+procedure expose Memo.
 arg xx
 if xx < 2 then
    return 0
@@ -67,8 +67,4 @@ if f = x1 then
 else
    return 0
 
-include Sequences
-include Numbers
-include Functions
-include Constants
-include Abend
+include Math

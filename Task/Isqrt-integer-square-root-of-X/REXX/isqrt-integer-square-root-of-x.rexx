@@ -1,5 +1,4 @@
--- 8 May 2025
-Main:
+-- 28 Jul 2025
 include Settings
 
 say 'ISQRT (INTEGER SQUARE ROOT)'
@@ -31,7 +30,7 @@ call Timer
 return
 
 Task2:
-procedure
+procedure expose Memo.
 arg xx,yy,zz,mm
 call Time('r')
 select
@@ -120,6 +119,4 @@ do while z < zz
 end
 return zz
 
-include Functions
-include Helper
-include Abend
+include Math

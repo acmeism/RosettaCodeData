@@ -1,0 +1,65 @@
+set variable letters = ['aleph', 'beth', 'gimel', 'daleth', 'he', 'waw', 'zayin', 'heth'];
+
+# The list of probabilities - last value must be given but will be ignored:
+set variable probs   = [1/5, 1/6, 1/7, 1/8, 1/9, 1/10, 1/11, 0];
+
+create or replace function cumulative_probabilities(probs) as (
+  with recursive cte0 as
+    (select 1 as ix, probs[1]::double as cum
+     union all
+     select ix+1 as ix,
+            cum + probs[ix + 1] as cum
+     from cte0
+     where ix < length(probs))
+  select array_agg(cum order by ix)
+  from cte0
+);
+
+# It is imperative to materialize rand because of DuckDB's "inlining"
+create or replace function choice(rand, cumProbs) as (
+  with r as materialized(select rand as r)
+  select
+    if (r <= cumProbs[1], 1,
+    if (r <= cumProbs[2], 2,
+    if (r <= cumProbs[3], 3,
+    if (r <= cumProbs[4], 4,
+    if (r <= cumProbs[5], 5,
+    if (r <= cumProbs[6], 6,
+    if (r <= cumProbs[7], 7, 8) ))))))
+  from r
+);
+
+# Infer the expected value for the last category
+create or replace function expectations(probs, n) as (
+  with ns as (select list_transform(probs[0:-2], x -> x*n) as ns),
+  subtotal as (select list_sum(ns) as subtotal from ns)
+  select ns || [ n - subtotal ]
+  from ns, subtotal
+);
+
+# Generate the histogram of observed letters
+create or replace function play(mx) as table (
+  with recursive cumProbs as (select cumulative_probabilities(getvariable('probs')) as cumProbs),
+  cte as (
+    select 1 as n, choice(random(), cumProbs) as cat
+    from cumProbs
+    union all
+    select n+1 as n, choice(random(), cumProbs) as cat
+    from cte, cumProbs
+    where n < mx)
+  select histogram(cat) as histogram
+  from cte
+);
+
+create or replace function synopsis(n) as table (
+  e as (select expectations(getvariable('probs'),n) as e)
+
+  select i as n,
+         getvariable('letters')[i] as letter,
+         e[i]::DECIMAL(10,2) as expected,
+         coalesce(histogram[i],0) as observed,
+         ((observed - expected)^2/expected)::DECIMAL(10,2) as "(o-e)^2/e"
+  from e, play(n), range(1, 1 + length(getvariable('probs'))) _(i) )
+);
+
+from synopsis(1000000);

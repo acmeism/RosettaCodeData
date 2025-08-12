@@ -1,4 +1,4 @@
--- 19 May 2025
+-- 28 Jul 2025
 include Settings
 
 say 'QUATERNION TYPE'
@@ -7,36 +7,35 @@ say
 i = '0 1'; j = '0 0 1'; k = '0 0 0 1'
 q = '1 2 3 4'; q1 = '2 3 4 5'; q2 = '3 4 5 6'; r = 7
 say 'VALUES'
-say 'i  =' Hlst2Form(i)
-say 'j  =' Hlst2Form(j)
-say 'k  =' Hlst2Form(k)
-say 'q  =' Hlst2Form(q)
-say 'q1 =' Hlst2Form(q1)
-say 'q2 =' Hlst2Form(q2)
-say 'r  =' Hlst2Form(r)
+say 'i  =' Lst2FormH(i)
+say 'j  =' Lst2FormH(j)
+say 'k  =' Lst2FormH(k)
+say 'q  =' Lst2FormH(q)
+say 'q1 =' Lst2FormH(q1)
+say 'q2 =' Lst2FormH(q2)
+say 'r  =' Lst2FormH(r)
 say
 say 'BASICS'
-say 'i*i   =' Hlst2Form(Hsquare(i))
-say 'j*j   =' Hlst2Form(Hsquare(j))
-say 'k*k   =' Hlst2Form(Hsquare(k))
-say 'i*j*k =' Hlst2Form(Hmul(i,j,k))
-say '||q|| =' Std(Hnorm(q))
-say '-q    =' Hlst2Form(Hneg(q))
-say 'q*    =' Hlst2Form(Hconj(q))
-say 'q+r   =' Hlst2Form(Hadd(q,r))
-say 'r+q   =' Hlst2Form(Hadd(r,q))
-say 'q1+q2 =' Hlst2Form(Hadd(q1,q2))
-say 'q2+q1 =' Hlst2Form(Hadd(q2,q1))
-say 'q*r   =' Hlst2Form(Hmul(q,r))
-say 'r*q   =' Hlst2Form(Hmul(r,q))
-say 'q1*q2 =' Hlst2Form(Hmul(q1,q2))
-say 'q2*q1 =' Hlst2Form(Hmul(q2,q1))
+say 'i*i   =' Lst2FormH(SquareH(i))
+say 'j*j   =' Lst2FormH(SquareH(j))
+say 'k*k   =' Lst2FormH(SquareH(k))
+say 'i*j*k =' Lst2FormH(MulH(i,j,k))
+say '||q|| =' Std(NormH(q))
+say '-q    =' Lst2FormH(NegH(q))
+say 'q*    =' Lst2FormH(ConjH(q))
+say 'q+r   =' Lst2FormH(AddH(q,r))
+say 'r+q   =' Lst2FormH(AddH(r,q))
+say 'q1+q2 =' Lst2FormH(AddH(q1,q2))
+say 'q2+q1 =' Lst2FormH(AddH(q2,q1))
+say 'q*r   =' Lst2FormH(MulH(q,r))
+say 'r*q   =' Lst2FormH(MulH(r,q))
+say 'q1*q2 =' Lst2FormH(MulH(q1,q2)) 'does not'
+say 'q2*q1 =' Lst2FormH(MulH(q2,q1)) 'commute!'
 say
 say 'BONUS'
-say 'q/r   =' Hlst2Form(Hdiv(q,r))
-say '1/q   =' Hlst2Form(Hinv(q))
+say '1/q   =' Lst2FormH(InvH(q))
+say 'q1/q2 =' Lst2FormH(DivLeftH(q1,q2)) 'left division'
+say 'q1/q2 =' Lst2FormH(DivRightH(q1,q2)) 'right division'
 exit
 
-include Quaternion
-include Functions
-include Abend
+include Math

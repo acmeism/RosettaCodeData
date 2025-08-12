@@ -4,9 +4,9 @@ The ARM architecture is widely used on mobile phones and tablets. It falls under
 ===Instruction Size===
 Every instruction that the ARM can execute is 32 bits. While other processors can have variable length instructions, the ARM does not. This means that the ARM doesn't need to parse where an instruction begins and ends, which makes it run very fast. What you might not expect is that this 32-bit instruction size includes both the actual instruction and the operands! Let's take a look at a [[Z80 Assembly]] instruction and compare it to an ARM instruction.
 
-<lang z80>LD HL,&8040           ;bytecode is 0x21 0x40 0x80</lang>
+<syntaxhighlight lang="z80">LD HL,&8040           ;bytecode is 0x21 0x40 0x80</syntaxhighlight>
 
-<lang ARM Assembly>mov r4,#0x04000000   ;bytecode is 0xE3A04301</lang>
+<syntaxhighlight lang="arm">mov r4,#0x04000000   ;bytecode is 0xE3A04301</syntaxhighlight>
 
 So where did the <code>0x04000000</code> go? It's actually been compressed and fit within those 4 bytes you saw earlier. The ARM is very good at decompressing it, since it's been shrunk to an 8-bit number that can be rotated by an even number of bits. Unfortunately, this compression method is a double-edged sword - some 32-bit numbers can't be compressed this way, and thus many instructions can't work with them!
 
@@ -18,72 +18,73 @@ Registers are much more flexible than immediate operands. Unlike immediate opera
 Getting an address in a register can be achieved with the <code>MOV</code> command, but there are limitations to that which will be explained in detail later. It's more reliable to use <code>ADR</code> which loads a nearby address into a register. This address has to be within a certain distance from the current program counter or it can't be loaded, so it's not a reliable way to load from the heap on many machines. It's mostly intended for loading from nearby read-only data, such as text strings or stored immediates (more on that later). When you type <code>ADR R0,LABEL</code>, the assembler will convert this to <code>MOV R0,PC,#N</code>, where N is the difference between the current program counter value and the label you specified.
 
 <code>LDR</code> can be used in a similar fashion to <code>ADR</code> but there is a subtle distinction between the two. Assume that the section below is assembled starting at memory address <code>0x04000000</code>:
-<lang ARM Assembly>DataBlock:
+<syntaxhighlight lang="arm">DataBlock:
 .long 0xDEADBEEF   ;VASM uses .long for 32-bit data and .word for 16-bit data. Your assembler will probably use .word for 32 bit and 
 .long 0xFFFFFFFF   ;    .hword for 16-bit.
 
 MyCode:
 adr r0, DataBlock   ;loads the value 0x04000000 into R0
-
 ldr r1, DataBlock   ;loads the value 0xDEADBEEF into R1
-
 adr r2, DataBlock+4 ;loads the value 0x04000004 into R2
-
-ldr r3, DataBlock+4 ;loads the value 0xFFFFFFFF into R3</lang>
+ldr r3, DataBlock+4 ;loads the value 0xFFFFFFFF into R3
+</syntaxhighlight>
 
 As you can see, <code>ADR</code> only gives you the memory location of a value in memory, where <code>LDR</code> loads ''from'' that memory location.
-
 
 ===Data Addressing using LDR and STR===
 Unlike its "cousin," the Motorola 68000 (which isn't really related but has a somewhat similar design), the ARM cannot directly write immediate values to memory. Those values must be contained in registers first. Unlike the 68000, the ARM has no "address registers." Rather, enclosing a register name in square brackets turns its value into a reference to a memory location. You'll need to load that memory location's numeric "value" as a constant first. Then you can read from it with <code>LDR</code> and write to it with <code>STR</code>. Not only can you read from a given address, you can also adjust how you read from it, and what you do before or after the read.
 
-<lang ARM Assembly>RAM_ADDRESS:
+<syntaxhighlight lang="arm">RAM_ADDRESS:
 .long 0               ;for simplicity we'll assume that this can actually be written to. Represents a placeholder for 32-bit data.
                       ;Your assembler's syntax may be different.
-
 .long 0               ;another placeholder for 32-bit data
 
 MyCode:
 adr R2,RAM_Address    ;get the address of a nearby place to store values.
 MOV R0,#0x12345678    ;the value to store.
-STR R0,[R2]           ;store 0x12345678 into the first 32-bit slot.</lang>
+STR R0,[R2]           ;store 0x12345678 into the first 32-bit slot.
+</syntaxhighlight>
 
 This is the basic way to store into memory, but there are other options, such as offsetting and post-increment.
-<lang ARM Assembly>RAM_ADDRESS:
+<syntaxhighlight lang="arm">RAM_ADDRESS:
 .long 0             
 .long 0              ;we'll store here this time.
 
 MyCode:
 adr R2,RAM_Address   ;point R2 to the first storage slot
 MOV R0,#0x12345678                       
-STR R0,[R2,#4]       ;store into the SECOND slot. R2 still points to the first slot - the #4 is added to R2 only temporarily.</lang>
+STR R0,[R2,#4]       ;store into the SECOND slot. R2 still points to the first slot - the #4 is added to R2 only temporarily.
+</syntaxhighlight>
 
 There's a limit on the size of an immediate value used to offset when loading/storing. You can also use a register as an offset, whose value will be added to the address. 
 
-<lang ARM Assembly>RAM_AREA:
+<syntaxhighlight lang="arm">RAM_AREA:
 .space 64,0   ;64 bytes of ram
 
 ;assume that R2 contains the address of "RAM_AREA"
 MyCode:
 MOV R0,#0x12345678
 MOV R1,#20
-STR R0,[R2,R1]   ;equivalent of "STR R0,[R2,#20]"</lang>
+STR R0,[R2,R1]   ;equivalent of "STR R0,[R2,#20]"
+</syntaxhighlight>
 
 Now let's say you wanted to actually alter the pointer to R2, so that it remains pointing to where you offset it to after the store or load. That's an option you have - all you have to do is type "!" after the brackets. This is called "pre-increment" or "pre-indexing."
 
-<lang ARM Assembly>RAM_ADDRESS:
+<syntaxhighlight lang="arm">RAM_ADDRESS:
 .long 0             
 .long 0              ;we'll store here this time, and we want R2 to still be pointing here after we write to it.
 
 MyCode:
 adr R2,RAM_Address   ;point R2 to the first storage slot
 MOV R0,#0x12345678                       
-STR R0,[R2,#4]!      ;store into the SECOND slot. R2 also points to the second slot now, even after this instruction has concluded.</lang>
+STR R0,[R2,#4]!      ;store into the SECOND slot. R2 also points to the second slot now, even after this instruction has concluded.
+</syntaxhighlight>
 
 Here, the offset is performed ''before'' the storage operation. What if you want to offset afterwards? That would be useful for reading in a data stream. Good news - you can do that simply by having the offset value or register '''outside''' the brackets. This is called "post-increment" or "post-indexing." Unlike pre-indexing, these changes to the pointer are not temporary. 
 
-<lang ARM Assembly>LDR R0,[R1],#4       ;load the 32-bit value stored at memory location R1 into R0, THEN add 4 to R1. This offset remains even after this
-                     ;   instruction is finished.</lang>
+<syntaxhighlight lang="arm">LDR R0,[R1],#4       ;load the 32-bit value stored at memory location R1 into R0, THEN add 4 to R1. This offset remains even after this
+                     ;   instruction is finished.
+</syntaxhighlight>
 
 ===Barrel Shifter===
 The ARM can add a bit shift or rotate to one of its operands at no additional cost to execution time or bytecode. If the operand being shifted is a register, the value of that register is not actually changed. The shift or rotate only applies during that instruction.

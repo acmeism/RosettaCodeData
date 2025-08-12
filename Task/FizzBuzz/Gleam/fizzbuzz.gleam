@@ -1,12 +1,12 @@
 import gleam/int
 import gleam/io
-import gleam/iterator
+import gleam/yielder
 
 pub fn main() {
-  iterator.range(1, 101)
-  |> iterator.map(to_fizzbuzz)
-  |> iterator.map(io.println)
-  |> iterator.run
+  yielder.range(1, 101)
+  |> yielder.map(to_fizzbuzz)
+  |> yielder.map(io.println)
+  |> yielder.run
 }
 
 fn to_fizzbuzz(n: Int) -> String {

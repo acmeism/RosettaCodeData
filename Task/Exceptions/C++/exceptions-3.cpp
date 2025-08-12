@@ -1,4 +1,5 @@
-void foo()
+#include <exception>
+struct MyException: std::exception
 {
-  throw MyException();
+  virtual const char* what() const noexcept { return "description"; }
 }

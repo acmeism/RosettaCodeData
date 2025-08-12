@@ -1,0 +1,40 @@
+create or replace function zigzag_matrix(n) as table (
+  with recursive cte as (
+    select 1 as ix, 1 as i, 1 as j, 0 as ij
+    union all
+    select ix+1 as ix,
+        if( (i + j) % 2 = 0,
+            -- Even stripes
+            if( i < n, i + 1, i),
+            -- Odd stripes
+            if( j < n, i - (i > 1)::INT, i + 1) ) as i,
+        if( (i + j) % 2 == 0,
+            -- Even stripes
+            if( i < n, j - (j > 1)::INT, j + 1) ,
+            -- Odd stripes
+            if( j < n, j+1, j)) as j,
+            ij + 1 as ij
+     from cte
+     where ix < n*n
+   )
+   select i, j, ij as value
+   from cte
+);
+
+# The i-th row as a list
+create or replace function ijTable2Row(A, m) as (
+  select array_agg(value order by j)
+  from query_table(A)
+  where i = m
+);
+
+# Pretty-print the mxn matrix stored as an ij-table named A
+create or replace function ijTable_pp(A,m,n) as table (
+  select ijTable2Row(A,i) as row
+  from range(1, m+1) t(i)
+  order by i
+);
+
+# Create the zig-zag matrix as a table and pretty-print it
+with zz as (from zigzag_matrix(5))
+from ijTable_pp('zz', 5,5);

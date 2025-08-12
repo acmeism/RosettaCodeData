@@ -1,6 +1,9 @@
-gate :: Eq a => [a] -> [a] -> [Door]
-gate (x:xs) (y:ys) | x == y  =  Open   : gate xs ys
-gate (x:xs) ys               =  Closed : gate xs ys
-gate []     _                =  []
+isDoorOpen :: Integral a => a -> Bool
+-- In Haskell, we are too lazy to open and close doors. Instead we
+-- count how many times we would have toggled them, and then check if
+-- that number is odd.
+isDoorOpen doorNumber = odd numToggles
+  where numToggles = length [ 1 | x <- [1..doorNumber], doorNumber `rem` x == 0]
 
-run n = gate [1..n] [k*k | k <- [1..]]
+main = do
+  print $ "Open doors are " ++ show [x | x <- [0..100], isDoorOpen x]

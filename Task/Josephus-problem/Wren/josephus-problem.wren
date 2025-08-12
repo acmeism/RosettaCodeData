@@ -24,7 +24,7 @@ for (triple in triples) {
     var n = triple[0]
     var k = triple[1]
     var m = triple[2]
-    System.print("Prisoners = %(n), Step = %(m), Survivors = %(m)")
+    System.print("Prisoners = %(n), Step = %(k), Survivors = %(m)")
     var sk = josephus.call(n, k, m)
     System.print("Survived   : %(sk[0])")
     System.print("Kill order : %(sk[1])")

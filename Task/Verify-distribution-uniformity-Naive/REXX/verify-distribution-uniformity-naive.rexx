@@ -1,4 +1,4 @@
--- 8 May 2025
+-- 28 Jul 2025
 include Settings
 parse arg xx','yy','zz
 if xx = '' then
@@ -27,7 +27,7 @@ say
 return
 
 Get:
-procedure expose work. coun. glob.
+procedure expose work. coun. Memo.
 parse arg xx,yy
 say 'Get uniform distributed integers 1 thru 7...'
 work. = 0; coun. = 0
@@ -43,7 +43,7 @@ return
 Check:
 procedure expose coun.
 arg xx,yy
-say 'And Verify them...'
+say 'And verify them...'
 a = xx%7
 say 'Per bin about' a 'expected'
 say '-------------------------------'
@@ -68,7 +68,4 @@ say 'The set' e 'pass the test'
 say
 return
 
-include Functions
-include Constants
-include Helper
-include Abend
+include Math

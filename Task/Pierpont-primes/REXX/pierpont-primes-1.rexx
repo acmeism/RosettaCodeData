@@ -1,11 +1,11 @@
--- 11 Apr 2025
+-- 28 Jul 2025
 include Settings
+numeric digits 40
 
 call Time('r')
 say 'PIERPOINT PRIMES (BRUTE FORCE)'
 say version
 say
-numeric digits 40
 call GetPierpont
 call Sort 'firs.'
 call Sort 'seco.'
@@ -14,7 +14,7 @@ say Format(Time('e'),,3) 'seconds'; say
 exit
 
 GetPierpont:
-procedure expose firs. glob. seco.
+procedure expose firs. Memo. seco.
 say 'Get Pierpont primes...'
 n1 = 0; firs. = 0; n2 = 0; seco. = 0
 p = 0; m = 1e40
@@ -70,7 +70,4 @@ say seco.250
 say
 return
 
-include Numbers
-include Functions
-include Helper
-include Abend
+include Math

@@ -1,4 +1,4 @@
--- 8 May 2025
+-- 28 Jul 2025
 include Settings
 
 say 'CIRCULAR PRIMES'
@@ -10,7 +10,7 @@ call HigherReps
 exit
 
 First19:
-procedure expose glob. prim.
+procedure expose Memo. prim.
 call Time('r')
 numeric digits 10
 say 'First 19 circular primes:'
@@ -35,7 +35,7 @@ say
 return
 
 Next3:
-procedure expose glob.
+procedure expose Memo.
 call Time('r')
 numeric digits 320
 say 'Next 3 circular primes:'
@@ -50,7 +50,7 @@ say
 return
 
 HigherReps:
-procedure expose glob.
+procedure expose Memo.
 call Time('r')
 numeric digits 1040
 say 'Primality of R(1031):'
@@ -62,8 +62,4 @@ say Format(Time('e'),,3) 'seconds'
 say
 return
 
-include Functions
-include Special
-include Numbers
-include Sequences
-include Abend
+include Math

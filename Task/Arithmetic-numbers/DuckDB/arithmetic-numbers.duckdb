@@ -1,0 +1,70 @@
+### Preliminaries
+# If x is NULL then raise an error condition:
+create or replace function try(x, ErrorMessage) as (
+  if( x IS NULL, error( ErrorMessage ), x )
+);
+
+create or replace function proper_divisors(n) as table (
+  select 1 where n > 1
+  union all
+  select distinct i
+  from (select unnest( [ j,  n // j]) as i
+        from range(2, 1 + sqrt(n).floor()::BIGINT) as t(j)
+        where (n % j) == 0)
+);
+
+create or replace function composite(n) as (
+  select count(*) == 2 as n from (from proper_divisors(n) limit 2)
+);
+
+create or replace function average_is_integral(lst) as (
+  list_sum(lst) % length(lst) = 0
+);
+
+create or replace function list_of_proper_divisors(n) as (
+  select coalesce(array_agg(i), []) as divisors from proper_divisors(n) t(i)
+);
+
+
+### Arithmetic numbers
+# A table of the arithmetic numbers in range(1, mx)
+create or replace function arithmetic_numbers(mx) as table (
+  select n
+  from range(1, mx) t(n)
+  where average_is_integral(list_of_proper_divisors(n) || [n])
+  order by n -- needed
+);
+
+# A table (n, composite) of the arithmetic numbers in range(1, mx) showing also whether each is composite
+create or replace function describe_arithmetic_numbers(mx) as table (
+  select n, length(lst) > 1 as composite
+  from
+    (select n, list_of_proper_divisors(n) as lst
+     from range(1, mx) t(n)
+     where average_is_integral(lst || [n])
+     order by n  -- needed
+    )
+);
+
+# Return a struct {nth, composites} giving the nth arithmetic number
+# and the number of composites less than or equal to that number.
+# If the heuristic fails, an error is raised.
+create or replace function describe_nth_arithmetic_number(nth) as (
+  with cte as (from describe_arithmetic_numbers(nth * 2) limit nth)
+  select try(
+      (select { nth:        (select last(n) from cte),
+                composites: (select count(*) from cte where composite = true)}
+       where nth = (select count(*) from cte)),
+      'heuristic failure')
+);
+
+# Return a list of the first `number` arithmetic numbers using a
+# heuristic cautiously
+create or replace function arithmetic_numbers_list(number) as (
+  with cte as (from describe_arithmetic_numbers(number * 2 ) limit number),
+  m as (select count(*) as m from cte)
+  select try(
+     if (m = number, (select array_agg(n) from cte), null),
+     'heuristic failure' )
+  from m
+);

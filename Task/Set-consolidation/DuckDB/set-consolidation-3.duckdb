@@ -1,0 +1,61 @@
+# If listofsets[j] can be merged with listofsets[i]
+# then set the former to [] and the latter to the merger
+create or replace function merge(listofsets, i, j) as (
+  if (i=j,
+      listofsets,
+      case when list_has_any(listofsets[i]::set, listofsets[j]::set) -- casts needed here
+           then list_update(
+                  list_update(listofsets,
+                    i,
+                    set_union(listofsets[i], listofsets[j])),
+                  j,
+                  [])
+           else listofsets
+           end)
+);
+
+create or replace function merge_i(listofsets, i) as table (
+  with recursive cte(j,s) as (
+    select 1, listofsets::SET[]   -- advisable!!
+    union all
+    select j+1, merge(s, i, j)
+    from cte
+    where j <= length(listofsets)
+  )
+  select last(s order by j) as s from cte
+);
+
+# Compute the consolidation as a set
+# Note: as of DuckDB V1.1, the CTE here must be given a different name from the one in merge_i
+create or replace function consolidation(listofsets) as (
+  with recursive cte1(i,s) as (
+    select 1, listofsets::SET[]
+    union all
+    select i+1, (from merge_i(s, i) limit 1) as s
+    from cte1
+    where i <= length(listofsets)
+  )
+  select to_set(
+          list_transform(
+            list_filter(last(s order by i), x -> length(x)>0),
+            x -> to_set(x))) as consolidation from cte1
+);
+
+# Verify that the consolidation of x is equal to to_set(y),
+# so be sure that each of the elements of y is in fact a set.
+create or replace function verify(x,y) as (
+  select consolidation(x) = to_set(y)
+);
+
+.print Example 1:
+select verify(  [ ['A','B'], ['C','D']],  [ ['A','B'], ['C','D']] ) as "Example 1";
+
+.print Example 2:
+select verify( [ ['A','B'], ['B','D'] ],  [['A', 'B','D']])  as "Example 2";
+
+.print Example 3:
+select verify( [['A','B'], ['C','D'], ['D','B']], [['A','B','C','D']]) as "Example 3";
+
+.print Example 4:
+select verify( [['H','I','K'], ['A','B'], ['C','D'], ['D','B'], ['F','G','H'] ],
+   [['A', 'B', 'C', 'D'], ['F', 'G', 'H', 'I', 'K']] )  as "Example 4";

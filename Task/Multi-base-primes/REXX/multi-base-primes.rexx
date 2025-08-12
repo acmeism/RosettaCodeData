@@ -1,12 +1,12 @@
--- 22 Mar 2025
+-- 28 Jul 2025
 include Settings
+arg ww
+if ww = '' then
+   ww = 4
 
 say 'MULTI-BASE PRIMES'
 say version
 say
-arg ww
-if ww = '' then
-   ww = 4
 call GetPrimes
 call Collect
 call Report
@@ -60,7 +60,4 @@ end
 say Time('e')/1 'seconds'; say
 return
 
-include Sequences
-include Numbers
-include Functions
-include Abend
+include Math

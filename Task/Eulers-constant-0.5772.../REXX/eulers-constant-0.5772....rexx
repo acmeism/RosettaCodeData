@@ -1,4 +1,4 @@
--- 10 Jun 2025
+-- 28 Jul 2025
 include Settings
 
 say 'EULER-MASCHERONI CONSTANT'
@@ -13,7 +13,7 @@ say 'True value' a '('e 'seconds)'
 exit
 
 Brent:
-procedure expose fact. glob. work.
+procedure expose fact. Memo. work.
 numeric digits Digits()+2
 -- Brent McMillan
 n = Ceil((Digits()*Ln(10)+Ln(Pi()))*0.25); m = Ceil(2.07*Digits())
@@ -30,8 +30,4 @@ TrueValue:
 procedure
 return 0.5772156649015328606065120900824024310421593359399235988057672348848677267776646709369470632917467495+0
 
-include Constants
-include Functions
-include Special
-include Numbers
-include Abend
+include Math

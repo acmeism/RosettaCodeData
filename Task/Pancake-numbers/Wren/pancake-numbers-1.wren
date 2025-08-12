@@ -2,12 +2,15 @@ import "./fmt" for Fmt
 
 var pancake = Fn.new { |n|
     var gap = 2
-    var sum = 2
+    var pg = 1
+    var sumGaps = gap
     var adj = -1
-    while (sum < n) {
+    while (sumGaps < n) {
         adj = adj + 1
-        gap = gap*2 - 1
-        sum = sum + gap
+        var t = pg
+        pg = gap
+        gap = gap + t
+        sumGaps = sumGaps + gap
     }
     return n + adj
 }

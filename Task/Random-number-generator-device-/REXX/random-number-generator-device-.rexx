@@ -1,4 +1,4 @@
--- 8 May 2025
+-- 28 Jul 2025
 include Settings
 numeric digits 12
 
@@ -24,7 +24,7 @@ say
 return
 
 Examples:
-procedure expose glob.
+procedure expose Memo.
 say 'Randu()       = ' Right(Randu(),14) 'Real, uniform distributed over (0,1)'
 say 'Randu(100)    = ' Right(Randu(100),14)  'Integer, between 0 and 100'
 say 'Randu(-10,10) = ' Right(Randu(-10,10),14)  'Integer, between -10 and 10'
@@ -32,7 +32,4 @@ say 'Randn()       = ' Right(Randn(),14)  'Real, normal distributed, average 0 a
 say
 return
 
-include Functions
-include Constants
-include Helper
-include Abend
+include Math

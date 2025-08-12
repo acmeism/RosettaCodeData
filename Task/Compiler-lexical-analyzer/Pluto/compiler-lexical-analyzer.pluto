@@ -1,0 +1,258 @@
+do -- Compiler/Lexical analyser
+
+    fmt = require( "fmt" )
+
+    local lineNumber, columnNumber, atEof = 0, 0, false
+    local line, lineWidth, currChar = "", -1, "\n"
+
+    local tkValue, tkType, tkLine, tkColumn, tkIntegerValue
+
+    local MAX_TOKEN_LENGTH   <const> = 256
+    local MAX_INTEGER        <const> = 2^32
+    local MAXINTEGER_OVER_10 <const> = MAX_INTEGER // 10
+    local MAXINTEGER_MOD_10  <const> = MAX_INTEGER  % 10
+
+    local tk = {}
+    do  -- setup token types
+        local function T( tknName ) tk[ tknName ] = tknName end
+
+        T( "Op_multiply"     ) T( "Op_divide"     ) T( "Op_mod"       )
+        T( "Op_add"          ) T( "Op_subtract"   ) T( "Op_negate"    )
+        T( "Op_less"         ) T( "Op_lessequal"  ) T( "Op_greater"   )
+        T( "Op_greaterequal" ) T( "Op_equal"      ) T( "Op_notequal"  )
+        T( "Op_not"          ) T( "Op_assign"     ) T( "Op_and"       )
+        T( "Op_or"           ) T( "LeftParen"     ) T( "RightParen"   )
+        T( "LeftBrace"       ) T( "RightBrace"    ) T( "Semicolon"    )
+        T( "Comma"           ) T( "Keyword_if"    ) T( "Keyword_else" )
+        T( "Keyword_while"   ) T( "Keyword_print" ) T( "Keyword_putc" )
+        T( "Identifier"      ) T( "Integer"       ) T( "String"       )
+        T( "End_of_input"    ) T( "Comment"       )
+    end
+
+    -- reports an error
+    local function lexError( message )
+        io.write( $"**** Error at({lineNumber},{columnNumber}): {message}\n" )
+    end
+
+    -- gets the next source character
+    local function nextChar()
+        ++ columnNumber
+        if      columnNumber == ( lineWidth + 1 ) then
+            currChar = "\n"
+        elseif columnNumber > lineWidth then
+            line = io.read( "l" )
+            if line == nil then
+                atEof, curChar, lineWidth = true, " ", -1
+            else
+                if line == "" then line = " " end
+                ++ lineNumber
+                lineWidth, columnNumber, currChar = #line, 1, line[ 1 ]
+            end
+        else
+            currChar = line[ columnNumber ]
+        end
+    end
+
+    -- gets the next token, returns the token type
+    local function nextToken()
+
+        -- returns true if currChar is in the inclusive range lowerValue to upperValue
+        --         false otherwise
+        local function inRange( lowerValue, upperValue )
+            return  lowerValue <= currChar <= upperValue
+        end
+
+        -- returns true if the current character can start an identifier, false otherwise
+        local function identifierStartChar()
+            return currChar == "_" or inRange( "a", "z" ) or inRange( "A", "Z" )
+        end
+
+        -- handle a single character token
+        local function singleCharToken( tokenType )
+            tkType = tokenType
+            nextChar()
+        end
+
+        -- handle a doubled character token: && or ||
+        local function doubleCharToken( tokenType )
+            local firstChar = currChar
+            tkType = tokenType
+            nextChar()
+            if currChar == firstChar then
+                nextChar()
+            else -- the character wasn't doubled
+                lexError( "Unrecognised character." )
+            end
+        end
+
+        -- handle an operator or operator= token
+        local function opOrOpEqual( opToken, opEqualToken )
+            tkType = opToken
+            nextChar()
+            if currChar == "=" then
+                -- have operator=
+                tkType = opEqualToken
+                nextChar()
+            end
+        end
+
+        -- handle a / operator or /*...*/ comment
+        local function divideOrComment()
+            tkType = tk.Op_divide
+            nextChar()
+            if currChar == "*" then
+                -- have a comment
+                tkType            = tk.Comment
+                repeat
+                    nextChar()
+                    while currChar != "*" and not atEof do nextChar() end
+                    while currChar == "*" and not atEof do nextChar() end
+                until atEof or currChar == "/"
+                if not atEof
+                then nextChar()
+                else lexError( "End-of-file in comment." )
+                end
+            end
+        end
+
+        -- handle an indentifier or keyword
+        local function identifierOrKeyword()
+            tkType = tk.Identifier
+            while identifierStartChar() or inRange( "0", "9" ) do nextChar() end
+            tkValue = line:sub( tkColumn, columnNumber - 1 )
+            -- there are only 5 keywords, so we just test each in turn here
+            if     tkValue == "if"      then tkType  = tk.Keyword_if
+            elseif tkValue == "else"    then tkType  = tk.Keyword_else
+            elseif tkValue == "while"   then tkType  = tk.Keyword_while
+            elseif tkValue == "print"   then tkType  = tk.Keyword_print
+            elseif tkValue == "putc"    then tkType  = tk.Keyword_putc
+            end
+            if tkType != tk.Identifier then
+                tkValue = ""
+            end
+        end
+
+        -- handle an integer literal
+        local function integerLiteral()
+            local overflowed = false
+            tkType           = tk.Integer
+            while inRange( "0", "9" ) do
+                local digit = tonumber( currChar )
+                if     tkIntegerValue >  MAXINTEGER_OVER_10
+                then overflowed = true
+                elseif tkIntegerValue == MAXINTEGER_OVER_10
+                   and digit          >  MAXINTEGER_MOD_10
+                then overflowed = true
+                else
+                    tkIntegerValue *= 10
+                    tkIntegerValue += digit
+                end
+                nextChar()
+            end
+            if overflowed then
+                lexError( "Number too large." )
+            end
+            if identifierStartChar() then
+                lexError( "Number followed by letter or underscore." )
+            end
+        end
+
+        -- handle a char literal
+        local function charLiteral()
+            nextChar()
+            if     currChar == "'" or currChar == "\n" then
+                lexError( "Invalid character constant." )
+            elseif currChar == "\\" then
+                -- have an escape
+                nextChar()
+                if     currChar == "n"  then currChar = "\n"
+                elseif currChar != "\\" then lexError( "Unknown escape sequence." )
+                end
+            end
+            tkType         = tk.Integer
+            tkIntegerValue = string.byte( currChar )
+            -- should have a closing quoute next
+            nextChar()
+            if   currChar != "'"
+            then lexError( "Multi-character constant." )
+            else nextChar()
+            end
+        end
+
+        -- handle a string literal
+        local function stringLiteral()
+            tkType    = tk.String
+            nextChar()
+            while currChar != "\"" and currChar != "\n" and not atEof do
+                nextChar()
+            end
+            if     currChar == "\n" then
+                lexError( "End-of-line while scanning string literal." )
+            elseif atEof then
+                lexError( "End-of-file while scanning string literal." )
+            else -- currChar must be """"
+                nextChar()
+            end
+            tkValue = line:sub( tkColumn, columnNumber - 1 )
+        end
+
+        repeat
+            -- skip white space
+            while ( currChar == " " or currChar == "\n" ) and not atEof do
+                nextChar()
+            end
+            -- get the token
+            tkLine         = lineNumber
+            tkColumn       = columnNumber
+            tkValue        = ""
+            tkIntegerValue = 0
+            if     atEof                 then tkType = tk.End_of_input
+            elseif currChar == "*"       then singleCharToken( tk.Op_multiply )
+            elseif currChar == "/"       then divideOrComment()
+            elseif currChar == "%"       then singleCharToken( tk.Op_mod )
+            elseif currChar == "+"       then singleCharToken( tk.Op_add )
+            elseif currChar == "-"       then singleCharToken( tk.Op_subtract )
+            elseif currChar == "<"       then opOrOpEqual( tk.Op_less,    tk.Op_lessequal    )
+            elseif currChar == ">"       then opOrOpEqual( tk.Op_greater, tk.Op_greaterequal )
+            elseif currChar == "="       then opOrOpEqual( tk.Op_assign,  tk.Op_equal        )
+            elseif currChar == "!"       then opOrOpEqual( tk.Op_not,     tk.Op_notequal     )
+            elseif currChar == "&"       then doubleCharToken( tk.Op_and     )
+            elseif currChar == "|"       then doubleCharToken( tk.Op_or      )
+            elseif currChar == "("       then singleCharToken( tk.LeftParen  )
+            elseif currChar == ")"       then singleCharToken( tk.RightParen )
+            elseif currChar == "{"       then singleCharToken( tk.LeftBrace  )
+            elseif currChar == "}"       then singleCharToken( tk.RightBrace )
+            elseif currChar == ";"       then singleCharToken( tk.Semicolon  )
+            elseif currChar == ","       then singleCharToken( tk.Comma      )
+            elseif identifierStartChar() then identifierOrKeyword()
+            elseif inRange( "0", "9" )   then integerLiteral()
+            elseif currChar == "'"       then charLiteral()
+            elseif currChar == "\""      then stringLiteral()
+            else
+                lexError( "Unrecognised character." )
+                singleCharToken( tk.Comment )
+            end
+            -- continue until we get something other than a comment
+        until tkType != tk.Comment
+        return tkType
+    end
+
+    -- outputs the current token
+    local function writeToken()
+        fmt.write( "%5d  %5d   ", tkLine, tkColumn )
+        if tkType == tk.Integer then
+            fmt.write( "%-16s%6d", tkType, tkIntegerValue )
+        elseif tkValue != "" then
+            -- token has a value
+            fmt.write( "%-16s%s", tkType, tkValue )
+        else
+            -- no value - no need to pad the token type
+            io.write( tkType )
+        end
+        io.write( "\n" )
+    end
+
+    -- get and print all tokens from standard input
+    while nextToken() != tk.End_of_input do writeToken() end
+    writeToken()
+end

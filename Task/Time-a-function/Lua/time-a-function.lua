@@ -2,7 +2,7 @@ function bench(Function, ...)
  local t = os.time()
  local clock1 = os.clock()
  Function(...)
- local c = os.clock()-clock
+ local c = os.clock()-clock1
  return os.time()-t, c
 end
 

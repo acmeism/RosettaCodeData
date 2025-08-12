@@ -1,10 +1,10 @@
--- 8 May 2025
+-- 28 Jul 2025
 include Settings
+numeric digits 100
 
 say 'PERNICIOUS NUMBERS'
 say version
 say
-numeric digits 100
 call Show 1,36
 call Show 888888877,888888888
 exit
@@ -33,7 +33,4 @@ say Format(Time('e'),,3) 'seconds'
 say
 return
 
-include Numbers
-include Functions
-include Special
-include Abend
+include Math

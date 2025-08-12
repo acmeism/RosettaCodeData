@@ -1,0 +1,40 @@
+# An example
+.maxwidth 100
+set variable game='85   24  72      9  4         1 7  23 5   9   4           8  7  17          36 4 ';
+
+create or replace function instr3(s,t,j) as (
+  select case when n = 0 then 0
+              else n + j - 1
+         end
+  from (select instr(substr(s,j), t) as n)
+);
+
+with recursive
+  symbols (d) as (select level::VARCHAR from range(1,10) t(level) )
+, board   (i) as (select level          from range(1,82) t(level) )
+, neighbors (i, j) as (
+    select b1.i, b2.i
+    from   board b1 inner join board b2
+      on   b1.i != b2.i
+           and (
+                    mod(b1.i - b2.i, 9) = 0
+                 or ceil(b1.i /  9) = ceil(b2.i /  9)
+                 or ceil(b1.i / 27) = ceil(b2.i / 27) and trunc(mod(b1.i - 1, 9) / 3) = trunc(mod(b2.i - 1, 9) / 3)
+               )
+  )
+, r (str, pos) as (
+    select  getvariable('game'), instr(getvariable('game'), ' ')
+
+    union all
+    select  substr(r.str, 1, r.pos - 1) || s.d || substr(r.str, r.pos + 1), instr3(r.str, ' ', r.pos + 1)
+      from  r inner join symbols s
+        on  r.pos > 0 and not exists (
+                                       select *
+                                       from   neighbors n
+                                       where  r.pos = n.i and s.d = substr(r.str, n.j, 1)
+                                     )
+  )
+select str
+from   r
+where  pos = 0
+;

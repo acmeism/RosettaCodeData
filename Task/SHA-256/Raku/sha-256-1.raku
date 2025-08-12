@@ -15,28 +15,28 @@ multi sha256(blob8 $data) {
 
   return blob8.new:
     map |*.polymod(256 xx 3).reverse,
-	|reduce -> $H, $block {
-	  blob32.new: $H[] Z+
-	    reduce -> $h, $j {
-	      my uint32 ($T1, $T2) =
-		$h[7] + Σ1($h[4]) + Ch(|$h[4..6])
-		+ (BEGIN init(* **(1/3))[^64])[$j] +
-		(
-		 (state buf32 $w .= new)[$j] = $j < 16 ?? $block[$j] !!
-		 σ0($w[$j-15]) + $w[$j-7] + σ1($w[$j-2]) + $w[$j-16]
-		),
-	      Σ0($h[0]) + Maj(|$h[0..2]);
-	      blob32.new: $T1 + $T2, |$h[0..2], $h[3] + $T1, |$h[4..6];
-	    }, $H, |^64;
-	},
-	(BEGIN init(&sqrt)[^8]),
-	|blob32.new(
-	    blob8.new(
-	      @$data,
-	      0x80,
-	      0 xx (-($data + 1 + 8) mod 64),
-	      (8*$data).polymod(256 xx 7).reverse
-	      ).rotor(4)
-	    .map: { :256[@$_] }
-	  ).rotor(16)
+   |reduce -> $H, $block {
+     blob32.new: $H[] Z+
+       reduce -> $h, $j {
+         my uint32 ($T1, $T2) =
+      $h[7] + Σ1($h[4]) + Ch(|$h[4..6])
+      + (BEGIN init(* **(1/3))[^64])[$j] +
+      (
+       (state buf32 $w .= new)[$j] = $j < 16 ?? $block[$j] !!
+       σ0($w[$j-15]) + $w[$j-7] + σ1($w[$j-2]) + $w[$j-16]
+      ),
+         Σ0($h[0]) + Maj(|$h[0..2]);
+         blob32.new: $T1 + $T2, |$h[0..2], $h[3] + $T1, |$h[4..6];
+       }, $H, |^64;
+   },
+   (BEGIN init(&sqrt)[^8]),
+   |blob32.new(
+       blob8.new(
+         @$data,
+         0x80,
+         0 xx (-($data + 1 + 8) mod 64),
+         (8*$data).polymod(256 xx 7).reverse
+         ).rotor(4)
+       .map: { :256[@$_] }
+     ).rotor(16)
 }

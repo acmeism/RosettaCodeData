@@ -1,0 +1,250 @@
+Type Punto
+    x As Double
+    y As Double
+    z As Double
+End Type
+
+Type DatosBorde
+    a As Integer
+    b As Integer
+    f1 As Integer
+    f2 As Integer
+End Type
+
+Dim Shared As Integer datosCara(0 To 4000-1) ' 1000 faces * 4 vertex
+Dim Shared As Integer Ptr carasNuevas(0 To 1000-1)
+
+
+Sub printPunto(p As Punto)
+    Print Using "[##.####, ##.####, ##.####]"; p.x; p.y; p.z
+End Sub
+
+Sub printCara(f As Integer Ptr, n As Integer)
+    Print "[";
+    For i As Integer = 0 To n-1
+        Print Using "## "; f[i];
+    Next
+    Print Chr(8) & "]"
+End Sub
+
+Function sumPunto(p1 As Punto, p2 As Punto) As Punto
+    Return Type<Punto>(p1.x + p2.x, p1.y + p2.y, p1.z + p2.z)
+End Function
+Function mulPunto(p As Punto, m As Double) As Punto
+    Return Type<Punto>(p.x * m, p.y * m, p.z * m)
+End Function
+Function divPunto(p As Punto, d As Double) As Punto
+    Return mulPunto(p, 1/d)
+End Function
+Function centerPunto(p1 As Punto, p2 As Punto) As Punto
+    Return divPunto(sumPunto(p1, p2), 2)
+End Function
+
+Function encontrarBorde(bordes() As DatosBorde, nBordes As Integer, a As Integer, b As Integer) As Integer
+    For k As Integer = 0 To nBordes-1
+        If (bordes(k).a = a And bordes(k).b = b) Or (bordes(k).a = b And bordes(k).b = a) Then Return k
+    Next
+    Return -1
+End Function
+
+Sub cmcSubdiv(puntosEntrada() As Punto, carasEntrada() As Integer Ptr, carasCnt As Integer, puntosSalida() As Punto, carasSalida() As Integer Ptr, Byref carasSalidaCnt As Integer)
+    Dim As Integer i, j, n, fi
+    Dim As Integer Ptr f
+
+    ' Step 1: calculate points of faces
+    Dim As Punto facePuntos(0 To carasCnt-1)
+    For i = 0 To carasCnt-1
+        f = carasEntrada(i)
+        n = f[0]
+        Dim As Punto fp = Type<Punto>(0,0,0)
+        For j = 1 To n
+            fp = sumPunto(fp, puntosEntrada(f[j]))
+        Next
+        facePuntos(i) = divPunto(fp, n)
+    Next
+
+    ' Step 2: calculate unique edges and their faces
+    Redim As DatosBorde bordes(0 To 0)
+    Dim As Integer nBordes = 0
+    For fi = 0 To carasCnt-1
+        f = carasEntrada(fi)
+        n = f[0]
+        For i = 1 To n
+            Dim As Integer a = f[i]
+            Dim As Integer b = f[Iif(i < n, i+1, 1)]
+            If a > b Then Swap a, b
+            Dim As Integer idx = encontrarBorde(bordes(), nBordes, a, b)
+            If idx = -1 Then
+                If nBordes > 0 Then Redim Preserve bordes(0 To nBordes)
+                bordes(nBordes).a = a
+                bordes(nBordes).b = b
+                bordes(nBordes).f1 = fi
+                bordes(nBordes).f2 = -1
+                nBordes += 1
+            Else
+                bordes(idx).f2 = fi
+            End If
+        Next
+    Next
+    Redim Preserve bordes(0 To nBordes-1)
+
+    ' Step 3: calculate edge points
+    Dim As Punto bordePuntos(0 To Ubound(bordes))
+    For i = 0 To Ubound(bordes)
+        Dim As Punto ea = puntosEntrada(bordes(i).a)
+        Dim As Punto eb = puntosEntrada(bordes(i).b)
+        Dim As Punto cp = centerPunto(ea, eb)
+        Dim As Punto fp1 = facePuntos(bordes(i).f1)
+        Dim As Punto fp2 = Iif(bordes(i).f2 = -1, fp1, facePuntos(bordes(i).f2))
+        Dim As Punto cfp = centerPunto(fp1, fp2)
+        bordePuntos(i) = centerPunto(cp, cfp)
+    Next
+
+    ' Step 4: calculate new vertex points
+    Dim As Integer np = Ubound(puntosEntrada) + 1
+    Dim As Integer pointsFaces(0 To np-1)
+    For fi = 0 To carasCnt-1
+        f = carasEntrada(fi)
+        n = f[0]
+        For i = 1 To n
+            pointsFaces(f[i]) += 1
+        Next
+    Next
+    Dim As Punto newPuntos(0 To np-1)
+    For i = 0 To np-1
+        n = pointsFaces(i)
+        Dim As Double m1 = (n-3)/n
+        Dim As Double m2 = 1.0/n
+        Dim As Double m3 = 2.0/n
+        Dim As Punto afp = Type<Punto>(0,0,0)
+        Dim As Punto ame = Type<Punto>(0,0,0)
+        For fi = 0 To carasCnt-1
+            f = carasEntrada(fi)
+            Dim As Integer nface = f[0]
+            For j = 1 To nface
+                If f[j] = i Then afp = sumPunto(afp, facePuntos(fi))
+            Next
+        Next
+        For ei As Integer = 0 To Ubound(bordes)
+            If bordes(ei).a = i Or bordes(ei).b = i Then
+                Dim As Punto ea = puntosEntrada(bordes(ei).a)
+                Dim As Punto eb = puntosEntrada(bordes(ei).b)
+                ame = sumPunto(ame, centerPunto(ea, eb))
+            End If
+        Next
+        afp = divPunto(afp, n)
+        ame = divPunto(ame, n)
+        Dim p1 As Punto = mulPunto(puntosEntrada(i), m1)
+        Dim p2 As Punto = mulPunto(afp, m2)
+        Dim p3 As Punto = mulPunto(ame, m3)
+        newPuntos(i) = sumPunto(sumPunto(p1, p2), p3)
+    Next
+
+    ' Step 5: add face points
+    Dim As Integer caraPuntoNums(0 To carasCnt-1)
+    Dim As Integer sgtePuntoNum = np
+    Redim Preserve newPuntos(0 To sgtePuntoNum + carasCnt - 1)
+    For i = 0 To carasCnt-1
+        newPuntos(sgtePuntoNum) = facePuntos(i)
+        caraPuntoNums(i) = sgtePuntoNum
+        sgtePuntoNum += 1
+    Next
+
+    ' Step 6: add edge points
+    Dim As Integer bordePuntoNums(0 To Ubound(bordes))
+    Redim Preserve newPuntos(0 To sgtePuntoNum + Ubound(bordes))
+    For i = 0 To Ubound(bordes)
+        newPuntos(sgtePuntoNum) = bordePuntos(i)
+        bordePuntoNums(i) = sgtePuntoNum
+        sgtePuntoNum += 1
+    Next
+
+    ' Step 7: build new faces (quads only)
+    Dim As Integer totalNewCaras = carasCnt * 4
+    Dim As Integer caraLen = 4
+    Dim As Integer caraIdx = 0
+    For fi = 0 To carasCnt-1
+        f = carasEntrada(fi)
+        If f[0] = 4 Then
+            Dim As Integer a = f[1], b = f[2], c = f[3], d = f[4]
+            Dim As Integer ab, bc, cd, da
+            For ei As Integer = 0 To Ubound(bordes)
+                If (bordes(ei).a = a And bordes(ei).b = b) Or (bordes(ei).a = b And bordes(ei).b = a) Then ab = bordePuntoNums(ei)
+                If (bordes(ei).a = b And bordes(ei).b = c) Or (bordes(ei).a = c And bordes(ei).b = b) Then bc = bordePuntoNums(ei)
+                If (bordes(ei).a = c And bordes(ei).b = d) Or (bordes(ei).a = d And bordes(ei).b = c) Then cd = bordePuntoNums(ei)
+                If (bordes(ei).a = d And bordes(ei).b = a) Or (bordes(ei).a = a And bordes(ei).b = d) Then da = bordePuntoNums(ei)
+            Next
+            Dim As Integer fp = caraPuntoNums(fi)
+            ' Face 1
+            datosCara(caraIdx*caraLen + 0) = a
+            datosCara(caraIdx*caraLen + 1) = ab
+            datosCara(caraIdx*caraLen + 2) = fp
+            datosCara(caraIdx*caraLen + 3) = da
+            carasNuevas(caraIdx) = @datosCara(caraIdx*caraLen)
+            caraIdx += 1
+            ' Face 2
+            datosCara(caraIdx*caraLen + 0) = b
+            datosCara(caraIdx*caraLen + 1) = bc
+            datosCara(caraIdx*caraLen + 2) = fp
+            datosCara(caraIdx*caraLen + 3) = ab
+            carasNuevas(caraIdx) = @datosCara(caraIdx*caraLen)
+            caraIdx += 1
+            ' Face 3
+            datosCara(caraIdx*caraLen + 0) = c
+            datosCara(caraIdx*caraLen + 1) = cd
+            datosCara(caraIdx*caraLen + 2) = fp
+            datosCara(caraIdx*caraLen + 3) = bc
+            carasNuevas(caraIdx) = @datosCara(caraIdx*caraLen)
+            caraIdx += 1
+            ' Face 4
+            datosCara(caraIdx*caraLen + 0) = d
+            datosCara(caraIdx*caraLen + 1) = da
+            datosCara(caraIdx*caraLen + 2) = fp
+            datosCara(caraIdx*caraLen + 3) = cd
+            carasNuevas(caraIdx) = @datosCara(caraIdx*caraLen)
+            caraIdx += 1
+        End If
+    Next
+
+    Redim puntosSalida(0 To Ubound(newPuntos))
+    For i = 0 To Ubound(newPuntos): puntosSalida(i) = newPuntos(i): Next
+    Redim carasSalida(0 To caraIdx-1)
+    For i = 0 To caraIdx-1: carasSalida(i) = carasNuevas(i): Next
+    carasSalidaCnt = caraIdx
+End Sub
+
+' Main program
+Dim As Punto puntosEntrada(0 To 7) = { _
+Type<Punto>(-1,  1,  1), _   ' 0
+Type<Punto>(-1, -1,  1), _   ' 1
+Type<Punto>( 1, -1,  1), _   ' 2
+Type<Punto>( 1,  1,  1), _   ' 3
+Type<Punto>( 1, -1, -1), _   ' 4
+Type<Punto>( 1,  1, -1), _   ' 5
+Type<Punto>(-1, -1, -1), _   ' 6
+Type<Punto>(-1,  1, -1) }    ' 7
+
+Dim As Integer f0(0 To 4) = {4, 0, 1, 2, 3}
+Dim As Integer f1(0 To 4) = {4, 3, 2, 4, 5}
+Dim As Integer f2(0 To 4) = {4, 5, 4, 6, 7}
+Dim As Integer f3(0 To 4) = {4, 7, 0, 3, 5}
+Dim As Integer f4(0 To 4) = {4, 7, 6, 1, 0}
+Dim As Integer f5(0 To 4) = {4, 6, 1, 2, 4}
+
+Dim As Integer Ptr carasEntrada(0 To 5) = {@f0(0), @f1(0), @f2(0), @f3(0), @f4(0), @f5(0)}
+Dim As Punto puntosSalida()
+Dim As Integer Ptr carasSalida()
+Dim As Integer carasSalidaCnt, i
+
+cmcSubdiv(puntosEntrada(), carasEntrada(), 6, puntosSalida(), carasSalida(), carasSalidaCnt)
+
+For i = 0 To Ubound(puntosSalida)
+    printPunto(puntosSalida(i))
+Next
+
+Print Chr(10)
+For i = 0 To carasSalidaCnt-1
+    printCara(carasSalida(i), 4)
+Next
+
+Sleep

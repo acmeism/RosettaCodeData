@@ -12,7 +12,7 @@ public :
 
    Employee ( const std::string &dep , const std::string &namen )
       : department( dep ) , name( namen ) {
-	 my_id = count++ ;
+     my_id = count++ ;
       }
 
    std::string getName( ) const {
@@ -47,9 +47,9 @@ private :
 
    template <class Archive>
       void serialize( Archive &ar, const unsigned int version ) {
-	 ar & my_id ;
-	 ar & name ;
-	 ar & department ;
+     ar & my_id ;
+     ar & name ;
+     ar & department ;
       }
 
 } ;
@@ -57,7 +57,7 @@ private :
 class Worker : public Employee {
 public :
    Worker( const std::string & dep, const std::string &namen ,
-	 double hourlyPay ) : Employee( dep , namen ) , salary( hourlyPay) { }
+     double hourlyPay ) : Employee( dep , namen ) , salary( hourlyPay) { }
 
    Worker( ) { }
 
@@ -67,7 +67,7 @@ public :
 
    void setSalary( double pay ) {
       if ( pay > 0 )
-	 salary = pay ;
+     salary = pay ;
    }
 
    virtual void print( ) {
@@ -79,8 +79,8 @@ private :
    friend class boost::serialization::access ;
    template <class Archive>
       void serialize ( Archive & ar, const unsigned int version ) {
-	 ar & boost::serialization::base_object<Employee>( *this ) ;
-	 ar & salary ;
+     ar & boost::serialization::base_object<Employee>( *this ) ;
+     ar & salary ;
       }
 } ;
 

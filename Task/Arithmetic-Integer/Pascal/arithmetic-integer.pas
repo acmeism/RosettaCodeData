@@ -1,5 +1,7 @@
 program arithmetic(input, output)
-
+{$IFDEF FPC}
+  uses math;
+{$ENDIF}
 var
  a, b: integer;
 

@@ -1,0 +1,50 @@
+# PRN in range(0,n)
+create or replace function prn(n) as
+  trunc(random() * n)::BIGINT;
+
+create or replace function random_array(n, twenty) as
+  list_transform(range(0,n), x-> 1+prn(twenty));
+
+create or replace function random_matrix(m, n, twenty) as (
+  list_transform(range(0,m), x -> random_array(n, twenty))
+);
+
+# Scanning the matrix row-wise, return a list of the cells up to
+# but excluding n, or else [].
+# WARNING: The matrix `matrix` should be materialized before entry!
+# Note the type declaration for `matrix`.
+create or replace function matrix_up_to(matrix, n) as (
+  if (length(matrix) = 0, [],
+     (with recursive matrix_t as (select matrix::BIGINT[][] as m),
+      cte1 as (
+          select 1 as ix,
+                 coalesce(list_position(m[1], n), 0) as p,
+                 [] as s
+          from matrix_t
+          union all
+          select ix+1 as ix,
+                 if (p = 0, coalesce(list_position(m[ix+1], n), 0),
+                     -1) as p,
+                 (s || if (@p = 1, [],
+                           if (p>0, m[ix][:p-1],
+                               m[ix] ) )) as s
+          from cte1, matrix_t
+          where p != -1 and
+                ix <= length(m)
+       )
+       -- for verification: select ((last(s), any_value(matrix)))
+       select last(s)
+       from cte1
+  ) )
+);
+
+.mode list
+.header off
+
+# Because of the way DuckDB inlines functions, the matrix produced
+# by random_matrix() must be materialized before it can be properly handled.
+# Using DuckDB V1.1, this can be done using SET VARIABLE:
+
+set variable matrix = random_matrix(10,5, 20);
+
+select matrix_up_to( getvariable('matrix'), 20 ) as head;

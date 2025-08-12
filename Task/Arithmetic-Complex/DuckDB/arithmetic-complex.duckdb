@@ -1,0 +1,86 @@
+CREATE TYPE COMPLEX AS STRUCT(r REAL, i REAL);
+
+CREATE OR REPLACE FUNCTION isreal(a) AS (
+  if (try_cast(a as REAL), true, false)
+);
+
+CREATE OR REPLACE FUNCTION tocomplex(a) AS (
+  coalesce( try_cast(a as COMPLEX),  {r: a, i:0.0 }::COMPLEX )
+);
+
+CREATE OR REPLACE FUNCTION complex_add_(a, b) AS (
+  {r: a.r + b.r, i:a.i + b.i}
+);
+
+CREATE OR REPLACE FUNCTION complex_add(a, b) AS (
+  complex_add_(tocomplex(a), tocomplex(b))
+);
+
+CREATE OR REPLACE FUNCTION complex_mul_(a, b) AS (
+  {r: a.r * b.r - a.i * b.i, i:a.r * b.i + a.i * b.r}
+);
+
+CREATE OR REPLACE FUNCTION complex_mul(a, b) AS (
+  complex_mul_(tocomplex(a), tocomplex(b))
+);
+
+CREATE OR REPLACE FUNCTION complex_mag(a) AS (
+  case when isreal(a)
+       then abs(a::REAL)
+       else sqrt( (a::COMPLEX).r ^ 2 + (a::COMPLEX).i ^2)
+       end
+);
+
+CREATE OR REPLACE FUNCTION complex_conj(a) AS (
+  case when isreal(a)
+       then {r: a::REAL, i: 0.0}
+       else {r: (a::COMPLEX).r, i: - (a::COMPLEX).i}
+       end
+);
+
+CREATE OR REPLACE FUNCTION complex_mag_squared(x) AS (
+  case when isreal(x)
+       then x::REAL*x::REAL
+       else (x::COMPLEX).r ^ 2 + (x::COMPLEX).i ^ 2
+       end
+);
+
+# Oddly, the a.r notation cannot currently be used here
+CREATE OR REPLACE FUNCTION complex_div_(a, b) AS (
+  WITH denom AS (select complex_mag_squared(b) as denom,
+    a['r'] as ar, a['i'] as ai, b['r'] as br, b['i'] as bi
+  )
+  SELECT {r: (ar * br + ai * bi) / denom,
+          i: (ai * br - ar * bi) / denom }
+  FROM denom
+);
+
+CREATE OR REPLACE FUNCTION complex_div(a, b) AS (
+  complex_div_(tocomplex(a), tocomplex(b))
+);
+
+CREATE OR REPLACE FUNCTION complex_exp_(z) AS (
+  complex_mul_( {r: exp(z.r), i: 0.0}, {r: cos(z.i), i:sin(z.i) })
+);
+
+CREATE OR REPLACE FUNCTION complex_exp(z) AS (
+  if( isreal(z),
+      {r:exp(z::REAL), i:0.0},
+      complex_exp_( tocomplex(z) ) )
+);
+
+## Examples
+.mode line
+CREATE OR REPLACE FUNCTION test(x,y) as table (
+  select x as "x",
+         y as "y",
+         complex_add(x,y) as "add",
+         complex_mul(x,y) as "mul",
+         complex_div(1, x) as "1/x",
+         complex_conj(x) as "conj(x)",
+         complex_div(x,y).complex_mul(y) as "(x/y)*y"
+);
+
+from test({r:1,i:1}, {r:0,i:1} );
+
+select complex_exp( {r:0, i:pi()} ) as "e^iπ";

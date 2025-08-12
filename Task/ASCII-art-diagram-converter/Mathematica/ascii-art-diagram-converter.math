@@ -1,0 +1,86 @@
+diagram = "
+         +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+         |                      ID                       |
+         +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+         |QR|   Opcode  |AA|TC|RD|RA|   Z    |   RCODE   |
+         +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+         |                    QDCOUNT                    |
+         +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+         |                    ANCOUNT                    |
+         +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+         |                    NSCOUNT                    |
+         +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+         |                    ARCOUNT                    |
+         +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+";
+
+testhexdata = "78477bbf5496e12e1bf169a4";
+
+(* Define BitField as an Association instead of a struct *)
+createBitField[name_, bits_, fieldstart_, fieldend_] :=
+  <|"name" -> name, "bits" -> bits, "fieldstart" -> fieldstart, "fieldend" -> fieldend|>;
+
+diagramToStruct[txt_] := Module[{bitfields = {}, lines, nbits, fieldpos, bitaccum,
+   bitsize, bitlabel, bitstart, bitend},
+  lines = StringTrim /@ StringSplit[txt, "\n"];
+
+  Do[
+    nbits = StringCount[lines[[row]], "+"] - 1;
+    fieldpos = StringPosition[lines[[row + 1]], "|"][[All, 1]];
+    bitaccum = Floor[row/2] * nbits;
+
+    Do[
+      endfield = fieldpos[[i + 1]];
+      bitsize = Floor[(endfield - field)/3];
+      bitlabel = StringTrim[StringTake[lines[[row + 1]], {field + 1, endfield - 1}]];
+      bitstart = Floor[(field - 1)/3] + bitaccum;
+      bitend = bitstart + bitsize - 1;
+      AppendTo[bitfields, createBitField[bitlabel, bitsize, bitstart, bitend]],
+
+      {i, 1, Length[fieldpos] - 1}, {field, {fieldpos[[i]]}}
+    ],
+
+    {row, 1, Length[lines] - 1, 2}
+  ];
+
+  bitfields
+];
+
+(* Convert a hex byte to binary string with padding *)
+binByte[c_] := IntegerString[FromDigits[c, 16], 2, 8];
+
+(* Convert entire hex string to binary *)
+hexToBinary[s_] := StringJoin[
+  binByte /@ (StringTake[s, {#, # + 1}] & /@ Range[1, StringLength[s] - 1, 2])
+];
+
+validator[binstring_, fields_] :=
+  StringLength[binstring] == Total[#["bits"] & /@ fields];
+
+bitReader[bitfields_, hexdata_] := Module[{b, pat},
+  Print["\nEvaluation of hex data ", hexdata, " as bitfields:"];
+  Print["Name     Size          Bits\n-------  ----  ----------------"];
+
+  b = hexToBinary[hexdata];
+  Assert[validator[b, bitfields]];
+
+  Do[
+    pat = StringTake[b, {bf["fieldstart"] + 1, bf["fieldend"] + 1}];
+    Print[StringPadRight[bf["name"], 9],
+          StringPadRight[ToString[bf["bits"]], 6],
+          StringPadLeft[pat, 16]],
+    {bf, bitfields}
+  ]
+];
+
+decoded = diagramToStruct[diagram];
+
+Print["Diagram as bit fields:\nName    Bits  Start  End\n------  ----  -----  ---"];
+Do[
+  Print[StringPadRight[bf["name"], 8],
+        StringPadRight[ToString[bf["bits"]], 6],
+        StringPadRight[ToString[bf["fieldstart"]], 6],
+        StringPadLeft[ToString[bf["fieldend"]], 4]],
+  {bf, decoded}
+];
+
+bitReader[decoded, testhexdata];

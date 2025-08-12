@@ -1,0 +1,12 @@
+import std/num/random
+
+effect ebreak
+  final ctl ebreak(): a
+
+fun main()
+  with final ctl ebreak() ()
+  while {True}
+    val a = random-int() % 20
+    println(a)
+    if a == 10 then ebreak()
+    println(random-int() % 20)

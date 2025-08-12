@@ -7,7 +7,7 @@ bool isPrime(double number)
 {
     for (double i = number - 1; i >= 2; i--) {
         if (fmod(number, i) == 0)
-	    return false;
+        return false;
     }
     return true;
 }
@@ -20,19 +20,19 @@ int main()
         if (isPrime(i))
         {
             n++;
-	    cout.width(1); cout << left << "n = " << n;
+        cout.width(1); cout << left << "n = " << n;
             //Only for Text Alignment
             if (n < 10)
-	    {
-	        cout.width(40); cout << right << i << endl;
-	    }
-	    else
-	    {
-		cout.width(39); cout << right << i << endl;
-	    }
+        {
+            cout.width(40); cout << right << i << endl;
+        }
+        else
+        {
+        cout.width(39); cout << right << i << endl;
+        }
             i += i - 1;
-	}
-	i++;
+    }
+    i++;
     }
     return 0;
 }

@@ -43,7 +43,7 @@ fn to_rpn(input: &mut String){
         rpn_string.push(top);
     }
 
-    println!("you formula results in {}", rpn_string);
+    println!("your formula results in {}", rpn_string);
 
     *input=rpn_string;
 }
@@ -72,7 +72,7 @@ fn calculate(input: &String, list : &mut [u32;4]) -> f32{
             };
         }
     }
-    println!("you formula results in {}",accumulator);
+    println!("your formula results in {}",accumulator);
     accumulator
 }
 
@@ -95,14 +95,14 @@ fn main() {
     to_rpn(&mut input);
     let result = calculate(&input, &mut list);
 
-    if list.iter().any(|&list| list !=10){
+    if list.iter().any(|&num| num != 10) {
+        println!("you didn't use all the numbers");
+    } else {
         println!("and you used all numbers");
         match result {
             24.0 => println!("you won"),
-            _ => println!("but your formulla doesn't result in 24"),
+            _ => println!("but your formula doesn't result in 24"),
         }
-    }else{
-        println!("you didn't use all the numbers");
     }
 
 }

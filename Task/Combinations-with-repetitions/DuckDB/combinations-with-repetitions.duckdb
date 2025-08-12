@@ -1,0 +1,49 @@
+create or replace function choose(lst,k) as table (
+  with recursive cte as (
+    select 0 as ix,
+           lst[0:0] as combination -- i.e. an empty array of the correct type
+    union all
+    select ix+1, combination || [ lst[j] ]
+    from cte, range(ix+1, 1+length(lst) ) _(j)
+    where length(combination) < k
+  )
+  select combination
+  from cte
+  where ix = k
+);
+
+# Assume 0<k<=n are integers
+# `one` determines the type to be used for the result,
+# and thus the precision and when overflow occurs.
+# E.g. 1 or 1::UHUGEINT or 1::DOUBLE
+create or replace function combinations_with_replacement_(n, k, one) as (
+  with recursive cte as (
+   select (n+k-1) as num, 1 as kk, one as result
+   union all
+   select num-1,
+          kk+1,
+          (result * num ) / kk
+   from cte
+   where kk <= k
+  )
+  select last(result order by kk)
+  from cte
+);
+
+create or replace function combinations_with_replacement(n, k) as
+  combinations_with_replacement_(n, k, 1::UHUGEINT);
+
+# The tasks:
+.mode duckbox
+.print Choosing 2:
+from choose(['iced', 'jam', 'plain'], 2);
+
+.headers off
+.mode list
+select
+ format('There are {} ways to pick 3 objects with replacement from 10.',
+        combinations_with_replacement(10,3) );
+
+select
+  format('Using DOUBLE, cwr(100, 50) = {}',
+         combinations_with_replacement_(100,50, 1::DOUBLE) );

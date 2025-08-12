@@ -1,0 +1,63 @@
+### Generic utilities
+
+create or replace function printstring(s, width) as (
+  regexp_replace(s, '(.{1,' || width || '})', '\1' || chr(10), 'g' )
+);
+
+# It is assumed that 1 <= i, j <= length(ary)
+create or replace function swap(ary, i, j) as (
+  case when i = j then ary
+       when i < j then ary[1:i -1] || [ary[j]] || ary[i+1:j-1] || [ary[i]] || ary[j+1:]
+       else            ary[1:j -1] || [ary[i]] || ary[j+1:i-1] || [ary[j]] || ary[i+1:]
+  end
+);
+
+# Generate a pseudo-random integer in range(0,n), i.e. excluding n
+create or replace function rnd(n) as (
+  SELECT floor(random() * n)::BIGINT AS rnd
+);
+
+### A deck of cards as codepoints
+create or replace function deck() as (
+     range(127137, 127148) || range(127149, 127151)  -- Spades
+  || range(127153, 127164) || range(127165, 127167)  -- Hearts
+  || range(127169, 127180) || range(127181, 127183)  -- Diamonds
+  || range(127185, 127196) || range(127197, 127199)  -- Clubs
+);
+
+create or replace function printdeck(deck) as (
+    list_transform(deck,  x -> chr(x::INTEGER)).array_to_string('')
+);
+
+### Knuth Shuffle of any list
+create or replace function knuth_shuffle_table(arr) as table (
+  WITH RECURSIVE cte(a, idx, r) AS (
+    -- Base case: the original array, the index of the last element, and a random index
+    SELECT arr as a, length(arr) AS idx, 1 + rnd(length(arr)) as r
+    UNION ALL
+    -- Recursive case: shuffle the array by swapping the current index with a random element
+    SELECT
+        swap(a, r, idx) AS a,
+        idx - 1 AS idx,
+        1 + rnd(idx - 1) as r
+    FROM cte
+    WHERE idx > 1
+  )
+  SELECT a
+  FROM cte
+  WHERE idx = 1
+  LIMIT 1
+);
+
+# A scalar version of knuth_shuffle_table() specialized for INTEGER[]
+# Currently DuckDB requires the specialization.
+create or replace function knuth_shuffle(arr) as (
+  from knuth_shuffle_table(arr::INTEGER[]) _(a)
+);
+
+### Examples
+select a, knuth_shuffle(a)
+from values ([]), ([10,20]), ([0,10,20,30,40]) as t(a);
+
+.mode list
+select knuth_shuffle(deck()).printdeck().printstring(13);

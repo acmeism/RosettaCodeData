@@ -1,0 +1,108 @@
+### MAPs
+
+# Since the keys of a JSON object must be strings, we'll use as an
+# example of a MAP one which has integer keys:
+
+D create or replace macro amap() as (SELECT MAP( [1,2,3], ['hello', 'world', '!']));
+D select amap() "A Map";
+┌─────────────────────────┐
+│          A Map          │
+│  map(integer, varchar)  │
+├─────────────────────────┤
+│ {1=hello, 2=world, 3=!} │
+└─────────────────────────┘
+
+# Iterating over the keys:
+
+D select unnest(map_keys(amap())) as key;
+┌───────┐
+│  key  │
+│ int32 │
+├───────┤
+│     1 │
+│     2 │
+│     3 │
+└───────┘
+
+# Iterating over the values:
+D select unnest(map_values(amap())) as value;
+┌─────────┐
+│  value  │
+│ varchar │
+├─────────┤
+│ hello   │
+│ world   │
+│ !       │
+└─────────┘
+
+# One way to generate the key-value pairs is as follows:
+D select unnest(map_keys(amap())) as key, unnest(map_values(amap())) as value;
+┌───────┬─────────┐
+│  key  │  value  │
+│ int32 │ varchar │
+├───────┼─────────┤
+│     1 │ hello   │
+│     2 │ world   │
+│     3 │ !       │
+└───────┴─────────┘
+
+# ... or avoiding calling amap() twice:
+
+D select unnest(map_keys(m)) as key, unnest(map_values(m)) as value
+  from (select amap() m);
+┌───────┬─────────┐
+│  key  │  value  │
+│ int32 │ varchar │
+├───────┼─────────┤
+│     1 │ hello   │
+│     2 │ world   │
+│     3 │ !       │
+└───────┴─────────┘
+
+### JSON objects
+
+# For simplicity, we'll the JSON entity `amap()::JSON` as an example object:
+
+D select amap()::JSON as j;
+┌───────────────────────────────────┐
+│                 j                 │
+│               json                │
+├───────────────────────────────────┤
+│ {"1":"hello","2":"world","3":"!"} │
+└───────────────────────────────────┘
+
+# To find the keys of a JSON object as a list,
+# whence one can use iteration over lists:
+
+D select json_keys(amap()::JSON) as keys;
+┌───────────┐
+│   keys    │
+│ varchar[] │
+├───────────┤
+│ [1, 2, 3] │
+└───────────┘
+
+# Similarly, to find the values in a JSON object as a list:
+
+D select list_transform( json_keys(j), k -> (j->>k) ) as list
+  from (select amap()::JSON as j);
+┌───────────────────┐
+│       list        │
+│     varchar[]     │
+├───────────────────┤
+│ [hello, world, !] │
+└───────────────────┘
+
+# Show the key-value pairs as a table:
+D select unnest(json_keys(j)) as key,
+         unnest(list_transform(json_keys(j), k -> (j->>k))) as value
+  from (select amap()::JSON as j);
+
+┌─────────┬─────────┐
+│   key   │  value  │
+│ varchar │ varchar │
+├─────────┼─────────┤
+│ 1       │ hello   │
+│ 2       │ world   │
+│ 3       │ !       │
+└─────────┴─────────┘

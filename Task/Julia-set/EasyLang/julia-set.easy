@@ -6,7 +6,7 @@ for y = 0 to 299 : for x = 0 to 299
    gcolor3 0 0 0
    for iter = 0 to 127
       if zx * zx + zy * zy > 4
-         gcolor3 iter / 16 0 0
+         gcolor3 iter * 5 0 0
          break 1
       .
       h = zx * zx - zy * zy + cx

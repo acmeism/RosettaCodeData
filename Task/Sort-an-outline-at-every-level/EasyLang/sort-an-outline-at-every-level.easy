@@ -73,7 +73,7 @@ func$[] outline .
 .
 proc run dir .
    sortdir = dir
-   call init
+   init
    nextline
    for s$ in outline : print s$
    print ""

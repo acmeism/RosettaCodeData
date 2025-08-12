@@ -1,0 +1,50 @@
+CREATE OR REPLACE FUNCTION parse_int(val) AS (
+  regexp_extract('decimal(12,3)', '[0-9]+')::INTEGER
+);
+
+# DECIMAL(p, s):
+CREATE OR REPLACE FUNCTION d2w(p) AS (
+  if( p <=  4, 16,
+  if( p <=  9, 32,
+  if( p <= 18, 64,
+              128) ))
+);
+
+CREATE OR REPLACE FUNCTION nominal_size_in_bits(val) AS (
+  CASE typeof(val)
+    WHEN 'TINYINT' THEN 8
+    WHEN 'SMALLINT' THEN 16
+    WHEN 'INTEGER' THEN 32
+    WHEN 'BIGINT' THEN 64
+    WHEN 'HUGEINT' THEN 128
+
+    WHEN 'UTINYINT' THEN 8
+    WHEN 'USMALLINT' THEN 16
+    WHEN 'UINTEGER' THEN 32
+    WHEN 'UBIGINT' THEN 64
+    WHEN 'UHUGEINT' THEN 128
+
+    WHEN 'JSON' THEN 8 * length(val::JSON::VARCHAR)
+    WHEN 'UUID' THEN 128
+
+    WHEN 'FLOAT' THEN 32
+    WHEN 'DOUBLE' THEN 64
+    WHEN 'BOOLEAN' THEN 8
+    WHEN 'BIT' THEN (CEIL(LENGTH(val::VARCHAR) / 8.0) * 8)::INTEGER
+    WHEN 'BLOB' THEN octet_length(val::BLOB) * 8
+    ELSE CASE
+           WHEN typeof(val) LIKE 'DECIMAL%'
+           THEN d2w( regexp_extract(typeof(val), '[0-9]+')::INTEGER )
+           WHEN typeof(val) LIKE 'VARCHAR%'
+           THEN 8 * octet_length(encode(val::VARCHAR))
+           ELSE NULL
+           END
+    END
+);
+
+# Example:
+
+select nominal_size_in_bits('1'::BIT) as "1::BIT",
+       nominal_size_in_bits(bitstring('1',7)) as "0000001",
+       nominal_size_in_bits(9.4) as "9.4",
+       nominal_size_in_bits('👨') as "glyph";

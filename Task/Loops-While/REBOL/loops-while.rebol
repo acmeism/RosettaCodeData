@@ -6,5 +6,5 @@ REBOL [
 value: 1024
 while [value > 0][
 	print value
-	value: to-integer value / 2
+	value: to integer! value / 2
 ]

@@ -1,4 +1,4 @@
--- 8 May 2025
+-- 28 Jul 2025
 include Settings
 
 say 'VERIFY DISTRIBUTION UNIFORMITY / CHI-SQUARED TEST'
@@ -12,7 +12,7 @@ call Timer
 exit
 
 Check:
-procedure expose stat. glob.
+procedure expose stat. Memo.
 arg xx
 -- Dataset
 stat. = 0
@@ -60,8 +60,4 @@ say 'Is dataset uniform?' Word('Yes No',(Abs(pv)<csv*sl)+1)
 say
 return
 
-include Functions
-include Special
-include Constants
-include Helper
-include Abend
+include Math

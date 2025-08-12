@@ -1,7 +1,7 @@
 in=: {{n&{ i. m"_}}             NB. index of m in row n of matrix
 F =: {{u"_1 # ]}}               NB. filter by function of items
 'Col Nat Pet Drink Cig'=: i.5   NB. refer to rows by name
-'col nat pet drink cig'=: (A.~i.@!@#)&>;:'BGRWY DEGNS BCDHZ BCMTW BbDpP'  NB. perm matrices
+'col nat pet drink cig'=: (A.~i.@!@#)&>BGRWY`DEGNS`BCDHZ`BCMTW`BbDpP  NB. perm matrices
 P=: ,/col,:"1/nat               NB. join color and nationality matrices
 P=: ('W' in Col = 1+ 'G' in Col)F P               NB. white right of green
 P=: (0 = 'N' in Nat)F P                           NB. Norwegian in first house

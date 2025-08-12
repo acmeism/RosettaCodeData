@@ -8,7 +8,7 @@ proc tree x1 y1 x2 y2 depth .
       y4 = y1 + dx
       x5 = x4 + 0.5 * (dx + dy)
       y5 = y4 + 0.5 * (dx - dy)
-      gcolor3 0.3 0.2 + depth / 18 0.1
+      gcolor3 30 20 + depth * 6 10
       gpolygon [ x1 y1 x2 y2 x3 y3 x4 y4 ]
       gpolygon [ x3 y3 x4 y4 x5 y5 ]
       tree x4 y4 x5 y5 depth + 1

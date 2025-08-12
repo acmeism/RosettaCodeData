@@ -1,6 +1,6 @@
 library(stringr)
 
-unixdict <- read.table("unixdict.txt", col.names="words")
+unixdict <- read.table("http://wiki.puzzlers.org/pub/wordlists/unixdict.txt", col.names="words")
 hexwords <- subset(unixdict, str_detect(words,"^[a-f]{4,}$"))
 hexwords$decimal <- strtoi(hexwords$words, 16L)
 
@@ -15,12 +15,10 @@ dig_root <- function(n){
 }
 
 #Method 2: using modulus operators recursively (can be inaccurate for very large n)
-dig_root <- function(n){
-  if(n>9){
-    return(dig_root(n%%10+dig_root(n%/%10)))
-  }
-  return(n)
-}
+dig_root <- function(n) ifelse(n>9, dig_root(n%%10+dig_root(n%/%10)), n)
+
+#Method 3: using a mathematical formula (probably the fastest way)
+dig_root <- function(n) ifelse(n==0, 0, 1+(n-1)%%9)
 
 hexwords$root <- sapply(hexwords$decimal, dig_root)
 

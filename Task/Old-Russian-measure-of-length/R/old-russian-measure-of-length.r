@@ -3,10 +3,7 @@ russian_units <- c(1066.8, 2.1336, 0.7112, 0.04445)
 names(russian_units) <- c("verst", "sazhen", "arshin", "vershok")
 
 #Expand this vector to a matrix with one column each for values in km, m, and cm
-metric_expand <- function(x){
-  return(cbind(x/1000, x, x*100))
-}
-
+metric_expand <- function(x) cbind(x/1000, x, x*100)
 conv_matrix <- metric_expand(russian_units)
 colnames(conv_matrix) <- c("km", "m", "cm")
 

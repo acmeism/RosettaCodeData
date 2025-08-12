@@ -1,0 +1,85 @@
+#*
+(this is a multiline comment in Nom)
+
+GRAMMAR OR PARSE TOKENS
+  nl* - new line, end of line
+  field* - one csv field
+  fieldset* - a number of fields
+  record* - one record (line) or a set of csv fields
+  recordset* -
+*#
+
+  # using the empty recordset trick
+  begin {
+    add "recordset*"; push;
+  }
+  read;
+  # ignore whitespace outside of quotes
+  " " { while [ ]; clear; .restart }
+  "\n" { put; clear; add "nl*"; push; .reparse }
+  '"' {
+    until '"'; clip; clop; unescape '"';
+    whilenot [\n,];
+    replace "&" "&amp;"; replace "<" "&lt;"; replace ">" "&gt;";
+    put; clear; add "<td>"; get; add "</td>"; put; clear;
+    add "field*"; push;
+    clear; .reparse
+  }
+  "," { clear; }
+
+  whilenot [\n,];
+  replace "&" "&amp;"; replace "<" "&lt;"; replace ">" "&gt;";
+  put; clear; add "<td>"; get; add "</td>"; put; clear;
+  add "field*"; push;
+
+parse>
+  # useful for debugging
+  #add "line "; lines; add " char "; chars; add ": "; print; clear;
+  #add "\n"; unstack; print; clip; stack;
+
+  # 1 token
+  pop;
+  # a record may be terminated by the end of input
+  (eof)."fieldset*" {
+    clear; add "<tr>"; get; add "</tr>\n"; put; clear;
+    add "record*"; push; .reparse
+  }
+  # 2 tokens
+  pop;
+  "recordset*field*" {
+    replace "field" "fieldset"; push; push; .reparse
+  }
+  # ignore blank lines
+  "recordset*nl*" {
+    clip; clip; clip; push; .reparse
+  }
+  "fieldset*field*" {
+    clear; get; ++; get; --; put; clear;
+    add "fieldset*"; push; .reparse
+  }
+  "fieldset*nl*" {
+    clear; add "<tr>\n "; get; add "</tr>\n"; put; clear;
+    add "record*"; push; .reparse
+  }
+  "recordset*record*" {
+    clear; a+; get;
+    ++; get; --; put; clear;
+    # if the count is 1, then this is the 1st
+    # record and should be marked up as a table header.
+    count; "1" {
+      clear; get; replace "tr>" "thead>"; put;
+    }
+    clear; add "recordset*"; push; .reparse
+  }
+
+  (eof) {
+    !"recordset*" {
+      clear; add "[invalid csv]\nThe parse stack was: "; print;
+      clear; unstack; add "\n"; print; quit;
+    }
+    clear;
+    add "<table>\n"; get; add "</table>\n";
+    add "[valid csv!] Found "; count; add " records.\n";
+    print; quit;
+  }
+  push; push;

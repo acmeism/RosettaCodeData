@@ -1,6 +1,7 @@
+-- 28 Jul 2025
 include Settings
 
-say 'POLYNOMIAL HORNER''S RULE - 2 Mar 2025'
+say 'POLYNOMIAL HORNER''S RULE'
 say version
 say
 call Evaluate '6 -4 7 -19',3
@@ -12,10 +13,7 @@ exit
 
 Evaluate:
 arg x,y
-say Plst2form(x) '| x='y '=' Peval(x,y)+0
+say Lst2FormP(x) '| x='y '=' EvalP(x,y)/1
 return
 
-include Polynomial
-include Functions
-include Constants
-include Abend
+include Math

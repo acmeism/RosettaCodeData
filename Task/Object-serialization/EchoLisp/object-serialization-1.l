@@ -1,11 +1,11 @@
 (define (person->string self) (format "%a : person." (person-name self)))
 (define (writer->string self) (format "%a:  writer of %a."
-			(person-name self)
-			(writer-books self)))
+            (person-name self)
+            (writer-books self)))
 (define  (father->string self) (format "%a: father of %a."
-			(person-name self)
-			(map person-name (father-children self))))
-			
+            (person-name self)
+            (map person-name (father-children self))))
+
 ; 'classes' definition, with inheritance.
 ; a writer is a person, too.
 (struct person (name)  #:tostring person->string)

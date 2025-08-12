@@ -1,7 +1,6 @@
 function T(t) return setmetatable(t, {__index=table}) end
 table.range = function(t,n) local s=T{} for i=1,n do s[i]=i end return s end
 table.map = function(t,f) local s=T{} for i=1,#t do s[i]=f(t[i]) end return s end
-table.batch = function(t,n,f) for i=1,#t,n do local s=T{} for j=1,n do s[j]=t[i+j-1] end f(s) end return t end
 
 function isprime(n)
   if n < 2 then return false end
@@ -24,6 +23,7 @@ function goldbach(n)
 end
 
 print("The first 100 G numbers:")
-g = T{}:range(100):map(function(n) return goldbach(2+n*2) end)
-g:map(function(n) return string.format("%2d ",n) end):batch(10,function(t) print(t:concat()) end)
+print(T{}:range(100)
+         :map(function(n) return string.format("%2d"..(n % 10 == 0 and "\n" or " "),goldbach(2+n*2)) end)
+         :concat(""))
 print("G(1000000) = "..goldbach(1000000))

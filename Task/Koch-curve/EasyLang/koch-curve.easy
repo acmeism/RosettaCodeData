@@ -1,5 +1,3 @@
-xp = 0 / 0
-yp = xp
 proc koch x1 y1 x2 y2 iter .
    x3 = (x1 * 2 + x2) / 3
    y3 = (y1 * 2 + y2) / 3
@@ -14,13 +12,11 @@ proc koch x1 y1 x2 y2 iter .
       koch x5 y5 x4 y4 iter
       koch x4 y4 x2 y2 iter
    else
-      if xp = xp : gline xp yp x1 y1
-      gline x1 y1 x3 y3
-      gline x3 y3 x3 y3
-      gline x3 y3 x4 y4
-      gline x4 y4 x2 y2
-      xp = x2
-      yp = y2
+      glineto x1 y1
+      glineto x3 y3
+      glineto x3 y3
+      glineto x4 y4
+      glineto x2 y2
    .
 .
 glinewidth 0.3

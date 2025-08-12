@@ -1,8 +1,10 @@
+-- 28 Jul 2025
 include Settings
-say 'CUBAN PRIMES - 3 Mar 2025'
+numeric digits 20
+
+say 'CUBAN PRIMES'
 say version
 say
-numeric digits 20
 call ShowCubans 1,200,8
 call ShowCubans 100000,,13
 say
@@ -10,7 +12,7 @@ say Format(Time('e'),,3) 'seconds'
 exit
 
 ShowCubans:
-procedure expose glob.
+procedure expose Memo.
 arg x,y,z
 if y = ''
    then y = x
@@ -34,6 +36,4 @@ end
 say
 return
 
-include Numbers
-include Functions
-include Abend
+include Math

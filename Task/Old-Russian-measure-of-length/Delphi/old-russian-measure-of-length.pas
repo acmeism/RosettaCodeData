@@ -10,7 +10,7 @@ const
     'piad', 'fut', 'arshin', 'sazhen', 'versta', 'milia', 'centimeter', 'meter',
     'kilometer');
   convs: array[0..12] of double = (0.0254, 0.254, 2.54, 4.445, 17.78, 30.48,
-    71.12, 213.36, 10668, 74676, 1, 100, 10000);
+    71.12, 213.36, 106680, 746760, 1, 100, 100000);
 
 function ReadInt(): integer;
 var

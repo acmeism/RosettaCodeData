@@ -3,11 +3,11 @@ REBOL [
 	URL: http://rosettacode.org/wiki/Loop/Foreach
 ]
 
-x: [Sork Gun Blues Neds Thirst Fright Catur]
+names: [Sork Gun Blues Neds Thirst Fright Catur]
 
-foreach i x [prin rejoin [i "day "]]  print ""
+foreach name names [prin join name "day "]  print ""
 
-; REBOL also has the 'forall' construct, which provides the rest of
+; Rebol also has the 'forall' construct, which provides the rest of
 ; the list from the current position.
 
-forall x [prin rejoin [x/1 "day "]]  print ""
+forall names [prin join names/1 "day "]  print ""

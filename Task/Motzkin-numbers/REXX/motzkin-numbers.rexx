@@ -1,4 +1,4 @@
--- 22 Mar 2025
+-- 28 Jul 2025
 include Settings
 numeric digits 30
 
@@ -11,7 +11,7 @@ say Time('e')/1 'seconds'
 exit
 
 Range:
-procedure expose motz. glob.
+procedure expose Motz. Memo.
 arg xx yy
 if yy = '' then
    yy = xx
@@ -26,7 +26,4 @@ do i = xx to yy
 end
 return
 
-include Sequences
-include Numbers
-include Functions
-include Abend
+include Math

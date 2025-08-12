@@ -1,0 +1,24 @@
+# Return 'inf'::DOUBLE if the value is too large
+# Assume limits is sorted
+create or replace function classify(x, limits) as (
+  with recursive cte as (
+    select 0 as i, null as found
+    union all
+    select i+1, if(x < limits[1+i], limits[1+i], null) as found
+    from cte
+    where found is null and i < length(limits)
+  )
+  select coalesce(last(found order by i), 'inf'::DOUBLE) from cte
+);
+
+create or replace function bins(data, limits) as table (
+  select value, classify(value, limits)
+  from unnest(data) _(value)
+);
+
+set variable limits  = [23, 37, 43, 53, 67, 83];
+set variable data = [95,21,94,12,99,4,70,75,83,93,52,80,57,5,53,86,65,17,92,83,71,61,54,58,47,
+           16, 8, 9,32,84,7,87,46,19,30,37,96,6,98,40,79,97,45,64,60,29,49,36,43,55];
+
+select histogram(boundary)
+from bins(getvariable('data'), getvariable('limits') ) t(value, boundary);

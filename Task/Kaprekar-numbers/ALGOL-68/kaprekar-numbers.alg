@@ -8,6 +8,9 @@ PROC is kaprekar = ( INT n )BOOL:
      ELIF n = 1 THEN
          # 1 is defined to be a Kaprekar number           #
          TRUE
+     ELIF n MOD 9 > 1 THEN
+         # n can't be Kaprekar if n MOD 9 is not 0 or 1   #
+         FALSE
      ELSE
          # n is a Kaprekar number if the digits of its    #
          # square can be partitioned into two numbers     #

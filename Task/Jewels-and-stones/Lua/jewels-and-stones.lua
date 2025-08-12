@@ -1,8 +1,7 @@
 function count_jewels(s, j)
     local count = 0
     for i=1,#s do
-        local c = s:sub(i,i)
-        if string.match(j, c) then
+        if j:match(s:sub(i,i)) then
             count = count + 1
         end
     end

@@ -1,2 +1,2 @@
-x: pick read/lines request-file/only 7
-either x [print x] [print "No seventh line"]
+line: pick read/lines %file.txt 7
+print any [line "No seventh line"]

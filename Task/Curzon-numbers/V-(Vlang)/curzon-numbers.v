@@ -15,16 +15,12 @@ fn main() {
             d := k*n + 1
             bd := big.integer_from_i64(d)
             if z%bd == zero {
-                if count < 50 {
-                    curzon50 << n
-                }
+                if count < 50 {curzon50 << n}
                 count++
                 if count == 50 {
                     for i in 0..curzon50.len {
                         print("${curzon50[i]:4} ")
-                        if (i+1)%10 == 0 {
-                            println('')
-                        }
+                        if (i+1)%10 == 0 {println("")}
                     }
                     print("\nOne thousandth: ")
                 }
@@ -36,6 +32,6 @@ fn main() {
             n++
             pow *= bk
         }
-        println('')
+        println("")
     }
 }

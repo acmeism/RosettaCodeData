@@ -1,0 +1,49 @@
+# Report whether lst is deranged, i.e. if lst[i] = i for any i
+# The following might achieve short-circuit semantics as it uses `LIMIT 1`
+CREATE OR REPLACE FUNCTION deranged(lst) as (
+   select not exists
+   (from (select unnest(lst) as x, generate_subscripts(lst, 1) as ix)
+    where x = ix
+    limit 1)
+);
+
+CREATE OR REPLACE FUNCTION derangements(lst) as table (
+  WITH RECURSIVE permute(perm, remaining) as (
+    -- base case
+    SELECT
+        [] as perm,
+        lst as remaining
+    UNION ALL
+    -- recursive case: add one element from remaining to perm and remove it from remaining
+    SELECT
+        (perm || [element]) AS perm,
+        list_filter(remaining, x -> x != element) AS remaining
+    FROM (select *, unnest(remaining) AS element
+          FROM permute)
+    where deranged(perm || [element])
+  )
+  SELECT perm
+  FROM permute
+  WHERE length(remaining) = 0
+);
+
+CREATE OR REPLACE FUNCTION subfact(num) as table (
+  with recursive cte(n,psub,sub) as (
+    -- psub means `previous sub`
+    select 0 as n, 1::HUGEINT as psub, 1::HUGEINT as sub
+    union all
+    select
+     n+1 as n,
+     sub as psub,
+     (n * (sub + psub)) as sub
+    from cte
+    where n < num
+  )
+  select n, sub from cte
+  order by n
+) ;
+
+select t.n,
+       sub as subfactorial,
+       (select count(*) from derangements(range(1, 1+t.n))) as count
+from range(0,10) t(n) positional join (from subfact(9)) ;

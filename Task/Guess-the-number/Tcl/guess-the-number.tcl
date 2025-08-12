@@ -6,7 +6,7 @@ while 1 {
     flush stdout
     gets stdin guess
     if {$guess == $target} {
-	break
+	    break
     }
     puts "Your guess was wrong. Try again!"
 }

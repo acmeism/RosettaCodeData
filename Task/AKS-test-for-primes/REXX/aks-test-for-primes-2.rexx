@@ -1,12 +1,12 @@
--- 22 Mar 2025
+-- 28 Jul 2025
 include Settings
+arg p
+if p = '' then
+   p = 10
 
 say 'AKS TEST FOR PRIMES'
 say version
 say
-arg p
-if p = '' then
-   p = 10
 numeric digits Max(10,Abs(p)%3)
 call Combis p
 call Polynomials p
@@ -37,9 +37,9 @@ else
    b = 0
 p = Abs(p); prim. = 0; n = 0
 do i = b to p
-   a = Ppow('1 -1',i)
+   a = PowP('1 -1',i)
    if i < 11 then
-      say '(x-1)^'i '=' Plst2form(Parr2lst())
+      say '(x-1)^'i '=' Lst2FormP(Arr2LstP())
    s = 1
    do j = 2 to poly.0-1
       a = poly.coef.j
@@ -84,8 +84,4 @@ say Format(Time('e'),,3) 'seconds'
 say
 return
 
-include Functions
-include Numbers
-include Polynomial
-include Sequences
-include Abend
+include Math

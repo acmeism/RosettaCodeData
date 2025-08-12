@@ -1,33 +1,59 @@
-# find some narcissistic decimal numbers                                      #
+# print the first 25 narcissistic numbers                                 #
+BEGIN
 
-# returns TRUE if n is narcissitic, FALSE otherwise; n should be >= 0         #
-PROC is narcissistic = ( INT n )BOOL:
-     BEGIN
-        # count the number of digits in n                                     #
-        INT digits := 0;
-        INT number := n;
-        WHILE digits +:= 1;
-              number OVERAB 10;
-              number > 0
-        DO SKIP OD;
-        # sum the digits'th powers of the digits of n                         #
-        INT sum := 0;
-        number  := n;
-        TO digits DO
-            sum +:= ( number MOD 10 ) ^ digits;
-            number OVERAB 10
-        OD;
-        # n is narcissistic if n = sum                                        #
-        n = sum
-     END # is narcissistic # ;
+    [ 0 : 9 ]INT power := ( []INT( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ) )[ AT 0 ];
+    INT count       := 0;
+    INT candidate   := 0;
+    INT prev digits := 0;
+    INT digits      := 0;
 
-# print the first 25 narcissistic numbers                                     #
-INT count := 0;
-FOR n FROM 0 WHILE count < 25 DO
-    IF is narcissistic( n ) THEN
-        # found another narcissistic number                                   #
-        print( ( " ", whole( n, 0 ) ) );
-        count +:= 1
-    FI
-OD;
-print( ( newline ) )
+    FOR d9 FROM 0 TO 2 DO
+        IF d9 > 0 AND digits < 9 THEN digits := 9 FI;
+        FOR d8 FROM 0 TO 9 DO
+            IF d8 > 0 AND digits < 8 THEN digits := 8 FI;
+            FOR d7 FROM 0 TO 9 DO
+                IF d7 > 0 AND digits < 7 THEN digits := 7 FI;
+                FOR d6 FROM 0 TO 9 DO
+                    IF d6 > 0 AND digits < 6 THEN digits := 6 FI;
+                    FOR d5 FROM 0 TO 9 DO
+                        IF d5 > 0 AND digits < 5 THEN digits := 5 FI;
+                        FOR d4 FROM 0 TO 9 DO
+                            IF d4 > 0 AND digits < 4 THEN digits := 4 FI;
+                            FOR d3 FROM 0 TO 9 DO
+                                IF d3 > 0 AND digits < 3 THEN digits := 3 FI;
+                                FOR d2 FROM 0 TO 9 DO
+                                    IF d2 > 0 AND digits < 2 THEN digits := 2 FI;
+                                    FOR d1 FROM 0 TO 9 DO
+
+                                        IF prev digits /= digits THEN
+                                            # number of digits has increased - increase the powers #
+                                            prev digits := digits;
+                                            FOR i FROM 2 TO 9 DO power[ i ] *:= i OD
+                                        FI;
+
+                                        # sum the digits'th powers of the    #
+                                        # digits of candidate                #
+                                        INT sum = power[ d1 ] + power[ d2 ] + power[ d3 ]
+                                                + power[ d4 ] + power[ d5 ] + power[ d6 ]
+                                                + power[ d7 ] + power[ d8 ] + power[ d9 ]
+                                                ;
+                                        IF candidate = sum THEN
+                                            # found another narcissistic decimal number            #
+                                            print( ( " ", whole( candidate, 0 ) ) );
+                                            count +:= + 1;
+                                            IF count >= 25 THEN GOTO done FI
+                                        FI;
+                                        candidate +:= 1
+                                    OD
+                                OD
+                            OD
+                        OD
+                    OD
+                OD
+            OD
+        OD
+    OD;
+done:
+    print( ( newline ) )
+
+END

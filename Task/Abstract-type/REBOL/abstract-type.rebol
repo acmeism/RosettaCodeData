@@ -40,5 +40,5 @@ s: make shape []  s/draw ; Nothing happens.
 print "A box:"
 b: make box [pen: "O" size: 5]  b/draw
 
-print [crlf "A rectangle:"]
+print "^/A rectangle:"
 r: make rectangle [size: 32x5]  r/draw

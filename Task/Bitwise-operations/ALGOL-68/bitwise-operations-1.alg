@@ -1,8 +1,13 @@
-main:(
+BEGIN
+
+  BITS all bits mask = NOT 16r0;
+  LONG BITS long bits mask = LENG all bits mask;
 
   PRIO SLC = 8, SRC = 8; # SLC and SRC are not built in, define and overload them here #
   OP SLC = (BITS b, INT rotate) BITS: b SHL rotate OR b SHR ( bits width - rotate );
-  OP SRC = (BITS b, INT rotate) BITS: b SHR rotate OR b SHL ( bits width - rotate );
+  OP SRC = (BITS b, INT rotate) BITS: b SHR rotate OR SHORTEN (   long bits mask
+                                                              AND ( LENG b SHL ( bits width - rotate ) )
+                                                              );
   # SRC and SRL are non-standard, but versions are built in to ALGOL 68R's standard prelude #
 
   PRIO XOR = 2;
@@ -10,7 +15,10 @@ main:(
   # XOR is non-standard, but a version is built in to ALGOL 68G's standard prelude #
 
   # ALGOL 68 has 5 different ways of representing a BINary BITS - Bases: 2, 4, 8, 16 and flip/flop #
-  FORMAT b5 = $"2r"2r32d," 4r"4r16d," 8r"8r11d," 16r"16r8d," "gl$;
+  FORMAT b5 = IF bits width > 32
+              THEN $"2r"2r64d," 4r"4r32d,l"          8r"8r22d," 16r"16r16d,l"          "gl$
+              ELSE $"2r"2r32d," 4r"4r16d," 8r"8r11d," 16r"16r8d,l"          "gl$
+              FI;
   OP BBBBB = (BITS b)[]BITS: (b,b,b,b,b);
 
   PROC bitwise = (BITS a, BITS b, INT shift)VOID:
@@ -61,4 +69,4 @@ CO
   bitwise(8r377,8r252,5);
   bitwise(16rff,16raa,5)
 END CO
-)
+END

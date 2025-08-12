@@ -15,14 +15,10 @@ proc findroot start stop step .
       x += step
    .
 .
-xp = 0 / 0
-yp = 0
 proc lineto x y .
    x = x * 10 + 50
    y = y * 10 + 50
-   if xp = xp : gline xp yp x y
-   xp = x
-   yp = y
+   glineto x y
 .
 proc drawfunc start stop .
    glinewidth 0.3
@@ -30,6 +26,7 @@ proc drawfunc start stop .
    gline 50 0 50 100
    drawgrid
    x = start
+   gpenup
    while x <= stop
       lineto x f x
       x += 0.1

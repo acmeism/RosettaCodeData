@@ -1,10 +1,6 @@
 main :: IO ()
 main =
-  mapM_
-    print
-    ( fmap
-        ($ [1 .. 10])
-        [ foldr (+) 0,
-          foldr (*) 1
-        ]
-    )
+  mapM_ print $
+    [ foldr (+) 0,
+      foldr (*) 1
+    ] <*> [[1 .. 10]]

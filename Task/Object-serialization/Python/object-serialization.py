@@ -6,14 +6,14 @@
 import pickle
 
 class Entity:
-	def __init__(self):
-		self.name = "Entity"
-	def printName(self):
-		print self.name
+    def __init__(self):
+        self.name = "Entity"
+    def printName(self):
+        print self.name
 
 class Person(Entity): #OldMan inherits from Entity
-	def __init__(self): #override constructor
-		self.name = "Cletus"
+    def __init__(self): #override constructor
+        self.name = "Cletus"
 
 instance1 = Person()
 instance1.printName()

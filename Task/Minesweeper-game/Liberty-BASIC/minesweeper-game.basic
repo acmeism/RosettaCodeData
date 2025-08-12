@@ -1,0 +1,422 @@
+' ===============================
+' MINESWEEPER - Liberty BASIC
+' ===============================
+
+' --- Constants ---
+global cellSize, gridWidth, gridHeight, infoBarHeight
+global totalMines, WindowWidth, WindowHeight, gameStatus$, minesLeft
+
+cellSize = 20
+gridWidth = 18
+gridHeight = 12
+infoBarHeight = 40
+totalMines = 16 + int(rnd(0)*4)
+
+WindowWidth = gridWidth * cellSize + 20
+WindowHeight = gridHeight * cellSize + infoBarHeight + 38
+
+' --- Game State ---
+dim mineGrid(gridWidth, gridHeight)
+dim adjacentCount(gridWidth, gridHeight)
+dim revealed(gridWidth, gridHeight)
+dim marked(gridWidth, gridHeight)
+
+minesLeft = totalMines
+gameStatus$ = "Playing..."
+
+' --- Start Program ---
+call setupGame
+call drawGameWindow
+
+wait
+
+' -------------------------------
+' SUB: Setup the Game
+' -------------------------------
+sub setupGame
+    for x = 1 to gridWidth
+        for y = 1 to gridHeight
+            mineGrid(x, y) = 0
+            adjacentCount(x, y) = 0
+            revealed(x, y) = 0
+            marked(x, y) = 0
+        next
+    next
+
+    minesPlaced = 0
+    while minesPlaced < totalMines
+        rx = int(rnd(0) * gridWidth) + 1
+        ry = int(rnd(0) * gridHeight) + 1
+
+        if mineGrid(rx, ry) = 0 then
+            mineGrid(rx, ry) = 1
+            minesPlaced = minesPlaced + 1
+        end if
+    wend
+
+    for x = 1 to gridWidth
+        for y = 1 to gridHeight
+            if mineGrid(x, y) = 0 then
+                count = 0
+                for dx = -1 to 1
+                    for dy = -1 to 1
+                        nx = x + dx
+                        ny = y + dy
+                        if nx >= 1 and nx <= gridWidth and ny >= 1 and ny <= gridHeight then
+                            if mineGrid(nx, ny) = 1 then
+                                count = count + 1
+                            end if
+                        end if
+                    next
+                next
+                adjacentCount(x, y) = count
+            end if
+        next
+    next
+end sub
+
+' -------------------------------
+' SUB: Draw Game Window
+' -------------------------------
+sub drawGameWindow
+    open "Minesweeper" for graphics_nf_nsb as #game
+    #game "down; fill white"
+    #game "trapclose [quit]"
+    #game "when leftButtonDown [leftClick]"
+    #game "when rightButtonDown [rightClick]"
+
+    call drawInfoBar
+    call drawGrid
+end sub
+
+' -------------------------------
+' SUB: Draw Info Bar
+' -------------------------------
+sub drawInfoBar
+    #game "color black; backcolor white"
+    info$ = "Mines Left: "; minesLeft; "   Status: "; gameStatus$
+    #game "place 10 20"
+    #game "\"; info$
+end sub
+
+' -------------------------------
+' SUB: Draw Grid
+' -------------------------------
+sub drawGrid
+    for x = 1 to gridWidth
+        for y = 1 to gridHeight
+            px = 6 + (x - 1) * cellSize
+            py = infoBarHeight + (y - 1) * cellSize
+
+            #game "color black; backcolor lightgray"
+            #game "place "; px; " "; py
+            #game "boxfilled "; px + cellSize; " "; py + cellSize
+        next
+    next
+end sub
+
+' -------------------------------
+' HANDLER: Left Mouse Click
+' -------------------------------
+[leftClick]
+    if gameStatus$ <> "Playing..." then
+        call askPlayAgain
+        wait
+    end if
+
+    mouseX = MouseX
+    mouseY = MouseY
+
+    gridLeft = 6
+    gridTop = infoBarHeight
+    gridRight = gridLeft + gridWidth * cellSize
+    gridBottom = gridTop + gridHeight * cellSize
+
+    if mouseX >= gridLeft and mouseX < gridRight and _
+       mouseY >= gridTop and mouseY < gridBottom then
+
+        cellX = int((mouseX - gridLeft) / cellSize) + 1
+        cellY = int((mouseY - gridTop) / cellSize) + 1
+
+        call revealCell cellX, cellY
+        call checkWin
+    end if
+
+    wait
+
+' -------------------------------
+' HANDLER: Right Mouse Click
+' -------------------------------
+[rightClick]
+    if gameStatus$ <> "Playing..." then
+        call askPlayAgain
+        wait
+    end if
+
+    mouseX = MouseX
+    mouseY = MouseY
+
+    gridLeft = 6
+    gridTop = infoBarHeight
+    gridRight = gridLeft + gridWidth * cellSize
+    gridBottom = gridTop + gridHeight * cellSize
+
+    if mouseX >= gridLeft and mouseX < gridRight and _
+       mouseY >= gridTop and mouseY < gridBottom then
+
+        cellX = int((mouseX - gridLeft) / cellSize) + 1
+        cellY = int((mouseY - gridTop) / cellSize) + 1
+
+        call toggleMark cellX, cellY
+        call checkWin
+    end if
+
+    wait
+
+' -------------------------------
+' HANDLER: Close Window
+' -------------------------------
+[quit]
+    close #game
+    end
+
+' -------------------------------
+' SUB: Reveal All Mines
+' -------------------------------
+sub revealAllMines
+    for x = 1 to gridWidth
+        for y = 1 to gridHeight
+            if mineGrid(x, y) = 1 then
+                call drawMine x, y
+            end if
+        next
+    next
+end sub
+
+' -------------------------------
+' SUB: Draw Mine Symbol
+' -------------------------------
+sub drawMine x, y
+    px = 6 + (x - 1) * cellSize
+    py = infoBarHeight + (y - 1) * cellSize
+
+    #game "color black; backcolor lightgray"
+    #game "place "; px; " "; py
+    #game "boxfilled "; px + cellSize; " "; py + cellSize
+
+    #game "color red"
+    tx = px + 5
+    ty = py + 15
+    #game "place "; tx; " "; ty
+    #game "\"; "M"
+end sub
+
+' -------------------------------
+' SUB: Reveal All Numbers
+' -------------------------------
+sub revealAllNumbers
+    for x = 1 to gridWidth
+        for y = 1 to gridHeight
+            if mineGrid(x, y) = 1 then
+                call drawMine x, y
+            else
+                call drawNumber x, y, adjacentCount(x, y)
+            end if
+        next
+    next
+end sub
+
+' -------------------------------
+' SUB: Draw Cell Number
+' -------------------------------
+sub drawNumber x, y, n
+    px = 6 + (x - 1) * cellSize
+    py = infoBarHeight + (y - 1) * cellSize
+
+    #game "color black; backcolor white"
+    #game "place "; px; " "; py
+    #game "boxfilled "; px + cellSize; " "; py + cellSize
+
+    if n > 0 then
+        #game "color blue"
+        tx = px + 6
+        ty = py + 15
+        #game "place "; tx; " "; ty
+        #game "\"; str$(n)
+    end if
+end sub
+
+' -------------------------------
+' SUB: Reveal a Single Cell
+' -------------------------------
+sub revealCell x, y
+    if gameStatus$ <> "Playing..." then exit sub
+    if revealed(x, y) = 1 then exit sub
+    if marked(x, y) = 1 then exit sub
+
+    revealed(x, y) = 1
+
+    if mineGrid(x, y) = 1 then
+        call animateBoom x, y
+        gameStatus$ = "BOOM!!!  Game Over!"
+        call revealAllMines
+        call drawInfoBar
+        exit sub
+    end if
+
+    call drawNumber x, y, adjacentCount(x, y)
+
+    if adjacentCount(x, y) = 0 then
+        for dx = -1 to 1
+            for dy = -1 to 1
+                nx = x + dx
+                ny = y + dy
+                if nx >= 1 and nx <= gridWidth and ny >= 1 and ny <= gridHeight then
+                    if revealed(nx, ny) = 0 then
+                        call revealCell nx, ny
+                    end if
+                end if
+            next
+        next
+    end if
+end sub
+
+' -------------------------------
+' SUB: Check for Win Condition
+' -------------------------------
+sub checkWin
+    safeCells = 0
+    revealedSafeCells = 0
+
+    for x = 1 to gridWidth
+        for y = 1 to gridHeight
+            if mineGrid(x, y) = 0 then
+                safeCells = safeCells + 1
+                if revealed(x, y) = 1 then
+                    revealedSafeCells = revealedSafeCells + 1
+                end if
+            end if
+        next
+    next
+
+    if revealedSafeCells = safeCells then
+        gameStatus$ = "You Win!"
+        call drawInfoBar
+        call revealAllMines
+    end if
+end sub
+
+' -------------------------------
+' SUB: Mark or unmark a cell
+' -------------------------------
+sub toggleMark x, y
+    if gameStatus$ <> "Playing..." then exit sub
+    if revealed(x, y) = 1 then exit sub
+
+    if marked(x, y) = 0 then
+        marked(x, y) = 1
+        minesLeft = minesLeft - 1
+        call drawMark x, y
+    else
+        marked(x, y) = 0
+        minesLeft = minesLeft + 1
+        call drawHidden x, y
+    end if
+
+    call drawInfoBar
+end sub
+
+' -------------------------------
+' SUB: Draw a Mark ("?")
+' -------------------------------
+sub drawMark x, y
+    px = 6 + (x - 1) * cellSize
+    py = infoBarHeight + (y - 1) * cellSize
+
+    #game "color black; backcolor yellow"
+    #game "place "; px; " "; py
+    #game "boxfilled "; px + cellSize; " "; py + cellSize
+
+    #game "color red"
+    tx = px + 6
+    ty = py + 15
+    #game "place "; tx; " "; ty
+    #game "\"; "?"
+end sub
+
+' -------------------------------
+' SUB: Draw Hidden Cell
+' -------------------------------
+sub drawHidden x, y
+    px = 6 + (x - 1) * cellSize
+    py = infoBarHeight + (y - 1) * cellSize
+
+    #game "color black; backcolor lightgray"
+    #game "place "; px; " "; py
+    #game "boxfilled "; px + cellSize; " "; py + cellSize
+end sub
+
+' -------------------------------
+' SUB: Animate a Boom
+' -------------------------------
+sub animateBoom x, y
+    #game "flush"
+
+    px = 6 + (x - 1) * cellSize
+    py = infoBarHeight + (y - 1) * cellSize
+
+    centerX = px + cellSize/2
+    centerY = py + cellSize/2
+
+    #game "color red"
+    steps = 12
+
+    #game "backcolor red"
+    for i = 1 to steps
+        radius = i * 2
+        #game "place "; centerX; " "; centerY
+        #game "circlefilled "; radius
+        timer 5, [continueBoom1]
+        wait
+        [continueBoom1]
+        timer 0
+    next
+
+    #game "backcolor white"
+    for i = 1 to steps
+        radius = i * 2
+        #game "place "; centerX; " "; centerY
+        #game "circlefilled "; radius
+        timer 5, [continueBoom2]
+        wait
+        [continueBoom2]
+        timer 0
+    next
+
+    #game "redraw"
+end sub
+
+' -------------------------------
+' SUB: Ask to Play Again
+' -------------------------------
+sub askPlayAgain
+    confirm "Play again?"; answer
+    if answer = 1 then
+        call restartGame
+    else
+        close #game
+        end
+    end if
+end sub
+
+' -------------------------------
+' SUB: Restart the Game
+' -------------------------------
+sub restartGame
+    minesLeft = totalMines
+    gameStatus$ = "Playing..."
+
+    call setupGame
+    call drawGrid
+    call drawInfoBar
+end sub

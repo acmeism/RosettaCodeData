@@ -1,4 +1,4 @@
--- 19 May 2025
+-- 28 Jul 2025
 include Settings
 
 say 'LITERALS FLOATING POINT'
@@ -47,6 +47,4 @@ say Left('Scientific',l) '=' Sci(a)
 say Left('Engineering',l)  '=' Eng(a)
 exit
 
-include Functions
-include Helper
-include Abend
+include Math

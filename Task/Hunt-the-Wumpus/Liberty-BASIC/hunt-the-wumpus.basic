@@ -1,0 +1,272 @@
+' ============================================
+' HUNT THE WUMPUS - Liberty BASIC (Text Version)
+' Text-only game played in Mainwin
+' ============================================
+
+' --- Global Variables ---
+dim rooms(20, 3)   ' Adjacency map
+dim hazard(20)     ' 0=nothing, 1=Wumpus, 2=Bat, 3=Pit
+
+global playerRoom, arrowsLeft, gameOver, wRoom
+
+playerRoom = 0
+arrowsLeft = 5
+gameOver = 0
+
+call setupMap
+call placeHazards
+
+print "WELCOME TO HUNT THE WUMPUS!"
+print "==========================="
+print "You can enter commands like M10 to move to room 10"
+print "  or S18 to shoot into room 18.  Of couse commands"
+print "  like M, S and Q are permitted as well.  Good luck"
+print ""
+call mainLoop
+end
+
+' ----------------------------
+sub setupMap
+    ' Each room has 3 connections
+    ' Standard dodecahedron layout
+
+    data 2,5,8
+    data 1,3,10
+    data 2,4,12
+    data 3,5,14
+    data 1,4,6
+    data 5,7,15
+    data 6,8,17
+    data 1,7,9
+    data 8,10,18
+    data 2,9,11
+    data 10,12,19
+    data 3,11,13
+    data 12,14,20
+    data 4,13,15
+    data 6,14,16
+    data 15,17,20
+    data 7,16,18
+    data 9,17,19
+    data 11,18,20
+    data 13,16,19
+
+    for i = 1 to 20
+        for j = 1 to 3
+            read a
+            rooms(i,j) = a
+        next
+    next
+end sub
+
+' ----------------------------
+sub placeHazards
+    for i = 1 to 20
+        hazard(i) = 0
+    next
+
+    wRoom = getEmptyRoom(0)
+    hazard(wRoom) = 1
+
+    for i = 1 to 2
+        bRoom = getEmptyRoom(0)
+        hazard(bRoom) = 2
+    next
+
+    for i = 1 to 2
+        pRoom = getEmptyRoom(0)
+        hazard(pRoom) = 3
+    next
+
+    playerRoom = getEmptyRoom(0)
+end sub
+
+' ----------------------------
+function getEmptyRoom(avoid)
+    do
+        room = int(rnd(0)*20) + 1
+    loop until hazard(room)=0 and room <> avoid
+    getEmptyRoom = room
+end function
+
+' ----------------------------
+sub mainLoop
+    while gameOver = 0
+        call describeHazards
+        print "You are in room "; playerRoom
+        print "Tunnels lead to "; rooms(playerRoom,1); ", "; rooms(playerRoom,2); ", "; rooms(playerRoom,3)
+        print "Arrows left: "; arrowsLeft
+
+        input "Shoot, Move or Quit (S/M/Q)? "; a$
+        a$ = upper$(trim$(a$))
+
+        if len(a$) > 1 then
+            'assume characters 2 and 3 are part of a number
+            num = val(mid$(a$,2))
+            if num > 20 then num = 0
+            a$ = left$(a$,1)
+        end if
+
+        select case a$
+            case "S"
+                call shoot num
+            case "M"
+                call move num
+            case "Q"
+                Print "You have decided to quit."
+                gameOver = 1
+            case else
+                print "Invalid choice."
+        end select
+    wend
+
+    input "Press Enter to quit the game"; dummy$
+end sub
+
+' ----------------------------
+sub describeHazards
+    for i = 1 to 3
+        adj = rooms(playerRoom,i)
+        select case hazard(adj)
+            case 1
+                print "You smell something terrible nearby."
+            case 2
+                print "You hear a rustling."
+            case 3
+                print "You feel a cold wind blowing from a nearby cavern."
+        end select
+    next
+end sub
+
+' ----------------------------
+sub move num
+
+    if num = 0 then
+        input "Which room do you want to enter? "; n
+        if n < 1 or n > 20 then
+            print "That's not a valid room!"
+            exit sub
+        end if
+    else
+        n = num
+    end if
+
+    adjacent = 0
+    for i = 1 to 3
+        if rooms(playerRoom,i) = n then adjacent = 1
+    next
+
+    if adjacent = 0 then
+        print "You can't go there directly!"
+        exit sub
+    end if
+
+    playerRoom = n
+    select case hazard(playerRoom)
+        case 1
+            print "You walked into the Wumpus room!"
+            print "The Wumpus eats you. GAME OVER!"
+            gameOver = 1
+        case 2
+            print "A giant bat grabs you!"
+            playerRoom = getEmptyRoom(0)
+            print "The bat drops you into room "; playerRoom
+            call checkNewRoom
+        case 3
+            print "You fall into a bottomless pit!"
+            print "GAME OVER!"
+            gameOver = 1
+        case else
+            ' safe
+    end select
+end sub
+
+' ----------------------------
+sub checkNewRoom
+    select case hazard(playerRoom)
+        case 1
+            print "The bat dropped you into the Wumpus room!"
+            print "The Wumpus eats you. GAME OVER!"
+            gameOver = 1
+        case 3
+            print "The bat dropped you into a pit!"
+            print "GAME OVER!"
+            gameOver = 1
+        case 2
+            print "Another bat grabs you!"
+            playerRoom = getEmptyRoom(0)
+            print "The bat drops you into room "; playerRoom
+            call checkNewRoom
+        case else
+            ' safe
+    end select
+end sub
+
+' ----------------------------
+sub shoot num
+
+    if num = 0 then
+    input "Shoot into which room? "; t
+        if t < 1 or t > 20 then
+            print "That's not a valid room!"
+            exit sub
+        end if
+    else
+        t = num
+    end if
+
+    adjacent = 0
+    for i = 1 to 3
+        if rooms(playerRoom,i) = t then adjacent = 1
+    next
+
+    if adjacent = 0 then
+        print "You can't shoot there directly!"
+        exit sub
+    end if
+
+    arrowsLeft = arrowsLeft - 1
+
+    if hazard(t) = 1 then
+        print "Your arrow flies true... and you hear a terrible scream!"
+        print "You have slain the Wumpus! YOU WIN!"
+        gameOver = 1
+        exit sub
+    else
+        print "You missed."
+        wWake = int(rnd(0)*100) + 1
+        if wWake <= 75 then
+            call moveWumpus
+        end if
+        if playerRoom = wRoom then
+            print "The Wumpus has moved into your room!"
+            print "It eats you. GAME OVER!"
+            gameOver = 1
+        end if
+    end if
+
+    'check to see if you are out of arrows
+    if arrowsLeft <= 0 then
+        print "You're out of arrows!"
+        print "GAME OVER - You have lost."
+        gameOver = 1
+        exit sub
+    end if
+
+end sub
+
+' ----------------------------
+sub moveWumpus
+    oldRoom = wRoom
+    found = 0
+    for tries = 1 to 10
+        adj = rooms(oldRoom, int(rnd(0)*3)+1)
+        if hazard(adj) = 0 and adj <> playerRoom then
+            hazard(oldRoom) = 0
+            hazard(adj) = 1
+            wRoom = adj
+            found = 1
+            exit for
+        end if
+    next
+end sub

@@ -14,10 +14,10 @@ foreach word $wordlist {
 # Find where a reversal exists
 foreach word $wordlist {
     if {[info exists reversed($word)] && $word ne [string reverse $word]} {
-	# Remove to prevent pairs from being printed twice
-	unset reversed([string reverse $word])
-	# Add to collection of pairs
-	set pairs($word/[string reverse $word]) "dummy"
+  # Remove to prevent pairs from being printed twice
+  unset reversed([string reverse $word])
+  # Add to collection of pairs
+  set pairs($word/[string reverse $word]) "dummy"
     }
 }
 set pairlist [array names pairs] ;# NB: pairs are in *arbitrary* order

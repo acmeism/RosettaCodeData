@@ -8,7 +8,7 @@ x = range(-1.0, 1.0, length=d+1)
 y = range(-h/d, h/d, length=h+1)
 
 C = 2.0 .* (x' .+ y .* im) .- 0.5
-Z, S = zero(C), zeros(size(C))
+S, Z = zeros(size(C)), zero(C)
 
 animation = Animation()
 smoothing = Animation()

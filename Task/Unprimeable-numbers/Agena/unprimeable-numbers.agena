@@ -1,0 +1,101 @@
+scope # find unprimeable numbers - numbers which can't be made into a prime by changing one digit
+
+    local constant maxNumber := 9_999_999;        # maximum number we will consider
+
+    # sieve the primes up to maxNumber
+    local prime; create register prime( maxNumber );
+    prime[ 1 ] := false;
+    for sPos from 2 to maxNumber do prime[ sPos ] := true od;
+    for sPos from 2 to entier( sqrt( maxNumber ) ) do
+        if prime[ sPos ] then
+            for p from sPos * sPos to maxNumber by sPos do
+                prime[ p ] := false
+            od
+        fi
+    od;
+
+    # returns true if n is unprimeable, false otherwise
+    local procedure isUnprimeable( n :: number ) :: boolean
+        local result := false;
+        if   n < 100    then return false
+        elif prime[ n ] then return false
+        else
+            # need to try changing a digit
+            local constant lastDigit     := n mod 10;
+            local constant leadingDigits := n - lastDigit;
+            if   prime[ leadingDigits + 1 ] then return false
+            elif prime[ leadingDigits + 3 ] then return false
+            elif prime[ leadingDigits + 7 ] then return false
+            elif prime[ leadingDigits + 9 ] then return false
+            elif lastDigit = 2 or lastDigit = 5 then
+                # the final digit is 2 or 5, changing the other digits can't make a prime
+                # unless there is only one other digit which we can change to 0
+                local v, dc := leadingDigits \ 10, 1;
+                while v > 0 do
+                    if v mod 10 <> 0 then dc +:= 1 fi;
+                    v \:= 10
+                od;
+                return dc <> 2
+            elif not odd lastDigit then
+                return true # last digit is even, changing the other digits won't make a prime
+            else
+                # last digit is 1, 3, 7, 9: must try changing the other digits
+                local m10, r10 := 10, 100;
+                result := true;
+                while result and n > r10 do
+                   local constant base := ( ( n \ r10 ) * r10 ) + ( n mod m10 );
+                   for i from 0 by m10 while result and i < r10 do
+                       result := not prime[ base + i ]
+                   od;
+                   m10 *:= 10;
+                   r10 *:= 10
+                od;
+                if result then
+                    # still not unprimeable, try changing the first digit
+                    local constant base := n mod m10;
+                    for i from 0 by m10 while result and i < r10 do
+                        result := not prime[ base + i ]
+                    od
+                fi
+            fi
+        fi;
+        return result
+    end
+
+    # returns a string representation of n with commas, n must be an integer
+    local procedure commatise( n :: number ) :: string
+        local constant nStr    := tostring( abs n );
+        local constant signStr := if n < 0 then "-" else "" fi;
+        local constant cStr    := strings.reverse( strings.gsub( strings.reverse( nStr ), "%d%d%d", "%1," ) );
+        return signStr & strings.gsub( cStr, "^,", "" )
+    end;
+
+    scope # find unprimeable numbers
+        local uCount, dCount := 0, 0;
+        local firstUnprimeable := reg( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ); # note: indexed from 1
+        for i from 100 while i < size prime and dCount < 10 do
+            if isUnprimeable( i ) then
+                uCount +:= 1;
+                if   uCount =   1 then
+                    printf( "First 35 unprimeable numbers: %d", i )
+                elif uCount <= 35 then
+                    printf( " %d", i )
+                elif uCount = 600 then
+                    printf( "\n600th unprimeable number: %s", commatise( i ) )
+                fi;
+                # need to add 1 to the final digit because firstUnprimeable is indxed from 1
+                local constant finalDigitPlus1 := ( i mod 10 ) + 1;
+                if firstUnprimeable[ finalDigitPlus1 ] = 0 then
+                    # first unprimeable number with this final digit
+                    dCount +:= 1;
+                    firstUnprimeable[ finalDigitPlus1 ] := i
+                fi
+            fi
+        od;
+        # show the first unprimeable number that ends with each digit
+        print();
+        for i from 0 to size firstUnprimeable - 1 do
+            printf( "First unprimeable number ending in %d: %s\n", i, commatise( firstUnprimeable[ i + 1 ] ) )
+        od
+    end
+end

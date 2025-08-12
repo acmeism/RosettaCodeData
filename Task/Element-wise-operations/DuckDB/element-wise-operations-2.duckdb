@@ -1,0 +1,58 @@
+# elementwise operation
+create or replace function mm_op(TableA, op, TableB) as table (
+  with TA as (from query_table(TableA)),
+       TB as (from query_table(TableB)),
+       tuple as
+        (select TA.i as i, TA.j as j,
+          ((select last(value) from TA where i=TB.i and j = TB.j),
+           (select last(value) from TB where i=TA.i and j = TA.j)) as value
+         from TA inner join TB
+         on TA.i = TB.i and TA.j = TB.j)
+  select i, j,
+         case op when '+' then value[1] + value[2]
+                 when '-' then value[1] - value[2]
+                 when '*' then value[1] * value[2]
+                 when '/' then value[1] / value[2]
+                 when '^' then value[1] ^ value[2]
+         else error('unknown op: ' || op)
+         end as value
+  from tuple
+);
+
+# scalar/matrix elementwise addition, preserving all columns
+create or replace function sm_add(x, TableA) as table (
+  select COLUMNS(* EXCLUDE(value)), (x + value) as value
+  from query_table(TableA)
+);
+
+# scalar/matrix elementwise multiplication, preserving all columns
+create or replace function sm_multiply(x, TableA) as table (
+  select COLUMNS(* EXCLUDE(value)), (x * value) as value
+  from query_table(TableA)
+);
+
+create or replace function matrix_elementwise_power(TableA, x) as table (
+  select COLUMNS(* EXCLUDE(value)), (value ^ x) as value
+  from query_table(TableA)
+);
+
+### Examples
+create or replace table A (i integer, j integer, value float );
+insert into A values
+  (1, 1, 1),
+  (1, 2, 2),
+  (1, 3, 3),
+  (2, 1, 2),
+  (2, 2, 5),
+  (2, 3, 7);
+
+create or replace table B (i integer, j integer, value float );
+insert into B values
+  (1, 1, 2),
+  (1, 2, 4),
+  (1, 3, 8),
+  (2, 1, 1),
+  (2, 2, 5),
+  (2, 3, 10);
+
+from mm_op('A', '+', 'B');

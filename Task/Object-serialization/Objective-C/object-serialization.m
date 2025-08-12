@@ -102,17 +102,17 @@ int main()
 
     // let us create a fantasy animal
     Animal *anAnimal = [[Animal alloc]
-	         initWithName: @"Eptohippos"
-	         andLegs: 7
-	        ];
+             initWithName: @"Eptohippos"
+             andLegs: 7
+            ];
     // for some reason an Eptohippos is not an horse with 7 legs,
     // and it is not a mammal, of course...
 
     // let us create a fantasy mammal (which is an animal too)
     Mammal *aMammal = [[Mammal alloc]
-	        initWithName: @"Mammaluc"
-	        hasFur: YES
-	       ];
+            initWithName: @"Mammaluc"
+            hasFur: YES
+           ];
     // let us add some eaten stuff...
     [aMammal addEatenThing: @"lamb"];
     [aMammal addEatenThing: @"table"];
@@ -129,7 +129,7 @@ int main()
     // now let us store the objects...
     NSMutableData *data = [[NSMutableData alloc] init];
     NSKeyedArchiver *arch = [[NSKeyedArchiver alloc]
-			      initForWritingWithMutableData: data];
+                  initForWritingWithMutableData: data];
     [arch encodeObject: anAnimal forKey: @"Eptohippos"];
     [arch encodeObject: aMammal forKey: @"Mammaluc"];
     [arch finishEncoding];
@@ -137,9 +137,9 @@ int main()
 
     // now we want to retrieve the saved objects...
     NSData *ldata = [[NSData alloc]
-		       initWithContentsOfFile: @"objects.dat"];
+               initWithContentsOfFile: @"objects.dat"];
     NSKeyedUnarchived *darch = [[NSKeyedUnarchiver alloc]
-	                         initForReadingWithData: ldata];
+                             initForReadingWithData: ldata];
     Animal *archivedAnimal = [darch decodeObjectForKey: @"Eptohippos"];
     Mammal *archivedMammal = [darch decodeObjectForKey: @"Mammaluc"];
     [darch finishDecoding];

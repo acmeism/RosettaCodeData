@@ -1,15 +1,15 @@
+-- 28 Jul 2025
 include Settings
-
-say 'NON-DECIMAL RADICES - 11 Mar 2025'
-say version
-say
 arg xx
 if xx = '' then
    xx = 255
+
+say 'NON-DECIMAL RADICES CONVERT'
+say version
+say
 do n = 2 to 36
-   say xx 'decimal =' Basenn(xx,n) 'base' n '=' Base10(Basenn(xx,n),n) 'decimal'
+   say xx 'decimal =' BaseNN(xx,n) 'base' n '=' Base10(BaseNN(xx,n),n) 'decimal'
 end
 exit
 
-include Functions
-include Abend
+include Math

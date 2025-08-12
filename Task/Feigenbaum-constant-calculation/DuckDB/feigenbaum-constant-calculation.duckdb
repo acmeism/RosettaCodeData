@@ -1,0 +1,46 @@
+# Helper function: compute (x, y)
+create or replace function xy(i, a) as table (
+  with recursive cte1(k,y,x) as (
+     select 0 as k, 0.0::DOUBLE as y, 0.0::DOUBLE as x   -- 0 or 1
+     union all
+     select k+1 as k, (1.0 - 2.0 * x * y) as y, (a - (x * x) ) as x
+     from cte1
+     where k < power(2, i)
+  )
+  select last(x order by k) as x, last(y order by k) as y from cte1
+);
+
+create or replace function compute_a(a0, i, jmax) as (
+ with recursive cte2(j, a) as (
+   select 0 as j, a0::DOUBLE as a
+   union all
+   (with xy as (from xy(i, a) )
+    select 1+j as j, (a - (x / y) ) as a
+    from cte2, xy
+    where j <= jmax
+   )
+ )
+ select last(a order by j) as a
+ from cte2
+);
+
+create or replace function feigenbaum_delta(imax, jmax) as table (
+  with recursive cte(i, d, a1, a2) as (
+     select 1 as i, 3.2::DOUBLE as d, 1.0::DOUBLE as a1, 0.0::DOUBLE as a2
+     union all
+     ( with atable as (select compute_a((a1 + (a1 - a2) / d), i+1, jmax) as a from cte )
+       select i+1 as i,
+              (a1 - a2) / (atable.a - a1) as d,
+              atable.a as a1,
+              a1 as a2
+       from cte, atable
+       where i < imax
+     )
+   )
+   select i, d as "δ"
+   from cte
+   order by i
+);
+
+.print Feigenbaum's delta constant incremental calculation:
+from feigenbaum_delta(13, 10);

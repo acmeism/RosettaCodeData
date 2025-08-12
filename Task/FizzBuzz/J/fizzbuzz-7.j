@@ -1,6 +1,6 @@
-CRT0=: 2 : ' (, 0 = +./)@(0 = m | ]) ;@# n , <@": '
-NB. Rather (, 0 = +./) than (, +:/) because designed for
-NB. 3 5 7 CRT0 (;:'Chinese Remainder Period') "0 >: i. */3 5 7
-FizzBuzz=: 3 5 CRT0 (;:'Fizz Buzz')
+'`f   b   fb'  =: ('Fizz'"_) ` ('Buzz'"_) ` (f , b)
+'`cm3 cm5 cm15'=: (3&|)      ` (5&|)      ` (15&|)  (0&=@)
+FizzBuzz=: ": ` f @. cm3 ` b @. cm5 ` fb @. cm15  NB. also:
+FizzBuzz=: ": ` f @. cm3 ` b @. cm5 ` (f,b) @. (cm3 *. cm5)
 
 FizzBuzz"0 >: i.100

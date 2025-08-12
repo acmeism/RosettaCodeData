@@ -26,4 +26,4 @@ function antiprimes(goal)
 end
 
 -- display the antiprimes
-oo.write( table.concat( antiprimes( 20 ), " " ) )
+io.write( table.concat( antiprimes( 20 ), " " ) )

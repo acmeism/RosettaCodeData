@@ -3,7 +3,7 @@ use URI::Escape;
 use JSON::Fast;
 use Sort::Naturally;
 
-my $client = HTTP::UserAgent.new;
+my $client = HTTP::UserAgent.new(:useragent('Rosetta Code Task bot'));
 
 my $url = 'https://rosettacode.org/w';
 

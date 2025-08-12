@@ -27,10 +27,10 @@ proc cycle now cyc t$ col .
    gcolor col
    gtext 4 cyc * 1.2 - 20 t$
    glinewidth 0.5
+   gpenup
    for d = now - 20 to now + 20
-      yp = y
       y = 50 + 20 * sin (360 * d / cyc)
-      if x > 0 : gline (x - 2.5) yp x y
+      glineto x y
       x += 2.5
    .
 .

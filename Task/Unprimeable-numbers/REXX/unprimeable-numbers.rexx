@@ -1,4 +1,4 @@
--- 22 Mar 2025
+-- 3 Aug 2025
 include Settings
 
 say 'UNPRIMEABLE NUMBERS'
@@ -89,6 +89,4 @@ say '-----------'
 say Format(Time('e'),,3) 'seconds'; say
 return
 
-include Functions
-include Sequences
-include Abend
+include Math

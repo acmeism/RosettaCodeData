@@ -1,9 +1,6 @@
-function luc_seeder{T<:Integer}(n::T)
-    a = -ones(BigInt, n)
-    a[end] = big(n)
-    return a
-end
-
-function luc{T<:Integer}(n::T, k::T)
-    NFib(n, k, luc_seeder)
+function luc_rc(n::Integer)
+    a = zeros(BigInt, n)
+    a[1] = 3
+    a[2] = -1
+    NFib(a, n)
 end

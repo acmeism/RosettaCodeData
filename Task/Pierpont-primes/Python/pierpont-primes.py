@@ -44,8 +44,8 @@ def pierpont(ulim, vlim, first):
     p2 = 1
     p3 = 1
     pp = []
-    for v in xrange(vlim):
-        for u in xrange(ulim):
+    for v in range(vlim):
+        for u in range(ulim):
             p = p2 * p3
             if first:
                 p = p + 1
@@ -60,19 +60,19 @@ def pierpont(ulim, vlim, first):
     return pp
 
 def main():
-    print "First 50 Pierpont primes of the first kind:"
+    print("First 50 Pierpont primes of the first kind:")
     pp = pierpont(120, 80, True)
-    for i in xrange(50):
-        print "%8d " % pp[i],
+    for i in range(50):
+        print("%8d " % pp[i], end="")
         if (i - 9) % 10 == 0:
-            print
-    print "First 50 Pierpont primes of the second kind:"
+            print("")
+    print("First 50 Pierpont primes of the second kind:")
     pp2 = pierpont(120, 80, False)
-    for i in xrange(50):
-        print "%8d " % pp2[i],
+    for i in range(50):
+        print ("%8d " % pp2[i], end="")
         if (i - 9) % 10 == 0:
-            print
-    print "250th Pierpont prime of the first kind:", pp[249]
-    print "250th Pierpont prime of the second kind:", pp2[249]
+            print("")
+    print("250th Pierpont prime of the first kind:", pp[249])
+    print("250th Pierpont prime of the second kind:", pp2[249])
 
 main()

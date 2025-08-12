@@ -2,7 +2,7 @@ BEGIN # find some Jacobsthal and related Numbers                             #
     INT max jacobsthal = 29;        # highest Jacobsthal number we will find #
     INT max oblong     = 20; # highest Jacobsthal oblong number we will find #
     INT max j prime    = 20;     # number of Jacobsthal prinmes we will find #
-    PR precision 200 PR                 # set the precision of LONG LONG INT #
+    PR precision 250 PR                 # set the precision of LONG LONG INT #
     PR read "primes.incl.a68" PR                   # include prime utilities #
     [ 0 : max jacobsthal ]LONG INT j;         # will hold Jacobsthal numbers #
     [ 0 : max jacobsthal ]LONG INT jl;  # will hold Jacobsthal-Lucas numbers #

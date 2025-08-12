@@ -4,7 +4,7 @@ function stoogesort!(a::Array, i::Int=1, j::Int=length(a))
     end
 
     if (j - i) > 1
-        t = round(Int, (j - i + 1) / 3)
+        t = (j - i + 1) ÷ 3
         a = stoogesort!(a, i,     j - t)
         a = stoogesort!(a, i + t, j)
         a = stoogesort!(a, i,     j - t)

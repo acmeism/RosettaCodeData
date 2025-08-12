@@ -1,6 +1,6 @@
 library(stringi)
 
-unixdict <- read.table("unixdict.txt", col.names="forwards")
+unixdict <- read.table("http://wiki.puzzlers.org/pub/wordlists/unixdict.txt", col.names="forwards")
 unixdict$backwards <- stri_reverse(unixdict$forwards)
 
 #Remove all actual palindromes, as we do not want those

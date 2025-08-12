@@ -40,7 +40,7 @@ generator foreach x [squares] y [cubes] {
 
     lappend acc $y
 
-    if { ! [expre {$x in $acc}] } { lappend comm $x }
+    if { ! [expr {$x in $acc}] } { lappend comm $x }
 
     if { [llength $comm] > $limit } {break}
 }

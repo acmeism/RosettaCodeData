@@ -10,8 +10,8 @@ var units = [
 
 var convs = [
     0.0254, 0.254, 2.54, 4.445, 17.78, 30.48,
-    71.12, 213.36, 10668, 74676,
-    1, 100, 10000
+    71.12, 213.36, 106680, 746760,
+    1, 100, 100000
 ]
 
 while (true) {
@@ -39,7 +39,7 @@ while (true) {
     System.print("\nThe equivalent in the remaining units is:\n")
     i = 0
     for (u in units) {
-        if (i != unit) Fmt.print(" $10s : $15.8g", u, value*convs[unit]/convs[i])
+        if (i != unit) Fmt.print(" $10s : $16.8g", u, value*convs[unit]/convs[i])
         i = i + 1
     }
     System.print()

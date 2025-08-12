@@ -1,4 +1,4 @@
-BEGIN # read a sequence of integers, terminated by 99999 and outpout their average #
+BEGIN # read a sequence of integers, terminated by 99999 and output their average #
     INT end value       = 99999;
     INT sum            := 0;
     INT count          := 0;

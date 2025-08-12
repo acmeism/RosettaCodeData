@@ -1,6 +1,8 @@
+# Solution for https://rosettacode.org/wiki/Arbitrary-precision_integers_(included)
 import bigints
+import std/math
 
-var x = 5.pow 4.pow 3.pow 2
+var x = 5.initBigInt.pow 4 ^ (3 ^ 2)
 var s = $x
 
 echo s[0..19]

@@ -1,0 +1,43 @@
+# pretty-print the list returned by list_extract_range()
+# being mindful of the 'at least two' rule:
+create or replace function list_range_pp(state) as (
+  list_transform(state,
+     x -> if( length(x)=2,
+              if (x[1] = x[2]::HUGEINT - 1,
+                 format('{},{}', x[1], x[2]),
+                 format('{}-{}', x[1], x[2])),
+              format('{}', x[1]) ) )
+     .array_to_string(',')
+);
+
+create or replace function list_extract_range(lst) as table (
+  with recursive cte as (
+    -- `state` is a list of lists in which [n] represents an integer and [start, end] a range
+    select 1 as ix,
+           [lst[0:0][0:0]][0:0] as state -- i.e. [] of the appropriate type
+    union all
+    select ix+1 as ix,
+           if (length(state) = 0,
+              [[ lst[ix] ]],
+              if (length(state[-1]) = 2,
+                 if (state[-1][2] + 1 = lst[ix],
+                    state[0:-2] || [[ state[-1][1], lst[ix]]],
+                    state || [[ lst[ix]] ]),
+                 if ( state[-1][1] + 1 = lst[ix],
+                    state[0:-2] || [[ state[-1][1], lst[ix]]],
+                    state || [[ lst[ix] ]] ) ) ) as state
+    from cte
+    where ix <= length(lst))
+  select last(state order by ix).list_range_pp() as range
+  from cte
+);
+
+### Examples
+from list_extract_range( [
+             0, 1, 2, 4, 6, 7, 8, 11, 12, 14,
+            15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+            25, 27, 28, 29, 30, 31, 32, 33, 35, 36,
+            37, 38, 39
+  ]);
+
+from list_extract_range( [1.0, 2.0, 3.0, 10.0, 11.0] );

@@ -22,13 +22,18 @@ end
 -- print the report
 print("There are " .. #semordnilaps .. " semordnilaps in " .. dictfile .. ".  Here are " .. sample_size .. ":")
 
-math.randomseed( os.time() )
-for i = 1, sample_size do
-  local j
-  repeat
-    j = math.random(1,#semordnilaps)
-  until semordnilaps[j]
-  local f, r = unpack(semordnilaps[j])
-  semordnilaps[j] = nil
-  print(f .. " -> " .. r)
+do
+  -- unpack is in table in Lua 5.4
+  local unpack = table.unpack or unpack
+
+  math.randomseed( os.time() )
+  for i = 1, sample_size do
+    local j
+    repeat
+      j = math.random(1,#semordnilaps)
+    until semordnilaps[j]
+    local f, r = unpack(semordnilaps[j])
+    semordnilaps[j] = nil
+    print(f .. " -> " .. r)
+  end
 end

@@ -1,4 +1,4 @@
--- 12 Apr 2025
+-- 28 Jul 2025
 include Settings
 numeric digits 30
 
@@ -71,8 +71,4 @@ do i = 3 by 2 to Isqrt(xx)
 end
 return 1
 
-include Sequences
-include Numbers
-include Functions
-include Constants
-include Abend
+include Math

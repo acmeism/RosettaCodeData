@@ -12,7 +12,7 @@ random/seed now
 
 ; Create array and fill with random numbers, range 1..20.
 soup: array [10 10]
-repeat row soup [forall row [row/1: random 20]]
+foreach row soup [forall row [row/1: random 20]]
 
 print "Loop break using state variable:"
 done: no

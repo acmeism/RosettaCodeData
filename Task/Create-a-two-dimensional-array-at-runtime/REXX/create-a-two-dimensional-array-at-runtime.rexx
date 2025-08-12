@@ -1,33 +1,110 @@
-/*REXX program  allocates/populates/displays  a two-dimensional array.  */
-call bloat                   /*the BLOAT procedure does all allocations.*/
-                             /*no more array named   @   at this point. */
-exit                         /*stick a fork in it, we're all done honey.*/
-/*─────────────────────────BLOAT subroutine─────────────────────────────*/
-bloat: procedure;  say       /*"PROCEDURE"  makes this a ··· procedure. */
-say 'Enter two positive integers (a 2-dimensional array will be created).'
-pull n m .                   /*elements are allocated as they're defined*/
-                             /*N and M should be verified at this point.*/
-@.=' · '                     /*Initial value for all  @  array elements,*/
-                             /*this ensures  every  element has a value.*/
-  do j    =1  for n          /*traipse through the first  dimension  [N]*/
-      do k=1  for m          /*   "       "     "  second     "      [M]*/
-      if random()//7==0  then @.j.k=j'~'k    /*populate every 7th random*/
-      end  /*k*/
-  end        /*j*/
-                             /* [↓]  display array to console:  row,col */
-  do r=1  for n;    _=       /*construct one row (or line) at a time.   */
-      do c=1  for m          /*construct row one column at a time.      */
-      _=_ right(@.r.c,4)     /*append a nice-aligned column to the line.*/
-      end   /*kk*/           /* [↑]   an nicely aligned line is built.  */
-  say _                      /*display one row at a time to the terminal*/
-  end         /*jj*/
-/*╔════════════════════════════════════════════════════════════════════╗
-  ║ When the  RETURN  is executed (from a PROCEDURE in this case), and ║
-  ║ array   @  is "de─allocated", that is, it's no longer defined, and ║
-  ║ the array's storage is now free for other REXX variables.   If the ║
-  ║ BLOAT   subroutine didn't have a   "PROCEDURE"   on that statement,║
-  ║ the array    @    would've been left intact.    The same effect is ║
-  ║ performed by a   DROP   statement   (an example is shown below).   ║
-  ╚════════════════════════════════════════════════════════════════════╝*/
-drop @.                      /*because of the  PROCEDURE  statement, the*/
-return                       /* [↑]    DROP   statement is superfluous. */
+-- 8 Aug 2025
+include Settings
+signal off novalue
+
+say 'CREATE AN TWO-DIMENSIONAL ARRAY AT RUNTIME'
+say version
+say
+call CreateMult
+call ShowMult 'Global'
+call CreateAddi
+call ShowAddi 'Global'
+call CreateSubt
+call ShowSubt 'Global'
+exit
+
+CreateMult:
+procedure expose Mult.
+arg xx
+do i = 1 to 9
+   do j = 1 to 9
+      Mult.i.j=i*j
+   end
+end
+return
+
+ShowMult:
+parse arg xx
+say '   'xx 'multiplication table'
+say '   'Copies('-',25)
+say '   1  2  3  4  5  6  7  8  9'
+say '   'Copies('-',25)
+do i = 1 to 9
+   call CharOut ,i
+   do j = 1 to 9
+      call CharOut ,Right(Mult.i.j,3)
+   end
+   say
+end
+say '   'Copies('-',25)
+say
+return
+
+CreateAddi:
+procedure
+do i = 1 to 9
+   do j = 1 to 9
+      Addi.i.j=i+j
+   end
+end
+call ShowAddi 'Local'
+return
+
+ShowAddi:
+parse arg xx
+say '   'xx 'addition table'
+say '   'Copies('-',25)
+say '   1  2  3  4  5  6  7  8  9'
+say '   'Copies('-',25)
+if DataType(Addi.1.1) = 'CHAR' then do
+   call CharOut ,'   'Addi.1.1 Addi.2. Addi.3.3'...'
+   say
+end
+else do
+   do i = 1 to 9
+      call CharOut ,i
+      do j = 1 to 9
+         call CharOut ,Right(Addi.i.j,3)
+      end
+      say
+   end
+end
+say '   'Copies('-',25)
+say
+return
+
+CreateSubt:
+procedure expose Subt.
+do i = 1 to 9
+   do j = 1 to 9
+      Subt.i.j=i-j
+   end
+end
+call ShowSubt 'Global'
+drop Subt.
+return
+
+ShowSubt:
+parse arg xx
+say '   'xx 'subtraction table'
+say '   'Copies('-',25)
+say '   1  2  3  4  5  6  7  8  9'
+say '   'Copies('-',25)
+if DataType(Subt.1.1) = 'CHAR' then do
+   call CharOut ,'   'Subt.1.1 Subt.2. Subt.3.3'...'
+   say
+end
+else do
+   do i = 1 to 9
+      call CharOut ,i
+      do j = 1 to 9
+         call CharOut ,Right(Subt.i.j,3)
+      end
+      say
+   end
+end
+say '   'Copies('-',25)
+say
+return
+
+include Abend

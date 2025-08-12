@@ -1,4 +1,4 @@
--- 8 May 2025
+-- 28 Jul 2025
 include Settings
 
 say 'LONG PRIMES'
@@ -24,7 +24,7 @@ say 'Long primes < 500'
 p = 0
 do i = 1 to prim.0 until p > 500
    p = prim.i
-   if p-qperiod(1 p) = 1 then
+   if p-PeriodQ(1 p) = 1 then
       call Charout ,p' '
 end
 say
@@ -42,15 +42,11 @@ do i = 1 to prim.0 while a > 0
       say Right(a,5) Right(n,4)
       w = w+1; a = Word(t,w)
    end
-   if p-qperiodinv(p) = 1 then do
+   if p-PeriodInvQ(p) = 1 then do
       n = n+1
    end
 end
 say Format(Time('e'),,3) 'seconds'; say
 return
 
-include Functions
-include Sequences
-include Rational
-include Constants
-include Abend
+include Math

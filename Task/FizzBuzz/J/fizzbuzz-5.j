@@ -1,1 +1,5 @@
-> }. (<'FizzBuzz') (I.0=15|n)} (<'Buzz') (I.0=5|n)} (<'Fizz') (I.0=3|n)} ":&.> n=: i.101
+Fizz=: 'Fizz' #~ 0 = 3&|
+Buzz=: 'Buzz' #~ 0 = 5&|
+FizzBuzz=: ": [^:('' -: ]) Fizz,Buzz
+
+FizzBuzz"0 >: i.100

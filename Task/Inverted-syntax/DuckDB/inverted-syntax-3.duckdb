@@ -1,0 +1,1 @@
+SET VARIABLE x = 1;

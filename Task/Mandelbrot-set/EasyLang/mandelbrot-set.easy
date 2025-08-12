@@ -30,7 +30,7 @@ proc draw .
          cx = (scr_x - center_x) / scale
          it = iter cx cy maxiter
          if it < maxiter
-            gcolor3 it / 20 it / 100 it / 150
+            gcolor3 it * 5 it it * 0.7
             grect scr_x / res scr_y / res 1 / res 1 / res
          .
       .

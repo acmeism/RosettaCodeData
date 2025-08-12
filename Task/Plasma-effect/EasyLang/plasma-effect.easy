@@ -11,8 +11,8 @@ on animate
          val += sin dist x y 25 25
          val += sin (dist x (y + time / 7) 75 50 * 1.2)
          val += sin dist x y 75 40
-         col = (val + 4) / 16
-         gcolor3 col col * 2 1 - col
+         col = (val + 4) * 6
+         gcolor3 col col * 2 100 - col
          grect x y 0.5 0.5
       .
    .

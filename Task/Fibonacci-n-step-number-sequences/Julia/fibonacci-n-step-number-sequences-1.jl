@@ -1,30 +1,22 @@
-type NFib{T<:Integer}
-    n::T
-    klim::T
-    seeder::Function
+struct NFib
+    seed::Vector{BigInt}
+    n::Int
+end
+NFib(seed::AbstractVector{<:Integer}) = NFib(seed, length(seed))
+
+mutable struct FState
+    a::Vector{BigInt}
+    adex::Int
 end
 
-type FState
-    a::Array{BigInt,1}
-    adex::Integer
-    k::Integer
-end
-
-function Base.start{T<:Integer}(nf::NFib{T})
-    a = nf.seeder(nf.n)
-    adex = 1
-    k = 1
-    return FState(a, adex, k)
-end
-
-function Base.done{T<:Integer}(nf::NFib{T}, fs::FState)
-    fs.k > nf.klim
-end
-
-function Base.next{T<:Integer}(nf::NFib{T}, fs::FState)
+function Base.iterate(nf::NFib, fs::FState=FState(copy(nf.seed), 1))
     f = sum(fs.a)
     fs.a[fs.adex] = f
-    fs.adex = rem1(fs.adex+1, nf.n)
-    fs.k += 1
-    return (f, fs)
+    fs.adex = mod1(fs.adex + 1, nf.n)
+    f, fs
 end
+
+Base.eltype(::NFib) = BigInt
+Base.isdone(::NFib) = false
+Base.isdone(::NFib, ::FState) = false
+Base.IteratorSize(::NFib) = Base.IsInfinite()

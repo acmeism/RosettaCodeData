@@ -1,9 +1,8 @@
--- 9 Jun 2025
+-- 28 Jul 2025
 include Settings
-
 arg digs
 if digs = '' then
-   digs=9
+   digs=16
 numeric digits digs
 
 say 'NUMERICAL INTEGRATION: GAUSS-LEGENDRE QUADRATURE'
@@ -13,23 +12,26 @@ w=Digits()+2
 say Left('Function',10) Left('Range',w+4) ' N',
     Left('Result',w) Left('True',w) Left(' Error',w)
 say
+call Task 'Sin(x)',     0, 1,      -Cos(1)+1
+call Task 'Sin(x)',     0, Pi()/1, 2
+call Task 'Sin(x)',     0, 10,     -Cos(10)+1
+call Task 'Cos(x)',     0, 1,      Sin(1)
+call Task 'Cos(x)',     0, Pi()/1, 0
+call Task 'Cos(x)',     0, 10,     Sin(10)
+call Task 'Tan(x)',     0, 1,      -Ln(Abs(Cos(1)))
+call Task 'Tan(x)',     0, Pi()/1, 0
+call Task 'Tan(x)',     0, 10,     -Ln(Abs(Cos(10)))
 call Task 'x**3',       0, 1,      1/4
 call Task '1/x',        1, 100,    Ln(100)/1
 call Task 'x',          0, 5000,   12500000
 call Task '4/(x**2+1)', 0, 1,      Pi()/1
-call Task 'Sin(x)',     0, 1,      -Cos(1)+1
-call Task 'Sin(x)',     0, Pi()/1, 2
-call Task 'Cos(x)',     0, 1,      Sin(1)
-call Task 'Cos(x)',     0, Pi()/1, 0
-call Task 'Tan(x)',     0, 1,      -Ln(Abs(Cos(1)))
-call Task 'Tan(x)',     0, Pi()/1, 0
 call Task 'Exp(x)',    -3, 3,      Exp(3)-Exp(-3)
 call Task 'Gamma(x)',   1, 8,      2603.238829328642145
 call Timer
 exit
 
 Task:
-procedure expose glob.
+procedure expose Memo.
 arg ff,aa,bb,true
 w=Digits()+2
 do nn = 1 to 20
@@ -41,7 +43,7 @@ say
 return
 
 GaussQuad:
-procedure expose glob.
+procedure expose Memo.
 -- Gaussion-Legendre quadrature on function f in range a...b taking n points
 arg ff,aa,bb,nn
 -- Legendre polynomials
@@ -88,8 +90,4 @@ do i = 1 to nn
 end
 return bm*zz
 
-include Functions
-include Special
-include Constants
-include Helper
-include Abend
+include Math

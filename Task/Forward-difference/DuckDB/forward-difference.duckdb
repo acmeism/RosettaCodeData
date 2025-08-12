@@ -1,0 +1,16 @@
+create or replace function first_forward_diff(l) as (
+  with cte as (select unnest(l) as i, unnest(range(0,length(l))) as ix),
+  forward as (select ix, (lead(i) over () - i) as f from cte),
+  agg as (select array_agg(f order by ix) from forward)
+  select list_filter((from agg limit 1), x -> x is not null)
+);
+
+create or replace function ndiff_table(lst, mx) as table (
+  with recursive cte as (
+    select 0 as n, lst as diff
+    union all
+    select n+1, first_forward_diff(diff) as diff
+    from cte
+    where n < mx and diff != [] )
+  select n as order, diff from cte
+);

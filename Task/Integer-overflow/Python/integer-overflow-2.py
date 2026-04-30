@@ -5,11 +5,11 @@ Type "copyright", "credits" or "license()" for more information.
    -2147483647 - 2147483647
    46341 * 46341
    (-2147483647-1) / -1'''.split('\n'):
-	ans = eval(calc)
-	print('Expression: %r evaluates to %s of type %s'
-	      % (calc.strip(), ans, type(ans)))
+  ans = eval(calc)
+  print('Expression: %r evaluates to %s of type %s'
+        % (calc.strip(), ans, type(ans)))
 
-	
+
 Expression: '-(-2147483647-1)' evaluates to 2147483648 of type <class 'int'>
 Expression: '2000000000 + 2000000000' evaluates to 4000000000 of type <class 'int'>
 Expression: '-2147483647 - 2147483647' evaluates to -4294967294 of type <class 'int'>

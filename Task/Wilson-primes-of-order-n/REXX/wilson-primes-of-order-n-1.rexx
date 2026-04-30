@@ -1,9 +1,9 @@
--- 24 Aug 2025
+-- 10 Mar 2026
 include Setting
 numeric digits 40000
 arg xx
-if xx = '' then
-   xx = 11000
+if xx='' then
+   xx=11000
 
 say 'WILSON PRIMES OF ORDER N'
 say version
@@ -27,7 +27,8 @@ GetFactorials:
 procedure expose fcto.
 arg xx
 say 'Get factorials...'
-say Factorials(xx) 'found'
+call Factorials xx
+say xx+1 'found'
 say
 return
 
@@ -36,20 +37,21 @@ procedure expose prim. fcto.
 arg xx
 say '  n: Wilson primes'
 say '--------------------'
-mo = 1
-do n = 1 to 11
-   a = Right(n,3)':'; n1 = n-1; n1 = fcto.n1; mo = -mo
-   do i = 1 to prim.0
-      p = prim.i
-      if p < n then
+mo=1
+do n=1 to 11
+   a=Right(n,3)':'; n1=n-1; n1=fcto.n1; mo=-mo
+   do i=1 to prim.0
+      p=prim.i
+      if p<n then
          iterate i
-      pn = p-n; pn = fcto.pn
-      if (n1*pn-mo)//(p*p) = 0 then
-         a = a p
+      pn=p-n; pn=fcto.pn
+      if (n1*pn-mo)//(p*p)=0 then
+         a=a p
    end
    say a
 end
 say '--------------------'
 return
 
+-- Primes; Factorials; Timer
 include Math

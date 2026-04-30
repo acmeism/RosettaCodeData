@@ -2,12 +2,12 @@
 
 # RPG attributes generator
 
-#	# Variables:
+# # Variables:
 #
 typeset -a attribs=( strength dexterity constitution intelligence wisdom charisma )
 integer MINTOT=75 MIN15S=2
 
-#	# Functions:
+# # Functions:
 #
 #   # Function _diceroll(sides, number, reportAs) - roll number of side-sided
 #   # dice, report (s)sum or (a)array (pseudo) of results
@@ -34,17 +34,17 @@ function _diceroll {
     fi
 }
 
-#	# Function _sumarr(n arr) - Return the sum of the first n arr elements
+# # Function _sumarr(n arr) - Return the sum of the first n arr elements
 #
 function _sumarr {
-	typeset _n ; integer _n=$1
-	typeset _arr ; nameref _arr="$2"
-	typeset _i _sum ; integer _i _sum
+  typeset _n ; integer _n=$1
+  typeset _arr ; nameref _arr="$2"
+  typeset _i _sum ; integer _i _sum
 
-	for ((_i=0; _i<_n; _i++)); do
-		(( _sum+=_arr[_i] ))
-	done
-	echo ${_sum}
+  for ((_i=0; _i<_n; _i++)); do
+    (( _sum+=_arr[_i] ))
+  done
+  echo ${_sum}
 }
 
  ######
@@ -52,19 +52,19 @@ function _sumarr {
  ######
 
 until (( total >= MINTOT )) && (( cnt15 >= MIN15S )); do
-	integer total=0 cnt15=0
-	unset attrval ; typeset -A attrval
-	for attr in ${attribs[*]}; do
-		unset darr ; typeset -a darr=( $(_diceroll 6 4 a) )
-		set -sK:nr -A darr
-		attrval[${attr}]=$(_sumarr 3 darr)
-		(( total += attrval[${attr}] ))
-		(( attrval[${attr}] > 14 )) && (( cnt15++ ))
-	done
+  integer total=0 cnt15=0
+  unset attrval ; typeset -A attrval
+  for attr in ${attribs[*]}; do
+    unset darr ; typeset -a darr=( $(_diceroll 6 4 a) )
+    set -sK:nr -A darr
+    attrval[${attr}]=$(_sumarr 3 darr)
+    (( total += attrval[${attr}] ))
+    (( attrval[${attr}] > 14 )) && (( cnt15++ ))
+  done
 done
 
 for attr in ${attribs[*]}; do
-	printf "%12s: %2d\n" ${attr} ${attrval[${attr}]}
+  printf "%12s: %2d\n" ${attr} ${attrval[${attr}]}
 done
 print "Attribute value total: ${total}"
 print "Attribule count >= 15:  ${cnt15}"

@@ -1,0 +1,233 @@
+Const NULL As Any Ptr = 0
+
+' HashTable with open addressing
+Type HashTable
+    Dim As Integer size
+    Dim As String entries(Any)
+End Type
+
+Sub HashInit(Byref ht As HashTable, sz As Integer)
+    ht.size = sz
+    Redim ht.entries(0 To sz-1)
+    For i As Integer = 0 To sz-1
+        ht.entries(i) = ""   ' empty slot marker
+    Next
+End Sub
+
+Function HashString(s As String, tableSize As Integer) As Integer
+    Dim As Uinteger h = 5381
+    For i As Integer = 0 To Len(s)-1
+        h = ((h Shl 5) + h) + Asc(Mid(s,i+1,1))  ' h*33 + c
+    Next
+    Return h Mod tableSize
+End Function
+
+Sub HashAdd(Byref ht As HashTable, s As String)
+    Dim As Integer idx = HashString(s, ht.size)
+    While ht.entries(idx) <> "" And ht.entries(idx) <> s
+        idx = (idx + 1) Mod ht.size
+    Wend
+    ht.entries(idx) = s
+End Sub
+
+Function HashContains(Byref ht As HashTable, s As String) As Boolean
+    Dim As Integer idx = HashString(s, ht.size)
+    While ht.entries(idx) <> ""
+        If ht.entries(idx) = s Then Return True
+        idx = (idx + 1) Mod ht.size
+    Wend
+    Return False
+End Function
+
+' Sokoban solver
+Type State
+    board As String
+    moves As String
+    posic As Integer
+End Type
+
+Type DirType
+    moveStr As String
+    pushStr As String
+    dPos As Integer
+End Type
+
+Function getChar(s As String, lug As Integer) As String
+    If lug < 0 Or lug >= Len(s) Then Return "#"
+    Return Mid(s, lug + 1, 1)
+End Function
+
+Function setChar(s As String, lug As Integer, c As String) As String
+    If lug < 0 Or lug >= Len(s) Then Return s
+    Return Left(s, lug) & c & Mid(s, lug + 2)
+End Function
+
+Function isWall(c As String) As Boolean
+    Return c = "#" Or c = Chr(10) Or c = ""
+End Function
+
+' --- Corner deadlock pruning (discard states where a box is stuck in a non-goal corner) ---
+Function isDeadlock(board As String, ancho As Integer) As Boolean
+    For i As Integer = 0 To Len(board)-1
+        Dim c As String = Mid(board, i+1, 1)
+        If c = "$" Then
+            ' Read neighbor cells around the box
+            Dim izda As String = getChar(board, i-1)
+            Dim dcha As String = getChar(board, i+1)
+            Dim up As String = getChar(board, i-(ancho+1))
+            Dim down As String = getChar(board, i+(ancho+1))
+            If (isWall(izda) Or isWall(dcha)) And (isWall(up) Or isWall(down)) Then
+                If getChar(board, i) <> "." Then Return True
+            End If
+        End If
+    Next
+    Return False
+End Function
+
+Function Move(s As State Ptr, dPos As Integer) As String
+    Dim As Integer newPos = s->posic + dPos
+    If newPos < 0 Or newPos >= Len(s->board) Then Return ""
+
+    Dim As String targetChar = getChar(s->board, newPos)
+    If isWall(targetChar) Then Return ""
+    If targetChar <> " " And targetChar <> "." Then Return ""
+
+    Dim As String tmp = s->board
+    Dim As Integer lug = s->posic
+    Dim As String currentChar = getChar(tmp, lug)
+
+    tmp = Iif(currentChar = "@", setChar(tmp, lug, " "), setChar(tmp, lug, "."))
+    tmp = setChar(tmp, newPos, Iif(targetChar = " ", "@", "+"))
+    Return tmp
+End Function
+
+Function Push(s As State Ptr, dPos As Integer) As String
+    Dim As Integer newPos = s->posic + dPos
+    Dim As Integer boxPos = newPos + dPos
+    If newPos < 0 Or boxPos < 0 Or boxPos >= Len(s->board) Then Return ""
+
+    Dim As String boxChar = getChar(s->board, newPos)
+    Dim As String targetChar = getChar(s->board, boxPos)
+
+    If boxChar <> "$" And boxChar <> "*" Then Return ""
+    If isWall(targetChar) Then Return ""
+    If targetChar <> " " And targetChar <> "." Then Return ""
+
+    Dim As String tmp = s->board
+    Dim As Integer lug = s->posic
+    Dim As String currentChar = getChar(tmp, lug)
+
+    tmp = Iif(currentChar = "@", setChar(tmp, lug, " "), setChar(tmp, lug, "."))
+    tmp = setChar(tmp, newPos, Iif(boxChar = "$", "@", "+"))
+    tmp = setChar(tmp, boxPos, Iif(targetChar = " ", "$", "*"))
+    Return tmp
+End Function
+
+Function isComplete(board As String) As Boolean
+    Return Instr(board, ".") = 0 And Instr(board, "$") = 0
+End Function
+
+Function Solve(board As String) As String
+    Dim As Integer boardLen = Len(board)
+    Dim As Integer ancho = Instr(board, Chr(10)) - 1
+    If ancho <= 0 Then Return "Invalid board"
+
+    Dim As DirType dirs(3)
+    dirs(0).moveStr = "u": dirs(0).pushStr = "U": dirs(0).dPos = -ancho-1
+    dirs(1).moveStr = "r": dirs(1).pushStr = "R": dirs(1).dPos = 1
+    dirs(2).moveStr = "d": dirs(2).pushStr = "D": dirs(2).dPos = ancho+1
+    dirs(3).moveStr = "l": dirs(3).pushStr = "L": dirs(3).dPos = -1
+
+    Dim As HashTable visited
+    HashInit(visited, 200000)   ' initial size (tune for fewer collisions)
+
+    HashAdd(visited, board)
+
+    Dim As Integer playerPos = Instr(board, "@") - 1
+    If playerPos < 0 Then playerPos = Instr(board, "+") - 1
+    If playerPos < 0 Then Return "No player"
+
+    Dim As State Ptr openStates = Callocate(100000, Sizeof(State))
+    Dim As Integer head = 0, tail = 0, capacity = 100000
+
+    openStates[tail].board = board
+    openStates[tail].moves = ""
+    openStates[tail].posic = playerPos
+    tail += 1
+
+    While head < tail
+        If tail > 1000000 Then
+            Deallocate(openStates)
+            Return "Too complex"
+        End If
+
+        Dim As State current = openStates[head]
+        head += 1
+
+        For i As Integer = 0 To 3
+            Dim As DirType currentDir = dirs(i)
+            Dim As Integer newPos = current.posic + currentDir.dPos
+
+            If newPos < 0 Or newPos >= boardLen Then Continue For
+            Dim As String targetChar = getChar(current.board, newPos)
+            If isWall(targetChar) Then Continue For
+
+            Dim As String newBoard = ""
+            Dim As String newSol = current.moves
+
+            If targetChar = "$" Or targetChar = "*" Then
+                newBoard = Push(@current, currentDir.dPos)
+                If Len(newBoard) > 0 Then newSol += currentDir.pushStr
+            Elseif targetChar = " " Or targetChar = "." Then
+                newBoard = Move(@current, currentDir.dPos)
+                If Len(newBoard) > 0 Then newSol += currentDir.moveStr
+            End If
+
+            If Len(newBoard) > 0 Andalso newBoard <> current.board Then
+                If isDeadlock(newBoard, ancho) Then Continue For
+
+                If isComplete(newBoard) Then
+                    Deallocate(openStates)
+                    Return newSol
+                End If
+                If Not HashContains(visited, newBoard) Then
+                    HashAdd(visited, newBoard)
+                    If tail >= capacity Then
+                        capacity += 50000
+                        Dim As State Ptr tmpPtr = Reallocate(openStates, capacity * Sizeof(State))
+                        If tmpPtr = NULL Then
+                            Deallocate(openStates)
+                            Return "Out of memory"
+                        End If
+                        openStates = tmpPtr
+                    End If
+                    openStates[tail].board = newBoard
+                    openStates[tail].moves = newSol
+                    Dim As Integer np = Instr(newBoard, "@") - 1
+                    If np < 0 Then np = Instr(newBoard, "+") - 1
+                    openStates[tail].posic = np
+                    tail += 1
+                End If
+            End If
+        Next
+    Wend
+
+    Deallocate(openStates)
+    Return "No solution"
+End Function
+
+' Main program
+Dim level As String = _
+"#######" & Chr(10) & _
+"#     #" & Chr(10) & _
+"#     #" & Chr(10) & _
+"#. #  #" & Chr(10) & _
+"#. $$ #" & Chr(10) & _
+"#.$$  #" & Chr(10) & _
+"#.#  @#" & Chr(10) & _
+"#######"
+
+Print "level:" & Chr(10) & level
+Print "Solution:" & Chr(10) & Solve(level)
+
+Sleep

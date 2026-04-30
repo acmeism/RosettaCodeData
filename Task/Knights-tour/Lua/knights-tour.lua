@@ -11,7 +11,7 @@ function Move_Allowed( board, x, y )
     return false
 end
 
-		
+
 board = {}
 for i = 1, N do
     board[i] = {}

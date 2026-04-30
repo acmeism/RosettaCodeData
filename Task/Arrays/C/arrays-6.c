@@ -1,1 +1,2 @@
-printf("%d\n", myArray[1]);
+myArray[0] = 1;
+myArray[1] = 3;

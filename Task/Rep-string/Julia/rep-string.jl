@@ -1,12 +1,7 @@
-function repstring(r::AbstractString)
+function repstring(str::AbstractString)
+    r = collect(str)
     n = length(r)
-    replst = String[]
-    for m in 1:n÷2
-        s = r[1:chr2ind(r, m)]
-        if (s ^ cld(n, m))[1:chr2ind(r, n)] != r continue end
-        push!(replst, s)
-    end
-    return replst
+    return [String(r[1:m]) for m in 1:n÷2 if collect(String(r[1:m]) ^ cld(n, m))[1:n] == r]
 end
 
 tests = ["1001110011", "1110111011", "0010010010", "1010101010", "1111111111",

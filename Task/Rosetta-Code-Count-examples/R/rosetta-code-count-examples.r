@@ -6,9 +6,9 @@ titles = as.character( sapply(nodes, xmlGetAttr, "title") )
 headers <- list()
 counts <- list()
 for (i in 1:length(titles)){
-	headers[[i]] <- getURL( paste("http://rosettacode.org/mw/index.php?title=", gsub(" ", "_", titles[i]), "&action=raw", sep="") )
-	counts[[i]] <- strsplit(headers[[i]],split=" ")[[1]]
-	counts[[i]] <- grep("\\{\\{header", counts[[i]])
-	cat(titles[i], ":", length(counts[[i]]), "examples\n")
+  headers[[i]] <- getURL( paste("http://rosettacode.org/mw/index.php?title=", gsub(" ", "_", titles[i]), "&action=raw", sep="") )
+  counts[[i]] <- strsplit(headers[[i]],split=" ")[[1]]
+  counts[[i]] <- grep("\\{\\{header", counts[[i]])
+  cat(titles[i], ":", length(counts[[i]]), "examples\n")
 }
 cat("Total: ", length(unlist(counts)), "examples\n")

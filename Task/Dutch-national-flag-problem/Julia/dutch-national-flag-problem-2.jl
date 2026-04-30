@@ -1,4 +1,4 @@
-function formatdf(a::Array{ASCIIString,1})
+function formatdf(a::AbstractVector)
     i = 0
     s = "    "
     for c in a
@@ -12,19 +12,19 @@ function formatdf(a::Array{ASCIIString,1})
     return s
 end
 
-cnum = 20
-d = [COLORS[rand(1:3)] for i in 1:cnum]
+const cnum = 20
+const d = [COLORS[rand(1:3)] for i in 1:cnum]
 while d == dutchsort(d)
-    d = [COLORS[rand(1:3)] for i in 1:cnum]
+    d .= [COLORS[rand(1:3)] for i in 1:cnum]
 end
 
 println("The original list is:")
 println(formatdf(d))
 
-print("Sorting with dutchsort, ")
+print("Sorting with dutchsort, after")
 @time e = dutchsort(d)
 println(formatdf(e))
 
-print("Sorting conventionally, ")
-@time e = sort(d, by=x->findfirst(COLORS, x))
+print("Sorting conventionally, after")
+@time e = sort(d, by = x -> findfirst(==(x), COLORS))
 println(formatdf(e))

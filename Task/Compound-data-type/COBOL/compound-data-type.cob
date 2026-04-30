@@ -1,0 +1,5 @@
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01  Point.
+           05 x USAGE IS BINARY-SHORT.
+           05 y USAGE IS BINARY-SHORT.

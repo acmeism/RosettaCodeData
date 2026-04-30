@@ -73,8 +73,8 @@ void MtxMulAndAddRows(Matrix m, int ixrdest, int ixrsrc, EL_Type mplr)
     srow = m->mtx[ixrsrc];
     for (ix=0; ix<m->dim_x; ix++)
         drow[ix] += mplr * srow[ix];
-//	printf("Mul row %d by %d and add to row %d\n", ixrsrc, mplr, ixrdest);
-//	MtxDisplay(m);
+// printf("Mul row %d by %d and add to row %d\n", ixrsrc, mplr, ixrdest);
+// MtxDisplay(m);
 }
 
 void MtxSwapRows( Matrix m, int rix1, int rix2)
@@ -86,8 +86,8 @@ void MtxSwapRows( Matrix m, int rix1, int rix2)
     r2 = m->mtx[rix2];
     for (ix=0; ix<m->dim_x; ix++)
         temp = r1[ix]; r1[ix]=r2[ix]; r2[ix]=temp;
-//	printf("Swap rows %d and %d\n", rix1, rix2);
-//	MtxDisplay(m);
+// printf("Swap rows %d and %d\n", rix1, rix2);
+// MtxDisplay(m);
 }
 
 void MtxNormalizeRow( Matrix m, int rix, int lead)
@@ -99,8 +99,8 @@ void MtxNormalizeRow( Matrix m, int rix, int lead)
     lv = drow[lead];
     for (ix=0; ix<m->dim_x; ix++)
         drow[ix] /= lv;
-//	printf("Normalize row %d\n", rix);
-//	MtxDisplay(m);
+// printf("Normalize row %d\n", rix);
+// MtxDisplay(m);
 }
 
 #define MtxGet( m, rix, cix ) m->mtx[rix][cix]

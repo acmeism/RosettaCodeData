@@ -1,6 +1,7 @@
--- 15 Nov 2025
+-- 25 Apr 2026
 include Setting
 numeric digits 40
+Memo.cache=0
 
 say 'SQUARE FORM FACTORIZATION'
 say version
@@ -59,11 +60,10 @@ procedure expose Mult. Memo.
 say 'Find a factor for 30 random numbers...'
 x=1
 do until x=30
-   n=''
-   do 30
+   n='';d=Random(4,24)
+   do d
       n||=Random(9)
    end
-   n%=10**Random(25)
    if Right(n,1)=5 | Even(n) | Digitsum(n)//3=0 then
       iterate
    call Time('r')
@@ -91,11 +91,5 @@ end
 say
 return
 
--- Even (is even?)
--- Xpon (get exponent)
-include Basic
--- Sfufof (find a factor by square forms factorization)
--- Pollardrho (find a factor by Pollard's rho algorithm)
--- Trialdiv (find a factor by trial division)
--- Digitsum (calculate sum of digits)
-include Ntheory
+-- Even; Xpon; Squfof; Pollardrho; Trialdiv; Digitsum
+include Math

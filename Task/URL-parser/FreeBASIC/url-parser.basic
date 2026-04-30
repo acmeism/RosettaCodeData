@@ -1,0 +1,181 @@
+Type URL
+    scheme As String * 16
+    username As String * 64
+    host As String * 64
+    port As Uinteger
+    path As String * 128
+    query As String * 128
+    frag As String * 64
+End Type
+
+Function getDefaultPort(scheme As String) As Uinteger
+    Select Case Lcase(scheme)
+    Case "http" : Return 80
+    Case "https": Return 443
+    Case "ftp"  : Return 21
+    Case "ssh"  : Return 22
+    Case "ldap" : Return 389
+    Case "news" : Return 119
+    Case Else   : Return 0
+    End Select
+End Function
+
+Function uri_unescape(s As String) As String
+    Dim As String result = ""
+    Dim hex_ As String * 2
+    Dim As Integer val_, i = 1
+
+    While i <= Len(s)
+        If Mid(s, i, 1) = "%" And i + 2 <= Len(s) Then
+            hex_ = Mid(s, i + 1, 2)
+            val_ = Val("&h" + hex_)
+            result &= Chr(val_)
+            i += 3
+        Else
+            result &= Mid(s, i, 1)
+            i += 1
+        End If
+    Wend
+    Return result
+End Function
+
+Sub parse_uri(u As String, Byref uri As URL)
+    Dim posic As Integer
+    Dim hasIPv6 As Boolean = False
+
+    ' Reset
+    uri.scheme = "": uri.host = "": uri.port = 0
+    uri.path = "": uri.query = "": uri.frag = ""
+
+    ' Special case jdbc:mysql://
+    If Instr(u, "jdbc:mysql://") = 1 Then
+        uri.scheme = "jdbc"
+        posic = Instr(u, "?")
+        If posic > 0 Then
+            uri.path = Mid(u, 13, posic - 13)
+            uri.query = Mid(u, posic + 1)
+        Else
+            uri.path = Mid(u, 13)
+        End If
+        Return
+    End If
+
+    ' Scheme normal
+    posic = Instr(u, "://")
+    If posic > 0 Then
+        uri.scheme = Left(u, posic - 1)
+        u = Mid(u, posic + 3)
+
+        ' Authority up to "/" or end
+        posic = Instr(u, "/")
+        Dim authority As String = ""
+        If posic > 0 Then
+            authority = Left(u, posic - 1)
+            u = Mid(u, posic)
+        Else
+            authority = u
+            u = ""
+        End If
+
+        ' Parse authority: [user:pass@]host[:port]
+        If Len(authority) > 0 Then
+            ' Remove user:pass@
+            Dim atPos As Integer = Instrrev(authority, "@")
+            If atPos > 0 Then
+                Dim userpass As String = Left(authority, atPos - 1)
+                authority = Mid(authority, atPos + 1)
+                ' user:pass -> just username for simplicity
+                posic = Instr(userpass, ":")
+                If posic > 0 Then
+                    uri.username = Left(userpass, posic - 1)
+                Else
+                    uri.username = userpass
+                End If
+            End If
+
+            ' IPv6 [host]
+            If Left(authority, 1) = "[" Then
+                hasIPv6 = True
+                posic = Instr(authority, "]")
+                If posic > 0 Then
+                    uri.host = Left(authority, posic)
+                    Dim restPort As String = Mid(authority, posic + 1)
+                    If Left(restPort, 1) = ":" Then uri.port = Val(Mid(restPort, 2))
+                End If
+            Else
+                ' host:port normal
+                posic = Instrrev(authority, ":")
+                If posic > 0 And posic < Len(authority) Then
+                    uri.host = Left(authority, posic - 1)
+                    uri.port = Val(Mid(authority, posic + 1))
+                Else
+                    uri.host = authority
+                End If
+            End If
+        End If
+    Else
+        ' WITHOUT "/" -> scheme:path
+        posic = Instr(u, ":")
+        If posic > 0 Then
+            uri.scheme = Left(u, posic - 1)
+            u = Mid(u, posic + 1)
+        End If
+    End If
+
+    'ParsePath:
+    If uri.port = 0 Then uri.port = getDefaultPort(uri.scheme)
+
+    ' Path/query/frag
+    posic = Instr(u, "?")
+    If posic > 0 Then
+        uri.path = Left(u, posic - 1)
+        Dim qfrag As String = Mid(u, posic + 1)
+        posic = Instr(qfrag, "#")
+        If posic > 0 Then
+            uri.query = Left(qfrag, posic - 1)
+            uri.frag = Mid(qfrag, posic + 1)
+        Else
+            uri.query = qfrag
+        End If
+    Else
+        posic = Instr(u, "#")
+        If posic > 0 Then
+            uri.path = Left(u, posic - 1)
+            uri.frag = Mid(u, posic + 1)
+        Else
+            uri.path = u
+        End If
+    End If
+End Sub
+
+' Test data
+Dim As String uris(13)
+uris(0) = "foo://example.com:8042/over/there?name=ferret#nose"
+uris(1) = "urn:example:animal:ferret:nose"
+uris(2) = "jdbc:mysql://test_user:ouupppssss@localhost:3306/sakila?profileSQL=true"
+uris(3) = "ftp://ftp.is.co.za/rfc/rfc1808.txt"
+uris(4) = "http://www.ietf.org/rfc/rfc2396.txt#header1"
+uris(5) = "ldap://[2001:db8::7]/c=GB?objectClass?one"
+uris(6) = "mailto:John.Doe@example.com"
+uris(7) = "news:comp.infosystems.www.servers.unix"
+uris(8) = "tel:+1-816-555-1212"
+uris(9) = "telnet://192.0.2.16:80/"
+uris(10) = "urn:oasis:names:specification:docbook:dtd:xml:4.1.2"
+uris(11) = "ssh://alice@example.com"
+uris(12) = "https://bob:pass@example.com/place"
+uris(13) = "http://example.com/?a=1&b=2+2&c=3&c=4&d=%65%6e%63%6f%64%65%64"
+
+Dim u As URL
+For i As Integer = 0 To Ubound(uris)
+    Print "URL:      " & uris(i)
+    parse_uri(uris(i), u)
+    Print "  scheme: " & Trim(u.scheme)
+    If Trim(u.host) <> "" Then Print "    host: " & uri_unescape(Trim(u.host))
+    If u.port > 0 Then Print "    port: " & u.port
+    Print "    path: " & uri_unescape(Trim(u.path))
+    If Trim(u.query) <> "" Then Print "   query: " & uri_unescape(Trim(u.query))
+    If Trim(u.frag) <> "" Then Print "fragment: " & uri_unescape(Trim(u.frag))
+    Print
+Next
+
+Sleep

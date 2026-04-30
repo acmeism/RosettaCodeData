@@ -21,7 +21,7 @@ fn get_easter_day(year: u32) -> chrono::NaiveDate {
         _ => (4, d + e - 9),
     };
 
-    NaiveDate::from_ymd(year as i32, month, day)
+    NaiveDate::from_ymd_opt(year as i32, month, day).unwrap()
 }
 fn main() {
     let holidays = vec![

@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 4 Mar 2026
 include Setting
 
 say 'UNTOUCHABLE NUMBERS'
@@ -16,7 +16,7 @@ call Timer
 exit
 
 GetPrimes:
-procedure expose prim. flag.
+procedure expose prim. flag. memo.
 arg yy
 say 'Get primes below' yy'...'
 say Primes(yy) 'found'
@@ -24,7 +24,7 @@ say
 return
 
 MarkTouchables:
-procedure expose touc. prim. flag.
+procedure expose touc. prim. flag. memo.
 arg xx,yy
 say 'Mark touchable numbers below' xx'...'
 touc. = 0
@@ -80,4 +80,5 @@ end
 say
 return
 
+-- Primes; Timer
 include Math

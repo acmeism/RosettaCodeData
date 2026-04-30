@@ -1,193 +1,193 @@
 .equ CursorX,0x02000000
 .equ CursorY,0x02000001
 ProgramStart:
-	mov sp,#0x03000000			;Init Stack Pointer
-	
-	mov r4,#0x04000000  		        ;DISPCNT -LCD Control
-	mov r2,#0x403    			;4= Layer 2 on / 3= ScreenMode 3
-	str	r2,[r4]         	        ;now the screen is visible
-	bl ResetTextCursors			;set text cursors to top left of screen
-	
-	mov r2,#32
-	mov r3,#32+20				;screen height is 20 chars
-	mov r5,#0				;column spacer
-	mov r6,#5
-	
-	;R0 = Character to print (working copy)
-	;R2 = real copy
-	;R3 = compare factor
+   mov sp,#0x03000000         ;Init Stack Pointer
+
+   mov r4,#0x04000000              ;DISPCNT -LCD Control
+   mov r2,#0x403           ;4= Layer 2 on / 3= ScreenMode 3
+   str   r2,[r4]                   ;now the screen is visible
+   bl ResetTextCursors        ;set text cursors to top left of screen
+
+   mov r2,#32
+   mov r3,#32+20           ;screen height is 20 chars
+   mov r5,#0            ;column spacer
+   mov r6,#5
+
+   ;R0 = Character to print (working copy)
+   ;R2 = real copy
+   ;R3 = compare factor
 loop_printAscii:
-	mov r0,r2
-	bl ShowHex
-	
-	mov r0,#32
-	bl PrintChar
-	
-	mov r0,r2
-	bl PrintChar
-	
-	bl CustomNewLine
-	add r2,r2,#1
-	
-	cmp r2,#128
-	beq forever		;exit early
-	
-	cmp r2,r3
-	bne loop_printAscii
-	
-	
-	add r3,r3,#20	;next section
-	
-	;inc to next column
-	add r5,r5,#5
-	mov r0,r5
-	mov r1,#0
-	bl SetTextCursors
-	subs r6,r6,#1
-	bne loop_printAscii
-	
+   mov r0,r2
+   bl ShowHex
+
+   mov r0,#32
+   bl PrintChar
+
+   mov r0,r2
+   bl PrintChar
+
+   bl CustomNewLine
+   add r2,r2,#1
+
+   cmp r2,#128
+   beq forever    ;exit early
+
+   cmp r2,r3
+   bne loop_printAscii
+
+
+   add r3,r3,#20  ;next section
+
+   ;inc to next column
+   add r5,r5,#5
+   mov r0,r5
+   mov r1,#0
+   bl SetTextCursors
+   subs r6,r6,#1
+   bne loop_printAscii
+
 
 
 
 forever:
-	b forever
-	
+   b forever
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;		INPUT/OUTPUT SUBROUTINES   		- 		CREATED BY KEITH OF CHIBIAKUMAS.COM
+;;;;;    INPUT/OUTPUT SUBROUTINES         -     CREATED BY KEITH OF CHIBIAKUMAS.COM
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-PrintString:					;Print 255 terminated string
-	STMFD sp!,{r0-r12, lr}
+PrintString:               ;Print 255 terminated string
+   STMFD sp!,{r0-r12, lr}
 PrintStringAgain:
-		ldrB r0,[r1],#1
-		cmp r0,#255
-		beq PrintStringDone		;Repeat until 255
-		bl printchar 			;Print Char
-		b PrintStringAgain
+      ldrB r0,[r1],#1
+      cmp r0,#255
+      beq PrintStringDone     ;Repeat until 255
+      bl printchar         ;Print Char
+      b PrintStringAgain
 PrintStringDone:
-	LDMFD sp!,{r0-r12, pc}
-	
+   LDMFD sp!,{r0-r12, pc}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 PrintChar:
-	STMFD sp!,{r0-r12, lr}
-	mov r4,#0
-		mov r5,#0
-		
-		mov r3,#CursorX
-		ldrB r4,[r3]			;X pos
-		mov r3,#CursorY
-		ldrB r5,[r3]			;Y pos
-		
-		mov r3,#0x06000000 		;VRAM base
-		
-		mov r6,#8*2				;Xpos, 2 bytes per pixel, 8 bytes per char
-		mul r2,r4,r6
-		add r3,r3,r2
-		
-		mov r4,#240*8*2			;Ypos, 240 pixels per line,
-		mul r2,r5,r4			;2 bytes per pixel, 8 lines per char
-		add r3,r3,r2
-		
-		adr r4,BitmapFont 		;Font source
-		
-		sub r0,r0,#32			;First Char is 32 (space)
-		add r4,r4,r0,asl #3		;8 bytes per char
-		
-		mov r1,#8				;8 lines
+   STMFD sp!,{r0-r12, lr}
+   mov r4,#0
+      mov r5,#0
+
+      mov r3,#CursorX
+      ldrB r4,[r3]         ;X pos
+      mov r3,#CursorY
+      ldrB r5,[r3]         ;Y pos
+
+      mov r3,#0x06000000      ;VRAM base
+
+      mov r6,#8*2          ;Xpos, 2 bytes per pixel, 8 bytes per char
+      mul r2,r4,r6
+      add r3,r3,r2
+
+      mov r4,#240*8*2         ;Ypos, 240 pixels per line,
+      mul r2,r5,r4         ;2 bytes per pixel, 8 lines per char
+      add r3,r3,r2
+
+      adr r4,BitmapFont       ;Font source
+
+      sub r0,r0,#32        ;First Char is 32 (space)
+      add r4,r4,r0,asl #3     ;8 bytes per char
+
+      mov r1,#8            ;8 lines
 DrawLine:
-		mov r7,#8 				;8 pixels per line
-		ldrb r8,[r4],#1			;Load Letter
-		mov r9,#0b100000000		;Mask
-				
-		mov r2, #0b1111111101000000; Color: ABBBBBGGGGGRRRRR   A=Alpha
+      mov r7,#8            ;8 pixels per line
+      ldrb r8,[r4],#1         ;Load Letter
+      mov r9,#0b100000000     ;Mask
+
+      mov r2, #0b1111111101000000; Color: ABBBBBGGGGGRRRRR   A=Alpha
 DrawPixel:
-		tst r8,r9				;Is bit 1?
-		strneh r2,[r3]			;Yes? then fill pixel (HalfWord)
-		add r3,r3,#2
-		mov r9,r9,ror #1		;Bitshift Mask
-		subs r7,r7,#1
-		bne DrawPixel			;Next Hpixel
-		
-		add r3,r3,#480-16	   ;Move Down a line (240 pixels *2 bytes)
-		subs r1,r1,#1								;-1 char (16 px)
-		bne DrawLine			;Next Vline
-		
-LineDone:	
-		mov r3,#CursorX
-		ldrB r0,[r3]	
-		add r0,r0,#1			;Move across screen
-		strB r0,[r3]	
-		mov r10,#30
-		cmp r0,r10
-		bleq NewLine
-	LDMFD sp!,{r0-r12, pc}
+      tst r8,r9            ;Is bit 1?
+      strneh r2,[r3]       ;Yes? then fill pixel (HalfWord)
+      add r3,r3,#2
+      mov r9,r9,ror #1     ;Bitshift Mask
+      subs r7,r7,#1
+      bne DrawPixel        ;Next Hpixel
+
+      add r3,r3,#480-16    ;Move Down a line (240 pixels *2 bytes)
+      subs r1,r1,#1                       ;-1 char (16 px)
+      bne DrawLine         ;Next Vline
+
+LineDone:
+      mov r3,#CursorX
+      ldrB r0,[r3]
+      add r0,r0,#1         ;Move across screen
+      strB r0,[r3]
+      mov r10,#30
+      cmp r0,r10
+      bleq NewLine
+   LDMFD sp!,{r0-r12, pc}
 
 NewLine:
-	STMFD sp!,{r0-r12, lr}
-		mov r3,#CursorX
-		mov r0,#0
-		strB r0,[r3]
-		mov r4,#CursorY
-		ldrB r0,[r4]
-		add r0,r0,#1
-		strB r0,[r4]
-	LDMFD sp!,{r0-r12, pc}
-	
+   STMFD sp!,{r0-r12, lr}
+      mov r3,#CursorX
+      mov r0,#0
+      strB r0,[r3]
+      mov r4,#CursorY
+      ldrB r0,[r4]
+      add r0,r0,#1
+      strB r0,[r4]
+   LDMFD sp!,{r0-r12, pc}
+
 CustomNewLine:
-	STMFD sp!,{r0-r12, lr}
-		mov r3,#CursorX
-		mov r0,r5
-		strB r0,[r3]
-		mov r4,#CursorY
-		ldrB r0,[r4]
-		add r0,r0,#1
-		strB r0,[r4]
-	LDMFD sp!,{r0-r12, pc}	
-	
+   STMFD sp!,{r0-r12, lr}
+      mov r3,#CursorX
+      mov r0,r5
+      strB r0,[r3]
+      mov r4,#CursorY
+      ldrB r0,[r4]
+      add r0,r0,#1
+      strB r0,[r4]
+   LDMFD sp!,{r0-r12, pc}
+
 ResetTextCursors:
-	STMFD sp!,{r4-r6,lr}
-		mov r4,#0
-		mov r5,#CursorX
-		mov r6,#CursorY
-		strB r4,[r5]
-		strB r4,[r6]
-	LDMFD sp!,{r4-r6,lr}
-	bx lr
-	
+   STMFD sp!,{r4-r6,lr}
+      mov r4,#0
+      mov r5,#CursorX
+      mov r6,#CursorY
+      strB r4,[r5]
+      strB r4,[r6]
+   LDMFD sp!,{r4-r6,lr}
+   bx lr
+
 SetTextCursors:
-	;input: R0 = new X
-	;	R1 = new Y
-	STMFD sp!,{r5-r6}
-		mov r5,#CursorX
-		mov r6,#CursorY
-		strB r0,[r5]
-		strB r1,[r6]
-	LDMFD sp!,{r5-r6}
-	bx lr
+   ;input: R0 = new X
+   ;  R1 = new Y
+   STMFD sp!,{r5-r6}
+      mov r5,#CursorX
+      mov r6,#CursorY
+      strB r0,[r5]
+      strB r1,[r6]
+   LDMFD sp!,{r5-r6}
+   bx lr
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ShowHex:
-	STMFD sp!,{r0-r12, lr}
-		mov r2,r0,ror #4
-		bl ShowHexChar	
-		mov r2,r0
-		bl ShowHexChar	
-	LDMFD sp!,{r0-r12, pc}		
-	
+   STMFD sp!,{r0-r12, lr}
+      mov r2,r0,ror #4
+      bl ShowHexChar
+      mov r2,r0
+      bl ShowHexChar
+   LDMFD sp!,{r0-r12, pc}
+
 ShowHexChar:
-	STMFD sp!,{r0-r12, lr}
-		;mov r3,
-		and r0,r2,#0x0F ; r3
-		cmp r0,#10
-		addge r0,r0,#7			;if 10 or greater convert to alphabet letters a-f
-		add r0,r0,#48
-		bl PrintChar	
-	LDMFD sp!,{r0-r12, pc}	
-	
+   STMFD sp!,{r0-r12, lr}
+      ;mov r3,
+      and r0,r2,#0x0F ; r3
+      cmp r0,#10
+      addge r0,r0,#7       ;if 10 or greater convert to alphabet letters a-f
+      add r0,r0,#48
+      bl PrintChar
+   LDMFD sp!,{r0-r12, pc}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	
+
 BitmapFont:
 ;each byte represents a row of 8 pixels. This is a 1BPP font that is converted to the GBA's 16bpp screen format at runtime
         .byte 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00     ; 20
@@ -286,4 +286,4 @@ BitmapFont:
         .byte 0x08,0x04,0x04,0x02,0x02,0x04,0x04,0x08     ; 7D }
         .byte 0x00,0x00,0x00,0x20,0x52,0x0C,0x00,0x00     ; 7E ~
         .byte 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00     ; 7F
-	.byte 0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF	  ; 80
+   .byte 0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF     ; 80

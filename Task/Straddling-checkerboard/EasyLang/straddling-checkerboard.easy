@@ -1,8 +1,6 @@
 board$ = "ET AON RISBCDFGHJKLMPQ/UVWXYZ."
 len encode[] 128
 len decode$[] 128
-arrbase encode[] 0
-arrbase decode$[] 0
 len row[] 2
 proc init s$ .
    s$[] = strchars s$

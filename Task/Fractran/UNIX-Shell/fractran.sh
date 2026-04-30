@@ -10,10 +10,10 @@ t=0
 n=72
 echo "steps of computation" > steps.csv
 while [ $t -le 6 ]; do
-	if [ $(($n*${ns[$t]}%${ds[$t]})) -eq 0 ]; then
-		let "n=$(($n*${ns[$t]}/${ds[$t]}))"
-		let "t=0"
-		factor $n >> steps.csv
-	fi
-	let "t=$t+1"
+   if [ $(($n*${ns[$t]}%${ds[$t]})) -eq 0 ]; then
+      let "n=$(($n*${ns[$t]}/${ds[$t]}))"
+      let "t=0"
+      factor $n >> steps.csv
+   fi
+   let "t=$t+1"
 done

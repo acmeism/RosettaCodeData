@@ -11,10 +11,10 @@ public:
     void sort( int* arr, int start, int end )
     {
         if( arr[start] > arr[end - 1] ) swap( arr[start], arr[end - 1] );
-	int n = end - start; if( n > 2 )
-	{
-	    n /= 3; sort( arr, start, end - n );
-	    sort( arr, start + n, end ); sort( arr, start, end - n );
+  int n = end - start; if( n > 2 )
+  {
+      n /= 3; sort( arr, start, end - n );
+      sort( arr, start + n, end ); sort( arr, start, end - n );
         }
     }
 };

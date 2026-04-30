@@ -1,0 +1,69 @@
+        IDENTIFICATION DIVISION.
+        PROGRAM-ID. FLOYD-TRIANGLE.
+
+        DATA DIVISION.
+        WORKING-STORAGE SECTION.
+        01 VARIABLES        COMP.
+           02 NUM-LINES     PIC 99.
+           02 CUR-LINE      PIC 99.
+           02 CUR-COL       PIC 99.
+           02 CUR-NUM       PIC 999.
+           02 ZERO-SKIP     PIC 9.
+           02 LINE-PTR      PIC 99.
+           02 MAX-NUM       PIC 999.
+
+        01 OUTPUT-FORMAT.
+           02 OUT-LINE      PIC X(72).
+           02 ONE-DIGIT     PIC B9.
+           02 TWO-DIGITS    PIC BZ9.
+           02 THREE-DIGITS  PIC BZZ9.
+           02 MAX-COL-NUM   PIC 999.
+
+        PROCEDURE DIVISION.
+        BEGIN.
+            MOVE 5 TO NUM-LINES. PERFORM FLOYD.
+            DISPLAY ' '.
+            MOVE 14 TO NUM-LINES. PERFORM FLOYD.
+            STOP RUN.
+
+        FLOYD.
+            MOVE 1 TO CUR-NUM.
+            COMPUTE MAX-NUM = NUM-LINES * (NUM-LINES + 1) / 2.
+            PERFORM FLOYD-LINE
+                VARYING CUR-LINE FROM 1 BY 1
+                UNTIL CUR-LINE IS GREATER THAN NUM-LINES.
+
+        FLOYD-LINE.
+            MOVE ' ' TO OUT-LINE.
+            MOVE 1 TO LINE-PTR.
+            PERFORM FLOYD-NUM
+                VARYING CUR-COL FROM 1 BY 1
+                UNTIL CUR-COL IS GREATER THAN CUR-LINE.
+            DISPLAY OUT-LINE.
+
+        FLOYD-NUM.
+            COMPUTE MAX-COL-NUM = MAX-NUM - NUM-LINES + CUR-COL.
+            MOVE 0 TO ZERO-SKIP.
+            INSPECT MAX-COL-NUM TALLYING ZERO-SKIP FOR LEADING '0'.
+            IF ZERO-SKIP IS EQUAL TO ZERO
+                PERFORM FLOYD-THREE-DIGITS
+            ELSE IF ZERO-SKIP IS EQUAL TO 1
+                PERFORM FLOYD-TWO-DIGITS
+            ELSE IF ZERO-SKIP IS EQUAL TO 2
+                PERFORM FLOYD-ONE-DIGIT.
+            ADD 1 TO CUR-NUM.
+
+        FLOYD-ONE-DIGIT.
+            MOVE CUR-NUM TO ONE-DIGIT.
+            STRING ONE-DIGIT DELIMITED BY SIZE INTO OUT-LINE
+                WITH POINTER LINE-PTR.
+
+        FLOYD-TWO-DIGITS.
+            MOVE CUR-NUM TO TWO-DIGITS.
+            STRING TWO-DIGITS DELIMITED BY SIZE INTO OUT-LINE
+                WITH POINTER LINE-PTR.
+
+        FLOYD-THREE-DIGITS.
+            MOVE CUR-NUM TO THREE-DIGITS.
+            STRING THREE-DIGITS DELIMITED BY SIZE INTO OUT-LINE
+                WITH POINTER LINE-PTR.

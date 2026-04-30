@@ -1,6 +1,6 @@
 arr[] = [ 2 ]
 fastproc .
-   for i = 2 to 9
+   for i = 2 to 8
       k = 3
       repeat
          em = 1

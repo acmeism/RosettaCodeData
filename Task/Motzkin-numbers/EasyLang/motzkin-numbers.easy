@@ -8,10 +8,10 @@ fastfunc isprim num .
    .
    return 1
 .
-m[] = [ 1 1 ]
 print 1 ; print 1
 len m[] 39
-arrbase m[] 0
+m[0] = 1
+m[1] = 1
 for n = 2 to 38
    m[n] = m[n - 1]
    for i = 0 to n - 2

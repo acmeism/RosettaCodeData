@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 21 Feb 2026
 include Setting
 
 say 'LEGENDRE PRIME COUNTER (WITH MEMOIZATION)'
@@ -13,25 +13,26 @@ end
 exit
 
 Pie:
-procedure expose prim. work.
+procedure expose Prim. Work. Memo.
 arg xx
 if xx < 3 then
    return 0+(xx=2)
 n = Primes(Isqrt(xx))
-work. = 0
+Work. = 0
 return Phi(xx,n)+n-1
 
 Phi:
-procedure expose prim. work.
+procedure expose Prim. Work.
 arg xx,yy
 if yy < 2 then
    return xx-(xx%2)*(yy=1)
-p = prim.yy
+p = Prim.yy
 if xx <= p then
    return 1
-if work.xx.yy > 0 then
-   return work.xx.yy
-work.xx.yy = Phi(xx,yy-1)-Phi(xx%p,yy-1)
-return work.xx.yy
+if Work.xx.yy > 0 then
+   return Work.xx.yy
+Work.xx.yy = Phi(xx,yy-1)-Phi(xx%p,yy-1)
+return Work.xx.yy
 
+-- Primes; Isqrt
 include Math

@@ -1,7 +1,7 @@
 // version 1.0.5-2
 
 fun quadraticMean(vector: Array<Double>) : Double {
-    val sum = vector.sumByDouble { it * it }
+    val sum = vector.sumOf { it * it }
     return Math.sqrt(sum / vector.size)
 }
 

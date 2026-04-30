@@ -1,0 +1,146 @@
+// Item name, weight, value, piece(s)
+i =     [   ["map", 9, 150, 1],
+            ["compass", 13, 35, 1],
+            ["water", 153, 200, 3],
+            ["sandwich", 50, 60, 2],
+            ["glucose", 15, 60, 2],
+            ["tin", 68, 45, 3],
+            ["banana", 27, 60, 3],
+            ["apple", 39, 40, 3],
+            ["cheese", 23, 30, 1],
+            ["beer", 52, 10, 3],
+            ["suntan cream", 11, 70, 1],
+            ["camera", 32, 30, 1],
+            ["t-shirt", 24, 15, 2],
+            ["trousers", 48, 10, 2],
+            ["umbrella", 73, 40, 1],
+            ["waterproof trousers", 42, 70, 1],
+            ["waterproof overclothes", 43, 75, 1],
+            ["note-case", 22, 80, 1],
+            ["sunglasses", 7, 20, 1],
+            ["towel", 18, 12, 2],
+            ["socks", 4, 50, 1],
+            ["book", 30, 10, 2]]
+
+[maxvalue, maxweight, usedDict] = knapsackBounded[i.getColumn[2], // value
+                                                  i.getColumn[1], // weight
+                                                  i.getColumn[3], // count
+                                                  400]
+res = new array
+for ind = sort[keys[usedDict]]
+   res.push[ ["   ", i@ind@0 , ":", usedDict@ind] ]
+
+println["Items:"]
+println[formatTable[res, "right"]]
+
+println[]
+println["Total weight: $maxweight"]
+println["Total value:  $maxvalue"]
+
+knapsack[values, weights, capacity] :=
+{
+   n = length[values]
+
+   if length[weights] != n
+   {
+      println["knapsack:  length of values does not equal length of weights."]
+      return undef
+   }
+
+   V = new array[[n+1, capacity+1], 0]
+   keep = new array[[n+1, capacity+1], false]
+
+   for i = 1 to n
+   {
+      for w = 0 to capacity
+      {
+         if weights@(i-1) <= w and (values@(i-1) + V@(i-1)@(w - weights@(i-1)) > V@(i-1)@w)
+         {
+            V@i@w = values@(i-1) + V@(i-1)@(w-weights@(i-1))
+            keep@i@w = true
+         } else
+         {
+            V@i@w = V@(i-1)@w
+            keep@i@w = false
+         }
+      }
+   }
+
+   included = new array
+   K = capacity
+   for i = n to 1 step -1
+      if keep@i@K == true
+      {
+         included.push[ [i-1, values@(i-1), weights@(i-1)] ]
+         K = K - weights@(i-1)
+      }
+
+   return concat[V@n@capacity, included.transpose[]]
+}
+
+knapsackBounded[values, weights, maxcount, capacity] :=
+{
+   len = length[values]
+
+   if length[weights] != len or length[maxcount] != len
+   {
+      println["knapsackBounded:  length of values or counts does not equal length of weights."]
+      return undef
+   }
+
+   values1  = new array
+   weights1 = new array
+   multipliers = new array  // Array of [origIndex, multiplier]
+
+   ITEM:
+   for i = 0 to len-1
+   {
+      count = maxcount@i
+
+      if count == 1
+      {
+         values1.push[values@i]
+         weights1.push[weights@i]
+         multipliers.push[ [i, 1] ]
+      }
+
+      if count > 1
+      {
+         nsum = 1
+         multiplier = 1
+         do
+         {
+            // Create multiples of 1,2,4,8... of the items
+            values1.push[values@i * multiplier]
+            weights1.push[weights@i * multiplier]
+            multipliers.push[ [i, multiplier] ]
+            multiplier = multiplier * 2
+            nsum = nsum + multiplier
+         } while nsum < count
+
+         nsum = nsum - multiplier
+         multiplier = multiplier / 2
+
+         // We have leftovers; add one more multiple to use them all
+         if nsum < count
+         {
+            diff = count - nsum
+            values1.push[values@i * diff]
+            weights1.push[weights@i * diff]
+            multipliers.push[ [i, diff] ]
+         }
+      }
+   }
+
+   [maxvalue2, indices2, values2, weights2] = knapsack[values1, weights1, capacity]
+
+   used = new dict   // Dictionary of <origIndex, times>
+   for idx = indices2
+   {
+      // Map multiples back to a count of originals
+      [origIndex, times] = multipliers@idx
+      used.increment[origIndex, times]
+   }
+
+   return [maxvalue2, sum[weights2], used]
+}

@@ -27,17 +27,17 @@ def recaman_required($capture):
       | if .n < $capture then .a += [.current] else . end
       | if ($alreadyUsed|not)
         then .used[$s] = true
-	| if (.current >= 0 and .current <= $required)
-	  then .found[$s] = true | .nfound+=1
-	  else . end
+  | if (.current >= 0 and .current <= $required)
+    then .found[$s] = true | .nfound+=1
+    else . end
         else .
-	end
+  end
       | if (.foundDup|not) and $alreadyUsed
         then .foundDup = .current
-	| .foundDupAt = .n
+  | .foundDupAt = .n
         else .
-	end );
-	
+  end );
+
 1000 as $required
 | 15 as $capture
 | $required | recaman_required($capture)

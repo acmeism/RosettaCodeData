@@ -1,9 +1,7 @@
 import rand
 
-const (
-   lo_abc = 'abcdefghijklmnopqrstuvwxyz'
-   up_abc = 'ABCDEFGHIJKLMNIPQRSTUVWXYZ'
-)
+const lo_abc = 'abcdefghijklmnopqrstuvwxyz'
+const up_abc = 'ABCDEFGHIJKLMNIPQRSTUVWXYZ'
 
 fn main() {
    key := rand.int_in_range(2, 25) or {13}

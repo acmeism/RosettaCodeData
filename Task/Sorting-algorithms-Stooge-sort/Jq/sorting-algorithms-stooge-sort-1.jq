@@ -9,8 +9,8 @@ def stoogesort:
      | if $j - $i > 1 then
           (($j - $i + 1) / 3 | floor) as $t
           | [., $i, $j-$t] | ss
-	  | [., $i+$t, $j] | ss
-	  | [., $i, $j-$t] | ss
+    | [., $i+$t, $j] | ss
+    | [., $i, $j-$t] | ss
        else .
        end;
 

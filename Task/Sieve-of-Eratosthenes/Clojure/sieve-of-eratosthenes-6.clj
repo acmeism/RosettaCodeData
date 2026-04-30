@@ -8,4 +8,5 @@
                 :when (aget refs i)]
           (doseq [j (range (* (+ i i) (inc i)) max-i (+ i i 1))]
             (aset refs j false)))
-        (cons 2 (map #(+ % % 1) (filter #(aget refs %) (range 1 max-i)))))))
+        (cons 2 (map #(+ % % 1)
+                  (filter #(aget refs %) (range 1 max-i)))))))

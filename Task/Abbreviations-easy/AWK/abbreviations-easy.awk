@@ -10,28 +10,28 @@ split("   Add ALTer  BAckup Bottom  CAppend Change SCHANGE  CInsert CLAst COMPre
       "   RIght LEft  SAVE  SET SHift SI  SORT  SOS  STAck STATus  TOP TRAnsfer Type Up" \
       , CMD);
 
-	for (k=1; k <= length(CMD); k++) {
-		cmd[k] = CMD[k];
-		sub(/[a-z]*$/,"",cmd[k]);
-		# print "0: ",CMD[k],"\t",cmd[k];
-	}
+  for (k=1; k <= length(CMD); k++) {
+    cmd[k] = CMD[k];
+    sub(/[a-z]*$/,"",cmd[k]);
+    # print "0: ",CMD[k],"\t",cmd[k];
+  }
 }
 
 function GET_ABBR(input) {
-	for (k2=1; k2<=length(CMD); k2++) {
-		if (index(toupper(CMD[k2]),input)==1) {
-			if (index(input,toupper(cmd[k2]))==1) {
-				return toupper(CMD[k2]);
-			}
-		}
-	}
-	return "*error*";
+  for (k2=1; k2<=length(CMD); k2++) {
+    if (index(toupper(CMD[k2]),input)==1) {
+      if (index(input,toupper(cmd[k2]))==1) {
+        return toupper(CMD[k2]);
+      }
+    }
+  }
+  return "*error*";
 }
 
 {
-	R="";	
-	for (k1=1; k1 <= NF; k1++) {
-		R=R" "GET_ABBR(toupper($k1))
-	}
-	print R;
+  R="";
+  for (k1=1; k1 <= NF; k1++) {
+    R=R" "GET_ABBR(toupper($k1))
+  }
+  print R;
 }

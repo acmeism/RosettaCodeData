@@ -12,10 +12,10 @@
 (defn note [hz sample-rate ms]
   (let [period (/ hz sample-rate)]
     (->> (range (* sample-rate ms 1/1000))
-	 (map #(->> (* 2 Math/PI % period)
-		    Math/sin
-		    (* 127 ,)
-		    byte) ,))))
+    (map #(->> (* 2 Math/PI % period)
+          Math/sin
+          (* 127 ,)
+          byte) ,))))
 
 (def morse-codes
      {\A ".-"   \J ".---" \S "..."   \1 ".----" \. ".-.-.-" \: "---..."
@@ -35,11 +35,11 @@
       ms 50]
   (def sounds
        {\. (note hz sample-rate (* 1 ms))
-	\- (note hz sample-rate(* 3 ms))
-	:element-gap (note 0 sample-rate (* 1 ms))
-	:letter-gap (note 0 sample-rate (* 3 ms))
-	\space (note 0 sample-rate (* 1 ms))})) ;includes letter-gap on either side
-	
+   \- (note hz sample-rate(* 3 ms))
+   :element-gap (note 0 sample-rate (* 1 ms))
+   :letter-gap (note 0 sample-rate (* 3 ms))
+   \space (note 0 sample-rate (* 1 ms))})) ;includes letter-gap on either side
+
 (defn convert-letter [letter]
   (->> (get morse-codes letter "")
        (map sounds ,)

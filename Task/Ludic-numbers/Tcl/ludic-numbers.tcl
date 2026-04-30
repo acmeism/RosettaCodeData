@@ -3,14 +3,14 @@ package require Tcl 8.6
 proc ludic n {
     global ludicList ludicGenerator
     for {} {[llength $ludicList] <= $n} {lappend ludicList $i} {
-	set i [$ludicGenerator]
-	set ludicGenerator [coroutine L_$i apply {{gen k} {
-	    yield [info coroutine]
-	    while true {
-		set val [$gen]
-		if {[incr i] == $k} {set i 0} else {yield $val}
-	    }
-	}} $ludicGenerator $i]
+   set i [$ludicGenerator]
+   set ludicGenerator [coroutine L_$i apply {{gen k} {
+       yield [info coroutine]
+       while true {
+      set val [$gen]
+      if {[incr i] == $k} {set i 0} else {yield $val}
+       }
+   }} $ludicGenerator $i]
     }
     return [lindex $ludicList $n]
 }
@@ -37,7 +37,7 @@ puts "2000-2005: [join $l ,]"
 for {set i 0} {[ludic $i] < 256} {incr i} {set isl([ludic $i]) $i}
 for {set i 1;set l {}} {$i < 250} {incr i} {
     if {[info exists isl($i)] && [info exists isl([expr {$i+2}])] && [info exists isl([expr {$i+6}])]} {
-	lappend l ($i,[expr {$i+2}],[expr {$i+6}])
+   lappend l ($i,[expr {$i+2}],[expr {$i+6}])
     }
 }
 puts "triplets: [join $l ,]"

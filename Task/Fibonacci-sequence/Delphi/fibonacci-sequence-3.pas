@@ -1,7 +1,7 @@
 function fib(n: Int64): Int64;
 
   type TFibMat = array[0..1] of array[0..1] of Int64;
-	
+
   function FibMatMul(a,b: TFibMat): TFibMat;
   var i,j,k: integer;
       tmp: TFibMat;
@@ -9,12 +9,12 @@ function fib(n: Int64): Int64;
     for i := 0 to 1 do
       for j := 0 to 1 do
       begin
-	tmp[i,j] := 0;
-	for k := 0 to 1 do tmp[i,j] := tmp[i,j] + a[i,k] * b[k,j];
+   tmp[i,j] := 0;
+   for k := 0 to 1 do tmp[i,j] := tmp[i,j] + a[i,k] * b[k,j];
       end;
     FibMatMul := tmp;
   end;
-	
+
   function FibMatExp(a: TFibMat; n: Int64): TFibmat;
   begin
     if n <= 1 then fibmatexp := a
@@ -24,7 +24,7 @@ function fib(n: Int64): Int64;
 
 var
   matrix: TFibMat;
-	
+
 begin
   matrix[0,0] := 1;
   matrix[0,1] := 1;

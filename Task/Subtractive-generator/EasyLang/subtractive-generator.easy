@@ -1,6 +1,5 @@
 MOD = 1000000000
 len state[] 55
-arrbase state[] 0
 global si sj .
 funcdecl subrand .
 proc subrand_seed p1 .

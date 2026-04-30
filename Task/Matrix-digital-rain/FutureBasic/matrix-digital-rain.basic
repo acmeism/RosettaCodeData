@@ -1,0 +1,219 @@
+//
+//         MATRIX RAIN
+//
+//   Using FutureBasic 7.0.34
+//  August 2025, R.W.
+//
+//  This code utilizes the Matrix Code
+//   font which can be downloaded for
+//  free at
+//  https://www.1001fonts.com/matrix-code-nfi-font.html
+
+begin enum 1
+  _matrix
+  _label
+  _startBtn
+  _debug
+end enum
+
+CGRect r
+Int dropletHeight
+
+Double Array1 (48, 100)
+Int Density, oldX, oldY
+CFStringRef UniString
+CFStringRef pop
+UInt32 IntUNI
+
+Double x1, x2, x3
+Int j, i, x, y
+Int meWidth, meHeight, mf
+
+Boolean running
+BlockOperationRef dCode
+OperationQueueRef cQueue
+OperationQueueRef opQueue
+
+//
+// Init vars
+//
+void local fn initRain
+  Random
+  if Density > 100 then Density = 100
+  if dropLetHeight > 45 then dropletHeight = 45
+  mf = 240 / dropLetHeight
+
+  // this font can be downloaded from
+  // https://www.1001fonts.com/matrix-code-nfi-font.html
+  // (adjust size to your liking)
+
+  text @"Matrix Code NFI", 22, fn colorGreen
+
+  // If you don't have the above font, it's OK
+  // you can use Menlo and it still looks OK
+  //text @"Menlo", 20, fn colorGreen
+
+  UniString = @"Abcdefghijklmnopqrstuvwxyz0|12\3]46>^?}¬
+  {~=<:<ghijklmnoqrstuvwxyzfghijklmn>^?}{~=<:<"
+
+  for j= 0 to Density
+    for i = 0 to dropletHeight
+      Array1 ( i,j ) = int(rnd(82)) //random str index
+    next i
+    // x coordinates are purposedly not spaced to clear a
+    // character width so that some will overlap creating
+    // a 3D and trailing effect due to antialiasing
+    Array1 (47,j) = int(rnd(meWidth)+ 20)   //random x
+    Array1 (46,j) = int(rnd(meHeight) + 20) //random y
+    // Y variance for speed differential
+    Array1 (48,j) = int(rnd(20) + rnd(20) + 20)
+  next j
+  // ensure we have a stream on the window edges
+  Array1(47,j-1) = meWidth - 30
+  Array1(47,0) = 10
+end fn
+
+//
+// The Matrix Rain
+//
+void local fn Rain
+  cls //destroy what we've drawn
+  for j = 0 to Density
+    x2 = 1
+    oldY = Array1 (48, j) + Array1( 46, j)
+    for i = 0 to dropletHeight
+      x = Array1(47,j)
+      y = oldY
+      if x > meWidth - 20 or y > meHeight - 80
+        // out of bounds
+      else
+        print % (x, y)"";
+        text ,,fn ColorWithRgb(0,255-(x2 * mf),0,1.0)
+        if I = 20 // blink effect
+          if int(rnd(10)) = 5
+            text ,, fn ColorWhite
+          else
+            text ,, fn ColorGreen
+          end if
+        end if
+        print mid(UniString,(Array1(i,j)),1);
+        oldY = oldY + 16
+        if oldY > meHeight then oldY = 0
+        x2 = x2 + 1
+      end if
+    next i
+
+    Array1(46,j) = Array1(46,j) + Array1 (48, j) //20
+    if Array1(46,j) > meHeight -60
+      Array1(46,j) = -400
+    end if
+  next j
+end fn
+
+//
+// Executed as long as we are running
+//
+local fn tillTheCowsComeHome (dPtr as Ptr)
+  while running
+    dispatchmain
+      fn Rain
+    dispatchend
+    delay 110
+  wend
+  // callback canned
+  OperationCancel (dCode )
+end fn
+
+// Begin animation
+void local fn Animate
+  // setup dispatch queue w/ callback
+  dCode = fn BlockOperationWithCallback( @fn tillTheCowsComeHome, NULL )
+  cQueue = fn OperationQueueInit           // Init queue
+  OperationQueueSetMaxConcurrentOperationCount( cQueue, 1 )  // serial only
+  OperationQueueAddOperations( cQueue, @[dCode], NO )        // add to queue
+end fn
+
+//
+// Create main window
+//
+void local fn BuildWindow
+  dim as SInt32 wndStyleMask
+  wndStyleMask  = NSWindowStyleMaskTitled
+  wndStyleMask += NSWindowStyleMaskClosable
+  wndStyleMask += NSWindowStyleMaskResizable
+  r = fn CGRectMake( 0, 0, 960, 626 )
+  window _matrix, @" Matrix Rain ", r, wndStyleMask
+  meWidth = window(_windowWidth)
+  meHeight = window(_windowHeight)
+  CGSize winMin
+  WinMin.width = 390
+  WinMin.height = 390
+  WindowSetBackgroundColor( _matrix, fn ColorBlack )
+  WindowSetContentMinSize(_matrix,winMin)
+  WindowSubclassContentView ( _matrix )
+  ViewSetAutoresizingMask( _matrix, NSViewWidthSizable + NSViewHeightSizable )
+  windowcenter (_matrix)
+  WindowMakeFirstResponder( _matrix, _windowContentViewTag )
+  ViewSetAcceptsFirstResponder( _windowContentViewTag, _true )
+  ViewSetNeedsDisplay( _windowContentViewTag )
+end fn
+
+local fn RefreshScreen
+  //if running then OperationCancel (dCode )
+  meWidth = window(_windowWidth)
+  meHeight = window(_windowHeight)
+  button _startBtn, YES, , @"Start", (meWidth/2-40, 8 ,81,32),,, _matrix
+  fn initRain
+end fn
+
+//
+// App Event handler
+//
+void local fn DoAppEvent( ev as long )
+  select ( ev )
+    case _appWillTerminate
+      if running then OperationCancel (dCode )
+  end select
+end fn
+
+//
+// Event handler
+//
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case _startBtn
+          running = not(running)
+          if running
+            button _startBtn, YES,,@" Stop "
+            fn Animate
+          else
+            button _startBtn, YES,,@" Start "
+          end if
+      end select //tag
+    case _windowDidEndLiveResize
+      fn RefreshScreen
+    case _windowWillResize
+      //      fn RefreshScreen
+    case _windowShouldClose
+      if running then OperationCancel (dCode )
+      end
+  end select //ev
+end fn
+//=================================================
+
+on dialog fn DoDialog
+on appevent fn DoAppEvent
+
+fn BuildWindow
+running = _False
+
+dropletHeight = 26
+Density = 70
+
+fn refreshScreen
+
+HandleEvents
+
+//=================================================

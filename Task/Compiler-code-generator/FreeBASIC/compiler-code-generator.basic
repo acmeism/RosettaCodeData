@@ -1,0 +1,287 @@
+Const NULL As Any Ptr = 0
+Const WORD_SIZE = 4
+
+Enum NodeTypes
+    nd_Ident, nd_String, nd_Integer, nd_Sequence, nd_If, nd_Prtc, nd_Prts, nd_Prti, nd_While
+    nd_Assign, nd_Negate, nd_Not, nd_Mul, nd_Div, nd_Mod, nd_Add, nd_Sub, nd_Lss, nd_Leq
+    nd_Gtr, nd_Geq, nd_Eql, nd_Neq, nd_And, nd_Or
+End Enum
+
+Enum ByteCode
+    bcFetch, bcStore, bcPush, bcAdd, bcSub, bcMul, bcDiv, bcMod, bcLt, bcGt, bcLe, bcGe
+    bcEq, bcNe, bcAnd, bcOr, bcNeg, bcNot, bcJmp, bcJz, bcPrtc, bcPrts, bcPrti, bcHalt
+End Enum
+
+Type Node
+    nodTyp As NodeTypes
+    izda   As Node Ptr
+    dcha   As Node Ptr
+    sValue As String
+    iValue As Long
+End Type
+
+Type SymbolEntry
+    nombre As String
+    offset As Integer
+End Type
+
+Dim Shared As Ubyte code(0 To 9999)
+Dim Shared As Integer codeSize = 0
+Dim Shared As SymbolEntry stringPool(0 To 99)
+Dim Shared As SymbolEntry globals(0 To 99)
+Dim Shared As Integer numStrings = 0
+Dim Shared As Integer numGlobals = 0
+
+Sub EmitByte(b As Ubyte)
+    code(codeSize) = b
+    codeSize += 1
+End Sub
+
+Sub EmitWord(w As Long)
+    Dim As Long value = w
+    For i As Integer = 0 To 3
+        code(codeSize + i) = 0
+    Next
+    *Cast(Long Ptr, @code(codeSize)) = value
+    codeSize += 4
+End Sub
+
+Sub EmitWordAt(at As Integer, n As Long)
+    For i As Integer = 0 To 3
+        code(at + i) = 0
+    Next
+    *Cast(Long Ptr, @code(at)) = n
+End Sub
+
+Function Hole() As Integer
+    Dim As Integer t = codeSize
+    EmitWord(0)
+    Return t
+End Function
+
+Function FetchVarOffset(nombre As String) As Integer
+    nombre = Trim(nombre)
+
+    For i As Integer = numGlobals - 1 To 0 Step -1
+        If globals(i).nombre = nombre Then Return i
+    Next
+
+    globals(numGlobals).nombre = nombre
+    globals(numGlobals).offset = numGlobals
+    numGlobals += 1
+    Return numGlobals - 1
+End Function
+
+Function FetchStringOffset(s As String) As Integer
+    s = Trim(s)
+    If Left(s, 1) = """" Then s = Mid(s, 2, Len(s) - 2)
+
+    For i As Integer = numStrings - 1 To 0 Step -1
+        If stringPool(i).nombre = s Then Return i
+    Next
+
+    stringPool(numStrings).nombre = s
+    numStrings += 1
+    Return numStrings - 1
+End Function
+
+Function GetNodeType(text As String) As NodeTypes
+    text = Trim(text)
+    Select Case text
+    Case "Identifier": Return nd_Ident
+    Case "String"    : Return nd_String
+    Case "Integer"   : Return nd_Integer
+    Case "Sequence"  : Return nd_Sequence
+    Case "If"        : Return nd_If
+    Case "While"     : Return nd_While
+    Case "Assign"    : Return nd_Assign
+    Case "Add"       : Return nd_Add
+    Case "Less"      : Return nd_Lss
+    Case "Prts"      : Return nd_Prts
+    Case "Prti"      : Return nd_Prti
+    Case Else
+        Print "Error: Unknown symbol "; text
+        End 1
+    End Select
+    Return 0
+End Function
+
+Sub CodeGen(n As Node Ptr)
+    If n = NULL Then Return
+
+    Select Case n->nodTyp
+    Case nd_Integer
+        EmitByte(bcPush)
+        EmitWord(n->iValue)
+
+    Case nd_String
+        EmitByte(bcPush)
+        EmitWord(FetchStringOffset(n->sValue))
+
+    Case nd_Ident
+        EmitByte(bcFetch)
+        EmitWord(FetchVarOffset(n->sValue))
+
+    Case nd_Assign
+        Dim As Integer offset = FetchVarOffset(n->izda->sValue)
+        CodeGen(n->dcha)
+        EmitByte(bcStore)
+        EmitWord(offset)
+
+    Case nd_If
+        CodeGen(n->izda)
+        EmitByte(bcJz)
+        Dim As Integer p1 = Hole()
+        CodeGen(n->dcha->izda)
+        If n->dcha->dcha <> NULL Then
+            EmitByte(bcJmp)
+            Dim As Integer p2 = Hole()
+            EmitWordAt(p1, codeSize - p1)
+            CodeGen(n->dcha->dcha)
+            EmitWordAt(p2, codeSize - p2)
+        Else
+            EmitWordAt(p1, codeSize - p1)
+        End If
+
+    Case nd_While
+        Dim startPos As Integer = codeSize
+
+        CodeGen(n->izda)
+
+        EmitByte(bcJz)
+        Dim jzPos As Integer = codeSize
+        EmitWord(0)
+
+        CodeGen(n->dcha)
+
+        EmitByte(bcJmp)
+        Dim jmpOpPos As Integer = codeSize
+        EmitWord(startPos - jmpOpPos)
+
+        EmitWordAt(jzPos, codeSize - jzPos)
+
+    Case nd_Sequence
+        If n->izda <> NULL Then CodeGen(n->izda)
+        If n->dcha <> NULL Then CodeGen(n->dcha)
+
+    Case nd_Prtc, nd_Prti, nd_Prts
+        CodeGen(n->izda)
+        Select Case n->nodTyp
+        Case nd_Prtc: EmitByte(bcPrtc)
+        Case nd_Prti: EmitByte(bcPrti)
+        Case nd_Prts: EmitByte(bcPrts)
+        End Select
+
+    Case nd_Add
+        CodeGen(n->izda)
+        CodeGen(n->dcha)
+        EmitByte(bcAdd)
+
+    Case nd_Lss
+        CodeGen(n->izda)
+        CodeGen(n->dcha)
+        EmitByte(bcLt)
+    End Select
+End Sub
+
+Function LoadAst() As Node Ptr
+    Static As String linea
+    Line Input #1, linea
+    linea = Trim(linea)
+    If linea = "" Orelse linea = ";" Then Return NULL
+
+    Dim As Integer posic = Instr(linea, " ")
+    Dim As String head, tail
+    If posic = 0 Then
+        head = linea
+        tail = ""
+    Else
+        head = Left(linea, posic - 1)
+        tail = Trim(Mid(linea, posic + 1))
+    End If
+
+    Dim As Node Ptr n = New Node
+    n->nodTyp = GetNodeType(head)
+
+    Select Case n->nodTyp
+    Case nd_Integer
+        n->iValue = Vallng(tail)
+        Return n
+    Case nd_String, nd_Ident
+        n->sValue = tail
+        Return n
+    End Select
+
+    n->izda = LoadAst()
+    n->dcha = LoadAst()
+    Return n
+End Function
+
+Sub ListCode()
+    Print "Datasize:"; numGlobals; " Strings:"; numStrings
+    For i As Integer = 0 To numStrings - 1
+        Print """"; stringPool(i).nombre; """"
+    Next
+
+    Dim As Integer pc = 0
+    While pc < codeSize
+        Print Using "#####"; pc;
+
+        Dim As Integer op = code(pc)
+        pc += 1
+
+        Dim As Long v = *Cast(Long Ptr, @code(pc))
+        Select Case op
+        Case bcFetch
+            Print " fetch  [" & v & "]"
+            pc += 4
+        Case bcStore
+            Print " store  [" & v & "]"
+            pc += 4
+        Case bcPush
+            Print " push  "; v
+            pc += 4
+        Case bcAdd:  Print " add"
+        Case bcSub:  Print " sub"
+        Case bcMul:  Print " mul"
+        Case bcDiv:  Print " div"
+        Case bcMod:  Print " mod"
+        Case bcLt :  Print " lt"
+        Case bcGt :  Print " gt"
+        Case bcLe :  Print " le"
+        Case bcGe :  Print " ge"
+        Case bcEq :  Print " eq"
+        Case bcNe :  Print " ne"
+        Case bcAnd:  Print " and"
+        Case bcOr :  Print " or"
+        Case bcNeg:  Print " neg"
+        Case bcNot:  Print " not"
+        Case bcJmp
+            Print " jmp     (" & v; ") " & pc + v
+            pc += 4
+        Case bcJz
+            Print " jz      (" & v; ") " & pc + v
+            pc += 4
+        Case bcPrtc:  Print " prtc"
+        Case bcPrti:  Print " prti"
+        Case bcPrts:  Print " prts"
+        Case bcHalt:  Print " halt"
+        End Select
+    Wend
+End Sub
+
+' Main program
+If Command(1) <> "" Then
+    Open Command(1) For Input As #1
+Else
+    Print "Usage: compiler input.ast"
+    Sleep: End 1
+End If
+
+Dim As Node Ptr ast = LoadAst()
+CodeGen(ast)
+EmitByte(bcHalt)
+ListCode()
+Close #1
+
+Sleep

@@ -1,0 +1,63 @@
+with javascript_semantics
+atom t0 = time(), t1 = time()+1
+include mpfr.e
+
+function wprp(integer p)
+    bool is_ok
+    if p<=5 then
+        is_ok := p!=2
+    else
+        mpz {s,low,high,modulus} = mpz_inits(4)
+        mpz_ui_pow_ui(modulus,2,p)
+        mpz_add_ui(modulus,modulus,1) /* modulus := 2^p + 1 */
+        mpz_set_si(s,25)
+        for i=2 to p do
+            mpz_mul(s,s,s)          /* s := s^2 */
+            mpz_tdiv_r_2exp(low,s,p) /* low := s mod 2^p */
+            mpz_tdiv_q_2exp(high,s,p) /* high := s >> p */
+            mpz_sub(s,low,high) /* s:=low-high (gives reduction mod (2^p+1)) */
+            /* normalize s to 0..modulus-1 (a single add/subtract suffices) */
+            if mpz_sign(s)<0 then
+                mpz_add(s,s,modulus)
+            elsif mpz_cmp(s,modulus)>=0 then
+                mpz_sub(s,s,modulus)
+            end if
+        end for
+        /* check s==25 (mod modulus) ie s is 25 in canonical rep 0..modulus-1 */
+        is_ok = (mpz_cmp_si(s,25)==0)
+        {s,low,high,modulus} = mpz_free({s,low,high,modulus})
+    end if
+    if is_ok then
+        mpz w = mpz_init()
+        mpz_ui_pow_ui(w,2,p)
+        mpz_add_si(w,w,1)
+        assert(mpz_fdiv_q_ui(w,w,3)=0)
+        return w
+    end if
+    return NULL
+end function
+
+integer p, pdx = 2, count = 0
+printf(1,"Some Wagstaff primes:\n")
+--while count<30 do
+while count<29 do
+    p = get_prime(pdx)
+    atom res = wprp(p)
+    if res then
+        count += 1
+        string th = ord(count)
+        if count<=10 then
+            string s = mpz_get_str(res,comma_fill:=true)
+            printf(1,"The %2d%s is %5d: %s\n",{count,th,p,s})
+        else
+            integer l = mpz_sizeinbase(res,10)
+            string e = elapsed(time()-t0,0.2,", %s")
+            printf(1,"The %d%s is %5d (%,d digits%s)\n",{count,th,p,l,e})
+        end if
+    elsif time()>t1 then
+--      progress("%d (%.2f%%)\r",{p,p/42737*100})
+        progress("%d (%.2f%%)\r",{p,p/14479*100})
+        t1 = time()+1
+    end if
+    pdx += 1
+end while

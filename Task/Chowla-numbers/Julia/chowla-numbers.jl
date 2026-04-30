@@ -1,4 +1,4 @@
-using Primes, Formatting
+using Primes, Format
 
 function chowla(n)
     if n < 1

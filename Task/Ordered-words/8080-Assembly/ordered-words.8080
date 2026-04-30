@@ -1,0 +1,106 @@
+puts    equ     9               ; CP/M system calls
+fopen   equ     15
+fread   equ     20
+FCB1    equ     5Ch             ; FCB pre-filled with file on command line
+DMA     equ     80h             ; Address where CP/M stores file block
+        org     100h            ; CP/M start of program
+
+        lxi     h,maxlen        ; Read the file, looking for maximum length
+        shld    wordcb+1
+        call    scnfil
+
+        lxi     h,prword        ; Then read the file again, printing matching
+        shld    wordcb+1        ; words
+
+        ;;;     Scan across file, calling a routine for each word
+scnfil: xra     a               ; Start reading the file at the beginning
+        sta     FCB1+0Ch
+        sta     FCB1+0Eh
+        sta     FCB1+0Fh
+        sta     FCB1+20h
+        lxi     d,FCB1          ; Open file given on command line
+        mvi     c,fopen
+        call    5
+        ana     a               ; Stop program on error
+        jm      err
+        lxi     h,word          ; HL = pointer to word buffer
+rdblk:  push    h               ; Save our pointer
+        lxi     d,FCB1          ; Read a block
+        mvi     c,fread
+        call    5
+        pop     h               ; Restore our pointer
+        dcr     a               ; On EOF, stop
+        rz
+        inr     a               ; On non-EOF error condition, stop with error
+        jnz     err
+        lxi     d,DMA           ; DE = pointer to start of block
+rdchr:  ldax    d               ; Copy character from block to word buffer
+        mov     m,a
+        inx     h               ; Push word pointer forward
+        cpi     10              ; End of line?
+        cz      doword          ; Then go handle the word
+        inr     e               ; Push low byte of block pointer forward
+        jz      rdblk           ; On rollover, go get the next block
+        jmp     rdchr           ; Otherwise, process next character in block
+err:    lxi     d,emsg          ; Write error message and stop
+        mvi     c,puts
+        call    5
+        rst     0
+emsg:   db      'Error$'
+
+        ;;;     Handle a word
+doword: push    d               ; Preserve the block pointer
+        lxi     h,word          ; Reset our word pointer
+        push    h
+        push    h
+        call    isord           ; Check if the word is valid
+        pop     h               ; Reset the word pointer again
+wordcb: cnc     0               ; Call the word handler if so
+        pop     h               ; Reset the word pointer again
+        pop     d               ; Restore the block pointer
+        ret
+
+        ;;;     Check if word at HL is ordered
+isord:  mov     b,m             ; Read first character
+isord1: inx     h
+        mov     a,m             ; Read next character
+        cpi     32              ; End of word?
+        cmc
+        rnc                     ; Then stop with C=0 (word is ordered)
+        cmp     b               ; Compare with previous char, we expect b <= a
+        rc                      ; Stop if b>a with C=1 (word not ordered)
+        mov     b,a             ; This is now the previous character
+        jmp     isord1          ; Check next character
+
+        ;;;     Update maximum length
+maxlen: call    wlen            ; Find length of word
+        lda     wrdlen          ; Get current length of longest word
+        cmp     c               ; Is it less than the length of our word?
+        rnc                     ; If not, do nothing
+        mov     a,c             ; If so, update the maximum length
+        sta     wrdlen
+        ret
+wrdlen: db      0               ; Maximum length found
+
+        ;;;     Find length of word
+wlen:   mvi     c,0             ; Length
+wlchar: mov     a,m
+        cpi     32              ; End of word?
+        rc                      ; Then stop
+        inx     h               ; Increment pointer and length
+        inr     c
+        jmp     wlchar
+
+        ;;;     Print word if its length matches the maximum length
+prword: call    wlen            ; Get length of word
+        lda     wrdlen          ; Is the length equal to the maximum found?
+        cmp     c
+        rnz                     ; If not, stop
+        inx     h               ; If so, skip past newline (not counted in length),
+        inx     h
+        mvi     m,'$'           ; and terminate word with '$'
+        lxi     d,word          ; and print the word
+        mvi     c,puts
+        jmp     5
+
+word    equ     $               ; Store the current word after the program

@@ -5,7 +5,7 @@ function Is_self_describing( n )
     for i = 0, 9 do t[i] = 0 end
 
     for i = 1, s:len() do
-	local idx = tonumber( s:sub(i,i) )
+   local idx = tonumber( s:sub(i,i) )
         t[idx] = t[idx] + 1
     end
 

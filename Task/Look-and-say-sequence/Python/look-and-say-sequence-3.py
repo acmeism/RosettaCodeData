@@ -1,12 +1,12 @@
 >>> from itertools import groupby, islice
 >>>
 >>> def lookandsay(number='1'):
-	while True:
-		yield number
-		number = ''.join( str(len(list(g))) + k
-		                  for k,g in groupby(number) )
+  while True:
+    yield number
+    number = ''.join( str(len(list(g))) + k
+                      for k,g in groupby(number) )
 
-		
+
 >>> print('\n'.join(islice(lookandsay(), 10)))
 1
 11

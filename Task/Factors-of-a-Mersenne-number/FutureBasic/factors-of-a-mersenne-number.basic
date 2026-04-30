@@ -1,0 +1,108 @@
+//
+// Factors of Mersenne number
+//
+// Using FutureBasic 7.0.36
+// October 2025, R.W.
+
+include "gmp.incl"
+
+_scanMax = 2000000  // max k scan set at 2 million
+
+// ------------------------------------------------------------
+// Exponent primality using GMP (mpz_probab_prime_p)
+// Returns _true if p is (probably) prime; _false otherwise.
+
+local fn IsPrimeP_mpz( p as UInt32 ) as BOOL
+  mpz_t z
+  int res
+  if p < 2 then return _false
+  mpz_init( z )
+  mpz_set_ui( z, p )
+  // Miller–Rabin reps = 18 is sufficient
+  // res 0 = composite, 1 = probable, 2 = definite
+  res = fn mpz_probab_prime_p( z, 18 )
+  mpz_clear( z )
+  if res == 0 then return _false
+  // res 1 or 2 → treat as prime for gating
+end fn = _True
+
+// ------------------------------------------------------------
+// Find first prime factor q of M_p = 2^p - 1
+// Scans q = 2 * k * p + 1 for k = 1..maxK. Returns 0 if none found.
+// Precondition: caller ensures p is (probably) prime and p ≥ 2.
+//
+local fn FindMersenneFactor( p as UInt32, maxK as UInt64 ) as UInt64
+  mpz_t qz, rz
+  UInt64 k, qCandidate
+  int isPrime
+  // Eliminate the obvious
+  if p < 2 then return 0
+  if p == 2 then return 0    // M2 = 3 is prime
+
+  mpz_init( qz )
+  mpz_init( rz )
+  k = 1
+  while k <= maxK
+    // q = 2 * k * p + 1  (candidates with q ≡ 1 (mod 2p))
+    qCandidate = (UInt64)2 * (UInt64)p * k + 1ULL
+    // primality screen for q
+    mpz_set_ui( qz, qCandidate )
+    // Miller–Rabin reps = 18 is sufficient
+    isPrime = fn mpz_probab_prime_p( qz, 18 )
+    if isPrime > 0
+      // Test 2^p ≡ 1 (mod q)
+      mpz_set_ui( rz, 2 )
+      mpz_powm_ui( rz, rz, p, qz )
+      if fn mpz_cmp_ui( rz, 1 ) == 0
+        mpz_clear( rz )
+        mpz_clear( qz )
+        return qCandidate
+      end if
+    end if
+    k = k + 1
+  wend
+  mpz_clear( rz )
+  mpz_clear( qz )
+end fn = 0
+
+// ------------------------------------------------------------
+// M_p gating/message
+//
+local fn ReportMersenne( p as UInt32, maxK as UInt64 )
+  UInt64 q
+  // Gate on exponent primality first
+  if fn IsPrimeP_mpz( p ) == _false
+    print @"M"; p; @" = 2^"; p; @" - 1 exponent is not prime"
+    exit fn
+  end if
+  // p is (probably) prime: try to find a factor of M_p
+  q = fn FindMersenneFactor( p, maxK )
+  if q == 0
+    // No factor found in scan range → either prime or factor > search bound
+    print @"M"; p; @" = 2^"; p; @" - 1 is prime (no factor found in range)"
+  else
+    print @"M"; p; @" = 2^"; p; @" - 1 is composite with factor "; q
+  end if
+end fn
+
+
+//  Main
+
+window 1
+
+UInt32 p
+p = 929    // Rosetta Task requirement
+
+// start the clock
+CFTimeInterval t
+t = fn CACurrentMediaTime
+
+// note, if you need a range, just do a loop
+// like:
+// for p = 900 to 930
+fn ReportMersenne( p, _scanMax )   // 2 million k scans
+// next p
+
+printf @"\nElapsed time: %.3f ms", (fn CACurrentMediaTime-t)*1000
+
+HandleEvents

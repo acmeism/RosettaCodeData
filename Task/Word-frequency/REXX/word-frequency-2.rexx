@@ -1,4 +1,4 @@
--- 9 Nov 2025
+-- 10 Mar 2026
 include Setting
 arg file top
 if file='' | file='.' then
@@ -9,10 +9,10 @@ if top='' then
 say 'WORD FREQUENCY'
 say version
 say
-call CountWords(file)
+call CountWords file
 call SaveCount
-call ShowCount(top)
-call ShowWord(top)
+call ShowCount top
+call ShowWord top
 call Timer
 exit
 
@@ -36,7 +36,7 @@ do while Lines(file)
       Dict.w+=1
    end i
 end
-List.Dict.0=n; List.Count.0=n
+List.0=n
 say n 'different words found'
 say
 return
@@ -44,7 +44,7 @@ return
 SaveCount:
 procedure expose Dict. List.
 -- Move counts to list
-do i=1 to List.Dict.0
+do i=1 to List.0
    w=List.Dict.i; List.Count.i=Dict.w
 end
 return
@@ -52,34 +52,34 @@ return
 ShowCount:
 procedure expose List.
 arg top
-call Sort 'List.Count.','List.Dict.'
+call SortSt 'List.Count.','List.Dict.'
 say 'Frequency by count'
 say 'word             rank count'
 say '---------------------------'
 n=0
-do i=List.Dict.0 by -1 to 1
+do i=List.0 by -1 to 1
    n+=1
    if n<=top then
       say Left(List.Dict.i,15) Right(n,5) Right(List.Count.i,5)
    List.Rank.i=n
 end
+say '...'
 say
 return
 
 ShowWord:
 procedure expose List.
 arg top
-call Sort 'List.Dict.','List.Rank. List.Count.'
+call SortSt 'List.Dict.','List.Rank. List.Count.'
 say 'Frequency by word'
 say 'word             rank count'
 say '---------------------------'
 do i=1 to top
    say Left(List.Dict.i,15) Right(List.Rank.i,5) Right(List.Count.i,5)
 end
+say '...'
 say
 return
 
--- Timer
-include Timer
--- Sort
-include Utility
+-- SortSt; Timer
+include Math

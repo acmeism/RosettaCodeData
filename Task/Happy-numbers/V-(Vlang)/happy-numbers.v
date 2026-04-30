@@ -1,16 +1,14 @@
 fn happy(h int) bool {
     mut m := map[int]bool{}
-    mut n := h
+    mut n, mut x := h, 0
     for n > 1 {
         m[n] = true
-        mut x := 0
+        x = 0
         for x, n = n, 0; x > 0; x /= 10 {
             d := x % 10
             n += d * d
         }
-        if m[n] {
-            return false
-        }
+        if m[n] { return false }
     }
     return true
 }
@@ -22,5 +20,5 @@ fn main() {
             found++
         }
     }
-    println('')
+    println("")
 }

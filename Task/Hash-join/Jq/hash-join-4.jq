@@ -21,7 +21,7 @@ def hashJoinArrays(table1; index1; table2; index2):
        ($row[index2]|h) as $key
        | if $hash|has($key) then
            reduce $hash[$key][] as $r
-	     (.;
-	      . + [ $r + $row[0:index2] + $row[index2+1:] ] )
-  	 else . end)
+       (.;
+        . + [ $r + $row[0:index2] + $row[index2+1:] ] )
+     else . end)
 ;

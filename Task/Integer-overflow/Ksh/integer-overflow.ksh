@@ -2,7 +2,7 @@
 
 # Integer overflow
 
-#	# Variables:
+# # Variables:
 #
 typeset -si SHORT_INT
 typeset -i  INTEGER

@@ -17,7 +17,7 @@ struct Card {
         immutable pipOrder = (!rankAceTop) ?
                              pip :
                              (pip ? pip - 1 : 12);
-        return pipOrder * suits.length + suit;
+        return pipOrder * cast(int)suits.length + suit;
     }
 
     bool opEqual(in Card rhs) const pure nothrow {
@@ -61,7 +61,7 @@ final class Deck {
     }
 
     Deck dealTop(Deck toDeck = null) pure nothrow {
-        return deal(length - 1, toDeck);
+        return deal(cast(int)length - 1, toDeck);
     }
 
     Card opIndex(in int loc) const pure nothrow {

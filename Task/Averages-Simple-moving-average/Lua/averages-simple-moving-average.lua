@@ -1,13 +1,13 @@
 function sma(period)
 	local t = {}
-	function sum(t)
-		sum = 0
+	local function sum(t)
+		local tot = 0
 		for _, v in ipairs(t) do
-			sum = sum + v
+			tot = tot + v
 		end
-		return sum
+		return tot
 	end
-	function average(n)
+	local function average(n)
 		if #t == period then table.remove(t, 1) end
 		t[#t + 1] = n
 		return sum(t) / #t

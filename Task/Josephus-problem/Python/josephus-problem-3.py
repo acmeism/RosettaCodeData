@@ -13,7 +13,5 @@ def josephus(n, k):
     return v
 
 josephus(10, 2)
-[1, 3, 5, 7, 9, 2, 6, 0, 8, 4]
 
 josephus(41, 3)[-1]
-30

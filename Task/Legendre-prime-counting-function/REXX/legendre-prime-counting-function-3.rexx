@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 21 Feb 2026
 include Setting
 
 say 'LEGENDRE PRIME COUNTER (SIEVING)'
@@ -12,4 +12,5 @@ do n = 0 to 8
 end
 exit
 
+-- Primes
 include Math

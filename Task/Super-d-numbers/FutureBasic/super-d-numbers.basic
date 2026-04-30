@@ -1,0 +1,109 @@
+// ------------------------------------------------------------
+//  Super-d numbers in base 10
+//  Using FutureBasic 7.0.36
+//  November 2025, R.W.
+//
+//  A positive integer n is super-d (2 ≤ d ≤ 9) if d * n^d
+//  contains ≥ d consecutive digits 'd' in its decimal expansion.
+// ------------------------------------------------------------
+
+include "gmp.incl"
+
+CFTimeInterval t
+CFRange rng
+Int gD
+
+// Returns _true if CFString s contains ≥ runLen consecutive copies of digit d
+
+// cache the "dddd…d" pattern per d (2..9)
+static CFStringRef gPat(9)
+
+local fn ContainsRunOfDigit( s as CFStringRef, d as int, runLen as int ) as boolean
+ if (s == 0) || (runLen <= 0) then RETURN _false
+ if (d < 2)  || (d > 9) then RETURN _false
+  if gPat(d) = 0
+    CFMutableStringRef pat = fn CFStringCreateMutable( _kCFAllocatorDefault, 0 )
+    CFStringRef ch = ucs(48 + d)
+    int i
+    for i = 1 to runLen
+      CFStringAppend( pat, ch )
+    next
+    gPat(d) = pat  // keep cached
+  end if
+  rng = fn CFStringFind( s, gPat(d), 0 )
+  if rng.location = _kCFNotFound then RETURN _false
+end fn = _True
+
+// Reuse big-int; (mpz_cf2 result is autoreleased → do NOT CFRelease)
+local fn KString_d_n( d as int, n as long ) as CFStringRef
+  static int sKInit
+  static mpz_t sK
+  if sKInit = 0
+    mpz_init( sK )
+    sKInit = 1
+  end if
+  fn mpz_ui_pow_ui( sK, n, d )
+  fn mpz_mul_ui( sK, sK, d )
+end fn = fn mpz_cf2( sK )  // no CFRelease on the caller side
+
+// Print first 10 super-d numbers
+local fn PrintFirst10SuperD( d as int )
+  print "First 10 super-"; d; " numbers:"
+  int count : count = 0
+  long n : n = 3
+  int printed : printed = 0
+
+  while count < 10
+    CFStringRef s : s = fn KString_d_n( d, n )
+    if fn ContainsRunOfDigit( s, d, d )
+      if printed > 0 then print " ";
+      print n;
+      printed = printed + 1
+      count   = count + 1
+    end if
+    n = n + 1
+  wend
+  print : print
+end fn
+
+// Get next super D
+// After D = 9, you will need plenty of Virtual
+// Memory or the app will run out of memory.
+
+local fn SuperPlus1
+  t = fn CACurrentMediaTime
+  gD++
+  fn PrintFirst10SuperD( gD )
+  printf @"Elapsed time time: %.3f secs\n", (fn CACurrentMediaTime-t)
+end fn
+
+// Dialog handler
+
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case 2
+          fn superPlus1
+      end select
+  end select
+end fn
+
+on dialog fn DoDialog
+
+// Main
+
+window 1, @"Super-d numbers", (0,0,720,610)
+button 2,YES,,@"Super+1",(10,20,100,20),,,1
+
+print @"\nSuper-D for D = 2 through D = 6\n"
+t = fn CACurrentMediaTime
+
+int d
+for d = 2 to 6
+  fn PrintFirst10SuperD( d )
+next
+gD = 6
+printf @"Elapsed time time: %.3f secs\n", (fn CACurrentMediaTime-t)
+
+HandleEvents

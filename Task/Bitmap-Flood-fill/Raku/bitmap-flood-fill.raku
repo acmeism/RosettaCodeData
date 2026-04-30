@@ -4,16 +4,16 @@ class Bitmap {
     has Pixel @.data;
 
     method pixel(
-	    $i where ^$!width,
-	    $j where ^$!height
-	    --> Pixel
+      $i where ^$!width,
+      $j where ^$!height
+      --> Pixel
       ) is rw { @!data[$i + $j * $!width] }
 }
 
 role PPM {
     method P6 returns Blob {
-	"P6\n{self.width} {self.height}\n255\n".encode('ascii')
-	~ Blob.new: flat map { .R, .G, .B }, self.data
+  "P6\n{self.width} {self.height}\n255\n".encode('ascii')
+  ~ Blob.new: flat map { .R, .G, .B }, self.data
     }
 }
 

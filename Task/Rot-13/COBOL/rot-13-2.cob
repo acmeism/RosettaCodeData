@@ -1,0 +1,21 @@
+IDENTIFICATION DIVISION.
+FUNCTION-ID. rot-13.
+
+DATA DIVISION.
+LOCAL-STORAGE SECTION.
+01  STR-LENGTH   CONSTANT AS 100.
+01  normal-lower CONSTANT AS "abcdefghijklmnopqrstuvwxyz".
+01  rot13-lower  CONSTANT AS "nopqrstuvwxyzabcdefghijklm".
+01  normal-upper CONSTANT AS "ABCDEFGHIJKLMNOPQRSTUVWXYZ".
+01  rot13-upper  CONSTANT AS "NOPQRSTUVWXYZABCDEFGHIJKLM".
+LINKAGE SECTION.
+77  in-str       PICTURE IS X(STR-LENGTH).
+77  out-str      PICTURE IS X(STR-LENGTH).
+
+PROCEDURE DIVISION USING in-str, RETURNING out-str.
+    MOVE in-str TO out-str
+    INSPECT out-str CONVERTING normal-lower TO rot13-lower
+    INSPECT out-str CONVERTING normal-upper TO rot13-upper
+    GOBACK.
+
+END FUNCTION rot-13.

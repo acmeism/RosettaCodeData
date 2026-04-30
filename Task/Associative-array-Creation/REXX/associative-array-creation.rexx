@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 21 Feb 2026
 include Setting
 
 say 'ASSOCIATIVE ARRAY: CREATION'
@@ -12,7 +12,7 @@ cap.uk='London'
 call Capital 'BE'
 call Capital 'UK'
 call Capital 'NO'
-day.='Unknown'; week.=day.
+day.='Unknown'; week.='Unknown'
 day.jan.2=2; week.jan.2=1
 day.mar.17=76; week.mar.17=12
 day.aug.7=219; week.aug.7=32
@@ -31,7 +31,7 @@ a2=a1; say 'a.'a2 '=' a.a2
 a1='└┴┬├─┼'; a.a1='special characters'
 a2=a1; say 'a.'a2 '=' a.a2
 say
-call DumpVariables
+call Showvars
 exit
 
 Capital:
@@ -44,4 +44,5 @@ arg mm,dd
 say mm dd 'is day no' day.mm.dd 'and week no' week.mm.dd
 return
 
+-- Showvars
 include Math

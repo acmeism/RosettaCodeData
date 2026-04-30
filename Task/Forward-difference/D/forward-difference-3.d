@@ -1,6 +1,6 @@
 import std.stdio;
 
-T[] forwardDifference(T)(T[] s, in int n) pure nothrow @nogc {
+T[] forwardDifference(T)(T[] s, in ulong n) pure nothrow @nogc {
     foreach (immutable i; 0 .. n)
         s[0 .. $ - i - 1] = s[1 .. $ - i] - s[0 .. $ - i - 1];
     return s[0 .. $ - n];

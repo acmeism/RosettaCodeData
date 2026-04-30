@@ -1,21 +1,31 @@
-from abc import ABCMeta, abstractmethod
+from typing import Literal
+from typing import Protocol
 
-class BaseQueue():
-    """Abstract Class
-    """
-    __metaclass__ = ABCMeta
+class Pet(Protocol):
+    def speak(self) -> str: ...
 
-    def __init__(self):
-        self.contents = list()
+class Cat:
+    def __init__(self, name: str) -> None:
+        self.name = name
 
-    @abstractmethod
-    def Enqueue(self, item):
-        pass
+    def speak(self) -> str:
+        return f"{self.name} says meow"
 
-    @abstractmethod
-    def Dequeue(self):
-        pass
+class Dog:
+    def __init__(self, name: str, size: Literal["small", "big"] = "small") -> None:
+        self.name = name
+        self.size = size
 
-    def Print_Contents(self):
-        for i in self.contents:
-            print i,
+    def speak(self) -> str:
+        return "woof" if self.size == "small" else "loud woof"
+
+
+if __name__ == "__main__":
+    pets: list[Pet] = [
+        Cat(name="Fluffy"),
+        Dog(name="Gary"),
+        Dog(name="Sue", size="big"),
+    ]
+
+    for pet in pets:
+        print(pet.speak())

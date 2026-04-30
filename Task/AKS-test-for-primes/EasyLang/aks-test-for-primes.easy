@@ -1,7 +1,7 @@
 func[] coefs n .
-   list[] = [ 1 ]
-   arrbase list[] 0
-   for k = 0 to n : list[] &= list[k] * (n - k) / (k + 1)
+   len list[] n + 2
+   list[0] = 1
+   for k = 0 to n : list[k + 1] = list[k] * (n - k) / (k + 1)
    for k = 1 step 2 to n : list[k] = -list[k]
    return list[]
 .

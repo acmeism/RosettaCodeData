@@ -11,7 +11,7 @@ string josephus(in int n, in int k) pure /*nothrow*/ @safe {
     int i;
     immutable(int)[] seq;
     while (!p.empty) {
-        i = (i + k - 1) % p.length;
+        i = (i + k - 1) % cast(int)p.length;
         seq ~= p.pop(i);
     }
 

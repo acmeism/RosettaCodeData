@@ -1,0 +1,76 @@
+with javascript_semantics
+include mpfr.e
+mpz {z,p} = mpz_inits(2)
+
+function is_chernick(integer n, atom m)
+    sequence cf = {}
+    integer c = 0
+    atom f
+    for i=1 to n do
+        c += iff(i<=3?6:c)
+        f = c*m+1
+        if f>23 then
+            for p in {3,5,7,11,13,17,19,23} do
+                if rmdr(f,p)=0 then return false end if
+            end for
+        end if
+        cf &= f
+    end for
+    for f in cf do
+        if f>107 then
+            for p in {29,31,37,41,43,47,53,59,61,67,
+                      71,73,79,83,89,97,101,103,107} do
+                if rmdr(f,p)=0 then return false end if
+            end for
+        end if
+    end for
+    mpz_set_si(p,1)
+    for f in cf do
+--      mpz_set_d(z,f) -- aside: fails for 17869585606041601 (..600, no real idea why)
+        mpz_set_str(z,sprintf("%d",f))
+        if not mpz_prime(z) then return false end if
+        mpz_mul(p,p,z)
+    end for
+    progress("")
+    printf(1,"U(%d,%d): %s = %s\n",{n,m,mpz_get_short_str(p),join(cf," * ",fmt:="%d")})
+    return true
+end function
+
+constant expected_results = {0,0,1,1,380,380,780320,950560,950560,3208386195840,31023586121600}
+--                           ^ ^ (unused)
+procedure main()
+    atom t0 = time()
+
+    -- derived from prime factors of the final k, should you find any way to bump
+    -- the multiplier by any of these, that would be good & need culling from this
+--  sequence cheat = {0,0,1,1,190,19,4*4877,26*457,13*457,
+--                      2*3*7*19*12564169,5*457*21214159}   -- 0s           -- max cheat!
+    sequence cheat = {0,0,1,1,1,1,1,1,1,12564169,21214159}  -- 0.0s         -- still cheating!
+--  sequence cheat = {0,0,1,1,1,1,1,1,1,2*3*7*19,21214159}  -- 8.3s
+--  sequence cheat = {0,0,1,1,1,1,1,1,1,12564169,5*457}     -- 7.8s
+--  sequence cheat = {0,0,1,1,1,1,1,1,1,2*3*7*19,5*457}     -- 15.9s
+--  sequence cheat = {0,0,1,1,1,1,1,1,1,12564169,457}       -- 38.5s
+--  sequence cheat = {0,0,1,1,1,1,1,1,1,1,21214159}         -- 1 hour (est)
+--  sequence cheat = {0,0,1,1,1,1,1,1,1,12564169,1}         -- 5 hours (est)
+
+    for n=3 to iff(machine_bits()=32?10:11) do
+        atom multiplier = iff(n>4 ? power(2,n-4) : 1), k = 0, t2 = time(), t1 = t2+1
+        if n>5 then multiplier *= 5 end if
+        while true do
+            k += cheat[n]                                   -- (see timings as above)
+--          k += 1                                          -- 6 hours (est, without cheating)
+            atom m = k * multiplier;
+            if is_chernick(n, m) then exit end if
+            if time()>t1 then
+                atom er = expected_results[n], f = m/er, e = time()-t2
+                -- estimated time and time to completion for the current n, fairly
+                -- obviously these do not indicate how long any later n might take.
+                string est = elapsed_short(e/f), etc = elapsed_short(e*((1-f)/f))
+                progress("%d/%d (%.2f%%, est: %s, etc:%s)",{m,er,f*100,est,etc})
+                t1 = time()+1
+            end if
+        end while
+    end for
+    ?elapsed(time()-t0)
+end procedure
+main()

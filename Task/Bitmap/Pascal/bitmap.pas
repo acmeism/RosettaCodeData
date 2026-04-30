@@ -117,14 +117,14 @@ Procedure CreateBmpFile32(directory: string; FileName: string;
       { fill the pixel data area }
       for y := (height - 1) downto 0  do
       begin
-	for x := 0 to (width - 1) do
-	begin { Pixel(x,y) }
-	  color32.Blue  := 255;
-	  color32.Green := 0;
-	  color32.Red   := 0;
-	  color32.Alfa  := 0;
-	  BlockWrite(bmpFile, color32, 4);
-	end; { for x ... }
+   for x := 0 to (width - 1) do
+   begin { Pixel(x,y) }
+     color32.Blue  := 255;
+     color32.Green := 0;
+     color32.Red   := 0;
+     color32.Alfa  := 0;
+     BlockWrite(bmpFile, color32, 4);
+   end; { for x ... }
       end; { for y ... }
       Close(bmpFile);
     end; { with bmpInfoHeader, bmpFileHeader }

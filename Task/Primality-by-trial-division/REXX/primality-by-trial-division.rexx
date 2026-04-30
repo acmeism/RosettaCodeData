@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 4 Mar 2026
 include Setting
 numeric digits 15
 
@@ -14,10 +14,10 @@ end
 exit
 
 ShowTrial:
-procedure
+procedure expose memo.
 arg xx,yy,zz
 call Time('r')
-say 'Primes between' std(xx) 'and' std(yy) 'by trial division'
+say 'Primes between' Std(xx) 'and' Std(yy) 'by trial division'
 n = 0; w = Xpon(yy)+2
 do i = xx to yy
    if Isprime(i) then do
@@ -33,10 +33,10 @@ say Format(Time('e'),,3) 'seconds'; say
 return
 
 ShowMR:
-procedure
+procedure expose memo.
 arg xx,yy,zz
 call Time('r')
-say 'Primes between' std(xx) 'and' std(yy) 'by Miller-Rabin'
+say 'Primes between' Std(xx) 'and' Std(yy) 'by Miller-Rabin'
 n = 0; w = Xpon(yy)+2
 do i = xx to yy
    if Prime(i) then do
@@ -52,7 +52,7 @@ say Format(Time('e'),,3) 'seconds'; say
 return
 
 CompareTrialMR:
-procedure
+procedure expose memo.
 arg xx,yy
 call Time('r')
 do i = xx to yy
@@ -69,7 +69,7 @@ say 'For n between' Right(Std(xx),14) 'and' Right(Std(yy),14),
 return
 
 Isprime:
-procedure
+procedure expose memo.
 arg xx
 if xx < 2 then
    return 0
@@ -83,4 +83,5 @@ do i = 3 by 2 to Isqrt(xx)
 end
 return 1
 
+-- Even; Std; Prime; Xpon; Isqrt
 include Math

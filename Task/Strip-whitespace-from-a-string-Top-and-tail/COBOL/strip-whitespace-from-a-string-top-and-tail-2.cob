@@ -1,0 +1,3 @@
+DISPLAY "'" FUNCTION TRIML(str) "'"
+DISPLAY "'" FUNCTION TRIMR(str) "'"
+DISPLAY "'" FUNCTION TRIM(str) "'"

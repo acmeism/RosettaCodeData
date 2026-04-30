@@ -7,13 +7,13 @@ String extend [
      [ coll size > 0 ]
      whileTrue: [
         nextElement := coll removeFirst.
-	( anElement == nextElement ) ifTrue: [
+  ( anElement == nextElement ) ifTrue: [
            counter := counter + 1.
         ] ifFalse: [
-	  newColl add: (counter displayString).
-	  newColl add: (anElement asString).
-	  anElement := nextElement.
-	  counter := 1.
+    newColl add: (counter displayString).
+    newColl add: (anElement asString).
+    anElement := nextElement.
+    counter := 1.
         ]
      ].
      newColl add: (counter displayString).

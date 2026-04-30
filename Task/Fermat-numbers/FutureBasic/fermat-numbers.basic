@@ -1,0 +1,640 @@
+// ------------------------------------------------------------
+//  Fermat numbers with factorization
+//
+//  Using FutureBasic 7.0.36
+//  November 2025, R.W.
+//
+//  This code is larger than I originally imagined but this is
+//  simply because my original coding idea was to use
+//  Pollard-Rho to do the factorization until I realize, it
+//  can be a very long time for factors of F[9] and above using
+//  PR and it may still returns nothing. So I did a pseudo ECM
+//  reasonably small but works faster.
+// ------------------------------------------------------------
+
+include "gmp.incl"
+
+CFTimeInterval tim
+
+// Global mpz_t bigints reused for speed
+mpz_t fm                             // work
+mpz_t num, den, inv, t1, t2, g
+
+// Limit is set at 15 since anything greater than 14 most
+// likely will exceed the 'under 5 minutes' Rosetta task limit
+mpz_t gF(15)                         // Fermat numbers F0..F15
+
+mpz_t gFactors(31)                   // factor buffer
+int   gFactorCount
+
+long gFN                             // next Fermat index for factoring
+int  gDidFactorHeader                // print header once
+
+// -----------------------------------------------------------
+//  Helper: CFString "F0", "F1", ...
+// -----------------------------------------------------------
+local fn FermatLabel( n as long ) as CFStringRef
+  CFStringRef out
+  out = @"\nF"
+  out = concat( out, str( n ) )
+end fn = out
+
+// -----------------------------------------------------------
+//  Helper: Abbreviate big numeric CFString: head...tail
+// -----------------------------------------------------------
+local fn AbbrevString( s as CFStringRef, head as int, ¬
+  tail as int ) as CFStringRef
+
+  if s == 0 then RETURN @""
+  CFStringRef a, b, out
+  int nLen
+  nLen = len( s )
+  if nLen <= head + tail then RETURN s
+  a   = left( s, head )
+  b   = right( s, tail )
+  out = @""
+  out = concat( a, @"...", b )
+end fn = out
+
+// -----------------------------------------------------------
+// Helper: Get mpz_t result and abbreviate if > 53 digits
+// -----------------------------------------------------------
+local fn Abbrev( ts as mpz_t ) as CFStringRef
+  CFStringRef result
+  result = fn mpz_cf2( ts )  // FB wrapper mpz_t to CFString
+  int nLen
+  nLen = len( result )
+  if nLen <= 53 then RETURN result
+  result = fn AbbrevString( result, 25, 25 )
+end fn = result
+
+// -----------------------------------------------------------
+//  Helper: Is n probably prime?
+// -----------------------------------------------------------
+local fn IsProbablePrime( n as mpz_t ) as boolean
+  int r
+  r = fn mpz_probab_prime_p( n, 25 )  // 25 reps should be sufficient
+  // r = 0 (composite), 1 (probable prime), 2 (definite prime)
+  if r > 0 then RETURN _true
+end fn = _false
+
+// -----------------------------------------------------------
+//  Helper: Simple 32-bit primality test for Stage 1 ECM
+// -----------------------------------------------------------
+local fn IsSmallPrime32( p as UInt32 ) as boolean
+  if p < 2 then return _false
+  if p = 2 then return _true
+  if (p AND 1) == 0 then return _false
+
+  UInt32 d
+  d = 3
+  while d * d <= p
+    if (p MOD d) == 0 then return _false
+    d = d + 2
+  wend
+
+end fn = _true
+
+// Clear global mpz
+void local fn clear_MPZ
+  mpz_clear( num )
+  mpz_clear( den )
+  mpz_clear( inv )
+  mpz_clear( t1 )
+  mpz_clear( t2 )
+  mpz_clear( g )
+end fn
+
+// Init global mpz
+void local fn Init_MPZ
+  mpz_init( num )
+  mpz_init( den )
+  mpz_init( inv )
+  mpz_init( t1 )
+  mpz_init( t2 )
+  mpz_init( g )
+end fn
+
+// ---------------------------------------------------------------
+//  ECM_PointDouble
+//  Point doubling: P = (x,y) → 2P on y^2 = x^3 + a x + b (MOD n)
+//  Returns _true if a nontrivial factor found (in 'factor'),
+//  else _false.
+//  On success, 'factor' holds GCD > 1, < n, and x,y are undefined
+//  On normal completion, x,y are updated to 2P.
+// ---------------------------------------------------------------
+
+local fn ECM_PointDouble( n as mpz_t, a as mpz_t, ¬
+  x as mpz_t, y as mpz_t, factor as mpz_t ) as boolean
+
+  fn Init_MPZ
+
+  mpz_mul( t1, x, x )  // num = 3 * x^2 + a (MOD n)
+  mpz_mod( t1, t1, n )       // t1 = x^2
+  mpz_mul_ui( num, t1, 3 )   // num = 3*x^2
+  mpz_add( num, num, a )
+  mpz_mod( num, num, n )
+
+  mpz_mul_ui( den, y, 2 )  // den = 2*y (MOD n)
+  mpz_mod( den, den, n )
+
+  if fn mpz_invert( inv, den, n ) == 0  // try to invert den
+    // inversion failed -> GCD(den, n) may give a factor?
+    // do you feel lucky, punk?
+    mpz_GCD( g, den, n )
+    if (fn mpz_cmp_ui( g, 1 ) > 0) && (fn mpz_cmp( g, n ) < 0)
+      mpz_set( factor, g )
+      fn Clear_MPZ
+      return _true
+    end if
+    // GCD == 1 or GCD == n -> useless curve (sigh)
+    fn Clear_MPZ
+    return _false
+  end if
+
+  mpz_mul( t1, num, inv )  // lambda = num * inv (MOD n)
+  mpz_mod( t1, t1, n )     // t1 = lambda
+
+  // x3 = lambda^2 - 2 * x (MOD n)
+  mpz_mul( t2, t1, t1 )    // lambda^2
+  mpz_mod( t2, t2, n )
+  mpz_mul_ui( num, x, 2 )  // 2x
+  mpz_mod( num, num, n )
+  mpz_sub( t2, t2, num )
+  mpz_mod( t2, t2, n )     // t2 = x3
+
+  // y3 = lambda * (x - x3) - y (MOD n)
+  mpz_sub( num, x, t2 )    // x - x3
+  mpz_mod( num, num, n )
+  mpz_mul( num, t1, num )  // lambda * (x - x3)
+  mpz_mod( num, num, n )
+  mpz_sub( num, num, y )   // lambda * (x - x3) - y
+  mpz_mod( num, num, n )   // num = y3
+
+  mpz_set( x, t2 )          // update P ← (x3, y3)
+  mpz_set( y, num )
+
+  fn Clear_MPZ
+end fn = _false
+
+// -----------------------------------------------------------
+//  ECM_PointAdd
+//  Point addition: P1 = (x1,y1) ← P1 + P2, with P2 = (x2,y2)
+//  Curve: y^2 = x^3 + a x + b (MOD n)
+//  Returns _true if a factor found (in 'factor'), else _false.
+// -----------------------------------------------------------
+local fn ECM_PointAdd( n as mpz_t, a as mpz_t, x1 as mpz_t, ¬
+  y1 as mpz_t, x2 as mpz_t, y2 as mpz_t, factor as mpz_t ) as boolean
+
+  fn Init_MPZ
+
+  mpz_sub( t1, n, y2 )     // t1 = -y2 MOD n
+  mpz_mod( t1, t1, n )
+  // If x1 == x2 and y1 == -y2, point is infinity
+  // For our purposes, treat this as a useless -> just return _false.
+  if (fn mpz_cmp( x1, x2 ) == 0) && (fn mpz_cmp( y1, t1 )== 0)
+    fn Clear_MPZ
+    return _false
+  end if
+
+  mpz_sub( num, y2, y1 )   // num = y2 - y1 (MOD n)
+  mpz_mod( num, num, n )
+
+  mpz_sub( den, x2, x1 )   // den = x2 - x1 (MOD n)
+  mpz_mod( den, den, n )
+
+  // try to invert den
+  if fn mpz_invert( inv, den, n ) == 0
+    mpz_GCD( g, den, n )
+    if (fn mpz_cmp_ui( g, 1 ) > 0) && (fn mpz_cmp( g, n ) < 0)
+      mpz_set( factor, g )
+      fn Clear_MPZ
+      return _true
+    end if
+    fn Clear_MPZ
+    return _false
+  end if
+
+  mpz_mul( t1, num, inv )  // lambda = num * inv (MOD n)
+  mpz_mod( t1, t1, n )     // t1 = lambda
+
+  // x3 = lambda^2 - x1 - x2 (MOD n)
+  mpz_mul( t2, t1, t1 )    // lambda^2
+  mpz_mod( t2, t2, n )
+  mpz_sub( t2, t2, x1 )
+  mpz_sub( t2, t2, x2 )
+  mpz_mod( t2, t2, n )     // t2 = x3
+
+  // y3 = lambda * (x1 - x3) - y1 (MOD n)
+  mpz_sub( num, x1, t2 )        // x1 - x3
+  mpz_mod( num, num, n )
+  mpz_mul( num, t1, num )
+  mpz_mod( num, num, n )
+  mpz_sub( num, num, y1 )
+  mpz_mod( num, num, n )    // num = y3
+
+  mpz_set( x1, t2 )
+  mpz_set( y1, num )
+
+  fn Clear_MPZ
+
+end fn = _false
+
+// ------------------------------------------------------------
+//  ECM_ScalarMul
+//  Scalar multiply P = (x,y) by k:  P ← k * P
+//  Uses binary double-and-add. Returns _true if a factor found.
+// ------------------------------------------------------------
+
+local fn ECM_ScalarMul( n as mpz_t, a as mpz_t, x as mpz_t, ¬
+  y as mpz_t, k as UInt64, factor as mpz_t ) as boolean
+
+  if k <= 1 then return _false
+
+  mpz_t rx, ry, qx, qy
+  mpz_init( rx )
+  mpz_init( ry )
+  mpz_init( qx )
+  mpz_init( qy )
+
+  int hasR
+  hasR = _false     // R (result) is "not set" yet
+
+  mpz_set( qx, x )  // Q = P (base)
+  mpz_set( qy, y )
+
+  // find highest bit of k
+  int sbit
+  sbit = 63
+  while (sbit > 0) && ((k AND (1ULL << sbit)) = 0)
+    sbit -- // decrement bit
+  wend
+
+  // process bits from MSB down to 0
+  while sbit >= 0
+    if hasR
+      // R = 2R
+      if fn ECM_PointDouble( n, a, rx, ry, factor )
+        // factor found
+        mpz_clear( rx )
+        mpz_clear( ry )
+        mpz_clear( qx )
+        mpz_clear( qy )
+        return _true
+      end if
+    end if
+
+    if (k AND (1ULL << sbit)) != 0
+      if hasR = _false
+        // first 1 bit: R = Q
+        mpz_set( rx, qx )
+        mpz_set( ry, qy )
+        hasR = _true
+      else
+        // R = R + Q
+        if fn ECM_PointAdd( n, a, rx, ry, qx, qy, factor )
+          mpz_clear( rx )
+          mpz_clear( ry )
+          mpz_clear( qx )
+          mpz_clear( qy )
+          return _true
+        end if
+      end if
+    end if
+
+    sbit -- // decrement bit
+  wend
+
+  if hasR
+    mpz_set( x, rx )
+    mpz_set( y, ry )
+  end if
+
+  mpz_clear( rx )
+  mpz_clear( ry )
+  mpz_clear( qx )
+  mpz_clear( qy )
+end fn = _false
+
+
+// ----------------------------------------------------------------
+//  ECM_Stage1Curve
+//  Stage-1 ECM on one curve determined by 'sigma'
+//  Curve: y^2 = x^3 + a x + b (MOD n) with (x,y) chosen from sigma.
+//  B1: first-stage bound, e.g. 10000.
+//  Returns _true and sets 'factor' if a factor was
+//  found, else _false.
+// ----------------------------------------------------------------
+
+local fn ECM_Stage1Curve( n as mpz_t, factor as mpz_t, ¬
+  B1 as UInt32, sigma as UInt32 ) as boolean
+
+  mpz_t a, b, x, y, tmp
+  mpz_init( a )
+  mpz_init( b )
+  mpz_init( x )
+  mpz_init( y )
+  mpz_init( tmp )
+
+  mpz_set_ui( x, sigma )      // x = sigma (MOD n)
+  mpz_mod( x, x, n )
+
+  mpz_set_ui( y, sigma + 1 )  // y = sigma + 1 (MOD n)
+  mpz_mod( y, y, n )
+
+  mpz_set_ui( a, sigma + 2 )  // a = sigma + 2 (MOD n)
+  mpz_mod( a, a, n )
+
+  // b = y^2 - x^3 - a*x (MOD n)
+  mpz_mul( b, y, y )          // y^2
+  mpz_mod( b, b, n )
+
+  mpz_mul( tmp, x, x )        // x^2
+  mpz_mod( tmp, tmp, n )
+  mpz_mul( tmp, tmp, x )      // x^3
+  mpz_mod( tmp, tmp, n )
+  mpz_sub( b, b, tmp )        // y^2 - x^3
+
+  mpz_mul( tmp, a, x )        // a * x
+  mpz_mod( tmp, tmp, n )
+  mpz_sub( b, b, tmp )        // y^2 - x^3 - a*x
+  mpz_mod( b, b, n )
+
+  // Multiply P by prime powers p^e with p <= B1
+  UInt32 p, pe
+  p = 2
+
+  while p <= B1
+    if fn IsSmallPrime32( p )
+      // pe = p^e <= B1
+      pe = p
+      while (pe * p) <= B1
+        pe = pe * p
+      wend
+
+      if fn ECM_ScalarMul( n, a, x, y, pe, factor )
+        // factor found
+        mpz_clear( a )
+        mpz_clear( b )
+        mpz_clear( x )
+        mpz_clear( y )
+        mpz_clear( tmp )
+        return _true
+      end if
+    end if
+
+    if p == 2 then p = 3 else p = p + 2
+  wend
+
+  mpz_clear( a )
+  mpz_clear( b )
+  mpz_clear( x )
+  mpz_clear( y )
+  mpz_clear( tmp )
+end fn = _false
+
+// -----------------------------------------------------------
+//  ECM_FindFactor
+//  Try several Stage-1 ECM curves with increasing sigma.
+//  Returns _true and sets 'factor' if a factor is found.
+// -----------------------------------------------------------
+
+local fn ECM_FindFactor( n as mpz_t, factor as mpz_t ) as boolean
+  UInt32 B1, sigma
+  int curves
+  int i
+  B1     = 10000       // bound (bigger = slower)
+  curves = 20          // number of different curves to try
+  sigma = 2
+  i = 0
+  while i < curves
+    if fn ECM_Stage1Curve( n, factor, B1, sigma )
+      return _true
+    end if
+    sigma ++
+    i ++
+  wend
+end fn = _false
+
+// Safely divide mpz_t
+
+local fn SafeMpzDiv( z as mpz_t, x as mpz_t, y as mpz_t )  as boolean
+  if ( fn mpz_sgn( y ) == 0 )  // div by zero?
+    mpz_set_ui( z, 0)
+    return _false
+  end if
+  // Call GMP division (truncate toward zero)
+  mpz_tdiv_q( z, x, y )
+end fn = _true
+
+// -----------------------------------------------------------
+//  Recursive factorization using trial division + ECM Stage 1
+//  Results go into global gFactors() / gFactorCount
+// -----------------------------------------------------------
+void local fn FactorRec( n as mpz_t )
+  // if n == 1 → nothing
+  if fn mpz_cmp_ui( n, 1 ) = 0 then RETURN
+  // if prime, store it
+  if fn IsProbablePrime( n )
+    mpz_set( gFactors(gFactorCount), n )
+    gFactorCount = gFactorCount + 1
+    RETURN
+  end if
+
+  mpz_t d, q
+  mpz_init( d )
+  mpz_init( q )
+
+  Boolean got = _False
+
+  got = fn ECM_FindFactor( n, d )
+
+  if got == _false
+    // ECM did not find a nontrivial factor; treat n as a "final" factor
+    mpz_set( gFactors(gFactorCount), n )
+    gFactorCount = gFactorCount + 1
+    mpz_clear( d )
+    mpz_clear( q )
+    RETURN
+  end if
+
+  if fn SafeMpzDiv( q, n, d)  // q = n / d
+    // recurse on d and q
+    fn FactorRec( d )
+    fn FactorRec( q )
+  end if
+
+  mpz_clear( d )
+  mpz_clear( q )
+end fn
+
+
+// -----------------------------------------------------------
+//  Init Fermat numbers F0..F9
+//  F_n = 2^(2^n) + 1
+// -----------------------------------------------------------
+local fn InitFermat
+  int i, expPow
+  // init working bigint
+  mpz_init( fm )
+  // init Fermat array
+  i = 0
+  while i <= 15
+    mpz_init( gF(i) )
+    i = i + 1
+  wend
+  // init factor buffer mpz_t
+  i = 0
+  while i <= 30
+    mpz_init( gFactors(i) )
+    i = i + 1
+  wend
+  // compute F0..F15 once
+  i = 0
+  while i <= 15
+    expPow = 1
+    // expPow = 2^i
+    int k
+    k = 0
+    while k < i
+      expPow = expPow * 2
+      k = k + 1
+    wend
+    // fm = 2^(2^i) + 1
+    mpz_ui_pow_ui( fm, 2, expPow )
+    mpz_add_ui( fm, fm, 1 )
+    mpz_set( gF(i), fm )
+    i ++
+  wend
+  gFN = 0
+  gDidFactorHeader = 0
+end fn
+
+// -----------------------------------------------------------
+//  Print first 10 Fermat numbers
+// -----------------------------------------------------------
+local fn Main
+  CFStringRef lineStr, fStr
+  int i
+  print @"\nThe first 10 Fermat numbers are:"
+  tim = fn CACurrentMediaTime
+
+  i = 0
+  while i <= 9
+    fStr   = fn Abbrev( gF(i) )
+    lineStr = @""
+    lineStr = concat( lineStr, fn FermatLabel( i ) )
+    lineStr = concat( lineStr, @" = " )
+    lineStr = concat( lineStr, fStr )
+    print lineStr;
+    i ++
+  wend
+
+  printf @"\nElapsed time: %.3f ms", (fn CACurrentMediaTime - tim) * 1000
+  print @"\nClick [Next] to display factors of Fermat numbers.\n"
+end fn
+
+// -----------------------------------------------------------
+//  Show next Fermat factors (one F_n per click)
+//  Calculation time displayed if greater than 1 sec
+// -----------------------------------------------------------
+void local fn Factor_More
+  long td
+  CFStringRef lineStr, factStr
+
+  if gDidFactorHeader == 0
+    print @"Factors of Fermat numbers + product if multiple factors found:"
+    gDidFactorHeader = 1
+  end if
+
+  tim = fn CACurrentMediaTime
+
+  // factor current Fermat number gF(gFN)
+  gFactorCount = 0
+
+  mpz_t nCopy
+  mpz_init( nCopy )
+  mpz_set( nCopy, gF(gFN) )
+  fn FactorRec( nCopy )
+  mpz_clear( nCopy )
+  // Fk = [f1, f2, ...]
+  int j
+  lineStr = @""
+  lineStr = concat( lineStr, fn FermatLabel( gFN ) )
+  lineStr = concat( lineStr, @" = [" )
+  j = 0
+  while j < gFactorCount
+    if j > 0
+      lineStr = concat( lineStr, @", " )
+    end if
+    factStr = fn Abbrev( gFactors(j) )
+    lineStr = concat( lineStr, factStr )
+    j = j + 1
+  wend
+
+  lineStr = concat( lineStr, @"]" )
+  print lineStr;
+  // if >= 2 factors, second line = product line
+  if gFactorCount >= 2
+    lineStr = @""
+    lineStr = concat( lineStr, fn FermatLabel( gFN ) )
+    lineStr = concat( lineStr, @" = " )
+    CFStringRef fAbbrev
+    fAbbrev = fn Abbrev( gF(gFN) )
+    lineStr = @"\n      "
+    lineStr = concat( lineStr, fAbbrev )
+    print lineStr;
+  end if
+
+  td = fn CACurrentMediaTime - tim
+  if td > 1
+    lineStr = fn StringWithFormat (@" (%.3f secs)", (fn CACurrentMediaTime - tim))
+    print @lineStr;
+  end if
+  gFN = gFN + 1
+  // Rosetta task sets a limit to under 5 minutes
+  // so kill the next button
+  if gFN > 14 then button 2, NO
+end fn
+
+// ------------------------------------------------------------
+//  Dialog handler
+// ------------------------------------------------------------
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case 2
+          fn Factor_More
+      end select
+
+    case _windowShouldClose
+      // clear any uncleared mpz
+      int i
+      mpz_clear( fm )
+      i = 0
+      while i <= 15
+        mpz_clear( gF(i) )
+        i ++
+      wend
+      i = 0
+      while i <= 30
+        mpz_clear( gFactors(i) )
+        i ++
+      wend
+      end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+// ------------------------------------------------------------
+//  Main
+// ------------------------------------------------------------
+window 1, @"Fermat numbers", (0,0,700,540)
+button 2, YES,, @"Next", (580,20,100,20),,, 1
+
+fn InitFermat
+fn Main
+
+HandleEvents

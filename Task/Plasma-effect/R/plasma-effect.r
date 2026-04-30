@@ -1,0 +1,6 @@
+plasma <- function(x, y) sin(x/16)+sin(y/8)+sin((x+y)/16)+sin(sqrt(x^2+y^2)/8)
+x <- y <- seq(-32*pi, 32*pi, length.out=1000)
+bigmat <- outer(x, y, plasma)
+png(filename="PlasmaEffect-R.png", width=1000, height=1000)
+image(bigmat, col=hcl.colors(12, "Plasma"), xaxt="n", yaxt="n")
+dev.off()

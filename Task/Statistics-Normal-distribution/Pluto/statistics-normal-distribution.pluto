@@ -1,0 +1,59 @@
+require "table2"
+require "io2"
+local fmt = require "fmt"
+
+-- Box-Muller method from Wikipedia.
+local function normal(mu, sigma)
+    local u1  = math.random()
+    local u2  = math.random()
+    local mag = sigma * math.sqrt(-2 * math.log(u1))
+    local z0  = mag * math.cos(2 * math.pi * u2) + mu
+    local z1  = mag * math.sin(2 * math.pi * u2) + mu
+    return {z0, z1}
+end
+
+local N = 100_000
+local NUM_BINS = 12
+
+local bins = table.rep(NUM_BINS, 0)
+local binSize = 0.1
+local samples = table.rep(N, 0)
+local mu = 0.5
+local sigma = 0.25
+for i = 0, N / 2 - 1 do
+    local rns = normal(mu, sigma)
+    for j = 0, 1 do
+        local rn = rns[j + 1]
+        local bn
+        if rn < 0 then
+            bn = 0
+        elseif rn >= 1 then
+            bn = 11
+        else
+            bn = rn // binSize + 1
+        end
+        bins[bn + 1] += 1
+        samples[i * 2 + j + 1] = rn
+    end
+end
+
+local labels = table.rep(NUM_BINS, "")
+for i = 1, NUM_BINS do
+    if i == 1 then
+        labels[i] = "-inf ..< 0.00 "
+    elseif i < NUM_BINS then
+        labels[i] = string.format("%4.2f ..< %4.2f ", binSize * (i-1), binSize * i)
+    else
+        labels[i] = "1.00 ... +inf "
+    end
+end
+
+fmt.print("Normal distribution with mean %0.2f and S/D %0.2f for %,s samples:\n", mu, sigma, N)
+local title = "    Range           Number of samples within that range"
+io.barchart(title, 85, labels, bins, true, true)
+
+local m = samples:mean()
+fmt.print("\nActual mean for these samples : %0.5f", m)
+local c = #samples
+local v = (samples:sqsum() - m * m * c) / (c - 1)
+fmt.print("Actual S/D  for these samples : %0.5f", math.sqrt(v))

@@ -1,9 +1,11 @@
-func x n .
+fastfunc x n .
    if n = 0 or n = 2 or n = 4 or n = 6 : return 1
    return 0
 .
-proc go start stop printable .
-   write start & " - " & stop & ":"
+global n[] count .
+fastproc gof start stop printable .
+   count = 0
+   if printable = 1 : len n[] 0
    for i = start step 2 to stop
       b = i div 1000000000
       r = i mod 1000000000
@@ -16,9 +18,14 @@ proc go start stop printable .
       if r >= 30 and r <= 66 : r = r mod 10
       if x b = 1 and x m = 1 and x t = 1 and x r = 1
          count += 1
-         if printable = 1 : write " " & i
+         if printable = 1 : n[] &= i
       .
    .
+.
+proc go start stop printable .
+   write start & " - " & stop & ":"
+   gof start stop printable
+   if printable = 1 : write " " & n[]
    print " (count=" & count & ")"
 .
 go 2 1000 1

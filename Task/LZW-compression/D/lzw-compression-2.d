@@ -9,7 +9,7 @@ struct LZW {
 
     enum int initDictSize = 256;
     static immutable ubyte[initDictSize] bytes;
-    static this() {
+    shared static this() {
         foreach (immutable T i; 0 .. initDictSize)
             bytes[i] = i;
     }
@@ -18,7 +18,7 @@ struct LZW {
     out(result) {
         if (!original.empty)
             assert(result[0] < initDictSize);
-    } body {
+    } do {
         if (original.empty)
             return [];
         Tcomp[Ta] dict;
@@ -57,7 +57,7 @@ struct LZW {
     in {
         if (!compressed.empty)
             assert(compressed[0] < initDictSize, "Bad compressed");
-    } body {
+    } do {
         if (compressed.empty)
             return [];
 

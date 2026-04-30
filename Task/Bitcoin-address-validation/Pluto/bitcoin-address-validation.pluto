@@ -1,0 +1,59 @@
+require "table2"
+local crypto = require "crypto"
+local fmt = require "fmt"
+
+$define ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+
+local function decode_base58(input)
+    local output = table.rep(25, 0)
+    for i = 1, #input do
+        local c = input[i]
+        local p = ALPHABET:find(c, 1, true)
+        if !p then return nil end
+        p -= 1
+        for j = 25, 2, -1 do
+            p += 58 * output[j]
+            output[j] = p % 256
+            p >>= 8
+        end
+        if p != 0 then return nil end
+    end
+    return output
+end
+
+local function sha256(data, start, len, recursion)
+    if recursion == 0 then return data end
+    local ds = data:slice(start, start + len - 1)
+    local md = crypto.sha256(string.char(ds:unpack()))
+    md = md:split(""):chunk(2):map(|x| -> tonumber(x:concat(), 16))
+    return sha256(md, 1, 32, recursion - 1)
+end
+
+local function validate_address(address)
+    local len = #address
+    if len < 26 or len > 35 then return false end
+    local decoded = decode_base58(address)
+    if !decoded then return false end
+    local hash = sha256(decoded, 1, 21, 2)
+    return table.same(hash:slice(1, 4), decoded:slice(22, 25))
+end
+
+local addresses = {
+    "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i",
+    "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62j",
+    "1Q1pE5vPGEEMqRcVRMbtBK842Y6Pzo6nK9",
+    "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62X",
+    "1ANNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i",
+    "1A Na15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i",
+    "BZbvjr",
+    "i55j",
+    "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62!",
+    "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62iz",
+    "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62izz",
+    "1Q1pE5vPGEEMqRcVRMbtBK842Y6Pzo6nJ9",
+    "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62I"
+}
+
+for addresses as address do
+    fmt.print("%-36s -> %s", address, validate_address(address) ? "valid" : "invalid")
+end

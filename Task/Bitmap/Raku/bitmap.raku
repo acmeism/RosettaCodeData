@@ -7,16 +7,16 @@ class Bitmap {
         @!data = $p.clone xx ($!width*$!height)
     }
     method pixel(
-	$i where ^$!width,
-	$j where ^$!height
-	--> Pixel
+   $i where ^$!width,
+   $j where ^$!height
+   --> Pixel
     ) is rw { @!data[$i + $j * $!width] }
 
     method set-pixel ($i, $j, Pixel $p) {
-	self.pixel($i, $j) = $p.clone;
+   self.pixel($i, $j) = $p.clone;
     }
     method get-pixel ($i, $j) returns Pixel {
-	self.pixel($i, $j);
+   self.pixel($i, $j);
     }
 }
 

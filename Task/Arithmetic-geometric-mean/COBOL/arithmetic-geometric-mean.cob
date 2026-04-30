@@ -1,0 +1,33 @@
+IDENTIFICATION DIVISION.
+PROGRAM-ID. ARITHMETIC-GEOMETRIC-MEAN-PROG.
+DATA DIVISION.
+WORKING-STORAGE SECTION.
+01  AGM-VARS.
+    05 A       PIC 9V9(16).
+    05 A-ZERO  PIC 9V9(16).
+    05 G       PIC 9V9(16).
+    05 DIFF    PIC 9V9(16) VALUE 1.
+* Initialize DIFF with a non-zero value, otherwise AGM-PARAGRAPH
+* is never performed at all.
+PROCEDURE DIVISION.
+TEST-PARAGRAPH.
+    MOVE    1 TO A.
+    COMPUTE G = 1 / FUNCTION SQRT(2).
+* The program will run with the test values. If you would rather
+* calculate the AGM of numbers input at the console, comment out
+* TEST-PARAGRAPH and un-comment-out INPUT-A-AND-G-PARAGRAPH.
+* INPUT-A-AND-G-PARAGRAPH.
+*     DISPLAY 'Enter two numbers.'
+*     ACCEPT  A.
+*     ACCEPT  G.
+CONTROL-PARAGRAPH.
+    PERFORM AGM-PARAGRAPH UNTIL DIFF IS LESS THAN 0.000000000000001.
+    DISPLAY A.
+    STOP RUN.
+AGM-PARAGRAPH.
+    MOVE     A TO A-ZERO.
+    COMPUTE  A = (A-ZERO + G) / 2.
+    MULTIPLY A-ZERO BY G GIVING G.
+    COMPUTE  G = FUNCTION SQRT(G).
+    SUBTRACT A FROM G GIVING DIFF.
+    COMPUTE  DIFF = FUNCTION ABS(DIFF).

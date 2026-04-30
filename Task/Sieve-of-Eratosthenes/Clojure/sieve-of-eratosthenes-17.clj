@@ -24,7 +24,8 @@
            (- 32 (java.lang.Integer/bitCount (bit-or (aget pg lmtw)
                                                       msk)))))
       (- pgbts
-         (areduce pg i ret (long 0) (+ ret (java.lang.Integer/bitCount (aget pg i))))))))
+         (areduce pg i ret (long 0)
+                  (+ ret (java.lang.Integer/bitCount (aget pg i))))))))
 ;;      (cntem pgsz))))
 (defn- primes-pages
   "unbounded Sieve of Eratosthenes producing a lazy sequence of culled page buffers."
@@ -98,22 +99,26 @@
           (more [this] (let [nv (.next this)] (if (nil? nv) (CIS. nil nil) nv)))
           (cons [this o] (clojure.core/cons o this))
           (empty [_] (if (and (nil? v) (nil? cont)) nil (CIS. nil nil)))
-          (equiv [this o] (loop [cis1 this, cis2 o] (if (nil? cis1) (if (nil? cis2) true false)
-                                                      (if (or (not= (type cis1) (type cis2))
-                                                              (not= (.v cis1) (.v ^CIS cis2))
-                                                              (and (nil? (.cont cis1))
-                                                                   (not (nil? (.cont ^CIS cis2))))
-                                                              (and (nil? (.cont ^CIS cis2))
-                                                                   (not (nil? (.cont cis1))))) false
-                                                        (if (nil? (.cont cis1)) true
-                                                          (recur ((.cont cis1)) ((.cont ^CIS cis2))))))))
-          (count [this] (loop [cis this, cnt 0] (if (or (nil? cis) (nil? (.cont cis))) cnt
-                                                  (recur ((.cont cis)) (inc cnt)))))
+          (equiv [this o] (loop [cis1 this, cis2 o]
+                            (if (nil? cis1) (if (nil? cis2) true false)
+                              (if (or (not= (type cis1) (type cis2))
+                                      (not= (.v cis1) (.v ^CIS cis2))
+                                      (and (nil? (.cont cis1))
+                                           (not (nil? (.cont ^CIS cis2))))
+                                      (and (nil? (.cont ^CIS cis2))
+                                           (not (nil? (.cont cis1)))))
+                                  false
+                                  (if (nil? (.cont cis1)) true
+                                     (recur ((.cont cis1)) ((.cont ^CIS cis2))))))))
+          (count [this] (loop [cis this, cnt 0]
+                          (if (or (nil? cis) (nil? (.cont cis))) cnt
+                            (recur ((.cont cis)) (inc cnt)))))
         clojure.lang.Seqable
           (seq [this] (if (and (nil? v) (nil? cont)) nil this))
         clojure.lang.Sequential
         Object
-          (toString [this] (if (and (nil? v) (nil? cont)) "()" (.toString (seq (map identity this))))))
+          (toString [this] (if (and (nil? v) (nil? cont)) "()"
+                             (.toString (seq (map identity this))))))
         (letfn [(next-prm [lowi i pgseq]
                   (let [lowi (long lowi),
                       i (long i),

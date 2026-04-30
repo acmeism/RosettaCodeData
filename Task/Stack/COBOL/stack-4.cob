@@ -1,0 +1,3 @@
+       01  p PICTURE 9.
+         88 nil VALUE ZERO WHEN SET TO FALSE IS 1.
+         88 t   VALUE 1 WHEN SET TO FALSE IS ZERO.

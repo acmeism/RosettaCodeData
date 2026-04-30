@@ -1,26 +1,18 @@
 function remove( filename, starting_line, num_lines )
-    local fp = io.open( filename, "r" )
-    if fp == nil then return nil end
-
-    content = {}
-    i = 1;
-    for line in fp:lines() do
-        if i < starting_line or i >= starting_line + num_lines then
-	    content[#content+1] = line
+  local content = {}
+  local i = 1
+  for line in io.lines(filename, "L") do -- errors
+    if i < starting_line or i >= starting_line + num_lines then
+      content[#content+1] = line
 	end
 	i = i + 1
-    end
+  end
 
-    if i > starting_line and i < starting_line + num_lines then
-	print( "Warning: Tried to remove lines after EOF." )
-    end
+  if i > starting_line and i < starting_line + num_lines then
+    print( "Warning: Tried to remove lines after EOF." )
+  end
 
-    fp:close()
-    fp = io.open( filename, "w+" )
-
-    for i = 1, #content do
-	fp:write( string.format( "%s\n", content[i] ) )
-    end
-
-    fp:close()
+  local fp = io.open( filename, "w+" ) or error"Not writable"
+	fp:write( table.concat( content ) )
+  fp:close()
 end

@@ -1,0 +1,201 @@
+%macro prolog 1
+    push rbp
+    mov rbp, rsp
+    sub rsp, %1
+%endmacro
+
+%macro epilog 1
+    add rsp, %1
+    pop rbp
+%endmacro
+
+%macro xcall 1
+    call [rel %1 wrt ..got]
+%endmacro
+
+%macro xlea 2
+    lea %1, [rel %2]
+%endmacro
+
+extern printf
+extern strlen
+extern strdup
+extern strchr
+extern free
+extern exit
+
+;; --> OpenSSL Stuffs <--
+extern BIO_new_ssl_connect
+extern BIO_ctrl
+extern BIO_write
+extern BIO_read
+extern BIO_free_all
+extern TLS_client_method
+extern SSL_CTX_new
+extern SSL_CTX_free
+extern SSL_CTX_set_verify
+extern SSL_CTX_set_default_verify_paths
+extern SSL_ctrl
+
+%define BIO_C_SET_CONNECT       100
+%define BIO_C_DO_STATE          101
+%define BIO_C_GET_SSL           110
+%define SSL_CTRL_SET_TLSHOST    55
+%define SSL_VERIFY_PEER         1
+
+section .text
+    global xrequest
+    xrequest:
+        prolog 6*8
+        %define _req_host   rbp-1*8
+        %define _req_pack   rbp-2*8
+        %define _req_buff   rbp-3*8
+        %define _req_ssl    rbp-4*8
+        %define _req_ctx    rbp-5*8
+        %define _req_bio    rbp-6*8
+
+        mov rax, rdi
+        mov qword [_req_host], rax
+        mov rax, rsi
+        mov qword [_req_pack], rax
+        mov rax, rdx
+        mov qword [_req_buff], rax
+        xcall TLS_client_method
+        mov rdi, rax
+        xcall SSL_CTX_new
+        test rax, rax
+        jz __req_err_ctx
+        mov qword [_req_ctx], rax
+        mov rdi, qword [_req_ctx]
+        xcall SSL_CTX_set_default_verify_paths
+        test eax, eax
+        jz __req_err_verify
+        mov rdx, 0
+        mov rsi, SSL_VERIFY_PEER
+        mov rdi, qword [_req_ctx]
+        xcall SSL_CTX_set_verify
+        ;;-->> Create Bio chain
+        mov rdi, qword [_req_ctx]
+        xcall BIO_new_ssl_connect
+        test rax, rax
+        jz __req_err_bio
+        mov qword [_req_bio], rax
+        ;;-->> Get SSL object
+        lea rcx, [_req_ssl]
+        mov rdx, 0
+        mov rsi, BIO_C_GET_SSL
+        mov rdi, qword [_req_bio]
+        xcall BIO_ctrl
+
+        ;; -->> Set the SNI hostname.
+        mov rdi, qword [_req_host]
+        xcall strdup
+        mov rdx, rax    ; rdx now holds the copy
+        push rdx        ; Push pointer to stack
+        mov rdi, rdx
+        mov rsi, ':'
+        xcall strchr
+        test rax, rax
+        jz __req_sni_set
+        mov byte [rax], 0 ; Null-terminate at colon
+        __req_sni_set:
+            mov rdi, qword [_req_ssl]
+            mov rsi, SSL_CTRL_SET_TLSHOST
+            mov rdx, 0
+            mov rcx, [rsp]
+            xcall SSL_ctrl
+            pop rdi
+            xcall free
+        ;; -->>Set Hostname (BIO expects "host:port")
+        mov rdi, qword [_req_bio]
+        mov rsi, BIO_C_SET_CONNECT
+        mov rdx, 0
+        mov rcx, qword [_req_host]
+        xcall BIO_ctrl
+        mov rdi, qword [_req_bio]
+        mov rsi, BIO_C_DO_STATE
+        mov rdx, 0
+        mov rcx, 0
+        xcall BIO_ctrl
+        cmp rax, 1
+        jl __req_err_conn
+
+        ;; -->> Send Request
+        mov rdi, qword [_req_pack]
+        xcall strlen
+        mov rdx, rax
+        mov rdi, qword [_req_bio]
+        mov rsi, qword [_req_pack]
+        xcall BIO_write
+
+        ; -->> Read Response Loop
+        __req_read_loop:
+            mov rdi, qword [_req_bio]
+            mov rsi, qword [_req_buff]
+            mov rdx, 1024
+            xcall BIO_read
+            test eax, eax
+            jle __req_exit
+            add qword [_req_buff], rax
+        jmp __req_read_loop
+
+
+        __req_err_bio:
+            mov r13, -1
+            jmp __req_exit
+        __req_err_verify:
+            mov r13, -2
+            jmp __req_exit
+        __req_err_ctx:
+            ;;-->> CTX Error
+            mov r13, -3
+            jmp __req_exit
+        __req_err_conn:
+            mov r13, -4
+            ;; fall through..
+        __req_exit:
+            mov r13, rax
+            mov rdi, qword [_req_bio]
+            xcall BIO_free_all
+            mov rdi, qword [_req_ctx]
+            xcall SSL_CTX_free
+            mov rax, r13
+        epilog 6*8
+    ret
+
+    global main
+    main:
+        prolog 4*8
+
+    ; request(hostname, request_str, buffer)
+        xlea rdi, hostname
+        xlea rsi, request_str
+        xlea rdx, buffer
+        call xrequest
+        mov rsi, rax
+        xlea rdi, fmt_ret
+        xcall printf
+
+    ; Print the response buffer
+        xlea rdi, fmt_str
+        xlea rsi, buffer
+        xor rax, rax
+        xcall printf
+        xor rdi, rdi
+        xcall exit
+        prolog 4*8  ;;Never gets here but w/e.
+    ret
+
+section .data
+    hostname        db "google.com:443", 0
+    request_str     db "GET / HTTP/1.1", 13, 10
+                    db "Host: google.com", 13, 10
+                    db "Connection: close", 13, 10
+                    db "User-Agent: TLS-TEST/0.5", 13, 10
+                    db 13, 10, 0
+
+    fmt_str         db "%s", 0
+    fmt_ret         db "%i",10,0
+
+section .bss
+    buffer          resb 16384

@@ -1,45 +1,62 @@
-do  -- find the first five rare numbers
+do  -- Rare numbers - translation of EasyLang with the MOD 1089/121 test from FreeBASIC
 
-    local function revn ( na )
-        local n, r = na, 0
-        while n > 0 do
-            r = r * 10   r = r + ( n % 10 )
-            n = math.floor( n / 10 )
+    local function rev( n )
+        local h, r = n, 0
+        while h > 0 do
+            r = r * 10 + h % 10
+            h = math.floor( h / 10 )
         end
         return r
-    end -- revn
+    end
 
-    local nd, count, lim, n = 2, 0, 90, 20
-    local oddNd = nd % 2 == 1
-    while true do
+    local function issqr( n )
+        local h = math.sqrt( n )
+        return math.floor( h ) == h
+    end
+
+    local po, oddDigits, lim, a, count, n = 1, true, 1, 0, 0, 0
+
+    while count < 5 do
         n = n + 1
-        local r = revn( n )
-        if  r < n then
-            local s, d = n + r, n - r
-            local tryThis = false
-            if   oddNd
-            then tryThis = d % 1089 == 0
-            else tryThis = s %  121 == 0
+        if n == lim then
+            a = a + 2
+            if a == 10 then
+                a         = 2
+                po        = po * 10
+                oddDigits = not oddDigits
             end
-            if tryThis then
-                local rootS = math.sqrt( s )
-                if  rootS == math.floor(rootS )
-                then
-                    local rootD = math.sqrt( d )
-                    if    rootD == math.floor( rootD )
-                    then
-                        count = count + 1
-                        io.write( count, ": ", n, "\n" )
-                        if count >= 5 then os.exit() end
+            n   = a * po
+            lim = n + po
+        end
+        local q = n % 10
+        if a ~= 2 or q == 2 then
+            if a ~= 4 or q == 0 then
+                if a ~= 6 or q == 0 or q == 5 then
+                    local s9 = ( n % 9 * 2 ) % 9
+                    if s9 <= 1 or s9 == 4 or s9 == 7 then
+                        if q ~= 1 and q ~= 4 and q ~= 6 and q ~= 9 then
+                            local h = a - q
+                            if h <= 1 or h >= 4 and h <= 6 then
+                                local nrev = rev( n )
+                                if n > nrev then
+                                    local s, d = n + nrev, n - nrev
+                                    if  (   oddDigits
+                                        and d % 1089 == 0
+                                        or  s %  121 == 0
+                                        )
+                                    then
+                                        if issqr( s ) then
+                                            if issqr( d ) then
+                                                io.write( " "..n )
+                                                count = count + 1
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
                     end
                 end
-            end
-            if  n == lim
-            then
-                lim   = lim * 10
-                nd    = nd  +  1
-                oddNd = not oddNd
-                n     = math.floor( lim / 9 ) * 2
             end
         end
     end

@@ -1,0 +1,82 @@
+|00 @System/vector $2 &expansion $2 &wst $1 &rst $1 &metadata $2 &r $2 &g $2 &b $2 &debug $1 &state $1
+|20 @Screen &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
+|c0 @DateTime &year $2 &month $1 &day $1 &hour $1 &minute $1 &second $1 &dotw $1 &doty $2 &isdst $1
+
+|00
+	@State &x $2 &y $2
+
+|0100
+@on-reset ( -> )
+	.DateTime/minute DEI2 SWP #20 SFT2 lcg/<seed>
+
+	#0f0f DUP2k
+	.System/r DEO2
+	.System/g DEO2
+	.System/b DEO2
+
+	( 256 x 222 fits all three reference points )
+	#0100 .Screen/width DEO2
+	#00de .Screen/height DEO2
+
+	start-point
+	.State/x STZ2
+	.State/y STZ2
+
+	;on-frame .Screen/vector DEO2
+	BRK
+
+@on-frame ( -> )
+	[ LIT2 00 -State/x ] LDZ .Screen/x DEO2
+	[ LIT2 00 -State/y ] LDZ .Screen/y DEO2
+	[ LIT2 01 -Screen/pixel ] DEO
+
+	next-point
+	.State/x STZ2
+	.State/y STZ2
+	BRK
+
+@start-point ( -- y* x* )
+	( pick a random point in a square )
+	lcg/next lcg/next
+	( mirror point if needed to move point to top left triangle )
+	ADD2k OVR2 GTH2 ?{
+		#0000 SWP2 SUB2 SWP2
+		#0000 SWP2 SUB2
+	}
+	( skew points so triangle has a point in the bottom middle )
+	SWP2 OVR2 #01 SFT2 ADD2
+	( mirror points vertically to make the triangle point up )
+	STH2 #0000 SWP2 SUB2
+	( fixed point multiply y by cos 30deg to make it equilateral )
+	( hi * hi ) OVR #00 SWP #00dd MUL2 STH2
+	( hi * lo ) SWP #00 SWP #00b4 MUL2 STH2
+	( lo * hi ) #00 SWP #00dd MUL2
+	( add low bytes ) STH2r ADD2 #08 SFT2
+	( add to high product ) STH2r ADD2
+	STH2r
+
+	JMP2r
+
+@next-point ( -- y* x* )
+	( midpoint of previous State and a random corner )
+	random-corner
+	#01 SFT2 .State/x LDZ2 #01 SFT2 ADD2
+	STH2
+	#01 SFT2 .State/y LDZ2 #01 SFT2 ADD2
+	STH2r JMP2r
+
+@random-corner ( -- y* x* )
+	( randomly pick one of the three corners )
+	lcg/next
+	#0003 DIV2k INC2 MUL2 SUB2 NIP
+	INC DUP ?{ POP #0000 #8000 JMP2r }
+	INC DUP ?{ POP #ddb4 #0000 JMP2r }
+	POP #ddb4 #ffff JMP2r
+
+@lcg/<seed> ( seed* -- )
+	,&State STR2 JMP2r
+
+@lcg/next ( -- x* )
+	[ LIT2 &State $2 ]
+	#0815 MUL2 #1419 ADD2 DUP2 ,&State STR2
+	JMP2r

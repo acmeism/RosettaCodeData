@@ -13,8 +13,11 @@ fastproc mksieve .
 .
 mksieve
 fastfunc nextprime n .
-   n += 1
-   while sieve[n] = 1 : n += 1
+   repeat
+      n += 1
+      if n > len sieve[] : return 0
+      until sieve[n] = 0
+   .
    return n
 .
 func isprim n .

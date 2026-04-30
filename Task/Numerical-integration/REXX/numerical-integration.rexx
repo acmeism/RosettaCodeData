@@ -1,11 +1,11 @@
--- 24 Aug 2025
+-- 25 Apr 2026
 include Setting
 arg digs
 if digs = '' then
    digs=9
 numeric digits digs
 
-say 'NUMERICAL INTEGRATION: COMPARE 5 METHODS'
+say 'NUMERICAL INTEGRATION: COMPARE 6 METHODS'
 say version
 say
 w=Digits()+2
@@ -125,4 +125,5 @@ do n = 4 by 4 to steps-4
 end
 return (s0+32*s1+12*s2+14*s3)*2*h/45
 
+-- Sin; Cos; Tan; Exp; Gamma
 include Math

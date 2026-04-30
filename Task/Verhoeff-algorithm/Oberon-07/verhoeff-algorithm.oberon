@@ -1,0 +1,139 @@
+MODULE VerhoeffAlgorithm; (* translated from the Wren sample via FreeBASIC & Algol 68    *)
+    IMPORT Out, Strings;
+
+    VAR    d              : ARRAY 10, 10 OF INTEGER;
+           inv            : ARRAY     10 OF INTEGER;
+           p              : ARRAY  8, 10 OF INTEGER;
+
+    (* initialises an array of 10 INTEGERs                                               *)
+    PROCEDURE set10( VAR a                                  : ARRAY OF INTEGER
+                   ; v0, v1, v2, v3, v4, v5, v6, v7, v8, v9 : INTEGER
+                   );
+        BEGIN
+            a[ 0 ] := v0; a[ 1 ] := v1; a[ 2 ] := v2; a[ 3 ] := v3; a[ 4 ] := v4;
+            a[ 5 ] := v5; a[ 6 ] := v6; a[ 7 ] := v7; a[ 8 ] := v8; a[ 9 ] := v9
+        END set10;
+
+    PROCEDURE init;     (* initialises the tables for the Verhoeff algorithm             *)
+        BEGIN
+            set10( d[ 0 ], 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 );
+            set10( d[ 1 ], 1, 2, 3, 4, 0, 6, 7, 8, 9, 5 );
+            set10( d[ 2 ], 2, 3, 4, 0, 1, 7, 8, 9, 5, 6 );
+            set10( d[ 3 ], 3, 4, 0, 1, 2, 8, 9, 5, 6, 7 );
+            set10( d[ 4 ], 4, 0, 1, 2, 3, 9, 5, 6, 7, 8 );
+            set10( d[ 5 ], 5, 9, 8, 7, 6, 0, 4, 3, 2, 1 );
+            set10( d[ 6 ], 6, 5, 9, 8, 7, 1, 0, 4, 3, 2 );
+            set10( d[ 7 ], 7, 6, 5, 9, 8, 2, 1, 0, 4, 3 );
+            set10( d[ 8 ], 8, 7, 6, 5, 9, 3, 2, 1, 0, 4 );
+            set10( d[ 9 ], 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 );
+
+            set10( inv,    0, 4, 3, 2, 1, 5, 6, 7, 8, 9 );
+
+            set10( p[ 0 ], 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 );
+            set10( p[ 1 ], 1, 5, 7, 6, 2, 8, 3, 0, 9, 4 );
+            set10( p[ 2 ], 5, 8, 0, 3, 7, 9, 6, 1, 4, 2 );
+            set10( p[ 3 ], 8, 9, 1, 6, 0, 4, 3, 5, 2, 7 );
+            set10( p[ 4 ], 9, 4, 5, 3, 1, 2, 6, 8, 7, 0 );
+            set10( p[ 5 ], 4, 2, 8, 6, 5, 7, 3, 9, 0, 1 );
+            set10( p[ 6 ], 2, 7, 9, 3, 8, 0, 6, 4, 1, 5 );
+            set10( p[ 7 ], 7, 0, 4, 6, 9, 1, 3, 2, 5, 8 );
+        END init ;
+
+    (* calculates the check digit of s or validates s using the Verhoeff algorithm       *)
+    (*            depending on whether validate is FALSE or TRUE                         *)
+    (* returns the check digit or zero/non-zero if s is valid/invalid                    *)
+    (* if table is TRUE, details of the calculations are shown                           *)
+    PROCEDURE VerhoeffAlgorithm( s : ARRAY OF CHAR; validate, table : BOOLEAN ) : INTEGER;
+        VAR   c, le, efl, k, result      : INTEGER;
+
+        PROCEDURE handleDigit( digit : CHAR; c, k, le : INTEGER; table : BOOLEAN ) : INTEGER;
+            VAR   nidx, pidx, result : INTEGER;
+            BEGIN
+                nidx   := ORD( digit ) - ORD( "0" );
+                pidx   := p[ ( le - k ) MOD 8, nidx ];
+                result := d[ c, pidx ];
+                IF table THEN
+                    Out.String( "    " );Out.Int( le - k, 2 );Out.String( "  " );Out.Int( nidx, 0 );
+                    Out.String( "      " );Out.Int( pidx, 0 );Out.String( "     " );Out.Int( result, 0 );Out.Ln
+                END
+            RETURN result
+            END handleDigit;
+
+        BEGIN
+            IF table THEN
+                IF validate THEN Out.String( "Validation" ) ELSE Out.String( "Check digit" ) END;
+                Out.String( " calculations for '" );Out.String( s );Out.String( "':" );Out.Ln;
+                Out.String( "     i  ni  p[i,ni]  c" );Out.Ln;Out.String( "    ------------------" );Out.Ln;
+            END;
+            c  := 0;
+            le := Strings.Length( s );
+            IF validate THEN efl := le ELSE efl := le + 1 END;
+            IF ~ validate THEN
+               (* calculating - pretend there is an extra 0 at the end of the string     *)
+               c := handleDigit( "0", c, efl - 1, efl - 1, table )
+            END;
+            FOR k := le - 1 TO 0 BY -1 DO
+                c := handleDigit( s[ k ], c, k, efl - 1, table )
+            END;
+            IF table & ~ validate THEN
+                Out.String( "    inv[" );Out.Int( c, 0 );Out.String( "] = " );Out.Int( inv[ c ], 0 );Out.Ln
+            END;
+            IF ~ validate THEN result := inv[ c ] ELSE result := c END
+         RETURN result
+         END VerhoeffAlgorithm ;
+
+    (* returns TRUE if s is valid according to the Verhoeff algorithm, FALSE otherwise   *)
+    (* if table is TRUE, details of the calculations are shown                           *)
+    PROCEDURE VerhoeffValidation( s : ARRAY OF CHAR; table : BOOLEAN ) : BOOLEAN;
+        BEGIN
+        RETURN VerhoeffAlgorithm( s, TRUE, table ) = 0
+        END VerhoeffValidation ;
+
+    (* returns the check digit of s according to the Verhoeff algorithm, FALSE otherwise *)
+    (* if table is TRUE, details of the calculations are shown                           *)
+    PROCEDURE VerhoeffCheckDigit( s : ARRAY OF CHAR; table : BOOLEAN ) : INTEGER;
+        BEGIN
+        RETURN VerhoeffAlgorithm( s, FALSE, table )
+        END VerhoeffCheckDigit ;
+
+    PROCEDURE testCases; (* run the Verhoeff algorithm task test cases                   *)
+
+        PROCEDURE oneTest( s : ARRAY OF CHAR; table : BOOLEAN );
+            VAR   c          : INTEGER;
+
+            PROCEDURE oneValidationTest( s : ARRAY OF CHAR; extraDigit : CHAR; table : BOOLEAN );
+                VAR   result    : ARRAY 16 OF CHAR;
+                      sd        : ARRAY 32 OF CHAR;
+                      sLen      : INTEGER;
+                BEGIN
+                    sd             := s;
+                    sLen           := Strings.Length( sd );
+                    sd[ sLen     ] := extraDigit;
+                    sd[ sLen + 1 ] := 0X;
+                    IF VerhoeffValidation( sd, table ) THEN
+                        result := "correct"
+                    ELSE
+                        result := "incorrect"
+                    END;
+                    Out.String( "Validation for '" );Out.String( sd );Out.String( "' -> " );
+                    Out.String( result );Out.String( "." );Out.Ln
+                END oneValidationTest ;
+
+            BEGIN
+                c := VerhoeffCheckDigit( s, table );
+                Out.String( "The check digit for '" );Out.String( s );
+                Out.String( "' is '" );Out.Int( c, 0 );Out.String( "'" );Out.Ln;
+                oneValidationTest( s, CHR( c + ORD( "0" ) ), table );
+                oneValidationTest( s, "9", table )
+            END oneTest ;
+
+        BEGIN
+            oneTest( "236",           TRUE );    Out.Ln;Out.Ln;
+            oneTest( "12345",         TRUE );    Out.Ln;Out.Ln;
+            oneTest( "123456789012", FALSE );
+        END testCases;
+
+BEGIN
+    init;
+    testCases
+END VerhoeffAlgorithm.

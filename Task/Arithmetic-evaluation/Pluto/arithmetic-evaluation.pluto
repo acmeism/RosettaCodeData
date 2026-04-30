@@ -1,0 +1,87 @@
+-- If string is empty, returns zero.
+local function to_double_or_zero(s)
+    local n = tonumber(s)
+    return n ? n : 0
+end
+
+local function multiply(s)
+    local b = s:split("*"):map(|c| -> to_double_or_zero(c))
+    return tostring(b[1] * b[2])
+end
+
+local function divide(s)
+    local b = s:split("/"):map(|c| -> to_double_or_zero(c))
+    return tostring(b[1] / b[2])
+end
+
+local function add(s)
+    local t = s:gsub("^%+", ""):gsub("%++", "+")
+    local b = t:split("+"):map(|c| -> to_double_or_zero(c))
+    return tostring(b[1] + b[2])
+end
+
+local function subtract(s)
+    local t = s:gsub("(%+%-|%-%+)", "-")
+    if "--" in t then  return add(t:replace("--", "+")) end
+    local b = t:split("-"):map(|c| -> to_double_or_zero(c))
+    return tostring(#b == 3 ? -b[2] - b[3] : b[1] - b[2])
+end
+
+local function eval_exp(s)
+    local t = s:gsub("[()]", "")
+    local pmd = "%d+%.?%d*%s*[*/]%s*[+-]?%d+%.?%d*"
+    local pm  = "%*"
+    local pas = "%-?%d+%.?%d*%s*[+-]%s*[+-]?%d+%.?%d*"
+    local pa  = "%d%+"
+
+    while true do
+        local exp = t:match(pmd)
+        if !exp then break end
+        local exp2 = exp:match(pm)
+        if exp2 then
+            t = t:replace(exp, multiply(exp))
+        else
+            t = t:replace(exp, divide(exp))
+        end
+    end
+
+    while true do
+        local exp = t:match(pas)
+        if !exp then break end
+        local exp2 = exp:match(pa)
+        if exp2 then
+             t = t:replace(exp, add(exp))
+        else
+             t = t:replace(exp, subtract(exp))
+        end
+    end
+
+    return t
+end
+
+local function eval_arithmetic_exp(s)
+    local t = s:gsub("%s", ""):gsub("^%+", "")
+    local ppara = "%([^()]*%)"
+    while true do
+        local exp = t:match(ppara)
+        if !exp then break end
+        t = t:replace(exp, eval_exp(exp))
+    end
+    return to_double_or_zero(eval_exp(t))
+end
+({
+    "2+3",
+    "2+3/4",
+    "2*3-4",
+    "2*(3+4)+5/6",
+    "2 * (3 + (4 * 5 + (6 * 7) * 8) - 9) * 10",
+    "2*-3--4+-0.25",
+    "-4 - 3",
+    "((((2))))+ 3 * 5",
+    "1 + 2 * (3 + (4 * 5 + 6 * 7 * 8) - 9) / 10",
+    "1 + 2*(3 - 2*(3 - 2)*((2 - 4)*5 - 22/(7 + 2*(3 - 1)) - 1)) + 1"
+}):foreach(|s| -> do
+    local r = eval_arithmetic_exp(s)
+    if r % 1.0 == 0 then r = math.round(r) end
+    print($"{s} = {r}")
+end)

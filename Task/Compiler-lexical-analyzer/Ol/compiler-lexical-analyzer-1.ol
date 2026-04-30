@@ -1,123 +1,123 @@
-(import (owl parse))
+(import (data parse))
 
-(define (get-comment)
-   (get-either
-      (let-parses (
-            (_ (get-imm #\*))
-            (_ (get-imm #\/)))
+(define (comment)
+   (either
+      (let-parse* (
+            (_ (byte #\*))
+            (_ (byte #\/)))
          #true)
-      (let-parses (
-            (_ get-byte)
-            (_ (get-comment)))
+      (let-parse* (
+            (_ (byte))
+            (_ (comment)))
          #true)))
 
-(define get-whitespace
-   (get-any-of
-      (get-byte-if (lambda (x) (has? '(#\tab #\newline #\space #\return) x))) ; whitespace
-      (let-parses ( ; comment
-            (_ (get-imm #\/))
-            (_ (get-imm #\*))
-            (_ (get-comment)))
+(define whitespace
+   (any-of
+      (byte (lambda (x) (has? '(#\tab #\newline #\space #\return) x))) ; whitespace
+      (let-parse* ( ; comment
+            (_ (byte #\/))
+            (_ (byte #\*))
+            (_ (comment)))
          #true)))
 
-(define get-operator
-   (let-parses (
-         (operator (get-any-of
-            (get-word "||" 'Op_or)
-            (get-word "&&" 'Op_and)
-            (get-word "!=" 'Op_notequal)
-            (get-word "==" 'Op_equal)
-            (get-word ">=" 'Op_greaterequal)
-            (get-word "<=" 'Op_lessequal)
+(define operator
+   (let-parse* (
+         (operator (any-of
+            (bytes "||" 'Op_or)
+            (bytes "&&" 'Op_and)
+            (bytes "!=" 'Op_notequal)
+            (bytes "==" 'Op_equal)
+            (bytes ">=" 'Op_greaterequal)
+            (bytes "<=" 'Op_lessequal)
 
-            (get-word "=" 'Op_assign)
-            (get-word "!" 'Op_nop)
-            (get-word ">" 'Op_greater)
-            (get-word "<" 'Op_less)
-            (get-word "-" 'Op_subtract)
-            (get-word "+" 'Op_add)
-            (get-word "%" 'Op_mod)
-            (get-word "/" 'Op_divide)
-            (get-word "*" 'Op_multiply))))
+            (bytes "=" 'Op_assign)
+            (bytes "!" 'Op_nop)
+            (bytes ">" 'Op_greater)
+            (bytes "<" 'Op_less)
+            (bytes "-" 'Op_subtract)
+            (bytes "+" 'Op_add)
+            (bytes "%" 'Op_mod)
+            (bytes "/" 'Op_divide)
+            (bytes "*" 'Op_multiply))))
       (cons 'operator operator)))
 
-(define get-symbol
-   (let-parses (
-         (symbol (get-any-of
-            (get-word "(" 'LeftParen)
-            (get-word ")" 'RightParen)
-            (get-word "{" 'LeftBrace)
-            (get-word "}" 'RightBrace)
-            (get-word ";" 'Semicolon)
-            (get-word "," 'Comma))))
+(define symbol
+   (let-parse* (
+         (symbol (any-of
+            (bytes "(" 'LeftParen)
+            (bytes ")" 'RightParen)
+            (bytes "{" 'LeftBrace)
+            (bytes "}" 'RightBrace)
+            (bytes ";" 'Semicolon)
+            (bytes "," 'Comma))))
       (cons 'symbol symbol)))
 
-(define get-keyword
-   (let-parses (
-         (keyword (get-any-of
-            (get-word "if" 'Keyword_if)
-            (get-word "else" 'Keyword_else)
-            (get-word "while" 'Keyword_while)
-            (get-word "print" 'Keyword_print)
-            (get-word "putc" 'Keyword_putc))))
+(define keyword
+   (let-parse* (
+         (keyword (any-of
+            (bytes "if" 'Keyword_if)
+            (bytes "else" 'Keyword_else)
+            (bytes "while" 'Keyword_while)
+            (bytes "print" 'Keyword_print)
+            (bytes "putc" 'Keyword_putc))))
       (cons 'keyword keyword)))
 
 
 
-(define get-identifier
-   (let-parses (
-         (lead (get-byte-if              (lambda (x) (or (<= #\a x #\z) (<= #\A x #\Z) (= x #\_)))))
-         (tail (get-greedy* (get-byte-if (lambda (x) (or (<= #\a x #\z) (<= #\A x #\Z) (= x #\_) (<= #\0 x #\9)))))))
+(define identifier
+   (let-parse* (
+         (lead (byte          (lambda (x) (or (<= #\a x #\z) (<= #\A x #\Z) (= x #\_)))))
+         (tail (greedy* (byte (lambda (x) (or (<= #\a x #\z) (<= #\A x #\Z) (= x #\_) (<= #\0 x #\9)))))))
       (cons 'identifier (bytes->string (cons lead tail)))))
 
-(define get-integer
-   (let-parses (
-         (main (get-greedy+ (get-byte-if (lambda (x) (<= #\0 x #\9))))) )
+(define integer
+   (let-parse* (
+         (main (greedy+ (byte (lambda (x) (<= #\0 x #\9))))) )
       (cons 'integer (string->integer (bytes->string main)))))
 
-(define get-character
-   (let-parses (
-         (_ (get-imm #\'))
-         (char (get-any-of
-            (get-word "\\n" #\newline)
-            (get-word "\\\\" #\\)
-            (get-byte-if (lambda (x) (not (or (eq? x #\') (eq? x #\newline)))))))
-         (_ (get-imm #\')) )
+(define character
+   (let-parse* (
+         (_ (byte #\'))
+         (char (any-of
+            (bytes "\\n" #\newline)
+            (bytes "\\\\" #\\)
+            (byte (lambda (x) (not (or (eq? x #\') (eq? x #\newline)))))))
+         (_ (byte #\')) )
       (cons 'character char)))
 
-(define get-string
-   (let-parses (
-         (_ (get-imm #\")) ;"
-         (data (get-greedy* (get-any-of
-            (get-word "\\n" #\newline)
-            (get-word "\\\\" #\\) ;\"
-            (get-byte-if (lambda (x) (not (or (eq? x #\") (eq? x #\newline)))))))) ;", newline
-         (_ (get-imm #\")) ) ;"
+(define string
+   (let-parse* (
+         (_ (byte #\"))
+         (data (greedy* (any-of
+            (bytes "\\n" #\newline)
+            (bytes "\\\\" #\\)
+            (byte (lambda (x) (not (or (eq? x #\") (eq? x #\newline))))))))
+         (_ (byte #\")) )
       (cons 'string (bytes->string data))))
 
-(define get-token
-   (let-parses (
-         (_ (get-greedy* get-whitespace))
-         (token (get-any-of
-            get-symbol
-            get-keyword
-            get-identifier
-            get-operator
-            get-integer
-            get-character
-            get-string
+(define token
+   (let-parse* (
+         (_ (greedy* whitespace))
+         (token (any-of
+            symbol
+            keyword
+            identifier
+            operator
+            integer
+            character
+            string
          )) )
       token))
 
 (define token-parser
-   (let-parses (
-         (tokens (get-greedy+ get-token))
-         (_ (get-greedy* get-whitespace)))
+   (let-parse* (
+         (tokens (greedy+ token))
+         (_ (greedy* whitespace)))
       tokens))
 
 
 (define (translate source)
-   (let ((stream (try-parse token-parser (str-iter source) #t)))
-      (for-each print (car stream))
-      (if (null? (cdr stream))
+   (let* ((tokens stream (let-parse token-parser (str-iter source))))
+      (for-each print tokens)
+      (if (null? stream)
          (print 'End_of_input))))

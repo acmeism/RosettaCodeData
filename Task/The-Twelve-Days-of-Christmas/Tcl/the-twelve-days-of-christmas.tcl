@@ -19,5 +19,5 @@ set gifts [lreverse {
 
 set n -1;puts [join [lmap day $days {
     format "On the $day day of Christmas,\nMy true love gave to me:\n%s" \
-	    [join [lrange $gifts end-[incr n] end] \n]
+      [join [lrange $gifts end-[incr n] end] \n]
 }] \n\n]

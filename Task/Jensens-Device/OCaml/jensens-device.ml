@@ -1,13 +1,10 @@
-let i = ref 42 (* initial value doesn't matter *)
-
-let sum' i lo hi term =
-  let result = ref 0. in
-    i := lo;
-    while !i <= hi do
-      result := !result +. term ();
-      incr i
-    done;
-    !result
+let sum i lo hi term =
+  let temp = ref 0. in
+  for n = lo to hi do i := n;
+      temp := !temp +. term()
+  done;
+  !temp
 
 let () =
-  Printf.printf "%f\n" (sum' i 1 100 (fun () -> 1. /. float !i))
+  let i = ref 1 in
+  print_float (sum i 1 100 (fun () -> 1. /. float !i))

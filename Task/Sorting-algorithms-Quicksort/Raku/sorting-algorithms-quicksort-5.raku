@@ -1,5 +1,7 @@
-say "x" x 11 ~ " Benchmarking " ~ "x" x 11;
+# run in a terminal: "zef install Benchmark" to install from https://raku.land
 use Benchmark;
+
+say "x" x 11 ~ " Benchmarking " ~ "x" x 11;
 my $runs = 5;
 my $elems = 10 * Kernel.cpu-cores * 2**10;
 my @unsorted of Str = ('a'..'z').roll(8).join xx $elems;
@@ -22,7 +24,7 @@ my %results = timethese $runs, {
 my @metrics = <mean median sd>;
 my $msg-row = "%.4f\t" x @metrics.elems ~ '%s';
 
-say @metrics.join("\t");
-for %results.kv -> $name, %m {
-	say sprintf($msg-row, %m{@metrics}, $name);
+for %results.sort( *.value<median> ) {
+    once say @metrics.join("\t"); # header
+	     say sprintf($msg-row, .value{@metrics}, .key)
 }

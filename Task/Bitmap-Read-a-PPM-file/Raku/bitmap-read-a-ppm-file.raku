@@ -7,8 +7,8 @@ class Bitmap {
 role PGM {
     has @.GS;
     method P5 returns Blob {
-	"P5\n{self.width} {self.height}\n255\n".encode('ascii')
-	~ Blob.new: self.GS
+  "P5\n{self.width} {self.height}\n255\n".encode('ascii')
+  ~ Blob.new: self.GS
     }
 }
 

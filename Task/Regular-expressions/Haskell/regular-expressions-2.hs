@@ -1,5 +1,3 @@
-import Text.Regex
-
-orig = "I am the original string"
-result = subRegex (mkRegex "original") orig "modified"
-putStrLn $ result
+ghci> import Text.Regex.TDFA
+ghci> compiled = makeRegex ".*string$" :: Regex
+ghci> match compiled "I am a string" :: Bool

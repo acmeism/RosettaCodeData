@@ -1,0 +1,108 @@
+require "bignum"
+local fmt = require "fmt"
+
+class result
+    function __construct(public name, public size, public start, public finish)
+    end
+end
+
+local function validate(diagram)
+    local lines = {}
+    for diagram:split("\n") as line do
+        line = line:strip(" \t")
+        if line != "" then lines:insert(line) end
+    end
+    if #lines == 0 then error("diagram has no non-empty lines!") end
+    local width = #lines[1]
+    local cols = (width - 1) // 3
+    if cols != 8 and cols != 16 and cols != 32 and cols != 64 then
+        error("number of columns should be 8, 16, 32 or 64")
+    end
+    if #lines % 2 == 0 then
+        error("number of non-empty lines should be odd")
+    end
+    if lines[1] != string.rep("+--", cols) .. "+" then error("incorrect header line") end
+    local i = 0
+    for lines as line do
+        if i == 0 then
+            continue
+        elseif i % 2 == 0 then
+            if line != lines[1] then error("incorrect separator line") end
+        elseif #line != width then
+            error("inconsistent line widths")
+        elseif line[1] != "|" or line[width] != "|" then
+            error("non-separator lines must begin and end with '|'")
+        end
+        i += 1
+    end
+    return lines
+end
+
+local function decode(lines)
+    print("Name     Bits  Start  End")
+    print("=======  ====  =====  ===")
+    local start = 0
+    local width = #lines[1]
+    local results = {}
+    local i = 0
+    for lines as line do
+        if i % 2 == 0 then
+            i += 1
+            continue
+        end
+        line = line:sub(2, width - 1)
+        for line:split("|") as name do
+            local size = (#name + 1) // 3
+            name = name:strip()
+            local r = new result(name, size, start, start + size - 1)
+            results:insert(r)
+            fmt.print("%-7s   %2d    %3d   %3d", r.name, r.size, r.start, r.finish)
+            start += size
+        end
+        i += 1
+    end
+    return results
+end
+
+local function hex2bin(hex)
+    local z = bigint.frombase(hex, 16)
+    return fmt.lpad(bigint.tobase(z, 2), 4 * #hex, "0")
+end
+
+local function unpack(results, hex)
+    print("\nTest string in hex:")
+    print(hex)
+    print("\nTest string in binary:")
+    local bin = hex2bin(hex)
+    print(bin)
+    print("\nUnpacked:\n")
+    print("Name     Size  Bit pattern")
+    print("=======  ====  ================")
+    for results as res do
+        fmt.print("%-7s   %2d   %s", res.name, res.size, bin:sub(res.start + 1, res.finish + 1))
+    end
+end
+
+local diagram = [[
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+     |                      ID                       |
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    |QR|   Opcode  |AA|TC|RD|RA|   Z    |   RCODE   |
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    |                    QDCOUNT                    |
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+
+    |                    ANCOUNT                    |
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    |                    NSCOUNT                    |
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    |                    ARCOUNT                    |
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+]]
+local lines = validate(diagram)
+print("Diagram after trimming whitespace and removal of blank lines:\n")
+for lines as line do print(line) end
+print("\nDecoded:\n")
+local results = decode(lines)
+local hex = "78477bbf5496e12e1bf169a4"  -- test string
+unpack(results, hex)

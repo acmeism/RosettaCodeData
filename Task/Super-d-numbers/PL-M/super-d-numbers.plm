@@ -1,0 +1,167 @@
+100H:
+/* BDOS ROUTINES */
+BDOS: PROCEDURE (FN, ARG); DECLARE FN BYTE, ARG ADDRESS; GO TO 5; END BDOS;
+EXIT: PROCEDURE; GO TO 0; END EXIT;
+PUT$CHAR: PROCEDURE (CHR); DECLARE CHR BYTE; CALL BDOS(2,CHR); END PUT$CHAR;
+PUT$STR: PROCEDURE (STR); DECLARE STR ADDRESS; CALL BDOS(9,STR); END PUT$STR;
+
+/* BIGINT ROUTINES */
+DECLARE BIGINT LITERALLY '(64)BYTE';
+
+INIT: PROCEDURE (NBUF, VAL);
+    DECLARE NBUF ADDRESS, N BASED NBUF BIGINT, VAL ADDRESS;
+    DECLARE I BYTE;
+    I = 0;
+    STEP: DO;
+        N(I) = VAL MOD 10;
+        I = I+1;
+        IF (VAL := VAL/10) > 0 THEN GO TO STEP;
+    END;
+    N(I) = -1;
+END INIT;
+
+COPY: PROCEDURE (IBUF, OBUF);
+    DECLARE (IBUF, OBUF) ADDRESS, (I BASED IBUF, O BASED OBUF) BIGINT;
+    STEP: DO;
+        O = I;
+        IF O = -1 THEN RETURN;
+        IBUF = IBUF + 1;
+        OBUF = OBUF + 1;
+        GO TO STEP;
+    END;
+END COPY;
+
+INCR: PROCEDURE (NBUF);
+    DECLARE NBUF ADDRESS, N BASED NBUF BIGINT;
+    DECLARE I BYTE;
+    I = 0;
+    STEP: DO;
+        N(I) = N(I) + 1;
+        IF N(I) < 10 THEN GO TO DONE;
+        N(I) = 0;
+        I = I + 1;
+        GO TO STEP;
+    END;
+    DONE: IF N(I) = 0 THEN DO;
+        N(I) = 1;
+        N(I+1) = -1;
+    END;
+END INCR;
+
+LEN: PROCEDURE (NBUF) BYTE;
+    DECLARE NBUF ADDRESS, N BASED NBUF BIGINT;
+    DECLARE I BYTE;
+    I = 0;
+    DO WHILE N(I) <> -1; I = I + 1; END;
+    RETURN I;
+END LEN;
+
+PUT$BIGINT: PROCEDURE (NBUF);
+    DECLARE NBUF ADDRESS, N BASED NBUF BIGINT;
+    DECLARE I BYTE;
+    I = LEN(.N);
+    DO WHILE (I := I-1) <> -1;
+        CALL PUT$CHAR('0' + N(I));
+    END;
+END PUT$BIGINT;
+
+MUL: PROCEDURE (ABUF, BBUF, RBUF);
+    DECLARE (ABUF, BBUF, RBUF) ADDRESS;
+    DECLARE A BASED ABUF BIGINT;
+    DECLARE B BASED BBUF BIGINT;
+    DECLARE R BASED RBUF BIGINT;
+    DECLARE (I, J, S, CR) BYTE;
+
+    DO I=0 TO LEN(.A) + LEN(.B); R(I)=0; END;
+
+    I = 0;
+    DO WHILE B(I) <> -1;
+        CR = 0;
+        J = 0;
+        DO WHILE A(J) <> -1;
+            S = R(I + J) + CR + A(J) * B(I);
+            R(I + J) = S MOD 10;
+            CR = S / 10;
+            J = J + 1;
+        END;
+        R(I + J) = R(I + J) + CR;
+        I = I + 1;
+    END;
+    I = I + J - 1;
+    IF CR = 0 THEN
+        R(I) = -1;
+    ELSE DO;
+        R(I) = CR MOD 10;
+        IF CR >= 10 THEN R(I := I + 1) = CR / 10;
+        R(I+1) = -1;
+    END;
+END MUL;
+
+POW: PROCEDURE (BASEBUF, EXP, RESBUF);
+    DECLARE (BASEBUF, RESBUF) ADDRESS;
+    DECLARE (BASE BASED BASEBUF, RES BASED RESBUF) BIGINT;
+    DECLARE (CUR, TMP) BIGINT;
+    DECLARE EXP BYTE;
+    CALL INIT(.RES, 1);
+    CALL COPY(.BASE, .CUR);
+    STEP: DO;
+        IF EXP THEN DO;
+            CALL MUL(.CUR, .RES, .TMP);
+            CALL COPY(.TMP, .RES);
+        END;
+        IF (EXP := SHR(EXP, 1)) = 0 THEN RETURN;
+        CALL MUL(.CUR, .CUR, .TMP);
+        CALL COPY(.TMP, .CUR);
+        GO TO STEP;
+    END;
+END POW;
+
+/* SEE IF NUMBER IS SUPER-D NUMBER */
+SUPER$D: PROCEDURE (NUMBUF, DIGIT) BYTE;
+    DECLARE NUMBUF ADDRESS, NUM BASED NUMBUF BIGINT;
+    DECLARE (DN, DND, DG) BIGINT;
+    DECLARE DIGIT BYTE, I BYTE, CONS BYTE;
+
+    CALL POW(.NUM, DIGIT, .DN);
+    CALL INIT(.DG, DIGIT);
+    CALL MUL(.DN, .DG, .DND);
+
+    I = 0;
+    CONS = 0;
+    DO WHILE DND(I) <> -1;
+        IF DND(I) = DIGIT
+            THEN CONS = CONS + 1;
+            ELSE CONS = 0;
+        IF CONS = DIGIT THEN RETURN 0FFH;
+        I = I + 1;
+    END;
+    RETURN 0;
+END SUPER$D;
+
+/* PRINT FIRST 10 SUPER-D NUMBERS */
+FIND$SUPER$DS: PROCEDURE (DIGIT);
+    DECLARE DIGIT BYTE, I BYTE;
+    DECLARE CUR$NUM BIGINT;
+
+    CALL PUT$CHAR(DIGIT + '0');
+    CALL PUT$CHAR(':');
+
+    CALL INIT(.CUR$NUM, 1);
+    DO I=1 TO 10;
+        DO WHILE NOT SUPER$D(.CUR$NUM, DIGIT);
+            CALL INCR(.CUR$NUM);
+        END;
+        CALL PUT$CHAR(' ');
+        CALL PUT$BIGINT(.CUR$NUM);
+        CALL INCR(.CUR$NUM);
+    END;
+    CALL PUT$STR(.(13,10,'$'));
+END;
+
+DECLARE D BYTE;
+DO D=2 TO 6;
+    CALL FIND$SUPER$DS(D);
+END;
+
+CALL EXIT;
+EOF

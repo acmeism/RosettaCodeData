@@ -1,7 +1,9 @@
-// version 1.0.6
+// version 2.3.20
 
-/* clears console on Windows 10 */
-fun cls() = ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor()
+// Assumes the terminal supports ANSI escape codes.
+fun cls() {
+    println("\u001B[2J")
+}
 
 fun main(args: Array<String>) {
     val units = listOf("tochka", "liniya", "dyuim", "vershok", "piad", "fut",
@@ -37,7 +39,7 @@ fun main(args: Array<String>) {
         println()
         do {
             print("Do another one y/n : ")
-            yn = readLine()!!.toLowerCase()
+            yn = readLine()!!.lowercase()
         }
         while (yn != "y" && yn != "n")
     }

@@ -1,0 +1,139 @@
+//
+//   FutureBasic 7.0.35 —  Almkvist–Giullera PI
+//
+//  September 2025, R.W.
+
+include "mpfr.incl"
+
+long PRECISION
+long n
+
+// Almkvist–Giullera PI estimate via MPFR (256-bit).
+//
+// 1 / π² = 32 × Σ (from n = 0 to ∞) [ (6n)! / (3 × (n!)⁶) × ¬
+//         (532n² + 126n + 9) × 1 / (10^(6n + 3)) ]
+
+void local fn AG_Pi256_Compute ( AgPI as mpfr_t )
+  long tmp
+  CFStringRef pLine
+  Boolean iterating = _True
+
+  mpz_t t1, t2, t3
+  mpfr_t f1, f2, sum, prev, diff, epsilon
+
+  // Init big integers
+  mpz_init( t1 )
+  mpz_init( t2 )
+  mpz_init( t3 )
+
+  // Init MPFR floats at 256 bits
+
+  mpfr_init2(        f1, PRECISION )
+  mpfr_init2(        f2, PRECISION )
+  mpfr_init2(       sum, PRECISION )
+  mpfr_init2(      prev, PRECISION )
+  mpfr_init2(      diff, PRECISION )
+  mpfr_init2(   epsilon, PRECISION )
+
+  // Looking at accuracy of 70 decimal digits
+  // Set epsilon to = 10^-70
+
+  fn mpfr_set_ui( epsilon, 10, MPFR_RNDN)
+  fn mpfr_pow_ui( epsilon, epsilon, 70, MPFR_RNDN )
+  fn mpfr_ui_div( epsilon, 1, epsilon, MPFR_RNDN )
+
+  // sum = 0
+  fn mpfr_set_ui( sum, 0, MPFR_RNDN )
+
+  // Sum_{n = 0..kTerms}
+  // ( (6n)! * (532 n^2 + 126 n + 9) * 2^5 ) / ( 3 * (n!)^6 * 10^(6n+3) )
+  //
+  While iterating
+    mpz_fac_ui( t1, 6 * n )    // t1 = (6n)!
+    //                         // t2 = 532 n^2 + 126 n + 9
+    mpz_ui_pow_ui( t2, n, 2 )  // t2 = n^2
+    mpz_mul_ui( t2, t2, 532 )  // 532 n^2
+    mpz_set_ui( t3, n )        // t3 = n
+    mpz_mul_ui( t3, t3, 126 )  // 126 n
+    mpz_add( t2, t2, t3 )      // 532 n^2 + 126 n
+    mpz_add_ui( t2, t2, 9 )    // + 9
+    //                         // t3 = 3 * (n!)^6
+    mpz_fac_ui( t3, n )        // t3 = n!
+    mpz_pow_ui( t3, t3, 6 )    // (n!)^6
+    mpz_mul_ui( t3, t3, 3 )    // 3 * (n!)^6
+    //                         // t1 = t1 * t2 * 2^5 / t3
+    mpz_mul( t1, t1, t2 )      // t1 = t1 * t2
+    mpz_mul_2exp( t1, t1, 5 )  // t1 = t1 * t1 ^5
+    mpz_divexact( t1, t1, t3 ) // t1 = t1 / t3
+
+    // Print t1 if n less than 10
+    // to fullfil Rosetta Task requirement
+    if n < 10
+      pLine = @""
+      pLine = fn mpz_cf(10,t1)
+      pLine = concat(str(n),@" | ",pLine)
+      print @ pLine
+      if n == 9
+        print@
+        print@ "Estimating PI.."
+        print @
+      end if
+    end if
+
+    // f1 = t1 / 10^(6n+3)
+    fn mpfr_set_z( f1, t1, MPFR_RNDN )
+    tmp = 6 * n + 3
+    fn mpfr_set_ui( f2, 10, MPFR_RNDN )
+    fn mpfr_pow_ui( f2, f2, tmp, MPFR_RNDN )
+    fn mpfr_div( f1, f1, f2, MPFR_RNDN )
+    // sum += f1
+    fn mpfr_add( sum, sum, f1, MPFR_RNDN )
+    // find the difference between previous sum and current
+    fn mpfr_sub( diff, sum, prev, MPFR_RNDN)
+    //mpfr_set_ui(prev, 10, MPFR_RNDN )    //sum -> prev
+    fn mpfr_set(prev, sum, MPFR_RNDN)
+
+    // if (sum - prev) < epsilon, then we're done
+
+    if (fn mpfr_cmpabs( diff, epsilon ) < 0 ) then iterating = _False
+    fn mpfr_sqrt( f2, sum, MPFR_RNDN )
+    fn mpfr_ui_div( AgPI, 1, f2, MPFR_RNDN ) // 1 / sqrt(sum)
+    n++
+  wend
+
+  // Final output
+  print @fn mpfr_cf2(71, AgPi, MPFR_RNDN)
+  print@
+  print @"70 decimal digits accuracy achieved after ";n;" iterations."
+
+  // Cleanup
+  mpfr_clear( epsilon )
+  mpfr_clear( diff )
+  mpfr_clear( prev )
+  mpfr_clear( sum )
+  mpfr_clear( f2 )
+  mpfr_clear( f1 )
+  mpz_clear( t3 )
+  mpz_clear( t2 )
+  mpz_clear( t1 )
+
+end fn
+
+//------------------ Main
+window 1, @"Almkvist–Giullera PI"
+print@
+print " n |              Integer of Nth term"
+printf fn StringByPaddingToLength( @"", 48, @"-", 0 )
+
+PRECISION = 256
+mpfr_t AgPi
+mpfr_init2( AgPI, PRECISION )
+
+fn AG_Pi256_Compute ( AgPI )
+
+mpfr_clear( AgPI )
+
+
+HandleEvents
+
+//

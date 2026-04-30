@@ -1,5 +1,4 @@
 import time
-import rand
 import rand.pcg32
 import rand.seed
 
@@ -11,7 +10,7 @@ fn main() {
             mut rng := pcg32.PCG32RNG{}
             time_seed := seed.time_seed_array(4) // the time derived array to seed the random generator
             rng.seed(time_seed)
-            time.sleep(time.Duration(rng.i64n(1_000_000_000)))
+            time.sleep(time.Duration(rng.u32()))
             println(w)
         }(w)
     }

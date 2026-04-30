@@ -1,0 +1,8 @@
+(defun pascal (r)
+  (dotimes (i r)
+    (let ((c 1))
+      (dotimes (k (+ i 1))
+        (princ (format "%d " c))
+        (setq c (/ (* c (- i k))
+                   (+ k 1))))
+        (terpri))))

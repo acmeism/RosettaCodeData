@@ -66,10 +66,10 @@ begin
     end testIsin ;
 
     testIsIsin( "US0378331005",  true  );
-    testIsIsin( "US0373831005",	 false );
+    testIsIsin( "US0373831005",  false );
     testIsIsin( "U50378331005",  false );
     testIsIsin( "US03378331005", false );
-    testIsIsin( "AU0000XVGZA3",	 true  );
-    testIsIsin( "AU0000VXGZA3",	 true  );
-    testIsIsin( "FR0000988040",	 true  );
+    testIsIsin( "AU0000XVGZA3",  true  );
+    testIsIsin( "AU0000VXGZA3",  true  );
+    testIsIsin( "FR0000988040",  true  );
 end.

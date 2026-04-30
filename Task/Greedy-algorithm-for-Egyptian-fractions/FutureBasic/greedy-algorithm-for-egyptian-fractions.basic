@@ -1,0 +1,304 @@
+include "gmp.incl"
+
+// --------------------------------------------
+//
+// Egyptian Fractions with GMP
+// Using FutureBasic 7.0.35, October 2025, R.W
+//
+// --------------------------------------------
+
+_kBitsPrecision = 256       // precission bits requested
+STRSetLeadingSpace(_False)  // no space on positive STR
+
+// ------------------------------------------
+// Simple string-returning Egyptian expansion
+// ------------------------------------------
+local fn egyptian_Fraction( num as Int, denom as Int ) as CFStringRef
+  CFStringRef result
+  mpz_t n, d, t
+
+  fn mpz_init2( n, _kBitsPrecision )
+  fn mpz_init2( d, _kBitsPrecision )
+  fn mpz_init2( t, _kBitsPrecision )
+
+  // n := num, d := denom
+  fn mpz_set_si( n, num )
+  fn mpz_set_si( d, denom )
+
+  result = @""
+  while fn mpz_cmp_si( n, 0 ) != 0
+    // t = ceil(d/n)
+    fn mpz_cdiv_q( t, d, n )
+
+    // append "1/t"
+    if fn CFStringGetLength( result ) == 0
+      result = concat( @"1/", fn mpz_cf2( t ) )
+    else
+      result = concat( result, @" + 1/", fn mpz_cf2( t ) )
+    end if
+
+    // n,d <- (n*t - d, d*t)
+    fn mpz_mul( n, n, t )        // n = n * t
+    fn mpz_sub( n, n, d )        // n = n - d
+    fn mpz_mul( d, d, t )        // d = d * t
+
+    // reduce if n != 0
+    if fn mpz_cmp_si( n, 0 ) != 0
+      mpz_t g
+      fn mpz_init2( g, _kBitsPrecision )
+      fn mpz_gcd( g, n, d )
+      if fn mpz_cmp_si( g, 1 ) != 0
+        fn mpz_divexact( n, n, g )
+        fn mpz_divexact( d, d, g )
+      end if
+      fn mpz_clear( g )
+    end if
+  wend
+
+  fn mpz_clears( t, d, n, NULL )
+end fn = result
+
+// ------------------------------------------
+// Helper:
+// gcd for Ints (used to skip duplicate fractions
+//     only consider reduced n/d)
+local fn GCD_Int( a as Int, b as Int ) as Int
+  Int x, y, t
+  x = (a < 0) ? -a : a
+  y = (b < 0) ? -b : b
+  while y != 0
+    t = x MOD y
+    x = y
+    y = t
+  wend
+end fn = x
+
+// Helper: number of base-10 digits for positive Int (r>=1)
+local fn NumDigits10( r as Int ) as Int
+  Int n, t
+  if r <= 0
+    n = 1
+  else
+    n = 0
+    t = r
+    while t > 0
+      t = t / 10
+      n = n + 1
+    wend
+  end if
+end fn = n
+
+// Helper: Append item to list (empty list -> item)
+local fn CSVAppend( list as CFStringRef, item as CFStringRef ) as CFStringRef
+  if list == _nil then return item
+  if fn CFStringGetLength( list ) == 0 then return item
+end fn = concat( list, @", ", item )
+
+// ------------------------------------------
+// EgyptianStats — greedy via GMP, returns:
+//   outStr  : "1/x + 1/y + ..."
+//   outCount: #terms
+//   outLast : last unit term "1/z"
+//   outLastDenDigits: digits in z
+// ------------------------------------------
+local fn EgyptianStats( n as Int, d as Int, ¬
+  outStr as ^CFStringRef, ¬
+  outCount as ^Int, ¬
+  outLast as ^CFStringRef, ¬
+  outLastDenDigits as ^Int )
+  mpz_t a, b, t, tmp, g
+  CFMutableStringRef m
+  CFStringRef unit
+  Int count, firstTerm
+  CFIndex lenLast
+
+  m = fn CFStringCreateMutable( _kCFAllocatorDefault, 0 )
+  count = 0
+  firstTerm = 1
+  *outLast = @""
+
+  fn mpz_init2( a, _kBitsPrecision )
+  fn mpz_init2( b, _kBitsPrecision )
+  fn mpz_init2( t, _kBitsPrecision )
+  fn mpz_init2( tmp, _kBitsPrecision )
+  fn mpz_init2( g, _kBitsPrecision )
+
+  fn mpz_set_si( a, n )     // a = numerator
+  fn mpz_set_si( b, d )     // b = denominator
+
+  while fn mpz_cmp_si( a, 0 ) != 0
+    // t = ceil(b/a)
+    fn mpz_cdiv_q( t, b, a )
+
+    // Current unit term "1/t"
+    unit = concat( @"1/", fn mpz_cf2( t ) )
+    if firstTerm
+      fn CFStringAppend( m, unit )
+      firstTerm = 0
+    else
+      fn CFStringAppend( m, @" + " )
+      fn CFStringAppend( m, unit )
+    end if
+    *outLast = unit
+    count = count + 1
+
+    // a = a*t - b ; b = b*t
+    fn mpz_mul( tmp, a, t )
+    fn mpz_sub( a, tmp, b )
+    fn mpz_mul( b, b, t )
+
+    if fn mpz_cmp_si( a, 0 ) != 0
+      fn mpz_gcd( g, a, b )
+      if fn mpz_cmp_si( g, 1 ) != 0
+        fn mpz_divexact( a, a, g )
+        fn mpz_divexact( b, b, g )
+      end if
+    end if
+  wend
+
+  *outStr = fn CFStringCreateCopy( _kCFAllocatorDefault, m )
+  lenLast = fn CFStringGetLength( *outLast )
+  if lenLast >= 3
+    *outLastDenDigits = lenLast - 2   // strip leading "1/"
+  else
+    *outLastDenDigits = 0
+  end if
+  *outCount = count
+
+  fn mpz_clears( g, tmp, t, b, a, _nil )
+end fn
+
+// ------------------------------------------
+// Display the fraction chain [xx] if whole #
+// ------------------------------------------
+void local fn efrac( num as Int, denom as Int )
+  CFStringRef fraction, e, prefix
+  Int whole
+  fraction = @"": e = @"":  prefix   = @""
+  fraction = concat( str(num),@"/", str(denom), @" -> " )
+  if num >= denom
+    whole = FIX( num / denom )
+    num   = num - whole * denom
+    prefix = concat(@"[",str(whole),@"] + ")
+  end if
+  e = concat( fn egyptian_Fraction( num, denom ))
+  print @ fraction, prefix; e
+end fn
+
+
+// Rosetta task did not specify that we can use ellipsis
+// but I figured it's unnecessary to list all the digits
+// if it's more than 200 digits, instead we abbreviate it
+
+// Abbreviate denominator of a last unit term "1/XXXXXXXX"
+// Returns "first10...last10" (or full if <= 200 chars)
+
+local fn AbbrevLastDen( lastTerm as CFStringRef ) as CFStringRef
+  CFStringRef outStr, denStr, a, b
+  CFIndex slashPos1, denLen
+  outStr = @""
+  if lastTerm == _nil then return outStr
+  slashPos1 = instr( 0, lastTerm, @"/" )
+  if slashPos1 == 0 then return outStr
+  // get the string from the slash back
+  denStr = mid( lastTerm, slashPos1+1 )
+  denLen = fn CFStringGetLength( denStr )
+  if denLen <= 200 then return denStr
+  a = left( denStr, 10 )
+  b = mid( denStr, denLen - 10 )
+  outStr = concat( a, @"...", b )
+end fn = outStr
+
+
+// ------------------------------------------
+//  Main
+// ------------------------------------------
+window 1, @"Greedy Egyptian Fraction", (0,0,610,400)
+print @
+print @"Egyptian fraction for:"
+print @
+
+// Rosetta Stone Task requirements 1
+
+fn efrac( 43, 48 )
+fn efrac( 5, 121 )
+fn efrac( 2014, 59 )
+
+// start the clock
+CFTimeInterval t
+t = fn CACurrentMediaTime
+
+// ---------------------------------------------------
+// Rosetta Stone task 2
+//
+// Do the Fibonacci's Greedy algorithm for Egyptian
+// fractions expansion for proper fraction n/d with
+// 1 <= n < d <= r+1, compute
+// its Egyptian expansion, and report:
+//   - Largest number of terms (maxt)
+//   - Largest size (digits) of the final denominator
+// ---------------------------------------------------
+Int r
+for r = 98 to 998 step 900    // do this iteration twice
+  Int n, d
+  Int nterms, lastDenDigits
+  Int maxTerms, maxDenDigits
+  CFStringRef termsStr, lastTerm, termLabel
+  CFStringRef maxTermsList, maxDenTermList, maxDenAbbrev
+  Int digitsR
+
+  maxTerms     = 0  : maxDenDigits   = 0
+  maxTermsList = @"": maxDenTermList = @"":  maxDenAbbrev   = @""
+
+  for n = 1 to r
+    for d = n + 1 to r + 1
+      // Only reduced fractions
+      if fn GCD_Int( n, d ) == 1    //dupes skipped
+        termLabel = fn CFStringCreateWithFormat( _kCFAllocatorDefault, 0, @"%d/%d", n, d )
+
+        fn EgyptianStats( n, d, @termsStr, @nterms, @lastTerm, @lastDenDigits )
+
+        // Track largest number of terms
+        if nterms > maxTerms
+          maxTerms     = nterms
+          maxTermsList = termLabel
+        else
+          if nterms == maxTerms
+            maxTermsList = fn CSVAppend( maxTermsList, termLabel )
+          end if
+        end if
+
+        // Track largest last-denominator digit length
+        if lastDenDigits > maxDenDigits
+          maxDenDigits   = lastDenDigits
+          maxDenTermList = termLabel
+          maxDenAbbrev   = fn AbbrevLastDen( lastTerm )
+        else
+          if lastDenDigits == maxDenDigits
+            maxDenTermList = fn CSVAppend( maxDenTermList, termLabel )
+          end if
+        end if
+      end if
+    next d
+  next n
+
+  // Rosetta Stone Task 3 (extra credit)
+
+  digitsR = fn NumDigits10( r )
+  print
+  print @"For proper fractions with 1 to "; digitsR; @" digits:"
+  print @"Largest number of terms is "; maxTerms; @" for "; maxTermsList
+  print @"Largest size for denominator is for "; maxDenTermList; " with ";maxDenDigits; @" digits: "
+
+  if maxDenDigits > 200
+    print @ "("; maxDenAbbrev;")"
+  else
+    print @ maxDenAbbrev
+  end if
+next r
+
+printf @"\nElapsed time: %.3f secs", (fn CACurrentMediaTime-t)
+
+handleEvents
+
+//

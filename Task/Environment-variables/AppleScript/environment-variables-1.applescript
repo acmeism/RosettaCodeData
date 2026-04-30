@@ -1,1 +1,3 @@
-tell application "Finder" to get name of home
+system attribute "HOME"
+system attribute "PATH"
+system attribute "USER"

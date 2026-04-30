@@ -4,7 +4,7 @@
 do
     io.write( "2" )
     local product = 2
-    for i = 2, 8 do
+    for i = 2, 9 do
         local nextV, p, found = product + 1, 3, false
         -- find the first prime factor of nextV
         while  p * p <= nextV and not found do

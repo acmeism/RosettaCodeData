@@ -8,14 +8,10 @@ func totient n .
          .
          tot -= tot div i
       .
-      if i = 2
-         i = 1
-      .
+      if i = 2 : i = 1
       i += 2
    .
-   if n > 1
-      tot -= tot div n
-   .
+   if n > 1 : tot -= tot div n
    return tot
 .
 n = 1
@@ -32,3 +28,4 @@ while cnt < 20
    .
    n += 2
 .
+print ""

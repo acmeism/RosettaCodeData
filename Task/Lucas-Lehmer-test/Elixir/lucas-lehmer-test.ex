@@ -1,5 +1,5 @@
 defmodule LucasLehmer do
-  use Bitwise
+  import Bitwise
   def test do
     for p <- 2..1300, p==2 or s(bsl(1,p)-1, p-1)==0, do: IO.write "M#{p} "
   end

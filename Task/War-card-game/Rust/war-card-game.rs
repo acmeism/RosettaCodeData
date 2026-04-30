@@ -1,5 +1,7 @@
+// rand@0.10.0
+
 use rand::seq::SliceRandom;
-use rand::thread_rng;
+use rand::rng;
 
 const SUITS: [&str; 4] = ["♣", "♦", "♥", "♠"];
 const FACES: [&str; 13] = ["2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"];
@@ -23,7 +25,7 @@ impl Card {
 fn war() {
     // Create and shuffle deck
     let mut deck: Vec<usize> = (0..52).collect();
-    deck.shuffle(&mut thread_rng());
+    deck.shuffle(&mut rng());
 
     // Deal cards to players (reversing order to match Go implementation)
     let mut hand1: Vec<usize> = Vec::with_capacity(52);

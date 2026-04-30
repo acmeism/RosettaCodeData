@@ -23,20 +23,20 @@ sub floodfill
     if ( colordistance(\@tcol, \@col) > $distparameter ) { return; }
     push @queue, [$x, $y];
     while ( @queue ) {
-	my $pointref = shift(@queue);
-	( $x, $y ) = @$pointref;
-	if ( ($x < 0) || ($y < 0) || ( $x >= $img->width ) || ( $y >= $img->height ) ) { next; }
-	if ( ! exists($visited{"$x,$y"}) ) {
-	    @col = $img->query_pixel($x, $y);
-	    if ( colordistance(\@tcol, \@col) <= $distparameter ) {
-		$img->draw_point($x, $y);
-		$visited{"$x,$y"} = 1;
-		push @queue, [$x+1, $y];
-		push @queue, [$x-1, $y];
-		push @queue, [$x, $y+1];
-		push @queue, [$x, $y-1];
-	    }
-	}
+  my $pointref = shift(@queue);
+  ( $x, $y ) = @$pointref;
+  if ( ($x < 0) || ($y < 0) || ( $x >= $img->width ) || ( $y >= $img->height ) ) { next; }
+  if ( ! exists($visited{"$x,$y"}) ) {
+      @col = $img->query_pixel($x, $y);
+      if ( colordistance(\@tcol, \@col) <= $distparameter ) {
+    $img->draw_point($x, $y);
+    $visited{"$x,$y"} = 1;
+    push @queue, [$x+1, $y];
+    push @queue, [$x-1, $y];
+    push @queue, [$x, $y+1];
+    push @queue, [$x, $y-1];
+      }
+  }
     }
 }
 

@@ -1,0 +1,175 @@
+//
+// Continued fraction/Arithmetic/Construct
+//            from rational number
+// Using FutureBasic 7.0.35
+//
+// September 2025, R.W
+//
+
+include "mpfr.incl"
+
+_precision = 128    // 128 bits, should be sufficient
+
+//
+// MPFR via digit walking)
+//
+
+// x := integer value of decimal CFString s (e.g. @"-151" or @"314159...")
+
+local fn MPFR_SetFromDecString( x as mpfr_t, s as CFStringRef )
+  long n, i, ch, neg, start
+  fn mpfr_set_ui( x, 0, MPFR_RNDN )
+  if ( s == _nil ) then exit fn
+  n = fn CFStringGetLength( s )
+  if n == 0 then exit fn
+  ch = fn CFStringGetCharacterAtIndex( s, 0 )
+  neg = ( ch == 45 ) // '-'
+
+  if neg
+    start = 1
+  else
+    start = 0
+  end if
+
+  for i = start to n - 1
+    ch = fn CFStringGetCharacterAtIndex( s, i )
+    if (ch >= 48) && (ch <= 57) // '0'..'9'
+      fn mpfr_mul_ui( x, x, 10, MPFR_RNDN )
+      fn mpfr_add_ui( x, x, ch - 48, MPFR_RNDN )
+    end if
+  next i
+
+  if neg then fn mpfr_neg( x, x, MPFR_RNDN )
+end fn
+
+//
+// One continued-fraction step using MPFR
+// q = trunc(num/den), r = num - q*den, then (num,den) ← (den,r)
+//
+local fn R2CF_Step_MPFR( num as mpfr_t, den as mpfr_t, q as mpfr_t )
+  mpfr_t t, r
+  mpfr_init2( t, fn mpfr_get_prec(num) )
+  mpfr_init2( r, fn mpfr_get_prec(num) )
+
+  // t := num/den
+  fn mpfr_div( t, num, den, MPFR_RNDZ )     // divide (any rounding OK)
+  fn mpfr_trunc( q, t )                     // q = trunc toward zero
+  // r := num - q*den
+  fn mpfr_mul( r, q, den, MPFR_RNDN )
+  fn mpfr_sub( r, num, r, MPFR_RNDN )
+  // (num,den) := (den,r)
+  fn mpfr_set( num, den, MPFR_RNDN )
+  fn mpfr_set( den, r,   MPFR_RNDN )
+
+  mpfr_clear( r )
+  mpfr_clear( t )
+end fn
+
+//
+// Run a single case: CF of (numStr / denStr)
+//
+local fn RunCase( label as CFStringRef, numStr as CFStringRef, denStr as CFStringRef, bits as long )
+  double rval
+  mpfr_t num, den, q
+  mpfr_init2( num, bits )
+  mpfr_init2( den, bits )
+  mpfr_init2( q,   bits )
+
+  fn MPFR_SetFromDecString( num, numStr )
+  fn MPFR_SetFromDecString( den, denStr )
+
+  print @numStr; "/"; denStr; "  -> [";
+
+  long first, second
+  first = 1
+  second = 0
+
+  // Eventhough variable q has the MPFR precision,
+  // for output printing, I thought it's easier to
+  // just put it in a double.
+
+  while ( fn mpfr_zero_p( den ) == 0 )
+    fn R2CF_Step_MPFR( num, den, q )
+
+    if first
+      rval = fn mpfr_get_d( q, MPFR_RNDN )
+      print @rval;
+      if ( fn mpfr_zero_p( den ) == 0 )
+        print @"; ";   // semicolon after first, if more terms follow
+      end if
+      first = 0
+    else
+      if second
+        print @",";
+      end if
+      rval = fn mpfr_get_d( q, MPFR_RNDN )
+      print rval;
+      second = 1
+    end if
+  wend
+  print @"]"
+
+  mpfr_clear( q )
+  mpfr_clear( den )
+  mpfr_clear( num )
+end fn
+
+//
+// Group header
+//
+local fn RunGroup( label as CFStringRef )
+  print @
+  print @"Running "; label; ":"
+  print @"--------------------"
+end fn
+
+//
+// Choose a precision big enough to keep all integers exact.
+// 128 precision bits is plenty for these inputs.
+//
+local fn Main
+  mpfr_set_default_prec( _precision )
+
+  // the examples
+  // Rosetta's requirements
+
+  fn RunGroup( @"the examples" )
+  fn RunCase( @"the examples", @"1",     @"2",    _precision )
+  fn RunCase( @"the examples", @"3",     @"1",    _precision )
+  fn RunCase( @"the examples", @"23",    @"8",    _precision )
+  fn RunCase( @"the examples", @"13",    @"11",  _precision )
+  fn RunCase( @"the examples", @"22",    @"7",    _precision )
+  fn RunCase( @"the examples", @"-151",  @"77",  _precision )
+
+  // for sqrt(2) rationals
+
+  fn RunGroup( @"for √2" )
+  fn RunCase( @"for sqrt(2)",  @"14142",     @"10000",    _precision )
+  fn RunCase( @"for sqrt(2)",  @"141421",    @"100000",    _precision )
+  fn RunCase( @"for sqrt(2)",  @"1414214",   @"1000000",  _precision )
+  fn RunCase( @"for sqrt(2)",  @"14142136",  @"10000000",  _precision )
+
+  // for pi rationals
+  fn RunGroup( @"for π" )
+  fn RunCase( @"for pi", @"31",                @"10",                _precision )
+  fn RunCase( @"for pi", @"314",                @"100",                _precision )
+  fn RunCase( @"for pi", @"3142",              @"1000",              _precision )
+  fn RunCase( @"for pi", @"31428",              @"10000",              _precision )
+  fn RunCase( @"for pi", @"314285",            @"100000",            _precision )
+  fn RunCase( @"for pi", @"3142857",            @"1000000",            _precision )
+  fn RunCase( @"for pi", @"31428571",          @"10000000",          _precision )
+  fn RunCase( @"for pi", @"314285714",          @"100000000",          _precision )
+  fn RunCase( @"for pi", @"3141592653589793",  @"1000000000000000",  _precision )
+end fn
+
+window 1, @"Continued fraction/Arithmetic Construction", (0,0,800,500)
+
+print  @
+print @"Continued fraction/Arithmetic/Construct from rational number"
+print @
+
+fn Main
+
+HandleEvents
+
+//

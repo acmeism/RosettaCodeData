@@ -1,4 +1,4 @@
-sub eratsieve($n) {
+sub sieve($n) {
     # Requires n(1 - 1/(log(n-1))) storage
     my $multiples = set();
     gather for 2..$n -> $i {
@@ -8,5 +8,3 @@ sub eratsieve($n) {
         }
     }
 }
-
-say flat eratsieve(100);

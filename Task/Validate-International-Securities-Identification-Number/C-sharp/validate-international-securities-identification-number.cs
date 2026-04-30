@@ -26,7 +26,7 @@ namespace ValidateIsin
                 ? c - '0'
                 : c - 'A' + 10;
    }
-	
+
    public class Program
    {
         public static void Main()

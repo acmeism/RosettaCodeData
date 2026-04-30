@@ -9,8 +9,8 @@ SET /A tmpElements=%numElements% - 1
 :: Create array of random numbers and output to file.
 ECHO GnomeSort Random Input 0 to %tmpElements%:>%~n0.txt
 FOR /L %%X IN (0, 1, %tmpElements%) DO (
-	SET array[%%X]=!RANDOM!
-	ECHO !array[%%X]!>>%~n0.txt
+  SET array[%%X]=!RANDOM!
+  ECHO !array[%%X]!>>%~n0.txt
 )
 
 :GnomeSort
@@ -28,26 +28,26 @@ TITLE GnomeSort:[%gs1%][%gsTmp%] of %tmpElements%
 :: pseudo code supplied by Rosetta Code. I had to add an additional
 :: pointer to represent i-1, because of limitations in WinNT Batch.
 IF %gs2% LSS %numElements% (
-	REM if i-1 <= i advance pointers to next unchecked element, then loop.
-	IF !array[%gs1%]! LEQ !array[%gs2%]! (
-		SET /A gs1=%gs3% - 1
-		SET /A gs2=%gs3%
-		SET /A gs3=%gs3% + 1
-	) ELSE (
-	REM ... else swap i-1 and i, decrement pointers to check previous element, then loop.
-		SET gsTmp=!array[%gs1%]!
-		SET array[%gs1%]=!array[%gs2%]!
-		SET array[%gs2%]=!gsTmp!
-		SET /A gs1-=1
-		SET /A gs2-=1
-		REM if first element has been reached, set pointers to next unchecked element.
-		IF !gs2! EQU 0 (
-			SET /A gs1=%gs3% - 1
-			SET /A gs2=%gs3%
-			SET /A gs3=%gs3% + 1
-		)
-	)
-	GOTO :GS_Loop
+  REM if i-1 <= i advance pointers to next unchecked element, then loop.
+  IF !array[%gs1%]! LEQ !array[%gs2%]! (
+    SET /A gs1=%gs3% - 1
+    SET /A gs2=%gs3%
+    SET /A gs3=%gs3% + 1
+  ) ELSE (
+  REM ... else swap i-1 and i, decrement pointers to check previous element, then loop.
+    SET gsTmp=!array[%gs1%]!
+    SET array[%gs1%]=!array[%gs2%]!
+    SET array[%gs2%]=!gsTmp!
+    SET /A gs1-=1
+    SET /A gs2-=1
+    REM if first element has been reached, set pointers to next unchecked element.
+    IF !gs2! EQU 0 (
+      SET /A gs1=%gs3% - 1
+      SET /A gs2=%gs3%
+      SET /A gs3=%gs3% + 1
+    )
+  )
+  GOTO :GS_Loop
 )
 TITLE GnomeSort:[%gs1%][%gsTmp%] - Done!
 

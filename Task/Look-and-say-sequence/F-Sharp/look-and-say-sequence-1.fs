@@ -15,6 +15,6 @@ let rec groupBy eq lst =
   | [] ->  []
   | x::xs ->
     let (ys,zs) = span (eq x) xs
-	(x::ys)::groupBy eq zs
+  (x::ys)::groupBy eq zs
 
 let group lst : list<list<'a>> when 'a : equality = groupBy (=) lst

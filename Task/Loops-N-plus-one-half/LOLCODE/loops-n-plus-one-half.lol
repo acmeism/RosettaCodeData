@@ -1,0 +1,13 @@
+HAI 1.3
+
+IM IN YR NPLUSONEHALF UPPIN YR N
+    VISIBLE SUM OF N AN 1!
+    BOTH SAEM N AN 9, O RLY?
+        YA RLY
+            VISIBLE ""
+            GTFO
+        NO WAI, VISIBLE ", "!
+    OIC
+IM OUTTA YR NPLUSONEHALF
+
+KTHXBYE

@@ -13,10 +13,10 @@ BEGIN
       STRING s;
       get (input file, (s, newline));
       FOR i TO UPB s DO
-	 CHAR c = s[i];
-	 IF "A" <= c AND c <= "Z" OR "a" <= c AND c <= "z" THEN
-	    histogram[ABS c] PLUSAB 1
-	 FI
+   CHAR c = s[i];
+   IF "A" <= c AND c <= "Z" OR "a" <= c AND c <= "z" THEN
+      histogram[ABS c] PLUSAB 1
+   FI
      OD
    OD;
    close (input file);

@@ -17,6 +17,8 @@
                                     (if (< n (first cmpsts))
                                       (cons n (lazy-seq (minusStrtAt (+ n 2) cmpsts)))
                                       (recur (+ n 2) (next cmpsts)))))]
-    (do (def oddprms (cons 3 (lazy-seq (let [cmpsts (-> oddprms (allmtpls) (mrgmltpls))]
-                                         (minusStrtAt 5 cmpsts)))))
+    (do (def oddprms (cons 3
+                       (lazy-seq
+                         (let [cmpsts (-> oddprms (allmtpls) (mrgmltpls))]
+                           (minusStrtAt 5 cmpsts)))))
         (cons 2 (lazy-seq oddprms)))))

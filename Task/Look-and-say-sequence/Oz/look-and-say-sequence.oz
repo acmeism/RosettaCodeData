@@ -20,7 +20,7 @@ declare
   fun {Group Xs}
      case Xs of nil then nil
      [] X|Xr then
-	Ys Zs
+  Ys Zs
         {List.takeDropWhile Xr fun {$ W} W==X end ?Ys ?Zs}
      in
         (X|Ys) | {Group Zs}

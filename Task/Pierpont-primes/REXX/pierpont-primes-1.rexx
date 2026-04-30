@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 21 Feb 2026
 include Setting
 numeric digits 40
 
@@ -7,10 +7,10 @@ say 'PIERPOINT PRIMES (BRUTE FORCE)'
 say version
 say
 call GetPierpont
-call Sort 'firs.'
-call Sort 'seco.'
+call SortSt 'firs.'
+call SortSt 'seco.'
 call ShowPierpont
-say Format(Time('e'),,3) 'seconds'; say
+call Timer
 exit
 
 GetPierpont:
@@ -70,4 +70,5 @@ say seco.250
 say
 return
 
+-- SortSt; Prime; Timer
 include Math

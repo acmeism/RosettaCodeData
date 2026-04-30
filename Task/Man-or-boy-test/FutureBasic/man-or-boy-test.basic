@@ -1,0 +1,453 @@
+// ------------------------------------------------------------
+//  Man or Boy Test
+//
+//  Using FutureBasic 7.0.37
+//  November 2025, R.W.
+//
+//  This is really only a simulation of the Don Knuth test.
+//  The purpose of the Man or Boy test was to evaluate if a
+//  compiler correctly implements recursion with non-local
+//  references (call by name, nested function definitions,
+//  proper environment). Knuth did this to test the ALGOL 60
+//  compiler. We don't have this problem today because all
+//  the known compilers, compiles code correctly.
+//  We also don't have a memory problem faced in the CPU's
+//  of the 60s. In 1965 for example, the Stantec Zebra machine
+//  (made by Netherlands PTT in collaboration with Standard
+//  Telephones and Cables (STC). Both the machine and the
+//  Algol 60 compiler were designed by G. van der Mey and
+//  W.L. van der Poel, two Dutch computer scientists), The
+//  machine only has 8K worth of memory. The "man or boy" test
+//  generates a large number of nested procedure calls, each of
+//  which consumes stack space to store activation records and
+//  local variables. With only 8K of memory, it was easy for the
+//  program's execution stack to run out of stack space.
+//
+//  The actual Don Knuth test cannot be directly translated
+//  to FB since FB does not have a function within a function.
+//  However, it can be simulated with records, closures and
+//  recursion which is the first displayed result.
+//
+//  The rest is strictly academic simulation of the values that
+//  can be used for fun and serves no purpose as far as
+//  proving that I am using a "man" compiler. But looking
+//  at the output generating thousands of digits, I can say
+//  it’s not a “boy” compiler.
+
+include "gmp.incl"
+
+CFTimeInterval tim, elapsed
+
+// Global mpz_t bigints reused for speed
+mpz_t mb
+long gN    // the next index to print when [Next] is pressed
+
+// ------------------------------------------------------------
+//  Man-or-Boy thunk & frame machinery (for DonKnuthA)
+// ------------------------------------------------------------
+
+// Thunk kinds
+_kMBKindConstOne      = 1
+_kMBKindConstMinusOne = 2
+_kMBKindConstZero     = 3
+_kMBKindBClosure      = 4
+
+_kMBMaxFrames = 20000
+
+begin record MBThunkRec
+  long kind
+  long frameIndex   // for B-closures; -1 for constants
+end record
+
+begin record MBFrameRec
+  long       m
+  MBThunkRec x1
+  MBThunkRec x2
+  MBThunkRec x3
+  MBThunkRec x4
+  MBThunkRec x5
+end record
+
+dim gMBFrames( _kMBMaxFrames - 1 ) as MBFrameRec
+long gMBFrameCount
+
+// SPecific to Don Knuth environment
+long gACallCount        // total calls to DonKnuthA (A)
+long gBCallCount        // total evaluations of B-closures
+long gACurrentDepth     // current recursion depth
+long gAMaxDepth         // maximum recursion depth reached
+
+// prototype for forward reference
+DEF fn MB_EvalThunk( t as MBThunkRec ) as long
+DEF fn DonKnuthA( k as long, ¬
+x1 as MBThunkRec, ¬
+x2 as MBThunkRec, ¬
+x3 as MBThunkRec, ¬
+x4 as MBThunkRec, ¬
+x5 as MBThunkRec ) as long
+
+
+// ------------------------------------------------------------
+//  MB_EvalThunk
+//  Evaluate a thunk: constants (1,-1,0) or a B-closure
+// ------------------------------------------------------------
+local fn MB_EvalThunk( t as MBThunkRec ) as long
+  long res
+
+  select t.kind
+    case _kMBKindConstOne
+      res = 1
+    case _kMBKindConstMinusOne
+      res = -1
+    case _kMBKindConstZero
+      res = 0
+    case _kMBKindBClosure
+      // Count how many times B is evaluated
+      gBCallCount++
+
+      // B(): m = m-1; return A(m, B, x1, x2, x3, x4)
+      long frameIndex
+      frameIndex = t.frameIndex
+
+      if frameIndex < 0 || frameIndex >= _kMBMaxFrames
+        res = 0
+      else
+        gMBFrames.m( frameIndex ) = gMBFrames.m( frameIndex ) - 1
+
+        long       newK
+        MBThunkRec bThunk
+
+        newK = gMBFrames.m( frameIndex )
+
+        bThunk.kind       = _kMBKindBClosure
+        bThunk.frameIndex = frameIndex
+
+        res = fn DonKnuthA( newK, ¬
+        bThunk, ¬
+        gMBFrames.x1( frameIndex ), ¬
+        gMBFrames.x2( frameIndex ), ¬
+        gMBFrames.x3( frameIndex ), ¬
+        gMBFrames.x4( frameIndex ) )
+      end if
+
+    case else
+      res = 0
+  end select
+end fn = res
+
+// ------------------------------------------------------------
+//  DonKnuthA
+//  Semantic translation of Knuth code:
+//
+//    if k <= 0 then
+//      res = x4() + x5()
+//    else
+//      m = k
+//      res = B()
+//
+//  where B() is a nested procedure that closes over m and
+//  calls A(m, B, x1, x2, x3, x4). We emulate call-by-name
+//  via explicit thunks and frames.
+// ------------------------------------------------------------
+local fn DonKnuthA( k as long, ¬
+  x1 as MBThunkRec, ¬
+  x2 as MBThunkRec, ¬
+  x3 as MBThunkRec, ¬
+  x4 as MBThunkRec, ¬
+  x5 as MBThunkRec ) as long
+
+  long res
+
+  // --- recursion accounting for A ---
+  gACallCount++
+  gACurrentDepth++
+  if gACurrentDepth > gAMaxDepth
+    gAMaxDepth = gACurrentDepth
+  end if
+  // ----------------------------------
+
+  if k <= 0
+    res = fn MB_EvalThunk( x4 ) + fn MB_EvalThunk( x5 )
+  else
+    long       oldTop, frameIndex
+    MBThunkRec bThunk
+
+    oldTop     = gMBFrameCount
+    frameIndex = gMBFrameCount
+
+    if frameIndex >= _kMBMaxFrames
+      print @"[ERROR] man-or-boy frame overflow."
+      res = 0
+    else
+      // Create new frame capturing m and x1..x5
+      gMBFrames.m(  frameIndex ) = k
+      gMBFrames.x1( frameIndex ) = x1
+      gMBFrames.x2( frameIndex ) = x2
+      gMBFrames.x3( frameIndex ) = x3
+      gMBFrames.x4( frameIndex ) = x4
+      gMBFrames.x5( frameIndex ) = x5
+
+      gMBFrameCount = gMBFrameCount + 1
+
+      // B-closure thunk bound to this frame
+      bThunk.kind       = _kMBKindBClosure
+      bThunk.frameIndex = frameIndex
+
+      // res = B()
+      res = fn MB_EvalThunk( bThunk )
+
+      // Restore frame stack pointer
+      gMBFrameCount = oldTop
+    end if
+  end if
+  // --- on exit, decrease depth ---
+  gACurrentDepth--
+  // ------------------------------
+end fn = res
+
+// -----------------------------------------------------------
+//  Helper: Abbreviate big numeric CFString: head...tail
+//          (used for the huge A(500), A(10000), A(1000000))
+// -----------------------------------------------------------
+local fn AbbrevString( s as CFStringRef, head as int, ¬
+  tail as int ) as CFStringRef
+
+  if s == 0 then RETURN @""
+  CFStringRef a, b, out
+  int nLen
+  nLen = len( s )
+  if nLen <= head + tail then RETURN s
+  a   = left( s, head )
+  b   = right( s, tail )
+  out = @""
+  out = concat( a, @"...", b )
+end fn = out
+
+// -----------------------------------------------------------
+// Helper: Convert mpz_t to CFString
+// -----------------------------------------------------------
+local fn mpz_to_CFString( m as mpz_t ) as CFStringRef
+  CFStringRef result = @""
+  result = fn mpz_cf2( m )  // FB wrapper mpz_t→CFString base 10
+end fn = result
+
+// -----------------------------------------------------------
+// Helper: returns elapsed time in CFStringRef
+// -----------------------------------------------------------
+local fn timeElapsed(et as CFTimeInterval) as CFStringRef
+  CFStringRef pline
+  if et < 1
+    pline = fn StringWithFormat(@"%.3f ms", et * 1000)
+  else
+    pline = fn StringWithFormat(@"%.3f secs", et)
+  end if
+end fn = pline
+
+// ------------------------------------------------------------
+//  MBT_A
+//  Compute A(k) into outA (mpz_t)
+// ------------------------------------------------------------
+void local fn MBT_A( k as long, outA as mpz_t )
+
+  // Small k < 6: use the literal coefficients
+  if k < 6
+    long x1, x2, x3, x4
+    long c1, c2, c3, c4
+    long nval
+    c1 = 0: c2 =  0: c3 =  0: c4 = 0
+    x1 = 1: x2 = -1:  x3 = -1: x4 = 1
+
+    select k
+      case 0
+        c1 = 0 : c2 = 0 : c3 = 0 : c4 = 1
+      case 1
+        c1 = 0 : c2 = 0 : c3 = 1 : c4 = 1
+      case 2
+        c1 = 0 : c2 = 1 : c3 = 1 : c4 = 0
+      case 3
+        c1 = 1 : c2 = 1 : c3 = 0 : c4 = 0
+      case 4
+        c1 = 2 : c2 = 1 : c3 = 0 : c4 = 0
+      case 5
+        c1 = 3 : c2 = 2 : c3 = 1 : c4 = 0
+    end select
+
+    nval = c1 * x1 + c2 * x2 + c3 * x3 + c4 * x4
+    mpz_set_si( outA, nval )
+    RETURN
+  end if
+
+  // Big k ≥ 6
+  mpz_t one, c0, c1z, c2z, c3z
+
+  mpz_init( one )
+  mpz_init( c0 )
+  mpz_init( c1z )
+  mpz_init( c2z )
+  mpz_init( c3z )
+
+  mpz_set_si( one, 1 )
+  mpz_set_si( c0, 3 )  // c0 = 3
+  mpz_set_si( c1z, 2 ) // c1 = 2
+  mpz_set_si( c2z, 1 ) // c2 = 1
+  mpz_set_si( c3z, 0 ) // c3 = 0
+
+  long j
+  j = 5
+  while j < k
+    // c3.add(c0).sub(one)
+    mpz_add( c3z, c3z, c0 )   // c3 = c3 + c0
+    mpz_sub( c3z, c3z, one )  // c3 = c3 - 1
+    // c0.add(c1)
+    mpz_add( c0, c0, c1z )    // c0 = c0 + c1
+    // c1.add(c2)
+    mpz_add( c1z, c1z, c2z )  // c1 = c1 + c2
+    // c2.add(c3)
+    mpz_add( c2z, c2z, c3z )  // c2 = c2 + c3
+    j++
+  wend
+
+  // result = c0 - c1 - c2 + c3
+  mpz_set( outA, c0 )
+  mpz_sub( outA, outA, c1z )
+  mpz_sub( outA, outA, c2z )
+  mpz_add( outA, outA, c3z )
+
+  mpz_clear( one )
+  mpz_clear( c0 )
+  mpz_clear( c1z )
+  mpz_clear( c2z )
+  mpz_clear( c3z )
+end fn
+
+// ------------------------------------------------------------
+//  MBT_Print
+//  Compute and print A(k), abbreviating large values
+// ------------------------------------------------------------
+void local fn MBT_Print( k as long )
+  CFStringRef s, abr, pline
+  long sLen, digits
+  tim = fn CACurrentMediaTime
+  // mb is already mpz_inited globally
+  fn MBT_A( k, mb )
+  s = fn mpz_to_CFString( mb )
+  sLen = len( s )
+
+  if sLen < 60
+    // Small result: print full result
+    pline = fn StringWithFormat(@"%l8d) = %@", k, s)
+    print pline;
+    if k = 10 then print @" ** Don Knuth Test" else print @
+  else
+    // Large result: head...tail (10 digits each), plus digit count
+    abr = fn AbbrevString( s, 10, 10 )
+    digits = sLen
+    // Do we have a minus sign?
+    if instr(0,s,@"-") != NSNotFound then digits --
+    pline = fn StringWithFormat(@"%l8d) = %@ (%ld digits) took ", k, abr, digits)
+    print pline;
+    print @fn timeElapsed(fn CACurrentMediaTime - tim)
+  end if
+
+end fn
+
+// ------------------------------------------------------------
+//  More_MBT
+//  Show the next group when [Next] is clicked
+//  First click: finish up to A(39)
+//  Second click: A(500), A(10000), A(1000000)
+// ------------------------------------------------------------
+void local fn More_MBT
+  tim = fn CACurrentMediaTime
+  if gN < 40
+    while gN < 40
+      fn MBT_Print( gN )
+      gN++
+    wend
+    print @"\nElapsed time: "; fn timeElapsed(fn CACurrentMediaTime - tim)
+  else
+    if gN == 40
+      fn MBT_Print(     500 )
+      fn MBT_Print(   10000 )
+      fn MBT_Print( 1000000 )
+      button 2, NO  // or just kill the button
+    end if
+  end if
+
+  print @
+end fn
+
+// ------------------------------------------------------------
+//  Main — compute the first 25 MBT tests (A(0)...A(24))
+//  and run the Knuth man-or-boy test once via DonKnuthA.
+// ------------------------------------------------------------
+local fn Main
+  long k
+  // Initialize global mpz
+  mpz_init( mb )
+
+  // --- Don Knuth man-or-boy test via thunk simulation -----
+  MBThunkRec t1, t2, t3, t4, t5
+  long knuthResult
+
+  t1.kind = _kMBKindConstOne      : t1.frameIndex = -1
+  t2.kind = _kMBKindConstMinusOne : t2.frameIndex = -1
+  t3.kind = _kMBKindConstMinusOne : t3.frameIndex = -1
+  t4.kind = _kMBKindConstOne      : t4.frameIndex = -1
+  t5.kind = _kMBKindConstZero     : t5.frameIndex = -1
+
+  gMBFrameCount  = 0
+  gACallCount    = 0
+  gBCallCount    = 0
+  gACurrentDepth = 0
+  gAMaxDepth     = 0
+
+  knuthResult = fn DonKnuthA( 10, t1, t2, t3, t4, t5 )
+  print @"Don Knuth man-or-boy test A(10, 1, -1, -1, 1, 0) = "; knuthResult
+
+  print @"A-call count: "; gACallCount
+  print @"B-call (thunk) count: "; gBCallCount
+  print @"Max recursion depth for A: "; gAMaxDepth
+  // --------------------------------------------------------
+
+  print @"\nThe first 25 tests:\n"
+  tim = fn CACurrentMediaTime
+  k = 0
+  while k < 25
+    fn MBT_Print( k )
+    k++
+  wend
+  gN = k   // gN = 25 → next group starts at A(25)
+  print @"\nElapsed Time: "; fn timeElapsed(fn CACurrentMediaTime - tim)
+  print @"\nClick [Next] for the next group.\n"
+end fn
+
+// ------------------------------------------------------------
+//  Dialog handler
+// ------------------------------------------------------------
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case 2
+          fn More_MBT
+      end select
+
+    case _windowShouldClose
+      // clear any uncleared mpz
+      mpz_clear( mb )
+      end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+// ------------------------------------------------------------
+//  Main
+// ------------------------------------------------------------
+window 1, @"Man or Boy test", (0,0,620,540)
+button 2, YES,, @"Next", (500,20,100,20),,, 1
+
+fn Main
+
+HandleEvents

@@ -47,37 +47,37 @@ SET mz=!mz:~0,%curPos%!!hall!!mz:~%cTmp%!
 
 :: iterate #cells*2+1 steps of random depth-first search
 FOR /L %%@ IN (1,1,%loops%) DO (
-	SET "rand=" & SET "crmPos="
-	REM set values for NSEW cell and wall positions
-	SET /A "rCnt=rTmp=0, cTmp=curPos+1, np=curPos+N, sp=curPos+S, ep=curPos+E, wp=curPos+W, wChk=curPos/wide*wide, eChk=wChk+wide, nw=curPos-wide, sw=curPos+wide, ew=curPos+1, ww=curPos-1"
-	REM examine adjacent cells, build direction list, and find last crumb position
-	FOR /F "tokens=1-8" %%A IN ("!np! !sp! !ep! !wp! !nw! !sw! !ew! !ww!") DO (
-		IF !np! GEQ 0 IF "!mz:~%%A,1!" EQU "!wall!" ( SET /A rCnt+=1 & SET "rand=n !rand!"
-		) ELSE IF "!mz:~%%E,1!" EQU "!crumb!" SET /A crmPos=np, cw=nw
-		IF !sp! LEQ !size! IF "!mz:~%%B,1!" EQU "!wall!" ( SET /A rCnt+=1 & SET "rand=s !rand!"
-		) ELSE IF "!mz:~%%F,1!" EQU "!crumb!" SET /A crmPos=sp, cw=sw
-		IF !ep! LEQ !eChk! IF "!mz:~%%C,1!" EQU "!wall!" ( SET /A rCnt+=1 & SET "rand=e !rand!"
-		) ELSE IF "!mz:~%%G,1!" EQU "!crumb!" SET /A crmPos=ep, cw=ew
-		IF !wp! GEQ !wChk! IF "!mz:~%%D,1!" EQU "!wall!" ( SET /A rCnt+=1 & SET "rand=w !rand!"
-		) ELSE IF "!mz:~%%H,1!" EQU "!crumb!" SET /A crmPos=wp, cw=ww
-	)
-	IF DEFINED rand ( REM adjacent unvisited cell is available
-		SET /A rCnt=!RANDOM! %% rCnt
-		FOR %%A IN (!rand!) DO ( REM pick random cell + wall
-			IF !rTmp! EQU !rCnt! SET /A "curPos=!%%Ap!, cTmp=curPos+1, mw=!%%Aw!, mTmp=mw+1"
-			SET /A rTmp+=1
-		)
-		REM write the 2 new characters into the maze
-		FOR /F "tokens=1-4" %%A IN ("!mw! !mTmp! !curPos! !cTmp!") DO (
-			SET "mz=!mz:~0,%%A!!crumb!!mz:~%%B!"
-			SET "mz=!mz:~0,%%C!!hall!!mz:~%%D!"
-		)
-	) ELSE IF DEFINED crmPos ( REM follow the crumbs backward
-		SET /A mTmp=cw+1
-		REM erase the crumb character and set new cursor position
-		FOR /F "tokens=1-2" %%A IN ("!cw! !mTmp!") DO SET "mz=!mz:~0,%%A!!hall!!mz:~%%B!"
-		SET "curPos=!crmPos!"
-	)
+   SET "rand=" & SET "crmPos="
+   REM set values for NSEW cell and wall positions
+   SET /A "rCnt=rTmp=0, cTmp=curPos+1, np=curPos+N, sp=curPos+S, ep=curPos+E, wp=curPos+W, wChk=curPos/wide*wide, eChk=wChk+wide, nw=curPos-wide, sw=curPos+wide, ew=curPos+1, ww=curPos-1"
+   REM examine adjacent cells, build direction list, and find last crumb position
+   FOR /F "tokens=1-8" %%A IN ("!np! !sp! !ep! !wp! !nw! !sw! !ew! !ww!") DO (
+      IF !np! GEQ 0 IF "!mz:~%%A,1!" EQU "!wall!" ( SET /A rCnt+=1 & SET "rand=n !rand!"
+      ) ELSE IF "!mz:~%%E,1!" EQU "!crumb!" SET /A crmPos=np, cw=nw
+      IF !sp! LEQ !size! IF "!mz:~%%B,1!" EQU "!wall!" ( SET /A rCnt+=1 & SET "rand=s !rand!"
+      ) ELSE IF "!mz:~%%F,1!" EQU "!crumb!" SET /A crmPos=sp, cw=sw
+      IF !ep! LEQ !eChk! IF "!mz:~%%C,1!" EQU "!wall!" ( SET /A rCnt+=1 & SET "rand=e !rand!"
+      ) ELSE IF "!mz:~%%G,1!" EQU "!crumb!" SET /A crmPos=ep, cw=ew
+      IF !wp! GEQ !wChk! IF "!mz:~%%D,1!" EQU "!wall!" ( SET /A rCnt+=1 & SET "rand=w !rand!"
+      ) ELSE IF "!mz:~%%H,1!" EQU "!crumb!" SET /A crmPos=wp, cw=ww
+   )
+   IF DEFINED rand ( REM adjacent unvisited cell is available
+      SET /A rCnt=!RANDOM! %% rCnt
+      FOR %%A IN (!rand!) DO ( REM pick random cell + wall
+         IF !rTmp! EQU !rCnt! SET /A "curPos=!%%Ap!, cTmp=curPos+1, mw=!%%Aw!, mTmp=mw+1"
+         SET /A rTmp+=1
+      )
+      REM write the 2 new characters into the maze
+      FOR /F "tokens=1-4" %%A IN ("!mw! !mTmp! !curPos! !cTmp!") DO (
+         SET "mz=!mz:~0,%%A!!crumb!!mz:~%%B!"
+         SET "mz=!mz:~0,%%C!!hall!!mz:~%%D!"
+      )
+   ) ELSE IF DEFINED crmPos ( REM follow the crumbs backward
+      SET /A mTmp=cw+1
+      REM erase the crumb character and set new cursor position
+      FOR /F "tokens=1-2" %%A IN ("!cw! !mTmp!") DO SET "mz=!mz:~0,%%A!!hall!!mz:~%%B!"
+      SET "curPos=!crmPos!"
+   )
 )
 SET /A open=cols/2*2, mTmp=open+1
 ECHO !wall!!bdr:~0,%open%!!hall!!bdr:~%mTmp%!!wall!

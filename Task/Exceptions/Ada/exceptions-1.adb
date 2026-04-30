@@ -1,0 +1,1 @@
+Foo_Error : exception;

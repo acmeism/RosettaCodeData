@@ -1,0 +1,1 @@
+$Host.UI.RawUI.FlushInputBuffer()

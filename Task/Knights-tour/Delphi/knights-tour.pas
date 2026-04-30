@@ -10,10 +10,10 @@ end;
 
 
 const KnightMoves: array [0..7] of TPoint = (
-	(X: 2; Y:1),(X: 2; Y:-1),
-	(X:-2; Y:1),(X:-2; Y:-1),
-	(X:1; Y: 2),(X:-1; Y: 2),
-	(X:1; Y:-2),(X:-1; Y:-2));
+  (X: 2; Y:1),(X: 2; Y:-1),
+  (X:-2; Y:1),(X:-2; Y:-1),
+  (X:1; Y: 2),(X:-1; Y: 2),
+  (X:1; Y:-2),(X:-1; Y:-2));
 
 var Board: array [0..7,0..7] of boolean;
 
@@ -96,9 +96,9 @@ procedure DrawPath(Canvas: TCanvas);
 var I: integer;
 begin
 for I:=0 to High(Path)-1 do
-	begin
-	DrawPathLine(Canvas, Path[I],Path[I+1]);
-	end;
+  begin
+  DrawPathLine(Canvas, Path[I],Path[I+1]);
+  end;
 end;
 
 
@@ -114,14 +114,14 @@ Canvas.Rectangle(R);
 R:=Rect(0,0,CellSize,CellSize);
 for Y:=0 to High(Board[0]) do
  for X:=0 to High(Board) do
-	begin
-	R2:=R;
-	if ((X+Y) mod 2)=0 then Color:=clWhite
-	else Color:=clBlack;
-	Canvas.Brush.Color:=Color;
-	OffsetRect(R2,X * CellSize, Y * CellSize);
-	Canvas.Rectangle(R2);
-	end;
+  begin
+  R2:=R;
+  if ((X+Y) mod 2)=0 then Color:=clWhite
+  else Color:=clBlack;
+  Canvas.Brush.Color:=Color;
+  OffsetRect(R2,X * CellSize, Y * CellSize);
+  Canvas.Rectangle(R2);
+  end;
 DrawPath(Canvas);
 end;
 
@@ -196,14 +196,14 @@ begin
 SetPosition(Image,Pos,True);
 if AllVisited then exit;
 for I:=0 to High(KnightMoves) do
-	begin
-	if AbortFlag then Exit;
-	if IsValidMove(Pos,KnightMoves[I]) then
-		begin
-		NewPos:=PointAdd(Pos,KnightMoves[I]);
-		TryAllMoves(Image,NewPos);
-		end;
-	end;
+  begin
+  if AbortFlag then Exit;
+  if IsValidMove(Pos,KnightMoves[I]) then
+    begin
+    NewPos:=PointAdd(Pos,KnightMoves[I]);
+    TryAllMoves(Image,NewPos);
+    end;
+  end;
 SetPosition(Image,Pos,False);
 Application.ProcessMessages;
 end;

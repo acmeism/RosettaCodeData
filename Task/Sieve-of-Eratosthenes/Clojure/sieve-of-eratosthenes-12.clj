@@ -14,12 +14,15 @@
                              (cons (union (first mltplss) (first tl))
                                    (lazy-seq (pairs (next tl)))))),
           (mrgmltpls [mltplss] (cons (first (first mltplss))
-                                     (lazy-seq (union (next (first mltplss))
-                                                      (mrgmltpls (pairs (next mltplss))))))),
+                                 (lazy-seq (union
+                                             (next (first mltplss))
+                                             (mrgmltpls (pairs (next mltplss))))))),
           (minusStrtAt [n cmpsts] (loop [n n, cmpsts cmpsts]
                                     (if (< n (first cmpsts))
                                       (cons n (lazy-seq (minusStrtAt (+ n 2) cmpsts)))
                                       (recur (+ n 2) (next cmpsts)))))]
-    (do (def oddprms (cons 3 (lazy-seq (let [cmpsts (-> oddprms (allmtpls) (mrgmltpls))]
-                                         (minusStrtAt 5 cmpsts)))))
+    (do (def oddprms (cons 3
+                       (lazy-seq
+                         (let [cmpsts (-> oddprms (allmtpls) (mrgmltpls))]
+                           (minusStrtAt 5 cmpsts)))))
         (cons 2 (lazy-seq oddprms)))))

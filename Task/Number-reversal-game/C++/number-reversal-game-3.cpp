@@ -1,4 +1,4 @@
-// Written by Katsumi -- twitter.com/realKatsumi_vn
+// Written by Katsumi
 // Compile with: g++ -std=c++20 -Wall -Wextra -pedantic NumberReversal.cpp -o NumberReversal
 #include <iostream>
 #include <algorithm>
@@ -25,7 +25,7 @@ std::string VectorRepr(std::vector<T> list) {
 int main() {
     const std::string IntroText = "NUMBER REVERSAL GAME\n"
                                   "based on a \"task\" on Rosetta Code -- rosettacode.org\n"
-                                  "by Katsumi -- twitter.com/realKatsumi.vn\n\n";
+                                  "by Katsumi \n\n";
 
     // Don't ever write this s**tty code...
     // std::srand(std::time(0));

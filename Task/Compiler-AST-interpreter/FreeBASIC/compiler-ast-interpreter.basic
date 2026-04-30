@@ -1,0 +1,303 @@
+Const NULL As Any Ptr = 0
+
+Enum NodeType
+    nd_Ident = 0
+    nd_String, nd_Integer, nd_Sequence, nd_If, nd_Prtc, nd_Prts, nd_Prti,
+    nd_While, nd_Assign, nd_Negate, nd_Not, nd_Mul, nd_Div, nd_Mod, nd_Add,
+    nd_Sub, nd_Lss, nd_Leq, nd_Gtr, nd_Geq, nd_Eql, nd_Neq, nd_And, nd_Or
+End Enum
+
+Type Tree
+    tiponodo As Integer
+    izda As Tree Ptr
+    dcha As Tree Ptr
+    valor As Integer
+End Type
+
+Dim Shared As String string_pool()
+Dim Shared As String global_names()
+Dim Shared As Integer global_values()
+
+Sub error_msg(Byval msg As String)
+    Color 12: Print "Error: "; msg
+    Sleep: End 1
+End Sub
+
+Function make_node(Byval tiponodo As NodeType, Byref izda As Tree Ptr, Byref dcha As Tree Ptr) As Tree Ptr
+    Dim puntero As Tree Ptr = New Tree
+    puntero->tiponodo = tiponodo
+    puntero->izda = izda
+    puntero->dcha = dcha
+    puntero->valor = 0
+    Return puntero
+End Function
+
+Function make_leaf(Byval tiponodo As NodeType, Byval valor As Integer) As Tree Ptr
+    Dim puntero As Tree Ptr = New Tree
+    puntero->tiponodo = tiponodo
+    puntero->valor = valor
+    puntero->izda = NULL
+    puntero->dcha = NULL
+    Return puntero
+End Function
+
+Function interp(Byref x As Tree Ptr) As Integer
+    If x = NULL Then Return 0
+
+    Select Case x->tiponodo
+    Case nd_Integer
+        Return x->valor
+
+    Case nd_Ident
+        Return global_values(x->valor)
+
+    Case nd_String
+        Return x->valor
+
+    Case nd_Assign
+        global_values(x->izda->valor) = interp(x->dcha)
+        Return global_values(x->izda->valor)
+
+    Case nd_Add
+        Return interp(x->izda) + interp(x->dcha)
+    Case nd_Sub
+        Return interp(x->izda) - interp(x->dcha)
+    Case nd_Mul
+        Return interp(x->izda) * interp(x->dcha)
+    Case nd_Div
+        Return interp(x->izda) \ interp(x->dcha)
+    Case nd_Mod
+        Return interp(x->izda) Mod interp(x->dcha)
+
+    Case nd_Lss
+        Return Iif(interp(x->izda) < interp(x->dcha), 1, 0)
+    Case nd_Gtr
+        Return Iif(interp(x->izda) > interp(x->dcha), 1, 0)
+    Case nd_Leq
+        Return Iif(interp(x->izda) <= interp(x->dcha), 1, 0)
+    Case nd_Geq
+        Return Iif(interp(x->izda) >= interp(x->dcha), 1, 0)
+    Case nd_Eql
+        Return Iif(interp(x->izda) = interp(x->dcha), 1, 0)
+    Case nd_Neq
+        Return Iif(interp(x->izda) <> interp(x->dcha), 1, 0)
+
+    Case nd_And
+        Return Iif(interp(x->izda) <> 0 And interp(x->dcha) <> 0, 1, 0)
+    Case nd_Or
+        Return Iif(interp(x->izda) <> 0 Or interp(x->dcha) <> 0, 1, 0)
+
+    Case nd_Negate
+        Return -interp(x->izda)
+
+    Case nd_Not
+        Return Iif(interp(x->izda) = 0, 1, 0)
+
+    Case nd_Prtc
+        Print Chr(interp(x->izda));
+        Return 0
+
+    Case nd_Prts
+        Dim As Integer idx = interp(x->izda)
+        Print string_pool(idx);
+        Return 0
+
+    Case nd_Prti
+        Print interp(x->izda); " ";
+        Return 0
+
+    Case nd_Sequence
+        interp(x->izda)
+        interp(x->dcha)
+        Return 0
+
+    Case nd_If
+        If interp(x->izda) <> 0 Then
+            interp(x->dcha->izda)
+        Else
+            interp(x->dcha->dcha)
+        End If
+        Return 0
+
+    Case nd_While
+        While interp(x->izda) <> 0
+            interp(x->dcha)
+        Wend
+        Return 0
+
+    Case Else
+        error_msg("Unknown node type en interp: " & x->tiponodo)
+    End Select
+
+    Return 0
+End Function
+
+Function fetch_string_offset(Byref raw As String) As Integer
+    Dim As Integer L = Len(raw)
+
+    If L >= 2 Andalso Left(raw,1) = Chr(34) Andalso Right(raw,1) = Chr(34) Then
+        raw = Mid(raw, 2, L - 2)
+    End If
+
+    Dim As String cleaned = ""
+    Dim As Integer i = 1
+
+    While i <= Len(raw)
+        Dim As String c = Mid(raw, i, 1)
+
+        If c = "\" Andalso i < Len(raw) Then
+            Dim As String nxt = Mid(raw, i + 1, 1)
+
+            If nxt = "n" Then
+                cleaned &= Chr(10)
+                i += 2
+                Continue While
+            Elseif nxt = "\" Then
+                cleaned &= "\"
+                i += 2
+                Continue While
+            End If
+        End If
+
+        cleaned &= c
+        i += 1
+    Wend
+
+    For i = 0 To Ubound(string_pool)
+        If string_pool(i) = cleaned Then Return i
+    Next i
+
+    Dim As Integer newIndex = Ubound(string_pool) + 1
+    Redim Preserve string_pool(newIndex)
+    string_pool(newIndex) = cleaned
+
+    Return newIndex
+End Function
+
+Function fetch_var_offset(Byval nombre As String) As Integer
+    For i As Integer = 0 To Ubound(global_names)
+        If global_names(i) = nombre Then Return i
+    Next
+    Redim Preserve global_names(0 To Ubound(global_names) + 1)
+    global_names(Ubound(global_names)) = nombre
+    Redim Preserve global_values(0 To Ubound(global_values) + 1)
+    global_values(Ubound(global_values)) = 0
+    Return Ubound(global_names)
+End Function
+
+Sub Split(Byval s As String, Byval delimiter As String, tokens() As String)
+    Dim As Integer cnt = 0
+    Dim As Integer startPos = 1
+    Dim As Integer delimPos
+
+    Redim tokens(0 To 0)
+
+    Do
+        delimPos = Instr(startPos, s, delimiter)
+        If delimPos = 0 Then
+            Redim Preserve tokens(0 To cnt)
+            tokens(cnt) = Mid(s, startPos)
+            Exit Do
+        Else
+            Redim Preserve tokens(0 To cnt)
+            tokens(cnt) = Mid(s, startPos, delimPos - startPos)
+            cnt += 1
+            startPos = delimPos + Len(delimiter)
+        End If
+    Loop
+End Sub
+
+Function load_ast(Byref f As Integer) As Tree Ptr
+    Dim As String linea
+    If Eof(f) Then Return NULL
+    Line Input #f, linea
+    linea = Trim(linea)
+    If linea = "" Then Return load_ast(f)
+
+    Dim As String tokens()
+    Split(linea, " ", tokens())
+    Dim As String token = tokens(0)
+    If token = ";" Then Return NULL
+
+    Dim As Integer tiponodo = -1
+
+    Select Case token
+    Case "Identifier"  : tiponodo = nd_Ident
+    Case "String"      : tiponodo = nd_String
+    Case "Integer"     : tiponodo = nd_Integer
+    Case "Sequence"    : tiponodo = nd_Sequence
+    Case "If"          : tiponodo = nd_If
+    Case "Prtc"        : tiponodo = nd_Prtc
+    Case "Prts"        : tiponodo = nd_Prts
+    Case "Prti"        : tiponodo = nd_Prti
+    Case "While"       : tiponodo = nd_While
+    Case "Assign"      : tiponodo = nd_Assign
+    Case "Negate"      : tiponodo = nd_Negate
+    Case "Not"         : tiponodo = nd_Not
+    Case "Multiply"    : tiponodo = nd_Mul
+    Case "Divide"      : tiponodo = nd_Div
+    Case "Mod"         : tiponodo = nd_Mod
+    Case "Add"         : tiponodo = nd_Add
+    Case "Subtract"    : tiponodo = nd_Sub
+    Case "Less"        : tiponodo = nd_Lss
+    Case "LessEqual"   : tiponodo = nd_Leq
+    Case "Greater"     : tiponodo = nd_Gtr
+    Case "GreaterEqual": tiponodo = nd_Geq
+    Case "Equal"       : tiponodo = nd_Eql
+    Case "NotEqual"    : tiponodo = nd_Neq
+    Case "And"         : tiponodo = nd_And
+    Case "Or"          : tiponodo = nd_Or
+    Case Else          : error_msg("Unknown token: " & token)
+    End Select
+
+    Dim As String rest = Mid(linea, Len(token) + 1)
+    rest = Ltrim(rest)
+
+    If rest <> "" Then
+        Dim As Integer n
+        Select Case tiponodo
+        Case nd_Ident
+            n = fetch_var_offset(rest)
+        Case nd_Integer
+            n = Val(rest)
+        Case nd_String
+            n = fetch_string_offset(rest)
+        Case Else
+            error_msg("Leaf with unknown node type: " & token)
+        End Select
+        Return make_leaf(tiponodo, n)
+    End If
+
+    Dim As Tree Ptr izda_node = load_ast(f)
+    Dim As Tree Ptr dcha_node = load_ast(f)
+
+    Return make_node(tiponodo, izda_node, dcha_node)
+End Function
+
+Sub main()
+    Redim string_pool(0 To 0)
+    string_pool(0) = ""
+
+    Redim global_names(0 To 0)
+    global_names(0) = ""
+
+    Redim global_values(0 To 0)
+    global_values(0) = 0
+
+    Dim As String filename
+    If Command(1) <> "" Then
+        filename = Command(1)
+    Else
+        filename = "ast.txt"
+    End If
+
+    Dim As Integer ff = Freefile()
+    Open filename For Input As #ff
+    Dim As Tree Ptr tree = load_ast(ff)
+    Close #ff
+    interp(tree)
+End Sub
+
+main()
+
+Sleep

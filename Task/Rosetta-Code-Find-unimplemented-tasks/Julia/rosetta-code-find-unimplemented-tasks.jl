@@ -2,7 +2,7 @@ using HTTP, JSON
 
 const baseuri = "http://www.rosettacode.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:"
 const enduri = "&cmlimit=500&format=json"
-queries(x) = baseuri * HTTP.Strings.escapehtml(x) * enduri
+queries(x) = baseuri * HTTP.escapeuri(x) * enduri
 
 function getimplemented(query)
     tasksdone = Vector{String}()
@@ -31,3 +31,4 @@ showunimp(x) = (println("\nUnimplemented in $x:"); for t in setdiff(alltasks,
 
 showunimp("Julia")
 showunimp("C++")
+# showunimp("V (Vlang)")

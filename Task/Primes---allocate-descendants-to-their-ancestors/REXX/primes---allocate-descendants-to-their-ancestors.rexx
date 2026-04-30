@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 21 Feb 2026
 include Setting
 numeric digits 20
 
@@ -13,13 +13,13 @@ do n = 1 to 99
    call Ancestors n
    call Terms n,1,0,''
    call Descendants
-   call Sort 'desc.'
+   call SortSt 'desc.'
    if n < 21 | Pos(n,46 62 74 94 99) > 0 then
       call ShowResults n
    call SumTotals
 end
 call ShowTotals
-say Format(Time('e'),,3) 'seconds'; say
+call Timer
 exit
 
 InitTotals:
@@ -118,4 +118,5 @@ say tota.desc 'descendants'
 say
 return
 
+-- Primes; SortSt; Factors
 include Math

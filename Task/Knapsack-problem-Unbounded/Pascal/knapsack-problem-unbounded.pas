@@ -36,15 +36,15 @@ begin
         current.weight := k * gold.weight + j * ichor.weight + i * panacea.weight;
         current.volume := k * gold.volume + j * ichor.volume + i * panacea.volume;
         if (current.value > maxvalue)      and
-	   (current.weight <= sack.weight) and
+      (current.weight <= sack.weight) and
            (current.volume <= sack.volume) then
-	begin
+   begin
           maxvalue    := current.value;
           totalweight := current.weight;
           totalvolume := current.volume;
           n[1] := i;
-	  n[2] := j;
-	  n[3] := k;
+     n[2] := j;
+     n[3] := k;
         end;
       end;
 

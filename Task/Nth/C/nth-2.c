@@ -13,6 +13,8 @@ static char * get_ordinal(const int i) {
     if(i % 100 >= 11 && i % 100 <= 13) ordinal = "th";
     else ordinal = i/10==1?"th":i%10==1?"st":i%10==2?"nd":i%10==3?"rd":"th";
     sprintf_s(o_number, string_size, "%d%s", i, ordinal);
+    // Replace the above line with the line below if using clang or gcc:
+    // sprintf(o_number, "%d%s", i, ordinal);
     return o_number;
 }
 

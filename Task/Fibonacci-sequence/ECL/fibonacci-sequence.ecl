@@ -2,12 +2,12 @@
 
 
 FibFunction(UNSIGNED2 n) := FUNCTION
-	REAL Sqrt5 := Sqrt(5);
-	REAL Phi := (1+Sqrt(5))/2;
-	REAL Phi_Inv := 1/Phi;
-	UNSIGNED FibValue := ROUND( ( POWER(Phi,n)-POWER(Phi_Inv,n) ) /Sqrt5);
-	RETURN FibValue;
-	END;
+   REAL Sqrt5 := Sqrt(5);
+   REAL Phi := (1+Sqrt(5))/2;
+   REAL Phi_Inv := 1/Phi;
+   UNSIGNED FibValue := ROUND( ( POWER(Phi,n)-POWER(Phi_Inv,n) ) /Sqrt5);
+   RETURN FibValue;
+   END;
 
  FibSeries(UNSIGNED2 n) := FUNCTION
 

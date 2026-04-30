@@ -11,36 +11,36 @@ void srnd(int x) { seed = x; }
 
 void show(const int *c)
 {
-	int i;
-	for (i = 0; i < 52; c++) {
-		printf("  \033[%dm%lc\033[m%lc", 32 - (1 + *c) % 4 / 2,
-			s_suits[*c % 4], s_nums[*c / 4]);
-		if (!(++i % 8) || i == 52) putchar('\n');
-	}
+  int i;
+  for (i = 0; i < 52; c++) {
+    printf("  \033[%dm%lc\033[m%lc", 32 - (1 + *c) % 4 / 2,
+      s_suits[*c % 4], s_nums[*c / 4]);
+    if (!(++i % 8) || i == 52) putchar('\n');
+  }
 }
 
 void deal(int s, int *t)
 {
-	int i, j;
-	srnd(s);
+  int i, j;
+  srnd(s);
 
-	for (i = 0; i < 52; i++) t[i] = 51 - i;
-	for (i = 0; i < 51; i++) {
-		j = 51 - rnd() % (52 - i);
-		s = t[i], t[i] = t[j], t[j] = s;
-	}
+  for (i = 0; i < 52; i++) t[i] = 51 - i;
+  for (i = 0; i < 51; i++) {
+    j = 51 - rnd() % (52 - i);
+    s = t[i], t[i] = t[j], t[j] = s;
+  }
 }
 
 int main(int c, char **v)
 {
-	int s, card[52];
-	if (c < 2 || (s = atoi(v[1])) <= 0) s = 11982;
+  int s, card[52];
+  if (c < 2 || (s = atoi(v[1])) <= 0) s = 11982;
 
-	setlocale(LC_ALL, "");
+  setlocale(LC_ALL, "");
 
-	deal(s, card);
-	printf("Hand %d\n", s);
-	show(card);
+  deal(s, card);
+  printf("Hand %d\n", s);
+  show(card);
 
-	return 0;
+  return 0;
 }

@@ -11,7 +11,7 @@ func AllEqual(strings []string) bool {
 
 func AllLessThan(strings []string) bool {
 	for i := 1; i < len(strings); i++ {
-		if !(strings[i - 1] < s) {
+		if strings[i - 1] >= strings[i] {
 			return false
 		}
 	}

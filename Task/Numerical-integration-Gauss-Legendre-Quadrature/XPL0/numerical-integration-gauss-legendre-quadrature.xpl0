@@ -1,0 +1,68 @@
+include xpllib;         \for Pi and Print
+define NN = 5;
+real LRoots(NN);
+real Weight(NN);
+real LCoef(NN+1, NN+1);
+
+proc LegeCoef;          \Compute Legendre polynomial coefficients up to order NN
+int  N, I;
+[LCoef(0, 0):= 1.;  LCoef(1, 1):= 1.;
+for N:= 2 to NN do
+    [LCoef(N, 0):= -float(N-1) * LCoef(N-2, 0) / float(N);
+    for I:= 1 to N do
+        LCoef(N,I):= (float(2*N-1) * LCoef(N-1, I-1) - float(N-1) * LCoef(N-2, I))
+            / float(N);
+    ];
+];
+
+func real LegeEval(N, X); \Evaluate PN(X)
+int  N;  real X;
+int  I;
+real S;
+[S:= LCoef(N, N);       \leading coefficient
+for I:= N downto 1 do
+        S:= S*X + LCoef(N, I-1);
+return S;
+];
+
+func real LegeDiff(N, X); \Derivative PN'(X)
+int N;  real X;
+return float(N) * (X*LegeEval(N, X) - LegeEval(N-1, X)) / (X*X - 1.);
+
+proc LegeRoots;         \Compute roots and weights for NN-point Gauss-Legendre
+int  I;
+real X, X1;
+[for I:= 1 to NN do
+        [X:= Cos(Pi * (float(I)-0.25) / (float(NN)+0.5));
+        repeat  X1:= X;
+                X:= X - LegeEval(NN, X) / LegeDiff(NN, X);
+        until   abs(X-X1) <= 2e-14;
+        LRoots(I-1):= X;
+        X1:= LegeDiff(NN, X);
+        Weight(I-1):= 2. / ((1. - X*X) * X1*X1);
+        ];
+];
+
+func real LegeInte(A, B);       \Integrate Exp(X) from A to B using NN-point GL
+real A, B;
+real C1, C2, Sum;
+int  I;
+[C1:= (B-A)/2.;  C2:= (B+A)/2.;  Sum:= 0.;
+for I:= 0 to NN-1 do
+    Sum:= Sum + Weight(I) * Exp(C1*LRoots(I) + C2);
+return C1 * Sum;
+];
+
+int  I;
+[LegeCoef;
+LegeRoots;
+Print("Roots: ");
+for I:= 0 to NN-1 do
+    Print(" %g", LRoots(I));
+Print("\nWeight:");
+for I:= 0 to NN-1 do
+    Print(" %g", Weight(I));
+Print("\nintegrating Exp(X) over [-3, 3]:\n\t%2.8f,
+compared to actual\n\t%2.8f\n",
+LegeInte(-3., 3.), Exp(3.) - Exp(-3.));
+]

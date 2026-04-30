@@ -1,0 +1,204 @@
+// ------------------------------------------------------------
+//  Lucas–Lehmer Mersenne prime tester
+//  Using FutureBasic 7.0.37
+//
+//  November 2025, R.W.
+// ------------------------------------------------------------
+
+include "gmp.incl"
+
+// ------------------------------------------------------------
+//  Lucas–Lehmer Mersenne prime tester
+// ------------------------------------------------------------
+
+CFTimeInterval tim
+
+// Global mpz_t bigints reused everywhere
+mpz_t ts           // Lucas–Lehmer state ts
+mpz_t mp, mp_minus1
+mpz_t tmp          // scratch for reduction
+unsigned long gN   // last exponent tested (for [Next])
+long gCount
+
+// ------------------------------------------------------------
+//  Init / clear big integers
+// ------------------------------------------------------------
+local fn InitBigInts
+  long maxBits
+  maxBits = 120000    // enough for p up to ~100k
+  mpz_init2( ts, maxBits )
+  mpz_init2( mp, maxBits )
+  mpz_init2( mp_minus1, maxBits )
+  mpz_init2( tmp, maxBits )
+end fn
+
+local fn ClearBigInts
+  mpz_clear( ts )
+  mpz_clear( mp )
+  mpz_clear( mp_minus1 )
+  mpz_clear( tmp )
+end fn
+
+// ------------------------------------------------------------
+//  Small 32-bit primality test for exponents p
+// ------------------------------------------------------------
+local fn IsPrime32( n as unsigned long ) as boolean
+  unsigned long d
+  // quick filter/rejects
+  if n  < 2 then return _False
+  if n == 2 then return _True
+  // even = composite
+  if ( n AND 1 ) == 0 then return _False
+  d = 3
+  while d * d <= n
+    if ( n MOD d ) == 0 then return _False
+    d = d + 2
+  wend
+end fn = _true
+
+// ------------------------------------------------------------
+//  IsMersennePrime_LL
+//  Lucas–Lehmer test for M_p = 2^p − 1
+//  Returns _true if M_p is prime
+// ------------------------------------------------------------
+
+local fn IsMersennePrime_LL( p as unsigned long ) as boolean
+  unsigned long k
+  // quick filter/rejects
+  if p == 2 then return _True
+  if p <  2 then return _False
+  // no even exponents (except the handled p = 2)
+  if ( p AND 1 ) == 0 then return _False
+  // exponent itself must be prime
+  if fn IsPrime32( p ) == _false then return _False
+  // build M_p = 2^p − 1
+  mpz_set_ui( mp_minus1, 1 )
+  mpz_mul_2exp( mp_minus1, mp_minus1, p )  // mp_minus1 = 1 << p
+  mpz_sub_ui( mp_minus1, mp_minus1, 1 )    // Mp = 2^p - 1
+  // Lucas–Lehmer sequence:
+  mpz_set_ui( ts, 4 )
+  k = 0
+  // s = 4; repeat p−2 times: s = s^2 − 2 (mod M_p)
+  while k < p - 2
+    mpz_mul( ts, ts, ts )           // s = s^2
+    mpz_sub_ui( ts, ts, 2 )         // s -= 2
+    mpz_mod( ts, ts, mp_minus1 )    // s = s mod M_p
+    k++
+  wend
+  if fn mpz_cmp_ui( ts, 0 ) == 0 then return _True
+end fn = _False
+
+// ------------------------------------------------------------
+//  LL_More
+//  Scan upward from gN until the next M_p is found
+// ------------------------------------------------------------
+
+void local fn LL_More
+  CFStringRef pline
+  boolean     iterating
+  unsigned long i
+
+  tim = fn CACurrentMediaTime
+
+  iterating = _true
+  // start from the next exponent after gN
+  i = gN + 1
+  // ensure we start from a valid candidate:
+  if i <= 2
+    i = 2
+  else
+    if ( i AND 1 ) == 0
+      i++
+    end if
+  end if
+
+  while iterating
+    if fn IsMersennePrime_LL( i )
+      gCount++
+      //pline = fn StringWithFormat( @"M%lu", i )
+      pline = fn StringWithFormat(@"%4lu M%lu", gCount, i)
+      print pline;
+      printf @" (%.3f secs)", ( fn CACurrentMediaTime - tim )
+      iterating = _false
+    end if
+    // advance to next candidate exponent
+    if i == 2
+      i = 3
+    else
+      i = i + 2
+    end if
+  wend
+  // remember last exponent tested so [Next] continues from here
+  if i >= 3
+    gN = i - 2
+  else
+    gN = i
+  end if
+end fn
+
+// ------------------------------------------------------------
+//  Compute Mersenne primes up to an initial exponent gN
+// ------------------------------------------------------------
+local fn Lucas_LehmerMP
+  unsigned long i
+
+  fn InitBigInts
+
+  print @"\nMersenne primes found with Lucas–Lehmer:\n"
+
+  // initial exponent limit for the first scan
+  gN = 5000
+  gCount = 0
+
+  tim = fn CACurrentMediaTime
+  // handle p = 2 separately
+  if gN >= 2
+    gCount++
+    i = 2
+    printf @"%4lu M%lu", gCount, i
+  end if
+
+  // scan odd exponents 3..gN
+  i = 3
+  while i <= gN
+    if fn IsMersennePrime_LL( i )
+      gCount++
+      printf @"%4lu M%lu", gCount, i
+    end if
+    i = i + 2
+  wend
+
+  printf @"\nElapsed time: %.3f secs", ( fn CACurrentMediaTime - tim )
+  print  @"\nClick [Next] for the next exponents.\n"
+end fn
+
+// ------------------------------------------------------------
+//  Dialog handler
+// ------------------------------------------------------------
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ev
+    case _btnClick
+      select tag
+        case 2
+          fn LL_More
+      end select
+
+    case _windowShouldClose
+      fn ClearBigInts
+      end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+// ------------------------------------------------------------
+//  Main
+// ------------------------------------------------------------
+window 1, @"Lucas–Lehmer Test", ( 0, 0, 620, 500 )
+button 2, YES,, @"Next", ( 500, 20, 100, 20 ),,, 1
+
+fn Lucas_LehmerMP
+
+HandleEvents
+
+//

@@ -29,8 +29,8 @@ inline void _ffill_enqueue(_ffill_queue *q, int px, int py)
 inline double color_distance( rgb_color_p a, rgb_color_p b )
 {
   return sqrt( (double)(a->red - b->red)*(a->red - b->red) +
-	       (double)(a->green - b->green)*(a->green - b->green) +
-	       (double)(a->blue - b->blue)*(a->blue - b->blue) ) / (256.0*sqrt(3.0));
+         (double)(a->green - b->green)*(a->green - b->green) +
+         (double)(a->blue - b->blue)*(a->blue - b->blue) ) / (256.0*sqrt(3.0));
 }
 
 inline void _ffill_rgbcolor(image img, rgb_color_p tc, int px, int py)
@@ -41,25 +41,25 @@ inline void _ffill_rgbcolor(image img, rgb_color_p tc, int px, int py)
 }
 
 
-#define NSOE(X,Y) do {							\
-    if ( ((X)>=0)&&((Y)>=0) && ((X)<img->width)&&((Y)<img->height)) {	\
-      _ffill_rgbcolor(img, &thisnode, (X), (Y));			\
-      if ( color_distance(&thisnode, bankscolor) > tolerance ) {	\
-	if (color_distance(&thisnode, rcolor) > 0.0) { 			\
-	  put_pixel_unsafe(img, (X), (Y), rcolor->red,			\
-			   rcolor->green,				\
-			   rcolor->blue);				\
-	  _ffill_enqueue(&head, (X), (Y));				\
-	  pixelcount++;							\
-	}								\
-      }									\
-    }									\
+#define NSOE(X,Y) do {              \
+    if ( ((X)>=0)&&((Y)>=0) && ((X)<img->width)&&((Y)<img->height)) { \
+      _ffill_rgbcolor(img, &thisnode, (X), (Y));      \
+      if ( color_distance(&thisnode, bankscolor) > tolerance ) {  \
+  if (color_distance(&thisnode, rcolor) > 0.0) {      \
+    put_pixel_unsafe(img, (X), (Y), rcolor->red,      \
+         rcolor->green,       \
+         rcolor->blue);       \
+    _ffill_enqueue(&head, (X), (Y));        \
+    pixelcount++;             \
+  }               \
+      }                 \
+    }                 \
   } while(0)
 
 
 unsigned int floodfill(image img, int px, int py,
-	       rgb_color_p bankscolor,
-	       rgb_color_p rcolor)
+         rgb_color_p bankscolor,
+         rgb_color_p rcolor)
 {
   _ffill_queue head;
   rgb_color thisnode;

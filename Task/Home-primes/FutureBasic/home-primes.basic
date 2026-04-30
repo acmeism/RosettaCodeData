@@ -1,0 +1,888 @@
+// ------------------------------------------------------------
+//  Home primes
+//
+//  Using FutureBasic 7.0.37
+//  November 2025, R.W.
+//
+//  This code is a lot longer than needed. Simply because I
+//  refused to use Pollard Rho (it's very slow and unreliable).
+//  So I used pseudo ECM (ECF) for factorization. Much faster.
+//
+//  Output includes Rosetta Task requiring HP65 to be included
+//  it also has the "impossible" HP49 (just click [next]..)
+// ------------------------------------------------------------
+
+include "gmp.incl"
+
+CFTimeInterval tim
+
+long gN    // the next starting integer for [Next] batches
+// Global mpz_t bigints reused for speed
+mpz_t num, den, inv, t1, t2, g
+
+mpz_t pp, tmpN, tmpFactor
+mpz_t fm
+mpz_t gFactors(31)
+int   gFactorCount
+
+
+// -----------------------------------------------------------
+//  Helper: Abbreviate big numeric CFString: head...tail
+// -----------------------------------------------------------
+local fn AbbrevString( s as CFStringRef, head as int, ¬
+  tail as int ) as CFStringRef
+  if s == 0 then RETURN @""
+  CFStringRef a, b, out
+  int nLen
+  nLen = len( s )
+  if nLen <= head + tail then RETURN s
+  a   = left( s, head )
+  b   = right( s, tail )
+  out = @""
+  out = concat( a, @"...", b )
+end fn = out
+
+// -----------------------------------------------------------
+// Helper: Get mpz_t result and abbreviate if > 43 digits
+// -----------------------------------------------------------
+local fn Abbrev( ts as mpz_t ) as CFStringRef
+  CFStringRef result
+  result = fn mpz_cf2( ts )  // FB wrapper mpz_t to CFString
+  int nLen
+  nLen = len( result )
+  if nLen <= 43 then RETURN result
+  result = fn AbbrevString( result, 20, 20 )
+end fn = result
+
+// -----------------------------------------------------------
+// Helper: Convert mpz_t to CFString
+// -----------------------------------------------------------
+local fn mpz_to_CFString( m as mpz_t ) as CFStringRef
+  CFStringRef result = @""
+  result = fn mpz_cf2( m )  //FB wrapper mpz_t to CFString base 10
+end fn = result
+// -----------------------------------------------------------
+//  Helper: Is n probably prime?
+// -----------------------------------------------------------
+local fn IsProbablePrime( n as mpz_t ) as boolean
+  int r
+  r = fn mpz_probab_prime_p( n, 25 )  // 25 reps should be sufficient
+  // r = 0 (composite), 1 (probable prime), 2 (definite prime)
+  if r > 0 then RETURN _true
+end fn = _false
+
+// ------------------------------------------------------------
+//  Small prime test for Int input
+//  Uses mpz_probab_prime_p with gmp
+// ------------------------------------------------------------
+local fn IsPrimeInt( n as long ) as Boolean
+  if n < 2 then RETURN _false
+  fn mpz_set_si( pp, n )
+  int r
+  r = fn mpz_probab_prime_p( pp, 15 )
+  if r > 0 then RETURN _true
+end fn = _false
+
+// -----------------------------------------------------------
+//  Helper: Simple 32-bit primality test for Stage 1 ECM
+// -----------------------------------------------------------
+local fn IsSmallPrime32( p as UInt32 ) as boolean
+  if p < 2 then return _false
+  if p = 2 then return _true
+  if (p AND 1) == 0 then return _false
+
+  UInt32 d
+  d = 3
+  while d * d <= p
+    if (p MOD d) == 0 then return _false
+    d = d + 2
+  wend
+
+end fn = _true
+
+// Clear global mpz
+void local fn clear_MPZ
+  mpz_clear( num )
+  mpz_clear( den )
+  mpz_clear( inv )
+  mpz_clear( t1 )
+  mpz_clear( t2 )
+  mpz_clear( g )
+end fn
+
+// Init global mpz
+void local fn Init_MPZ
+  mpz_init( num )
+  mpz_init( den )
+  mpz_init( inv )
+  mpz_init( t1 )
+  mpz_init( t2 )
+  mpz_init( g )
+end fn
+
+// ---------------------------------------------------------------
+//  ECM_PointDouble
+//  Point doubling: P = (x,y) → 2P on y^2 = x^3 + a x + b (MOD n)
+//  Returns _true if a nontrivial factor found (in 'factor'),
+//  else _false.
+//  On success, 'factor' holds GCD > 1, < n, and x,y are undefined
+//  On normal completion, x,y are updated to 2P.
+// ---------------------------------------------------------------
+
+local fn ECM_PointDouble( n as mpz_t, a as mpz_t, ¬
+  x as mpz_t, y as mpz_t, factor as mpz_t ) as boolean
+
+  fn Init_MPZ
+
+  mpz_mul( t1, x, x )  // num = 3 * x^2 + a (MOD n)
+  mpz_mod( t1, t1, n )       // t1 = x^2
+  mpz_mul_ui( num, t1, 3 )   // num = 3*x^2
+  mpz_add( num, num, a )
+  mpz_mod( num, num, n )
+
+  mpz_mul_ui( den, y, 2 )  // den = 2*y (MOD n)
+  mpz_mod( den, den, n )
+
+  if fn mpz_invert( inv, den, n ) == 0  // try to invert den
+    // inversion failed -> GCD(den, n) may give a factor?
+    // do you feel lucky, punk?
+    mpz_GCD( g, den, n )
+    if (fn mpz_cmp_ui( g, 1 ) > 0) && (fn mpz_cmp( g, n ) < 0)
+      mpz_set( factor, g )
+      fn Clear_MPZ
+      return _true
+    end if
+    // GCD == 1 or GCD == n -> useless curve (sigh)
+    fn Clear_MPZ
+    return _false
+  end if
+
+  mpz_mul( t1, num, inv )  // lambda = num * inv (MOD n)
+  mpz_mod( t1, t1, n )     // t1 = lambda
+
+  // x3 = lambda^2 - 2 * x (MOD n)
+  mpz_mul( t2, t1, t1 )    // lambda^2
+  mpz_mod( t2, t2, n )
+  mpz_mul_ui( num, x, 2 )  // 2x
+  mpz_mod( num, num, n )
+  mpz_sub( t2, t2, num )
+  mpz_mod( t2, t2, n )     // t2 = x3
+
+  // y3 = lambda * (x - x3) - y (MOD n)
+  mpz_sub( num, x, t2 )    // x - x3
+  mpz_mod( num, num, n )
+  mpz_mul( num, t1, num )  // lambda * (x - x3)
+  mpz_mod( num, num, n )
+  mpz_sub( num, num, y )   // lambda * (x - x3) - y
+  mpz_mod( num, num, n )   // num = y3
+
+  mpz_set( x, t2 )          // update P ← (x3, y3)
+  mpz_set( y, num )
+
+  fn Clear_MPZ
+end fn = _false
+
+// -----------------------------------------------------------
+//  ECM_PointAdd
+//  Point addition: P1 = (x1,y1) ← P1 + P2, with P2 = (x2,y2)
+//  Curve: y^2 = x^3 + a x + b (MOD n)
+//  Returns _true if a factor found (in 'factor'), else _false.
+// -----------------------------------------------------------
+local fn ECM_PointAdd( n as mpz_t, a as mpz_t, x1 as mpz_t, ¬
+  y1 as mpz_t, x2 as mpz_t, y2 as mpz_t, factor as mpz_t ) as boolean
+
+  fn Init_MPZ
+
+  mpz_sub( t1, n, y2 )     // t1 = -y2 MOD n
+  mpz_mod( t1, t1, n )
+  // If x1 == x2 and y1 == -y2, point is infinity
+  // For our purposes, treat this as a useless -> just return _false.
+  if (fn mpz_cmp( x1, x2 ) == 0) && (fn mpz_cmp( y1, t1 )== 0)
+    fn Clear_MPZ
+    return _false
+  end if
+
+  mpz_sub( num, y2, y1 )   // num = y2 - y1 (MOD n)
+  mpz_mod( num, num, n )
+
+  mpz_sub( den, x2, x1 )   // den = x2 - x1 (MOD n)
+  mpz_mod( den, den, n )
+
+  // try to invert den
+  if fn mpz_invert( inv, den, n ) == 0
+    mpz_GCD( g, den, n )
+    if (fn mpz_cmp_ui( g, 1 ) > 0) && (fn mpz_cmp( g, n ) < 0)
+      mpz_set( factor, g )
+      fn Clear_MPZ
+      return _true
+    end if
+    fn Clear_MPZ
+    return _false
+  end if
+
+  mpz_mul( t1, num, inv )  // lambda = num * inv (MOD n)
+  mpz_mod( t1, t1, n )     // t1 = lambda
+
+  // x3 = lambda^2 - x1 - x2 (MOD n)
+  mpz_mul( t2, t1, t1 )    // lambda^2
+  mpz_mod( t2, t2, n )
+  mpz_sub( t2, t2, x1 )
+  mpz_sub( t2, t2, x2 )
+  mpz_mod( t2, t2, n )     // t2 = x3
+
+  // y3 = lambda * (x1 - x3) - y1 (MOD n)
+  mpz_sub( num, x1, t2 )        // x1 - x3
+  mpz_mod( num, num, n )
+  mpz_mul( num, t1, num )
+  mpz_mod( num, num, n )
+  mpz_sub( num, num, y1 )
+  mpz_mod( num, num, n )    // num = y3
+
+  mpz_set( x1, t2 )
+  mpz_set( y1, num )
+
+  fn Clear_MPZ
+
+end fn = _false
+
+// ------------------------------------------------------------
+//  ECM_ScalarMul
+//  Scalar multiply P = (x,y) by k:  P ← k * P
+//  Uses binary double-and-add. Returns _true if a factor found.
+// ------------------------------------------------------------
+
+local fn ECM_ScalarMul( n as mpz_t, a as mpz_t, x as mpz_t, ¬
+  y as mpz_t, k as UInt64, factor as mpz_t ) as boolean
+
+  if k <= 1 then return _false
+
+  mpz_t rx, ry, qx, qy
+  mpz_init( rx )
+  mpz_init( ry )
+  mpz_init( qx )
+  mpz_init( qy )
+
+  int hasR
+  hasR = _false     // R (result) is "not set" yet
+
+  mpz_set( qx, x )  // Q = P (base)
+  mpz_set( qy, y )
+
+  // find highest bit of k
+  int sbit
+  sbit = 63
+  while (sbit > 0) && ((k AND (1ULL << sbit)) = 0)
+    sbit -- // decrement bit
+  wend
+
+  // process bits from MSB down to 0
+  while sbit >= 0
+    if hasR
+      // R = 2R
+      if fn ECM_PointDouble( n, a, rx, ry, factor )
+        // factor found
+        mpz_clear( rx )
+        mpz_clear( ry )
+        mpz_clear( qx )
+        mpz_clear( qy )
+        return _true
+      end if
+    end if
+
+    if (k AND (1ULL << sbit)) != 0
+      if hasR = _false
+        // first 1 bit: R = Q
+        mpz_set( rx, qx )
+        mpz_set( ry, qy )
+        hasR = _true
+      else
+        // R = R + Q
+        if fn ECM_PointAdd( n, a, rx, ry, qx, qy, factor )
+          mpz_clear( rx )
+          mpz_clear( ry )
+          mpz_clear( qx )
+          mpz_clear( qy )
+          return _true
+        end if
+      end if
+    end if
+
+    sbit -- // decrement bit
+  wend
+
+  if hasR
+    mpz_set( x, rx )
+    mpz_set( y, ry )
+  end if
+
+  mpz_clear( rx )
+  mpz_clear( ry )
+  mpz_clear( qx )
+  mpz_clear( qy )
+end fn = _false
+
+
+// ----------------------------------------------------------------
+//  ECM_Stage1Curve
+//  Stage-1 ECM on one curve determined by 'sigma'
+//  Curve: y^2 = x^3 + a x + b (MOD n) with (x,y) chosen from sigma.
+//  B1: first-stage bound, e.g. 10000.
+//  Returns _true and sets 'factor' if a factor was
+//  found, else _false.
+// ----------------------------------------------------------------
+
+local fn ECM_Stage1Curve( n as mpz_t, factor as mpz_t, ¬
+  B1 as UInt32, sigma as UInt32 ) as boolean
+
+  mpz_t a, b, x, y, tmp
+  mpz_init( a )
+  mpz_init( b )
+  mpz_init( x )
+  mpz_init( y )
+  mpz_init( tmp )
+
+  mpz_set_ui( x, sigma )      // x = sigma (MOD n)
+  mpz_mod( x, x, n )
+
+  mpz_set_ui( y, sigma + 1 )  // y = sigma + 1 (MOD n)
+  mpz_mod( y, y, n )
+
+  mpz_set_ui( a, sigma + 2 )  // a = sigma + 2 (MOD n)
+  mpz_mod( a, a, n )
+
+  // b = y^2 - x^3 - a*x (MOD n)
+  mpz_mul( b, y, y )          // y^2
+  mpz_mod( b, b, n )
+
+  mpz_mul( tmp, x, x )        // x^2
+  mpz_mod( tmp, tmp, n )
+  mpz_mul( tmp, tmp, x )      // x^3
+  mpz_mod( tmp, tmp, n )
+  mpz_sub( b, b, tmp )        // y^2 - x^3
+
+  mpz_mul( tmp, a, x )        // a * x
+  mpz_mod( tmp, tmp, n )
+  mpz_sub( b, b, tmp )        // y^2 - x^3 - a*x
+  mpz_mod( b, b, n )
+
+  // Multiply P by prime powers p^e with p <= B1
+  UInt32 p, pe
+  p = 2
+
+  while p <= B1
+    if fn IsSmallPrime32( p )
+      // pe = p^e <= B1
+      pe = p
+      while (pe * p) <= B1
+        pe = pe * p
+      wend
+
+      if fn ECM_ScalarMul( n, a, x, y, pe, factor )
+        // factor found
+        mpz_clear( a )
+        mpz_clear( b )
+        mpz_clear( x )
+        mpz_clear( y )
+        mpz_clear( tmp )
+        return _true
+      end if
+    end if
+
+    if p == 2 then p = 3 else p = p + 2
+  wend
+
+  mpz_clear( a )
+  mpz_clear( b )
+  mpz_clear( x )
+  mpz_clear( y )
+  mpz_clear( tmp )
+end fn = _false
+
+// -----------------------------------------------------------
+//  ECM_FindFactor
+//  Try several Stage-1 ECM curves with increasing sigma.
+//  Returns _true and sets 'factor' if a factor is found.
+// -----------------------------------------------------------
+
+local fn ECM_FindFactor( n as mpz_t, factor as mpz_t ) as boolean
+  UInt32 B1, sigma
+  int curves
+  int i
+  B1     = 10000       // bound (bigger = slower)
+  curves = 20          // number of different curves to try
+  sigma = 2
+  i = 0
+  while i < curves
+    if fn ECM_Stage1Curve( n, factor, B1, sigma )
+      return _true
+    end if
+    sigma ++
+    i ++
+  wend
+end fn = _false
+
+// Safely divide mpz_t
+
+local fn SafeMpzDiv( z as mpz_t, x as mpz_t, y as mpz_t )  as boolean
+  if ( fn mpz_sgn( y ) == 0 )  // div by zero?
+    mpz_set_ui( z, 0)
+    return _false
+  end if
+  // Call GMP division (truncate toward zero)
+  mpz_tdiv_q( z, x, y )
+end fn = _true
+
+
+// -----------------------------------------------------------
+//  Recursive factorization using ECM Stage 1
+//  Results go into global gFactors() / gFactorCount
+//  trustProbPrime = _true  → use IsProbablePrime shortcut
+//  trustProbPrime = _false → NEVER trust IsProbablePrime; rely on ECM
+// -----------------------------------------------------------
+void local fn FactorRec( n as mpz_t, trustProbPrime as boolean )
+  // if n == 1 → nothing
+  if fn mpz_cmp_ui( n, 1 ) = 0 then RETURN
+
+  // If allowed, trust mpz_probab_prime_p
+  if trustProbPrime
+    if fn IsProbablePrime( n )
+      mpz_set( gFactors( gFactorCount ), n )
+      gFactorCount = gFactorCount + 1
+      RETURN
+    end if
+  end if
+
+  mpz_t d, q
+  mpz_init( d )
+  mpz_init( q )
+
+  Boolean got
+  got = fn ECM_FindFactor( n, d )
+
+  if got == _false
+    // ECM did not find a nontrivial factor; treat n as final factor
+    mpz_set( gFactors( gFactorCount ), n )
+    gFactorCount = gFactorCount + 1
+    mpz_clear( d )
+    mpz_clear( q )
+    RETURN
+  end if
+
+  if fn SafeMpzDiv( q, n, d )  // q = n / d
+    // recurse on d and q with the same mode
+    fn FactorRec( d, trustProbPrime )
+    fn FactorRec( q, trustProbPrime )
+  end if
+
+  mpz_clear( d )
+  mpz_clear( q )
+end fn
+
+// ------------------------------------------------------------
+//  FactorStringUnderscore
+//  Factor j into primes and build "p1_p2_p3" as CFStringRef
+//  forceFull = _false → use IsProbablePrime shortcut (fast)
+//  forceFull = _true  → ignore IsProbablePrime, full ECM
+// ------------------------------------------------------------
+local fn FactorStringUnderscore( j as mpz_t, forceFull as boolean ) as CFStringRef
+  CFStringRef outStr = @""
+
+  // Work copy of j in fm, factor |j|
+  fn mpz_set( fm, j )
+  fn mpz_abs( fm, fm )
+
+  // If fm < 2, nothing to do
+  if fn mpz_cmp_ui( fm, 2 ) < 0 then RETURN outStr
+
+  // Reset factor buffer
+  gFactorCount = 0
+
+  // Fill gFactors[0..gFactorCount-1] with prime factors (not sorted)
+  // trustProbPrime = NOT forceFull
+  Boolean trustProbPrime
+  trustProbPrime = _true
+  if forceFull then trustProbPrime = _false
+
+  fn FactorRec( fm, trustProbPrime )
+
+  // If FactorRec somehow didn't produce anything, bail out
+  if gFactorCount <= 0 then RETURN outStr
+
+  // sort factors in ascending order (same as before)
+  int i, jidx
+  mpz_t tmp
+  mpz_init( tmp )
+
+  i = 0
+  while i < gFactorCount - 1
+    jidx = i + 1
+    while jidx < gFactorCount
+      if fn mpz_cmp( gFactors(i), gFactors(jidx) ) > 0
+        fn mpz_set( tmp, gFactors(i) )
+        fn mpz_set( gFactors(i), gFactors(jidx) )
+        fn mpz_set( gFactors(jidx), tmp )
+      end if
+      jidx++
+    wend
+    i++
+  wend
+
+  mpz_clear( tmp )
+
+  // build "p1_p2_p3_..." string
+  outStr = @""
+  i = 0
+  while i < gFactorCount
+    if i > 0
+      outStr = concat( outStr, @"_" )
+    end if
+    outStr = concat( outStr, fn mpz_to_CFString( gFactors(i) ) )
+    i++
+  wend
+
+end fn = outStr
+
+// ------------------------------------------------------------
+//  FactorConcat (ECM-based)
+//  Factor j into primes using FactorRec (ECM + primality test),
+//  collect factors in ascending order, and concatenate them
+// ------------------------------------------------------------
+local fn FactorConcat( j as mpz_t ) as CFStringRef
+  CFStringRef outStr = @""
+
+  // Work copy of j in fm, factor |j|
+  fn mpz_set( fm, j )
+  fn mpz_abs( fm, fm )
+
+  // If fm < 2, nothing to do
+  if fn mpz_cmp_ui( fm, 2 ) < 0 then RETURN outStr
+
+  // Reset factor buffer
+  gFactorCount = 0
+
+  // Fill gFactors[0..gFactorCount-1] with prime factors (not sorted)
+  fn FactorRec( fm, _true )   // for chain math, trust probable primes
+
+  // If FactorRec somehow didn't produce anything, bail out
+  if gFactorCount <= 0 then RETURN outStr
+
+  // sort factors in ascending order
+  int i, jidx
+  mpz_t tmp
+  mpz_init( tmp )
+
+  i = 0
+  while i < gFactorCount - 1
+    jidx = i + 1
+    while jidx < gFactorCount
+      if fn mpz_cmp( gFactors(i), gFactors(jidx) ) > 0
+        // swap gFactors(i) and gFactors(jidx)
+        fn mpz_set( tmp, gFactors(i) )
+        fn mpz_set( gFactors(i), gFactors(jidx) )
+        fn mpz_set( gFactors(jidx), tmp )
+      end if
+      jidx++
+    wend
+    i++
+  wend
+
+  mpz_clear( tmp )
+
+  // build concatenated decimal string of prime factors
+  outStr = @""
+  i = 0
+  while i < gFactorCount
+    outStr = concat( outStr, fn mpz_to_CFString( gFactors(i) ) )
+    i++
+  wend
+
+end fn = outStr
+
+
+// Max chain length we’re willing to handle
+_kMaxChain = 32
+
+// ------------------------------------------------------------
+//  Home_Prime_Chain
+//  Build Home Prime chain for integer n
+//  - Uses FactorConcat (ECM-backed) for factoring
+//  - Stops when value is prime OR when no progress is made
+// ------------------------------------------------------------
+local fn Home_Prime_Chain( n as long ) as CFStringRef
+  CFStringRef result = @""
+  CFStringRef pad = @"           "
+  CFStringRef chain
+  CFStringRef nStr, iterStr, tmpCF
+
+  // Guard: n < 2 → empty
+  if n < 2 then RETURN result
+
+  // If n is prime: "HPn = n"
+  if fn IsPrimeInt( n )
+    nStr  = mid( str( n ), 1 )
+    chain = concat( @"HP", nStr )
+    chain = concat( chain, left( pad, 10 - len( chain ) ), @"= " )
+    chain = concat( chain, nStr )
+    result = chain
+    RETURN result
+  end if
+
+  // ----------------------------------------
+  // Otherwise, build the chain using GMP
+  // h[0..iterCount] hold the successive values
+  // ----------------------------------------
+  _kMaxSteps = 64
+  mpz_t h( _kMaxSteps - 1 )
+  int i
+
+  // initialize mpz_t array
+  i = 0
+  while i < _kMaxSteps
+    fn mpz_init( h(i) )
+    i++
+  wend
+
+  int iterCount
+  iterCount = 0
+
+  CFStringRef concatStr
+  CFStringRef oneDigit
+
+  // Track previous value to detect "no progress" stalls
+  mpz_t prevN
+  fn mpz_init( prevN )
+  int stalled
+  stalled = _false
+
+  // h[0] = initial n
+  fn mpz_set_si( h(0), n )
+  fn mpz_set_si( tmpN, n )  // current value in the chain
+
+  // iterate until prime, stall, or max steps
+  while iterCount < _kMaxSteps
+    int isPrime
+    isPrime = fn mpz_probab_prime_p( tmpN, 15 )
+    if isPrime > 0
+      // Probable prime: normal termination
+      exit while
+    end if
+
+    // Save previous value so we can detect no progress
+    fn mpz_set( prevN, tmpN )
+
+    // Not prime: factor tmpN, build concatenation string of prime factors
+    concatStr = fn FactorConcat( tmpN )   // decimal string of concatenated factors
+
+    // Build new tmpN from decimal digits of concatStr
+    fn mpz_set_ui( tmpN, 0 )
+
+    int L, dpos, digit
+    L    = len( concatStr )
+    dpos = 1
+
+    while dpos <= L
+      // CFString mid() is 0-based: start at dpos-1
+      oneDigit = mid( concatStr, dpos - 1, 1 )
+      digit    = IntVal( oneDigit )   // CFStringRef → int digit (0–9)
+      fn mpz_mul_ui( tmpN, tmpN, 10 )
+      fn mpz_add_ui( tmpN, tmpN, digit )
+      dpos++
+    wend
+
+    // Check for "no progress": new tmpN == prevN ⇒ factoring failed / stalled
+    if fn mpz_cmp( tmpN, prevN ) == 0
+      stalled = _true
+      exit while
+    end if
+
+    // Store this term in the chain
+    iterCount++
+    if iterCount < _kMaxSteps
+      fn mpz_set( h(iterCount), tmpN )
+    end if
+  wend
+
+  // Safety clamp if we bailed by hitting the step cap
+  if iterCount >= _kMaxSteps
+    iterCount = _kMaxSteps - 1
+    stalled   = _true
+  end if
+
+  // iterCount is the index of the final value in h[]
+  CFStringRef finalStr
+  finalStr = fn Abbrev( h(iterCount) )
+
+  // ----------------------------------------------
+  // Build the chain in multi-line readable format
+  // ----------------------------------------------
+  chain = @""
+
+  // First line: HPn(iterCount)
+  pad     = @"           "
+  nStr    = mid( str( n ), 1 )
+  iterStr = mid( str( iterCount ), 1 )
+
+  chain = concat( chain, @"HP" )
+  chain = concat( chain, nStr )
+  if iterCount > 1
+    chain = concat( chain, @" (" )
+    chain = concat( chain, iterStr )
+    chain = concat( chain, @")" )
+  end if
+  chain = concat( chain, left( pad, 10 - len( chain ) ), @"= " )
+
+  // ----------------------------------------------------
+  // Print each step on its own line, as factor strings:
+  //  stepIndex = 1 → factors of h(0) (original n)
+  //  stepIndex = 2 → factors of h(1), etc.
+  //  remaining = iterCount - stepIndex
+  // ----------------------------------------------------
+  int stepIndex
+  stepIndex = 1
+  while stepIndex <= iterCount - 1
+    int remaining
+    remaining = iterCount - stepIndex
+
+    // Factor h(stepIndex-1) and show "p1_p2_p3"
+    // For intermediate steps we can use the fast mode (trust probable primes).
+    tmpCF = fn FactorStringUnderscore( h(stepIndex - 1), _false )
+    iterStr = mid( str( remaining ), 1 )
+
+    if stepIndex == 1
+      pad = @""
+    else
+      pad = @"            "
+    end if
+
+    chain = concat( chain, pad )
+    tmpCF = fn AbbrevString( tmpCF, 20, 20 )
+    chain = concat( chain, tmpCF )
+    chain = concat( chain, @" (" )
+    chain = concat( chain, iterStr )
+    chain = concat( chain, @")" )
+    chain = concat( chain, @"\n" )
+
+    stepIndex++
+  wend
+
+  // Final line: just show the final value (probable prime)
+  if stepIndex > 1
+    chain = concat( chain, @"            " )
+  end if
+
+  //CFStringRef finalStr
+  finalStr = fn Abbrev( h(iterCount) )
+  chain = concat( chain, finalStr )
+  if stalled
+    chain = concat( chain, @"  (stalled – factoring limit)" )
+  end if
+
+  result = chain
+
+  // clear h[] and prevN
+  i = 0
+  while i < _kMaxSteps
+    fn mpz_clear( h(i) )
+    i++
+  wend
+  fn mpz_clear( prevN )
+
+end fn = result
+
+// ------------------------------------------------------------
+//  More_HP
+//  show the next 20 Home Primes
+// ------------------------------------------------------------
+void local fn More_HP
+  CFStringRef pline
+  long n
+  int count
+
+  tim = fn CACurrentMediaTime
+
+  count = 0
+  n = gN
+  while count < 20
+    pline = fn Home_Prime_Chain( n )
+    print @pline
+    n++
+    count++
+  wend
+
+  gN = n
+  if gN > 160 then button 2, NO
+  printf @"\nElapsed time: %.3f secs\n", ( fn CACurrentMediaTime - tim )
+end fn
+
+// ------------------------------------------------------------
+//  Main — compute 2 to 20 Home primes
+// ------------------------------------------------------------
+local fn Main
+  CFStringRef pline
+  long k
+  // init globals
+  fn mpz_init( pp )
+  fn mpz_init( tmpN )
+  fn mpz_init( tmpFactor )
+
+  int i
+  i = 0
+  while i <= 30
+    mpz_init( gFactors(i) )
+    i++
+  wend
+
+  print @"Home Prime for integer 2 through 20:\n"
+
+  tim = fn CACurrentMediaTime
+
+  k = 2
+  while k <= 20
+    pline = fn Home_Prime_Chain( k )
+    print @pline
+    k++
+  wend
+
+  printf @"\nElapsed time: %.3f secs\n", ( fn CACurrentMediaTime - tim )
+  print @"Click [Next] for the next 20 Home primes.\n"
+
+  // Prepare next batch start
+  gN = 21
+end fn
+
+// ------------------------------------------------------------
+//  Dialog handler
+// ------------------------------------------------------------
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case 2
+          fn More_HP
+      end select
+
+    case _windowShouldClose
+      // clear any uncleared mpz
+      fn mpz_clear( pp )
+      fn mpz_clear( tmpN )
+      fn mpz_clear( tmpFactor )
+      end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+// ------------------------------------------------------------
+//  Main
+// ------------------------------------------------------------
+window 1, @"Home primes", (0,0,800,600)
+button 2, YES,, @"Next", (680,20,100,20),,, 1
+
+// init globals
+fn mpz_init( pp )
+fn mpz_init( tmpN )
+fn mpz_init( tmpFactor )
+
+fn Main
+
+HandleEvents

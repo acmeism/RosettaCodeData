@@ -1,7 +1,2 @@
-import Text.Regex
-
-str = "I am a string"
-
-case matchRegex (mkRegex ".*string$") str of
-  Just _  -> putStrLn $ "ends with 'string'"
-  Nothing -> return ()
+ghci> import Text.Regex.TDFA
+ghci> "I am a string" =~ ".*string$" :: Bool

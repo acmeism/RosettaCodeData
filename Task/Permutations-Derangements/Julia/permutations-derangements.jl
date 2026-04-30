@@ -9,9 +9,9 @@ function subfact(n::Integer)::Integer
     elseif n == 1
         return 0
     elseif 1 ≤ n ≤ 18
-        return round(Int, factorial(n) / e)
+        return round(Int, factorial(n) / ℯ)
     elseif n > 0
-        return (n - 1) * ( subfact(n - 1) + subfact(n - 2) )
+        return (n - 1) * (subfact(n - 1) + subfact(n - 2))
     else
         error()
     end

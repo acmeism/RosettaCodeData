@@ -1,0 +1,164 @@
+// ------------------------------------------------------------
+//  Juggler Sequences
+//
+//  Using FutureBasic 7.0.37
+//  November 2025, R.W.
+// ------------------------------------------------------------
+
+include "gmp.incl"
+
+CFTimeInterval tim
+
+// Global mpz_t bigints reused for speed
+mpz_t js         // current term in sequence
+mpz_t ln         // temp for powers
+mpz_t hn         // current maximum value in sequence
+
+UInt64 res(2)    // res(0)=l[n], res(1)=i[n], res(2)=d[n] (digit count)
+
+// Rosetta task part 2 + extra huge
+long rs(14) = {113, 173, 193, 2183, 11229, 15065, 15845, ¬
+30817, 48443, 275485, 1267909, 2264915, 5812827, 7110201, 604398963}
+
+// -----------------------------------------------------------
+// Helper: Convert mpz_t to CFString
+// -----------------------------------------------------------
+local fn mpz_to_CFString( m as mpz_t ) as CFStringRef
+  CFStringRef result = @""
+  result = fn mpz_cf2( m )  // FB wrapper mpz_t → CFString base 10
+end fn = result
+
+// ------------------------------------------------------------
+//  JugglerSequence
+//  calculate juggler sequence for n
+//  results in globals:
+//    res(0) = l[n] (steps to reach 1)
+//    res(1) = i[n] (index of first maximum, 0-based)
+//    res(2) = d[n] (decimal digit count of maximum)
+// ------------------------------------------------------------
+void local fn JugglerSequence( n as Int )
+  UInt64 steps, idx, maxIdx, digits
+  steps = 0: idx = 0: 	maxIdx = 0
+
+  fn mpz_set_ui( js, n )      // js = current term (n)
+  fn mpz_set( hn, js )        // hn = current maximum
+
+  // iterate until we reach 1
+  while ( fn mpz_cmp_ui( js, 1 ) != 0 )
+    // even vs odd
+    if ( fn mpz_tstbit( js, 0 ) == 0 )		//test bit zero
+      fn mpz_sqrt( js, js )    // even: a_{k+1} = floor( sqrt(a_k) )
+    else
+      // odd: a_{k+1} = floor( a_k^(3/2) ) = floor( sqrt(a_k^3) )
+      fn mpz_mul( ln, js, js ) // ln = js^2
+      fn mpz_mul( ln, ln, js ) // ln = js^3
+      fn mpz_sqrt( js, ln )    // js = floor( sqrt(js^3) )
+    end if
+    steps ++
+    idx  ++
+    // update maximum and its first index
+    if ( fn mpz_cmp( js, hn ) > 0 )
+      fn mpz_set( hn, js )
+      maxIdx = idx
+    end if
+  wend
+  // compute decimal digit count d[n] of hn
+  digits = fn mpz_sizeinbase( hn, 10 )
+  // mpz_sizeinbase can overestimate by 1 digit; adjust if needed
+  // (see GMP 6.3.0 manual page 45)
+  if digits > 0
+    fn mpz_ui_pow_ui( ln, 10, digits - 1 )
+    if ( fn mpz_cmp( ln, hn ) > 0 )
+      digits --  // decrement
+    end if
+  end if
+
+  res(0) = steps
+  res(1) = maxIdx
+  res(2) = digits
+end fn
+
+// ------------------------------------------------------------
+//  More_JS
+//  show the next specific juggler sequences up to 604,398,963
+// ------------------------------------------------------------
+void local fn More_JS
+  CFStringRef pline
+  CFTimeInterval elapsed
+  Int i, n
+  for i = 0 to 14
+    if i = 0
+      print @"       n      l[n]   i[n]    d[n]"
+      print @"-----------------------------------"
+    end if
+    tim = fn CACurrentMediaTime
+    n = rs(i)
+    fn JugglerSequence( n )
+    pline = fn StringWithFormat( @"%l9d   %l5d  %l5d  %l9d ", n, res(0), res(1), res(2) )
+    print @pline;
+    elapsed = fn CACurrentMediaTime - tim
+    if elapsed < 1
+      printf @"(%.3f ms)", elapsed * 1000
+    else
+      printf @"(%.3f secs)", elapsed
+    end if
+  next i
+  button 2, NO
+end fn
+
+// ------------------------------------------------------------
+//  Main — compute juggler sequences for n = 20..39
+// ------------------------------------------------------------
+local fn Main
+  CFStringRef pline = @""
+  CFStringRef hStr
+  Int n
+  // init mpz globals once
+  mpz_init( js )
+  mpz_init( ln )
+  mpz_init( hn )
+  tim = fn CACurrentMediaTime
+  print @"       n      l[n]   i[n]    d[n]"
+  print @"-----------------------------------"
+  for n = 20 to 39		// Rosetta task
+    fn JugglerSequence( n )
+    // hn holds the maximum; convert to CFString for display
+    hStr = fn mpz_to_CFString( hn )
+    pline = fn StringWithFormat( @"%l9d   %5d  %5d     %@", n, res(0), res(1), hStr )
+    print @pline
+  next n
+  printf @"\nElapsed time: %.3f secs", (fn CACurrentMediaTime - tim)
+  print @"Click [Next] for the next juggler sequences.\n"
+end fn
+
+// ------------------------------------------------------------
+//  Dialog handler
+// ------------------------------------------------------------
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case 2
+          fn More_JS
+      end select
+
+    case _windowShouldClose
+      // clear any mpz before quitting
+      mpz_clear( js )
+      mpz_clear( ln )
+      mpz_clear( hn )
+      end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+// ------------------------------------------------------------
+//  Main
+// ------------------------------------------------------------
+window 1, @"Juggler Sequences", (0,0,500,640)
+button 2, YES,, @"Next", (380,20,100,20),,, 1
+
+fn Main
+
+HandleEvents

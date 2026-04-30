@@ -1,0 +1,179 @@
+//
+// 9 billion names of G-D the integer
+//
+// Using FutureBasic 7.0.35
+// September 2025, R.W.
+//
+
+include "gmp.incl"    // GMP only (MPFR not needed here)
+
+_kTriMax  = 25
+_kMaxP    = 123456    // compile-time bound for big_p[]
+
+UInt64 tri(_kTriMax, _kTriMax)   // the 25 by 25 triangle
+mpz_t  big_p(_kMaxP)            // partition values P(0.._kMaxP)
+
+//
+// Integer partition via GMP (mpz_t)
+//
+// Computes P(0..partMax) in global big_p[]
+// big_p(xxxxx) will have _kMaxP elements
+//
+// At its largest sum term (123456),
+// it would be greater than 10^385 or hundreds of digits
+// beyond a centillion
+
+local fn ComputePartitions( partMax as long )
+  long i, j, k
+  long a, b
+  mpz_t s
+
+  if partMax > _kMaxP then partMax = _kMaxP
+  // temp accumulator
+  mpz_init( s )
+
+  // base case
+  mpz_set_ui( big_p(0), 1 )
+
+  for i = 1 to partMax
+    // generalized pentagonal sequence setup
+    j = 1
+    k = 1
+    b = 2
+    a = 5
+
+    while j > 0
+      // j = i - (3*k*k+k) \ 2
+      // (implemented incrementally via b,a)
+      j = i - b
+      b = b + a
+      a = a + 3
+
+      if j >= 0
+        if (k AND 1) <> 0
+          mpz_add( s, s, big_p(j) )
+        else
+          mpz_sub( s, s, big_p(j) )
+        end if
+      end if
+      // second term at j + k
+      j = j + k
+      if j >= 0
+        if (k AND 1) <> 0
+          mpz_add( s, s, big_p(j) )
+        else
+          mpz_sub( s, s, big_p(j) )
+        end if
+      end if
+      k ++
+    wend
+
+    mpz_swap( big_p(i), s )
+  next
+
+  mpz_clear( s )
+end fn
+
+//
+// Partition triangle using 64-bit ints
+// p(n,k) -> # of partitions of n with
+// largest part exactly k
+//
+local fn BuildPartitionTriangle
+  CFStringRef pLine, filler
+  pLine = @""
+  filler = @"                                       "
+  long n, k
+
+  // first 3 rows are always 1's
+  tri(1,1) = 1
+  tri(2,1) = 1
+  tri(2,2) = 1
+  tri(3,1) = 1
+  tri(3,2) = 1
+  tri(3,3) = 1
+
+  for n = 4 to _kTriMax
+    for k = 1 to n
+      if k * 2 > n
+        tri(n,k) = tri(n-1, k-1)
+      else
+        tri(n,k) = tri(n-1, k-1) + tri(n-k, k)
+      end if
+    next
+  next
+
+  // display the triangle
+  for n = 1 to 25
+    pLine = @""
+    for k = 1 to n
+      pLine = concat(pLine, mid(str(tri(n,k)),1),@" ")
+    next k
+    pLine = concat(left(filler, 38 - len(pLine)/2) , pLine)
+    print pLine
+  next n
+end fn
+//
+//               MAIN
+// ----------------------------------------------
+Window 1, @"9 Billion Names of G-D the integer",¬
+(0,0,980,540)
+
+long n, k, max
+max = 123456      // must not exceed _kMaxP
+CFStringRef pLine
+pLine = @""
+
+CFTimeInterval t
+t = fn CACurrentMediaTime  // start clock
+
+fn BuildPartitionTriangle
+
+// Initialize big_p(0..kPartMax) to 0
+for n = 0 to max
+  mpz_init( big_p(n) )
+next
+
+// Compute partitions P(0..kPartMax)
+fn ComputePartitions( max )
+print@
+print @"Sums"
+print @"----"
+
+long cxCount
+cxCount = 5
+Int i
+long cx(5)
+cx(1) = 23
+cx(2) = 123
+cx(3) = 1234
+cx(4) = 12345
+cx(5) = 123456
+
+long at
+at = 1
+
+for i = 1 to max
+  if at <= cxCount
+    if i = cx(at)
+      pLine = fn mpz_cf( 10,big_p(i) )
+      print concat( @"G(", mid(str(i),1), @") = ", pLine )
+      at = at + 1
+    end if
+  else
+    exit for
+  end if
+next
+//
+// stop the clock
+print@
+printf @"Elapsed time = %.4f ms.", (fn CACurrentMediaTime - t)*1000
+
+// Cleanup
+for n = 0 to max
+  mpz_clear( big_p(n) )
+next
+
+HandleEvents
+
+//

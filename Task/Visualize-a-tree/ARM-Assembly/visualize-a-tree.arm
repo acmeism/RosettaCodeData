@@ -1,0 +1,283 @@
+/* ARM assembly Raspberry PI  */
+/*  program displaytree.s   */
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.include "../constantes.inc"
+.equ HEAPSIZE,   50000
+.equ NBVAL,    9
+/*******************************************/
+/*   Macros                              */
+/*******************************************/
+//.include "../../ficmacros32.inc"            @ for developer debugging
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure tree     */
+    .struct  0
+tree_root:                             @ root pointer
+    .struct  tree_root + 4
+tree_size:                             @ number of element of tree
+    .struct  tree_size + 4
+tree_fin:
+/* structure node tree */
+    .struct  0
+node_left:                             @ left pointer
+    .struct  node_left + 4
+node_right:                            @ right pointer
+    .struct  node_right + 4
+node_value:                            @ element value
+    .struct  node_value + 4
+node_fin:
+
+/*******************************************/
+/* Initialized data */
+/*******************************************/
+.data
+szMessDebutPgm:       .asciz "Program 32 bits start. \n"
+szMessFinOK:          .asciz "Program normal end. \n"
+szMessDisplayTree:    .asciz "Tree display :\n"
+szCarriageReturn:     .asciz "\n"
+/* datas error display */
+szMessErreur:         .asciz "Error detected.\n"
+/* datas message display */
+szMessResult:         .ascii "Element value :"
+sValue:               .space 12,' '
+                      .asciz "\n"
+szIndent:             .asciz "|-->"
+szIndent1:            .asciz "|   "
+.align 2
+ptHeapReserve:        .int heapReserve
+/*******************************************/
+/* UnInitialized data */
+/*******************************************/
+.bss
+sConvArea:        .skip 24
+stTree:          .skip tree_fin    @ place to structure tree
+heapReserve:     .skip HEAPSIZE
+/*******************************************/
+/*  code section   */
+/*******************************************/
+.text
+.global main
+main:
+    ldr r0,iAdrszMessDebutPgm
+    bl affichageMess
+    mov r1,#1                           @ node tree value
+1:
+    ldr r0,iAdrstTree                   @ structure tree address
+    bl insertElement                    @ add element value r1
+    cmp r0,#-1
+    beq 99f
+    add r1,#1                           @ increment value
+    cmp r1,#NBVAL                       @ end ?
+    ble 1b                              @ no -> loop
+
+    ldr r0,iAdrszMessDisplayTree
+    bl affichageMess
+    ldr r3,iAdrstTree                   @ tree root address (begin structure)
+    ldr r0,[r3,#tree_root]
+    mov r1,#0
+    bl displayTree
+
+    ldr r0,iAdrszMessFinOK
+    bl affichageMess
+    b 100f
+99:                                     @ display error
+    ldr r0,iAdrszMessErreur
+    bl affichageMess
+100:                                    @ standard end of the program
+    mov r7, #EXIT                       @ request to exit program
+    svc 0                               @ perform system call
+iAdrszMessDebutPgm:        .int szMessDebutPgm
+iAdrszMessFinOK:           .int szMessFinOK
+iAdrszMessDisplayTree:     .int szMessDisplayTree
+iAdrszMessErreur:          .int szMessErreur
+iAdrszCarriageReturn:      .int szCarriageReturn
+iAdrstTree:                .int stTree
+iAdrdisplayElement:        .int displayElement
+/******************************************************************/
+/*     insert element in the tree                                 */
+/******************************************************************/
+/* r0 contains the address of the tree structure */
+/* r1 contains the value of element              */
+/* r0 returns address of element or - 1 if error */
+insertElement:
+    push {r1-r7,lr}                   @ save  registers
+    mov r4,r0
+    mov r0,#node_fin                  @ reservation place one element
+    bl allocHeap
+    cmp r0,#-1                        @ allocation error
+    beq 100f
+    mov r5,r0
+    str r1,[r5,#node_value]           @ store value in address heap
+    mov r1,#0
+    str r1,[r5,#node_left]            @ init left pointer with zero
+    str r1,[r5,#node_right]           @ init right pointer with zero
+    ldr r2,[r4,#tree_size]            @ load tree size
+    cmp r2,#0                         @ 0 element ?
+    bne 1f
+    str r5,[r4,#tree_root]            @ yes -> store in root
+    b 4f
+1:                                    @ else search free address in tree
+    ldr r3,[r4,#tree_root]            @ start with address root
+    add r6,r2,#1                      @ increment tree size
+    clz r7,r6                         @ compute zeroes left bits
+    add r7,#1                         @ for sustract the first left bit
+    lsl r6,r7                         @ shift number in left
+2:
+    lsls r6,#1                        @ read left bit
+    bcs 3f                            @ is 1 ?
+    ldr r1,[r3,#node_left]            @ no store node address in left pointer
+    cmp r1,#0                         @ if equal zero
+    streq r5,[r3,#node_left]
+    beq 4f
+    mov r3,r1                         @ else loop with next node
+    b 2b
+3:                                    @ yes
+    ldr r1,[r3,#node_right]           @ store node address in right pointer
+    cmp r1,#0                         @ if equal zero
+    streq r5,[r3,#node_right]
+    beq 4f
+    mov r3,r1                         @ else loop with next node
+    b 2b
+4:
+    add r2,#1                         @ increment tree size
+    str r2,[r4,#tree_size]
+100:
+    pop {r1-r7,pc}                    @ restaur registers
+
+/******************************************************************/
+/*     display node                                               */
+/******************************************************************/
+/* r0 contains node  address          */
+displayElement:
+    push {r1,lr}                       @ save  registers
+    ldr r0,[r0,#node_value]
+    ldr r1,iAdrsValue
+    bl conversion10S
+    ldr r0,iAdrszMessResult
+    bl affichageMess
+100:
+    pop {r1,pc}                        @ restaur registers
+iAdrszMessResult:          .int szMessResult
+iAdrsValue:                .int sValue
+/******************************************************************/
+/*     shift result to left                                               */
+/******************************************************************/
+/* r0 contains conversion area          */
+shiftResult:               @ INFO: shiftResult
+    push {r1-r3,lr}        @ save  registers
+    mov r2,#0
+1:
+    ldrb r1,[r0,r2]        @ load one char
+    cmp r1,#0              @ zero -> end
+    beq 100f
+    cmp r1,#' '            @ not space ?
+    bne 2f
+    add r2,r2,#1            @ else loop
+    b 1b
+2:
+    mov r3,#0              @ store indice
+3:
+    strb r1,[r0,r3]        @ store char in area begin
+    cmp r1,#0              @ zero -> end
+    beq 100f
+    add r2,r2,#1           @ increment indices
+    add r3,r3,#1
+    ldrb r1,[r0,r2]        @ load char
+    b 3b                   @ and loop
+
+100:
+    pop {r1-r3,pc}         @ restaur registers
+/******************************************************************/
+/*     display tree                                               */
+/******************************************************************/
+/* r0 contains node  address          */
+/* r1 contains level          */
+
+displayTree:
+    push {r2-r5,lr}                       @ save  registers
+    cmp r0,#-1
+    beq 100f
+    mov r4,r0
+    mov r5,r1
+    mov r2,#0
+    ldr r3,iAdrszIndent1
+1:
+    cmp r2,r1
+    bge 2f
+    mov r0,r3
+    bl affichageMess
+    add r2,r2,#1
+    b 1b
+2:
+    ldr r0,iAdrszIndent
+    bl affichageMess
+    ldr r0,[r4,#node_value]
+    ldr r1,iAdrsConvArea
+    bl conversion10S
+    ldr r0,iAdrsConvArea
+    bl shiftResult
+    ldr r0,iAdrsConvArea
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    ldr r0,[r4,#node_left]
+    cmp r0,#0
+    beq 3f
+    add r1,r5,#1                 @ increment level
+    bl displayTree
+3:
+    ldr r0,[r4,#node_right]
+    cmp r0,#0
+    beq 4f
+    add r1,r5,#1                 @ increment level
+    bl displayTree
+    b 100f
+4:
+    mov r0,#-1
+
+100:
+    pop {r2-r5,pc}                        @ restaur registers
+iAdrszIndent:     .int szIndent
+iAdrszIndent1:    .int szIndent1
+iAdrsConvArea:    .int sConvArea
+/******************************************************************/
+/*     memory allocation on the heap                                  */
+/******************************************************************/
+/* r0 contains the size to allocate */
+/* r0 returns address of memory heap or - 1 if error */
+/* CAUTION : The size of the allowance must be a multiple of 4  */
+allocHeap:
+    push {r1-r4,lr}                 @ save  registers
+    @ allocation
+    ldr r1,iAdrptHeapReserve
+    ldr r2,[r1]                     @ free heap address
+    add r3,r2,r0                    @ reserve area on heap
+    ldr r4,iAdrheapReserve
+    mov r0,#HEAPSIZE
+    add r4,r4,r0                    @ compute heap end
+    cmp r3,r4
+    blt 1f                          @ allocation address < heap end ?
+    mov r0,#-1                       @ allocation error
+    b 100f
+1:
+    str r3,[r1]                     @ store new start free address heap
+    mov r0,r2                       @ return address
+100:
+    pop {r1-r4,pc}                  @ restaur registers
+.align 2
+iAdrptHeapReserve:    .int ptHeapReserve
+iAdrheapReserve:      .int heapReserve
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

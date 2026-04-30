@@ -1,6 +1,1 @@
-open System
-let answer2 =
-    let PerfectSquare n =
-        let sqrt = int(Math.Sqrt(float n))
-        n = sqrt * sqrt
-    [| for i in 1..100 do yield PerfectSquare i |]
+[1..100] |> List.fold (fun doors pass->List.mapi (fun i x->if ((i + 1) % pass)=0 then not x else x) doors) (List.init 100 (fun _->false))

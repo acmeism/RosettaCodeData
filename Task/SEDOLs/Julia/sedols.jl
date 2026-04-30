@@ -1,14 +1,13 @@
-using Base.Test
+using Test
 
-function appendchecksum(chars::AbstractString)
-    if !all(isalnum, chars) throw(ArgumentError("invalid SEDOL number '$chars'")) end
-    weights = [1, 3, 1, 7, 3, 9, 1]
+isalnum(c::Char) = isletter(c) || isnumeric(c)
 
-    s = 0
-    for (w, c) in zip(weights, chars)
-        s += w * parse(Int, c, 36)
-    end
-    return string(chars, (10 - s % 10) % 10)
+function appendchecksum(s::AbstractString)
+    !all(isalnum, s) && throw(ArgumentError("invalid SEDOL number '$s'"))
+
+	weights = [1, 3, 1, 7, 3, 9, 1]
+    checksum = sum(weights[i] * parse(Int, s[i], base = 36) for i in eachindex(s))
+    return s * string((10 - checksum % 10) % 10)
 end
 
 tests = ["710889", "B0YBKJ", "406566", "B0YBLH", "228276", "B0YBKL", "557910", "B0YBKR", "585284", "B0YBKT", "B00030"]

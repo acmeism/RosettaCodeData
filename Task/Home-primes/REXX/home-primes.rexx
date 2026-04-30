@@ -1,6 +1,7 @@
--- 8 Nov 2025
+-- 25 Apr 2026
 include Setting
-numeric digits 100
+numeric digits 200
+memo.cache=0
 
 say 'HOME PRIMES'
 say version
@@ -41,7 +42,5 @@ say
 call Timer
 return
 
--- FactorS
-include Sequence
--- Timer
-include Timer
+-- FactorS; Timer
+include Math

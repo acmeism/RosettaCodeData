@@ -1,0 +1,88 @@
+link hexcvt # for hexstring
+
+record testitem(ch,code,u8str)
+
+procedure main()
+    testdata := [
+        testitem("A",  16r0041, "\x41"            ),
+        testitem("ö",  16r00F6, "\xC3\xB6"        ),
+        testitem("Ж",  16r0416, "\xD0\x96"        ),
+        testitem("€",  16r20AC, "\xE2\x82\xAC"    ),
+        testitem("𝄞", 16r1D11E, "\xF0\x9D\x84\x9E")
+    ]
+    every item := !testdata do
+        if u8char(item.code) == item.ch == item.u8str &
+           u8ord(item.u8str) = item.code                then
+           write(u8char(item.code)," (U+",hexstring(u8ord(item.u8str),4),
+                 ") <-> ",hexordstr(u8char(item.code)),"  passed")
+        else
+           write(item.ch," (U+",hexstring(item.code,4),") failed")
+end
+
+procedure u8char(i)     # Codepoint to utf-8 encoding
+    local s
+    if not ((i := integer(i)) >= 0) then runerr(101,i)  # not an integer >= 0
+    if i < 16r80 then{              # 1 byte
+        s := char(i)
+    }else if i < 16r800 then{       # 2 byte
+        s :=   char(ior(2r11000000,ishift(i,-6)))
+        s ||:= char(ior(2r10000000,iand(i,2r111111)))
+    }else if i < 16r10000 then{     # 3 byte
+        if 16rD800 <= i <= 16rDFFF then runerr(205,i)   # surrogates are not codepoints
+        s :=   char(ior(2r11100000,ishift(i,-12)))
+        s ||:= char(ior(2r10000000,iand(ishift(i,-6),2r111111)))
+        s ||:= char(ior(2r10000000,iand(i,2r111111)))
+    }else if i < 16r110000 then{    # 4 byte
+        s :=   char(ior(2r11110000,ishift(i,-18)))
+        s ||:= char(ior(2r10000000,iand(ishift(i,-12),2r111111)))
+        s ||:= char(ior(2r10000000,iand(ishift(i,-6),2r111111)))
+        s ||:= char(ior(2r10000000,iand(i,2r111111)))
+    }else{  # beyond range
+        runerr(101,i)
+    }
+    return s
+end
+
+procedure u8ord(u8ch)   # utf-8 encoding to code point
+    local b1,b2,b3,b4,i
+
+    type(u8ch) == "string"  |  runerr(103,u8ch)
+    b1 := ord(u8ch[1])
+    case *u8ch of{
+        1:{ b1 < 16r80  |  fail
+            i := b1
+        }
+        2:{ 16rC1 < b1 < 16rE0  |  fail
+            b2 := ord(u8ch[2])
+            iand(b2,2r11000000) = 2r10000000  |  fail
+            i := ishift(iand(b1,2r11111),6)
+            i := ior(i,iand(b2,2r111111))
+        }
+        3:{ 16rDF < b1 < 16rF0  |  fail
+            b2 := ord(u8ch[2]) ; b3 := ord(u8ch[3])
+            iand(b2,2r11000000) = iand(b3,2r11000000) = 2r10000000  |  fail
+            i := ishift(iand(b1,2r1111),12)
+            i := ior(i,ishift(iand(b2,2r111111),6))
+            i := ior(i,iand(b3,2r111111))
+            16r0800 <= i < 16rD800  |  i > 16rDFFF  |  fail
+        }
+        4:{ 16rEF < b1 < 16rF5  |  fail
+            b2 := ord(u8ch[2]) ; b3 := ord(u8ch[3]) ; b4 := ord(u8ch[4])
+            iand(b2,2r11000000) = iand(b3,2r11000000) = iand(b4,2r11000000) =
+                2r10000000  |  fail
+            i := ishift(iand(b1,2r1111),18)
+            i := ior(i,ishift(iand(b2,2r111111),12))
+            i := ior(i,ishift(iand(b3,2r111111), 6))
+            i := ior(i,iand(b4,2r111111))
+            16r010000 <= i <= 16r10FFFF  |  fail
+        }
+        default: runerr(205,u8ch)
+    }
+    return i
+end
+
+procedure hexordstr(str)
+    s := ""
+    every s ||:= hexstring(ord(!str)) || " "
+    return s[1:-1]
+end

@@ -1,10 +1,10 @@
 MODULE Assertions;
 VAR
-	x: INTEGER;
+   x: INTEGER;
 PROCEDURE DoIt*;
 BEGIN
-	x := 41;
-	ASSERT(x = 42);
+   x := 41;
+   ASSERT(x = 42);
 END DoIt;
 END Assertions.
 

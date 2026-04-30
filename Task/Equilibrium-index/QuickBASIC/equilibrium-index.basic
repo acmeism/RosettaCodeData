@@ -1,0 +1,84 @@
+' Equilibrium index
+DECLARE SUB PrintArray (Nums() AS INTEGER, NL AS INTEGER)
+DECLARE SUB PrintIndicesOfTrue (Bools() AS INTEGER, NL AS INTEGER)
+DECLARE SUB GetIndices (Nums() AS INTEGER, Result() AS INTEGER)
+DIM I AS INTEGER
+DIM X1(0 TO 6) AS INTEGER, X1Result(0 TO 6) AS INTEGER
+FOR I = 0 TO 6
+   READ X1(I)
+NEXT I
+DATA -7,  1, 5,  2, -4,  3, 0
+CALL GetIndices(X1(), X1Result())
+DIM X2(0 TO 2) AS INTEGER, X2Result(0 TO 2) AS INTEGER
+FOR I = 0 TO 2
+   READ X2(I)
+NEXT I
+DATA  2,  4, 6
+CALL GetIndices(X2(), X2Result())
+DIM X3(0 TO 2)  AS INTEGER, X3Result(0 TO 2) AS INTEGER
+FOR I = 0 TO 2
+   READ X3(I)
+NEXT I
+DATA 2,  9, 2
+CALL GetIndices(X3(), X3Result())
+DIM X4(0 TO 6) AS INTEGER, X4Result(0 TO 6) AS INTEGER
+FOR I = 0 TO 6
+   READ X4(I)
+NEXT I
+DATA 1, -1, 1, -1,  1 ,-1, 1
+CALL GetIndices(X4(), X4Result())
+PRINT "Results:"
+PRINT
+PRINT "X1:";
+CALL PrintArray(X1(), 1)
+PRINT "Eqs:";
+CALL PrintIndicesOfTrue(X1Result(), 1)
+PRINT
+PRINT "X2:";
+CALL PrintArray(X2(), 1)
+PRINT "Eqs:";
+CALL PrintIndicesOfTrue(X2Result(), 1)
+PRINT
+PRINT "X3:";
+CALL PrintArray(X3(), 1)
+PRINT "Eqs:";
+CALL PrintIndicesOfTrue(X3Result(), 1)
+PRINT
+PRINT "X4:";
+CALL PrintArray(X4(), 1)
+PRINT "Eqs:";
+CALL PrintIndicesOfTrue(X4Result(), 1)
+END
+
+SUB GetIndices (Nums() AS INTEGER, Result() AS INTEGER)
+IF (LBOUND(Nums) <> LBOUND(Result)) OR (UBOUND(Nums) <> UBOUND(Result)) THEN
+   PRINT "Range of indices in both arrays should be the same"
+   STOP
+END IF
+DIM LeftSum AS INTEGER, RightSum AS INTEGER
+DIM I AS INTEGER
+LeftSum = 0
+RightSum = 0
+FOR I = LBOUND(Nums) TO UBOUND(Nums)
+  RightSum = RightSum + Nums(I)
+NEXT I
+FOR I = LBOUND(Nums) TO UBOUND(Nums)
+  RightSum = RightSum - Nums(I)
+  Result(I) = (LeftSum = RightSum)
+  LeftSum = LeftSum + Nums(I)
+NEXT I
+END SUB
+
+SUB PrintArray (Nums() AS INTEGER, NL AS INTEGER)
+FOR I = LBOUND(Nums) TO UBOUND(Nums)
+  PRINT Nums(I);
+NEXT I
+IF NL THEN PRINT
+END SUB
+
+SUB PrintIndicesOfTrue (Bools() AS INTEGER, NL AS INTEGER)
+FOR I = LBOUND(Bools) TO UBOUND(Bools)
+  IF Bools(I) THEN PRINT I;
+NEXT I
+IF NL THEN PRINT
+END SUB

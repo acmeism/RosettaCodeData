@@ -1,0 +1,1 @@
+mshta vbscript:Execute("")

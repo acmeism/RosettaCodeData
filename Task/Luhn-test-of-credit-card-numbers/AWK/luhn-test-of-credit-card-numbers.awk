@@ -7,7 +7,7 @@ BEGIN {
     A[5] = "01234567897";
     A[6] = "01234567890";
     A[7] = "00000000000";
-    for (k in A) print "isLuhn("A[k]"): ",isLuhn(A[k]);	
+    for (k in A) print "isLuhn("A[k]"): ",isLuhn(A[k]);
 }
 
 function isLuhn(cardno) {
@@ -15,10 +15,10 @@ function isLuhn(cardno) {
     m = "0246813579";
     n = length(cardno);
     for (k = n; 0 < k; k -= 2) {
-	s += substr(cardno, k, 1);
+   s += substr(cardno, k, 1);
     }
     for (k = n-1; 0 < k; k -= 2) {
-	s += substr(m, substr(cardno, k, 1)+1, 1);
+   s += substr(m, substr(cardno, k, 1)+1, 1);
     }
-    return ((s%10)==0);	
+    return ((s%10)==0);
 }

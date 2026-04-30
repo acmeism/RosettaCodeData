@@ -1,0 +1,62 @@
+-- Set of real numbers, translation of the Go and Phix samples
+
+local function namedFunction( fn, name ) return { ["name"] = name, ["fn"] = fn } end
+
+local function Union( a, b ) return namedFunction( function( x ) return a.fn( x ) or b.fn( x ) end
+                                                 , a.name .. " ∪ " .. b.name
+                                                 )
+end
+local function Inter( a, b ) return namedFunction( function( x ) return a.fn( x ) and b.fn( x ) end
+                                                 , a.name .. " ∩ " .. b.name
+                                                 )
+end
+local function Diff( a, b ) return namedFunction( function( x ) return a.fn( x ) and not b.fn( x ) end
+                                                , a.name .. " - " .. b.name
+                                                )
+end
+local function open( a, b )
+    return namedFunction( function( x ) return a < x and x < b end, "("..a..","..b..")" )
+end
+local function closed( a, b )
+    return namedFunction( function( x ) return a <= x and x <= b end, "["..a..","..b.."]" )
+end
+local function opCl( a, b )
+    return namedFunction( function( x ) return a < x and x < b end, "("..a..","..b.."]" )
+end
+local function clOp( a, b )
+    return namedFunction( function( x ) return a <= x and x < b end, "["..a..","..b..")" )
+end
+
+do  -- test cases
+    local s = {}
+    s[ 1 ] = Union( opCl( 0, 1 ), clOp(   0, 2 ) )  -- (0,1] ∪ [0,2)
+    s[ 2 ] = Inter( clOp( 0, 2 ), opCl(   1, 2 ) )  -- [0,2) ∩ (1,2]
+    s[ 3 ] = Diff(  clOp( 0, 3 ), open(   0, 1 ) )  -- [0,3) − (0,1)
+    s[ 4 ] = Diff(  clOp( 0, 3 ), closed( 0, 1 ) )  -- [0,3) − [0,1]
+
+    for i = 1, # s do
+        for x = 0, 2 do
+            print( string.format( "%.0f ∈ %s: %s", x, s[ i ].name, ( s[ i ].fn( x ) and "true" or "false" ) ) )
+        end
+        print()
+    end
+
+    -- as with the Go and Phix samples, this sample can't check for empty sets
+    -- however using the same technique as the Phix sample, we can calculate
+    -- the approximate length of the "optional work" set, as in the Phix sample
+
+    local aspxx = namedFunction( function( x ) return math.abs( math.sin( math.pi * x * x ) ) > 0.5 end
+                               , "|abs sin πx²| > 0.5"
+                               )
+    local aspx  = namedFunction( function( x ) return math.abs( math.sin( math.pi * x     ) ) > 0.5 end
+                               , "|abs sin πx| > 0.5"
+                               )
+
+    local C = Diff( Inter( open( 0, 10 ), aspxx ), Inter( open( 0, 10 ), aspx ) )
+    local x, step, count = 0, 0.00001, 0
+    while x <= 10 do
+        if C.fn( x ) then count += 1 end
+        x += step
+    end
+    print( $"Approximate length of { C.name }: { count * step }" )
+end

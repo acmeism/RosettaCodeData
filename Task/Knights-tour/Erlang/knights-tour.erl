@@ -3,12 +3,12 @@
 -export( [display/1, solve/1, task/0] ).
 
 display( Moves ) ->
-	%% The knigh walks the moves {Position, Step_nr} order.
-	%% Top left corner is {$a, 8}, Bottom right is {$h, 1}.
-	io:fwrite( "Moves:" ),
-	lists:foldl( fun display_moves/2, erlang:length(Moves), lists:keysort(2, Moves) ),
-	io:nl(),
-	[display_row(Y, Moves) || Y <- lists:seq(8, 1, -1)].
+  %% The knigh walks the moves {Position, Step_nr} order.
+  %% Top left corner is {$a, 8}, Bottom right is {$h, 1}.
+  io:fwrite( "Moves:" ),
+  lists:foldl( fun display_moves/2, erlang:length(Moves), lists:keysort(2, Moves) ),
+  io:nl(),
+  [display_row(Y, Moves) || Y <- lists:seq(8, 1, -1)].
 
 solve( First_square ) ->
     try
@@ -20,9 +20,9 @@ solve( First_square ) ->
     end.
 
 task() ->
-	io:fwrite( "Starting {a, 1}~n" ),
-	Moves = solve( {$a, 1} ),
-	display( Moves ).
+  io:fwrite( "Starting {a, 1}~n" ),
+  Moves = solve( {$a, 1} ),
+  display( Moves ).
 
 
 
@@ -37,33 +37,33 @@ bt_reject( true, _N, _Move, _Moves ) -> backtrack;
 bt_reject( false, N, Move, Moves ) -> bt_accept( is_all_knights(Moves), N, Move, Moves ).
 
 display_moves( {{X, Y}, 1}, Max ) ->
-	io:fwrite(" ~p. N~c~p", [1, X, Y]),
-	Max;
+  io:fwrite(" ~p. N~c~p", [1, X, Y]),
+  Max;
 display_moves( {{X, Y}, Max}, Max ) ->
-	io:fwrite(" N~c~p~n", [X, Y]),
-	Max;
+  io:fwrite(" N~c~p~n", [X, Y]),
+  Max;
 display_moves( {{X, Y}, Step_nr}, Max ) when Step_nr rem 8 =:= 0 ->
-	io:fwrite(" N~c~p~n~p. N~c~p", [X, Y, Step_nr, X, Y]),
-	Max;
+  io:fwrite(" N~c~p~n~p. N~c~p", [X, Y, Step_nr, X, Y]),
+  Max;
 display_moves( {{X, Y}, Step_nr}, Max ) ->
-	io:fwrite(" N~c~p ~p. N~c~p", [X, Y, Step_nr, X, Y]),
-	Max.
+  io:fwrite(" N~c~p ~p. N~c~p", [X, Y, Step_nr, X, Y]),
+  Max.
 
 display_row( Row, Moves ) ->
-	[io:fwrite(" ~2b", [proplists:get_value({X, Row}, Moves)]) || X <- [$a, $b, $c, $d, $e, $f, $g, $h]],
-	io:nl().
+  [io:fwrite(" ~2b", [proplists:get_value({X, Row}, Moves)]) || X <- [$a, $b, $c, $d, $e, $f, $g, $h]],
+  io:nl().
 
 is_all_knights( Moves ) when erlang:length(Moves) =:= 64 -> true;
 is_all_knights( _Moves ) -> false.
 
 is_asymetric( Start_column, Start_row, Stop_column, Stop_row ) ->
-	erlang:abs( Start_column - Stop_column ) =/= erlang:abs( Start_row - Stop_row ).
+  erlang:abs( Start_column - Stop_column ) =/= erlang:abs( Start_row - Stop_row ).
 
 is_not_allowed_knight_move( Move, Moves ) ->
-	no_such_move =/= proplists:get_value( Move, Moves, no_such_move ).
+  no_such_move =/= proplists:get_value( Move, Moves, no_such_move ).
 
 next_moves( {Column, Row} ) ->
-	[{X, Y} || X <- next_moves_column(Column), Y <- next_moves_row(Row), is_asymetric(Column, Row, X, Y)].
+  [{X, Y} || X <- next_moves_column(Column), Y <- next_moves_row(Row), is_asymetric(Column, Row, X, Y)].
 
 next_moves_column( $a ) -> [$b, $c];
 next_moves_column( $b ) -> [$a, $c, $d];

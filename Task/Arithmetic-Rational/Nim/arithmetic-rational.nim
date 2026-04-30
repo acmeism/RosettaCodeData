@@ -88,7 +88,7 @@ proc abs*(x: Rational): Rational =
   result.num = abs x.num
   result.den = abs x.den
 
-for candidate in 2'i64 .. <((2'i64)^19):
+for candidate in 2'i64 ..< ((2'i64)^19):
   var sum: Rational = (1'i64, candidate)
   for factor in 2'i64 .. pow(candidate.float, 0.5).int64:
     if candidate mod factor == 0:

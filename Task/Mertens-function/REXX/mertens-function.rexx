@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 3 Mar 2026
 include Setting
 arg xx
 if xx = '' then
@@ -8,14 +8,16 @@ say 'MERTENS FUNCTION'
 say version
 say
 call Tasks1 xx
+call Timer 'R'
 call Tasks2 xx
+call Timer 'R'
 call Tasks3 xx
+call Timer 'R'
 exit
 
 Tasks1:
-procedure expose squa.
+procedure expose squa. memo.
 arg xx
-call Time('r')
 say 'Tasks using Sieve...'
 call Squarefrees 2*xx
 if xx < 100 then
@@ -46,13 +48,11 @@ end
 say
 say 'M1 thru M'xx 'equals zero' a 'times'
 say 'M1 thru M'xx 'crosses zero' b 'times'
-say Format(Time('e'),,3) 'seconds'; say
 return
 
 Tasks2:
-procedure expose squa.
+procedure expose squa. memo.
 arg xx
-call Time('r')
 say 'Tasks using Moebius function...'
 if xx < 100 then
    say 'M1 thru M'xx
@@ -75,13 +75,11 @@ end
 say
 say 'M1 thru M'xx 'equals zero' a 'times'
 say 'M1 thru M'xx 'crosses zero' b 'times'
-say Format(Time('e'),,3) 'seconds'; say
 return
 
 Tasks3:
-procedure expose squa.
+procedure expose squa. memo.
 arg xx
-call Time('r')
 say 'Tasks using Squarefree function...'
 if xx < 100 then
    say 'M1 thru M'xx
@@ -109,7 +107,7 @@ end
 say
 say 'M1 thru M'xx 'equals zero' a 'times'
 say 'M1 thru M'xx 'crosses zero' b 'times'
-say Format(Time('e'),,3) 'seconds'; say
 return
 
+-- Squarefrees; Factors; Even; Odd; Moebius; Timer
 include Math

@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 21 Feb 2026
 include Setting
 
 say 'ARRAYS BASIC USAGE'
@@ -15,7 +15,7 @@ say 'Mimic indexing...'
 say 'Square of' 3 'is' a(3)
 say 'Square of' 7 'is' a(7)
 say
-call DumpVariables
+call Showvars
 exit
 
 A:
@@ -23,4 +23,5 @@ procedure expose a.
 arg xx
 return a.xx
 
+-- Showvars
 include Math

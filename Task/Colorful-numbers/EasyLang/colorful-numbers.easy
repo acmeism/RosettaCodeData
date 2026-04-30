@@ -1,6 +1,5 @@
 func colorful n .
    len digcnt[] 10
-   arrbase digcnt[] 0
    len digits[] 8
    m = n
    while m > 0
@@ -28,7 +27,6 @@ func colorful n .
 .
 len cnt[] 8
 len used[] 10
-arrbase used[] 0
 largest = 0
 proc cnt_colorful taken n digits .
    if taken = 0
@@ -57,9 +55,7 @@ proc cnt_colorful taken n digits .
 .
 print "Colorful numbers less than 100:"
 for n = 0 to 99
-   if colorful n = 1
-      write n & " "
-   .
+   if colorful n = 1 : write n & " "
 .
 cnt_colorful 0 0 0
 print "\n\nLargest colorful number:" & largest

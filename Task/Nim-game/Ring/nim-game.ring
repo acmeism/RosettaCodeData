@@ -45,52 +45,52 @@ app = new qApp
 {
       win = new qWidget() {
             app.StyleFusionBlack()
-	    setWindowTitle('CalmoSoft Nim Game')
-	    setWinIcon(self,"images/nim.jpg")
-	    setWindowFlags(Qt_SplashScreen | Qt_CustomizeWindowHint)
-	    reSize(620,460)
+       setWindowTitle('CalmoSoft Nim Game')
+       setWinIcon(self,"images/nim.jpg")
+       setWindowFlags(Qt_SplashScreen | Qt_CustomizeWindowHint)
+       reSize(620,460)
 
             for Col = 1 to limit1
-		Button1[Col] = new QPushButton(win) {
+      Button1[Col] = new QPushButton(win) {
                           y = 230+(Col-1)*height
                           setgeometry(y+10,70,width,height)
                           setSizePolicy(1,1)
                           seticon(new qicon(new qpixmap(C_NIM)))
                           setIconSize(new qSize(60,60))
-                          }				
-	    next
+                          }
+       next
 
             for Col = 1 to limit2
-		Button2[Col] = new QPushButton(win) {
+      Button2[Col] = new QPushButton(win) {
                           y = 170+(Col-1)*height
                           setgeometry(y+10,150,width,height)
                           setSizePolicy(1,1)
                           seticon(new qicon(new qpixmap(C_NIM)))
                           setIconSize(new qSize(60,60))
-                          }				
-	    next
+                          }
+       next
 
             for Col = 1 to limit3
-		Button3[Col] = new QPushButton(win) {
+      Button3[Col] = new QPushButton(win) {
                           y = 110+(Col-1)*height
                           setgeometry(y+10,230,width,height)
                           setSizePolicy(1,1)
                           seticon(new qicon(new qpixmap(C_NIM)))
                           setIconSize(new qSize(60,60))
-                          }				
-	    next
+                          }
+       next
 
             for Col = 1 to limit4
-		Button4[Col] = new QPushButton(win) {
+      Button4[Col] = new QPushButton(win) {
                           y = 50+(Col-1)*height
                           setgeometry(y+10,310,width,height)
                           setSizePolicy(1,1)
                           seticon(new qicon(new qpixmap(C_NIM)))
                           setIconSize(new qSize(60,60))
-                          }				
-	    next
+                          }
+       next
 
-	    Row1 = new QPushButton(win) {
+       Row1 = new QPushButton(win) {
                    setgeometry(500,70,width,height)
                    setStyleSheet("color:Black;background-color:Orange")
                    setSizePolicy(1,1)
@@ -98,7 +98,7 @@ app = new qApp
                    settext("Row1") }
 
 
-	    Row2 = new QPushButton(win) {
+       Row2 = new QPushButton(win) {
                    setgeometry(500,150,width,height)
                    setStyleSheet("color:Black;background-color:Orange")
                    setSizePolicy(1,1)
@@ -106,7 +106,7 @@ app = new qApp
                    settext("Row2") }
 
 
-	    Row3 = new QPushButton(win) {
+       Row3 = new QPushButton(win) {
                    setgeometry(500,230,width,height)
                    setStyleSheet("color:Black;background-color:Orange")
                    setSizePolicy(1,1)
@@ -114,33 +114,33 @@ app = new qApp
                    settext("Row3") }
 
 
-	    Row4 = new QPushButton(win) {
+       Row4 = new QPushButton(win) {
                    setgeometry(500,310,width,height)
                    setStyleSheet("color:Black;background-color:Orange")
                    setSizePolicy(1,1)
                    setclickevent("deleteRow4()")
                    settext("Row4") }
 
-	    labelYourScore = new QLabel(win) { setgeometry(60,20,150,30)
-		             setFont(new qFont("Verdana",C_FONTSIZE,50,0))
+       labelYourScore = new QLabel(win) { setgeometry(60,20,150,30)
+                   setFont(new qFont("Verdana",C_FONTSIZE,50,0))
                              settext("Your score: 0") }
 
-	    labelComputerScore = new QLabel(win) { setgeometry(350,20,150,30)
-		                setFont(new qFont("Verdana",C_FONTSIZE,50,0))
+       labelComputerScore = new QLabel(win) { setgeometry(350,20,150,30)
+                      setFont(new qFont("Verdana",C_FONTSIZE,50,0))
                                 settext("PC score: 0") }
 
-	    btnNewGame = new QPushButton(win) { setgeometry(60,400,80,30)
-			     setFont(new qFont("Verdana",C_FONTSIZE,50,0))
+       btnNewGame = new QPushButton(win) { setgeometry(60,400,80,30)
+              setFont(new qFont("Verdana",C_FONTSIZE,50,0))
                              settext("New")
                              setclickevent("newGame()") }
 
-	    btnExit = new QPushButton(win) { setgeometry(400,400,80,30)
-			  setFont(new qFont("Verdana",C_FONTSIZE,50,0))
+       btnExit = new QPushButton(win) { setgeometry(400,400,80,30)
+           setFont(new qFont("Verdana",C_FONTSIZE,50,0))
                           settext("Exit")
                           setclickevent("pQuit()") }
 
-	    btnPcMove = new QPushButton(win) { setgeometry(200,400,140,30)
-		        setFont(new qFont("Verdana",C_FONTSIZE,50,0))
+       btnPcMove = new QPushButton(win) { setgeometry(200,400,140,30)
+              setFont(new qFont("Verdana",C_FONTSIZE,50,0))
                         settext("PC move")
                         setclickevent("pcMove()") }
 
@@ -319,53 +319,53 @@ func newGame()
      pcMove = 0
 
      for Col = 1 to limit1
-	 Button1[Col] = new QPushButton(win) {
+    Button1[Col] = new QPushButton(win) {
                         y = 230+(Col-1)*height
                         setgeometry(y+10,70,width,height)
                         setSizePolicy(1,1)
                         seticon(new qicon(new qpixmap(C_NIM)))
                         setIconSize(new qSize(60,60))
                         show()
-                        }				
-	next
+                        }
+   next
 
         for Col = 1 to limit2
-	    Button2[Col] = new QPushButton(win) {
+       Button2[Col] = new QPushButton(win) {
                            y = 170+(Col-1)*height
                            setgeometry(y+10,150,width,height)
                            setSizePolicy(1,1)
                            seticon(new qicon(new qpixmap(C_NIM)))
                            setIconSize(new qSize(60,60))
                            show()
-                           }				
-	next
+                           }
+   next
 
         for Col = 1 to limit3
-	    Button3[Col] = new QPushButton(win) {
+       Button3[Col] = new QPushButton(win) {
                            y = 110+(Col-1)*height
                            setgeometry(y+10,230,width,height)
                            setSizePolicy(1,1)
                            seticon(new qicon(new qpixmap(C_NIM)))
                            setIconSize(new qSize(60,60))
                            show()
-                           }				
-	next
+                           }
+   next
 
         for Col = 1 to limit4
-	    Button4[Col] = new QPushButton(win) {
+       Button4[Col] = new QPushButton(win) {
                            y = 50+(Col-1)*height
                            setgeometry(y+10,310,width,height)
                            setSizePolicy(1,1)
                            seticon(new qicon(new qpixmap(C_NIM)))
                            setIconSize(new qSize(60,60))
                            show()
-                           }				
-	next
+                           }
+   next
 
-func msgBox(cText)	
+func msgBox(cText)
      mb = new qMessageBox(win) {
-	  setWindowTitle('CalmoSoft Nim Game')
-	  setText(cText)
+     setWindowTitle('CalmoSoft Nim Game')
+     setText(cText)
           setstandardbuttons(QMessageBox_OK)
           result = exec()
      }

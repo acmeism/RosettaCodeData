@@ -1,0 +1,238 @@
+Dim Shared As String * 23 gmooh(1 To 23) = { _
+".........00000.........", _
+"......00003130000......", _
+"....000321322221000....", _
+"...00231222432132200...", _
+"..0041433223233211100..", _
+"..0232231612142618530..", _
+".003152122326114121200.", _
+".031252235216111132210.", _
+".022211246332311115210.", _
+"00113232262121317213200", _
+"03152118212313211411110", _
+"03231234121132221411410", _
+"03513213411311414112320", _
+"00427534125412213211400", _
+".013322444412122123210.", _
+".015132331312411123120.", _
+".003333612214233913300.", _
+"..0219126511415312570..", _
+"..0021321524341325100..", _
+"...00211415413523200...", _
+"....000122111322000....", _
+"......00001120000......", _
+".........00000........." }
+
+Dim Shared As Integer ancho = 23, alto = 23
+
+Type Pyx
+    y As Integer
+    x As Integer
+End Type
+
+Type Route
+    cost  As Integer
+    fromy As Integer
+    fromx As Integer
+End Type
+
+Dim Shared As Route routes(1 To 23, 1 To 23)
+
+Dim Shared As Pyx d(1 To 8) = { _
+(-1,-1), (0,-1), (1,-1), _
+(-1,0),            (1,0), _
+(-1,1),  (0,1),   (1,1) }
+
+' Returns the cell digit (0..9) or -1 if it is not navigable ('.' or other)
+Function cellDigit(y As Integer, x As Integer) As Integer
+    Dim As String ch = Mid(gmooh(y), x, 1)
+    If ch = "" Then Return -1
+
+    Dim As Integer a = Asc(ch)
+    If a >= Asc("0") And a <= Asc("9") Then Return a - Asc("0")
+    Return -1
+End Function
+
+Sub search(startY As Integer, startX As Integer)
+    Dim As Integer QSIZE = alto * ancho
+    Dim As Route queue(0 To QSIZE-1)
+    Dim As Integer head = 0, tail = 0
+
+    ' Clear routes: -1 = not visited
+    For i As Integer = 1 To alto
+        For j As Integer = 1 To ancho
+            routes(i,j).cost  = -1
+            routes(i,j).fromy = 0
+            routes(i,j).fromx = 0
+        Next
+    Next
+
+    ' Initialize source
+    routes(startY,startX).cost  = 0
+    routes(startY,startX).fromy = startY
+    routes(startY,startX).fromx = startX
+
+    queue(tail).cost  = 0
+    queue(tail).fromy = startY
+    queue(tail).fromx = startX
+    tail = (tail + 1) Mod QSIZE
+
+    ' BFS
+    While head <> tail
+        Dim As Integer cost = queue(head).cost
+        Dim As Integer y    = queue(head).fromy
+        Dim As Integer x    = queue(head).fromx
+        head = (head + 1) Mod QSIZE
+
+        Dim As Integer n = cellDigit(y, x)
+        If n < 0 Then Continue While  ' no caminable
+
+        ' "Jump" type movement of size n in 8 directions
+        For di As Integer = 1 To 8
+            Dim As Integer dx = d(di).x
+            Dim As Integer dy = d(di).y
+            Dim As Integer rx = x + n * dx
+            Dim As Integer ry = y + n * dy
+
+            If rx >= 1 And rx <= ancho And ry >= 1 And ry <= alto Then
+                Dim As Integer destDigit = cellDigit(ry, rx)
+                If destDigit >= 0 Then
+                    ' If not visited or there is a cost improvement
+                    If routes(ry,rx).cost = -1 Or routes(ry,rx).cost > cost + 1 Then
+                        routes(ry,rx).cost  = cost + 1
+                        routes(ry,rx).fromy = y
+                        routes(ry,rx).fromx = x
+
+                        ' Enqueue only if the destination can continue propagating (digit > 0)
+                        If destDigit > 0 Then
+                            Dim As Integer nextTail = (tail + 1) Mod QSIZE
+                            If nextTail = head Then
+                                Print "Queue overflow! BFS aborted."
+                                Exit Sub
+                            End If
+                            queue(tail).cost  = cost + 1
+                            queue(tail).fromy = ry
+                            queue(tail).fromx = rx
+                            tail = nextTail
+                        End If
+                    End If
+                End If
+            End If
+        Next
+    Wend
+End Sub
+
+Function getRoute(y As Integer, x As Integer) As String
+    If routes(y,x).cost = -1 Then Return " (unreachable)"
+    Dim As String res = ""
+    Dim As Integer cy = y, cx = x
+    Do
+        res = " (" & (cy-1) & "," & (cx-1) & ")" & res
+        Dim As Integer c = routes(cy,cx).cost
+        If c = 0 Then Exit Do
+
+        Dim As Integer py = routes(cy,cx).fromy
+        Dim As Integer px = routes(cy,cx).fromx
+        cy = py : cx = px
+    Loop
+    Return res
+End Function
+
+Sub showShortest()
+    Dim As Integer shortest = 9999, cnt = 0
+    Dim As String res(1 To 200)
+
+    For y As Integer = 1 To alto
+        For x As Integer = 1 To ancho
+            If cellDigit(y,x) = 0 Then
+                Dim As Integer c = routes(y,x).cost
+                If c >= 0 And c <= shortest Then
+                    If c < shortest Then
+                        cnt = 0
+                        shortest = c
+                    End If
+                    If cnt < Ubound(res) Then
+                        cnt += 1
+                        res(cnt) = getRoute(y,x)
+                    End If
+                End If
+            End If
+        Next
+    Next
+
+    If cnt = 0 Then
+        Print "There are no escape routes to '0' cells."
+    Else
+        Print "There are " & cnt & " shortest routes of " & shortest & " days to safety:"
+        For i As Integer = 1 To cnt
+            Print "    " & res(i)
+        Next
+    End If
+    Print
+End Sub
+
+Sub showUnreachable()
+    Print !"\nThe following cells are unreachable:"
+    Dim As Integer cnt = 0
+    For y As Integer = 1 To alto
+        For x As Integer = 1 To ancho
+            If cellDigit(y,x) >= 0 And routes(y,x).cost = -1 Then
+                Print "    (" & (y-1) & "," & (x-1) & ") ";
+                cnt += 1
+                If cnt Mod 5 = 0 Then Print
+            End If
+        Next
+    Next
+    If cnt = 0 Then Print "    (none)"
+    Print
+End Sub
+
+Sub showLongest()
+    Dim As Integer longest = 0, cnt = 0
+    Dim As String res(1 To 200)
+
+    For y As Integer = 1 To alto
+        For x As Integer = 1 To ancho
+            If cellDigit(y,x) >= 0 Then
+                Dim As Integer c = routes(y,x).cost
+                If c >= 0 Then
+                    If c >= longest Then
+                        If c > longest Then
+                            longest = c
+                            cnt = 0
+                        End If
+                        If cnt < Ubound(res) Then
+                            cnt += 1
+                            res(cnt) = getRoute(y,x)
+                        End If
+                    End If
+                End If
+            End If
+        Next
+    Next
+
+    Print !"\nLongest reinforcement from HQ is " & longest & " for:"
+    For i As Integer = 1 To cnt
+        Print "    " & res(i)
+    Next
+    If cnt = 0 Then Print "    (none)"
+    Print
+End Sub
+
+' Main program
+search(12,12)
+showShortest()
+
+Print !"\nThe shortest route from (21,11) to (1,11):"
+search(22,12)
+Print "    " & getRoute(2,12)
+
+Print !"\nThe shortest route from (1,11) to (21,11):"
+search(2,12)
+Print "    " & getRoute(22,12)
+
+search(12,12)
+showUnreachable()
+showLongest()
+
+Sleep

@@ -1,6 +1,6 @@
 import os
 fn main() {
-    lines := os.read_lines('data.txt')?
+    lines := os.read_lines('data.txt')!
     println('Those earthquakes with a magnitude > 6.0 are:\n')
     for line in lines {
         fields := line.fields()

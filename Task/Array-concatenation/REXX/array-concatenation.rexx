@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 21 Feb 2026
 include Setting
 
 say 'ARRAY CONCATENATION'
@@ -17,7 +17,8 @@ do i = 1 to a.0
    say i a.i
 end
 say
-call DumpVariables
+call Showvars
 exit
 
+-- Showvars
 include Math

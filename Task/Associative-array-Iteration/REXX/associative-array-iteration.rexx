@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 21 Feb 2026
 include Setting
 
 say 'ASSOCIATIVE ARRAY: ITERATION'
@@ -47,7 +47,7 @@ do w = 1 to arra.0
 end
 say
 -- Show all vars
-call DumpVariables
+call Showvars
 exit
 
 SetStateCap:
@@ -61,4 +61,5 @@ list=list code
 w=w+1; arra.w=code
 return
 
+-- Showvars
 include Math

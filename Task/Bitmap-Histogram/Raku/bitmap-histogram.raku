@@ -7,8 +7,8 @@ class Bitmap {
 role PBM {
     has @.BM;
     method P4 returns Blob {
-	"P4\n{self.width} {self.height}\n".encode('ascii')
-	~ Blob.new: self.BM
+  "P4\n{self.width} {self.height}\n".encode('ascii')
+  ~ Blob.new: self.BM
     }
 }
 

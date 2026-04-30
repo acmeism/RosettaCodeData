@@ -5,11 +5,11 @@ sub hashJoin {
     my %h;
     # hash phase
     foreach my $s (@$table1) {
-	push @{ $h{$s->[$index1]} }, $s;
+  push @{ $h{$s->[$index1]} }, $s;
     }
     # join phase
     map { my $r = $_;
-	  map [$_, $r], @{ $h{$r->[$index2]} }
+    map [$_, $r], @{ $h{$r->[$index2]} }
     } @$table2;
 }
 

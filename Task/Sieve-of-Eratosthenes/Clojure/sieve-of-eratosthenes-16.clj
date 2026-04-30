@@ -8,7 +8,8 @@
               (let [mn (getMin-pq cmpsts)]
                 (if (and mn (>= c (.k mn))) ;; never greater than
                   (recur (+ c 2) q bsprms
-                         (loop [adv (.v mn), cmps cmpsts] ;; advance repeat composites for value
+                         (loop [adv (.v mn), cmps cmpsts]
+                           ;; advance repeat composites for value
                            (let [ncmps (replaceMinAs-pq cmps (+ c adv) adv),
                                  nmn (getMin-pq ncmps)]
                              (if (and nmn (>= c (.k nmn)))

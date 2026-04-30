@@ -17,7 +17,7 @@ def knapsack($i; $value; $weight; $volume):
          then .bestValue = $value
          | reduce range(0; $n) as $j (.; .best[$j] = .count[$j])
          else .
-	 end
+    end
     else (($weight / items[$i].weight)|floor) as $m1
     | (($volume / items[$i].volume)|floor) as $m2
     | .count[$i] = ([$m1, $m2] | min)
@@ -69,7 +69,7 @@ def solve($maxWeight; $maxVolume):
         | .sumNumber  += .number
         | .sumWeight  +=  .weight
         | .sumVolume  +=  .volume
-	| .emit += [ f(.name; .number; .value; .weight; .volume) ]
+   | .emit += [ f(.name; .number; .value; .weight; .volume) ]
         else .
         end)
     | .emit[],

@@ -1,0 +1,1 @@
+-join ($s[$s.Length..0])

@@ -1,5 +1,5 @@
 import numba
-import numba.cuda as cuda
+# import numba.cuda as cuda  # import numba.cuda for GPU calculations
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,7 +8,7 @@ import decimal as dc  # decimal floating point arithmetic with arbitrary precisi
 dc.getcontext().prec = 80  # set precision to 80 digits (about 256 bits)
 
 d, h = 100, 2000  # pixel density (= image width) and image height
-n, r = 80000, 100000.0  # number of iterations and escape radius (r > 2)
+n, r = 100000, 10000  # number of iterations and escape radius (r > 2)
 
 a = dc.Decimal("-1.256827152259138864846434197797294538253477389787308085590211144291")
 b = dc.Decimal(".37933802890364143684096784819544060002129071484943239316486643285025")
@@ -24,19 +24,19 @@ for i in range(n + 2):
         print("The reference sequence diverges within %s iterations." % i)
         break
 
-x = np.linspace(0, 2, num=d+1, dtype=np.float64)
-y = np.linspace(0, 2 * h / d, num=h+1, dtype=np.float64)
+x = np.linspace(0, 2, num=d+1)
+y = np.linspace(0, 2 * h / d, num=h+1)
 
 A, B = np.meshgrid(x * np.pi, y * np.pi)
 C = (- 8.0) * np.exp((A + B * 1j) * 1j)
 
 @numba.njit(parallel=True)
 def iteration_numba(S, C):
-    I = np.zeros(C.shape, dtype=np.intp)
+    I = np.zeros(C.shape, dtype=np.int64)
     E, Z, dZ = np.zeros_like(C), np.zeros_like(C), np.zeros_like(C)
 
     def iteration(S, C):
-        I = np.zeros(C.shape, dtype=np.intp)
+        I = np.zeros(C.shape, dtype=np.int64)
         E, Z, dZ = np.zeros_like(C), np.zeros_like(C), np.zeros_like(C)
 
         def abs2(z):
@@ -70,7 +70,7 @@ def iteration_numba(S, C):
     return I, E, Z, dZ
 
 def iteration_numba_cuda(S, C):
-    I = np.zeros(C.shape, dtype=np.intp)
+    I = np.zeros(C.shape, dtype=np.int64)
     E, Z, dZ = np.zeros_like(C), np.zeros_like(C), np.zeros_like(C)
 
     @cuda.jit()
@@ -106,7 +106,7 @@ def iteration_numba_cuda(S, C):
     return I.copy_to_host(), E.copy_to_host(), Z.copy_to_host(), dZ.copy_to_host()
 
 I, E, Z, dZ = iteration_numba(S, C)  # use iteration_numba or iteration_numba_cuda
-D = np.zeros(C.shape, dtype=np.float64)
+D = np.zeros(C.shape)
 
 N = abs(Z) > 2  # exterior distance estimation
 D[N] = np.log(abs(Z[N])) * abs(Z[N]) / abs(dZ[N])

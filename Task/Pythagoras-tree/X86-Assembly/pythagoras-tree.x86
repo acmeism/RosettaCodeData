@@ -1,0 +1,144 @@
+  1                        ;ptree.asm      24-Aug-2025
+  2                        ;translation of xpl0
+  3                        ;Assemble with: tasm; tlink /t
+  4
+  5     0000                       .model  tiny
+  6     0000                       .code
+  7                                .486
+  8                                org     100h
+  9                        ;ax=0, bx=0, cx=00FFh, dx=cs, si=0100h, di=-2, bp=09xx, sp=-2
+ 10           =0140        ScrW    equ     320             ;screen width and height
+ 11           =00C8        ScrH    equ     200
+ 12     0100  B0 13        start:  mov     al, 13h         ;SetVid($13)
+ 13     0102  CD 10                int     10h
+ 14
+ 15     0104  68 A000              push    0A000h          ;es:= video memory segment
+ 16     0107  07                   pop     es
+ 17
+ 18                        ;DrawTree(9*ScrW/20, 3*ScrH/4, 11*ScrW/20, 3*ScrH/4, 0)
+ 19     0108  68 9690              push     9*ScrW/20 + (3*ScrH/4)*100h
+ 20     010B  68 96B0              push    11*ScrW/20 + (3*ScrH/4)*100h
+ 21     010E  6A 2A                push    0 + 2Ah         ;Depth:= 0 + 2Ah (Color)
+ 22     0110  E8 000A              call    DrawTree
+ 23
+ 24     0113  33 C0                xor     ax, ax          ;wait for keystroke
+ 25     0115  CD 16                int     16h
+ 26     0117  B8 0003              mov     ax, 0003h       ;restore text mode
+ 27     011A  CD 10                int     10h
+ 28     011C  C3                   ret
+ 29
+ 30                        ;------------------------------------------------------------
+ 31                        ;DrawTree(X1,Y1, X2,Y2, Depth)
+ 32                        ;
+ 33                        ;Offsets relative to bp:
+ 34           =0008        P1      equ     8       ;equ X1,Y1
+ 35           =0006        P2      equ     6       ;equ X2,Y2
+ 36           =0004        Depth   equ     4
+ 37                        ; ret   equ     2
+ 38                        ; bp    equ     0
+ 39           =-0002       P3      equ     -2      ;equ X3,Y3
+ 40           =-0004       P4      equ     -4      ;equ X4,Y4
+ 41           =-0006       P5      equ     -6      ;equ X5,Y5
+ 42
+ 43     011D               DrawTree:
+ 44     011D  C8 0006 00           enter   3*2, 0          ;set up stack frame for P3, P4, P5
+ 45
+ 46     0121  83 7E 0              cmp     word ptr [bp+Depth], 7 + 2Ah
+ 47     0125  7D 62                jge     dt90            ;limit depth of recursion
+ 48
+ 49     0127  8B 5E 0              mov     bx, [bp+P1]     ;Move(X1, Y1)
+ 50     012A  8B 46 06             mov     ax, [bp+P2]
+ 51
+ 52     012D  8A D0                mov     dl, al          ;DX:= X2 - X1;
+ 53     012F  2A D3                sub     dl, bl          ;(DX # dx)
+ 54     0131  8A F7                mov     dh, bh          ;DY:= Y1 - Y2
+ 55     0133  2A F4                sub     dh, ah
+ 56
+ 57     0135  2A C6                sub     al, dh          ;X3:= X2 - DY
+ 58     0137  2A E2                sub     ah, dl          ;Y3:= Y2 - DX
+ 59     0139  89 46 FE             mov     [bp+P3], ax
+ 60
+ 61     013C  8B C3                mov     ax, bx
+ 62     013E  2A C6                sub     al, dh          ;X4:= X1 - DY
+ 63     0140  2A E2                sub     ah, dl          ;Y4:= Y1 - DX
+ 64     0142  89 46 FC             mov     [bp+P4], ax
+ 65
+ 66     0145  52                   push    dx
+ 67     0146  2A D6                sub     dl, dh          ;(DX-DY)/2
+ 68     0148  D0 FA                sar     dl, 1
+ 69     014A  02 C2                add     al, dl          ;X5:= X4 + (DX-DY)/2
+ 70     014C  5A                   pop     dx
+ 71
+ 72     014D  02 D6                add     dl, dh          ;(DX+DY)/2
+ 73     014F  D0 FA                sar     dl, 1
+ 74     0151  2A E2                sub     ah, dl          ;Y5:= Y4 - (DX+DY)/2
+ 75     0153  89 46 FA             mov     [bp+P5], ax
+ 76
+ 77     0156  8B 46 0              mov     ax, [bp+P2]     ;Line(X2, Y2, Color)
+ 78     0159  E8 0031              call    DrawLine
+ 79     015C  8B 46 FE             mov     ax, [bp+P3]     ;Line(X3, Y3, Color)
+ 80     015F  E8 002B              call    DrawLine
+ 81     0162  8B 46 FC             mov     ax, [bp+P4]     ;Line(X4, Y4, Color)
+ 82     0165  E8 0025              call    DrawLine
+ 83     0168  8B 46 08             mov     ax, [bp+P1]     ;Line(X1, Y1, Color)
+ 84     016B  E8 001F              call    DrawLine
+ 85
+ 86     016E  FF 76 F              push    word ptr [bp+P4] ;DrawTree(X4, Y4, X5, Y5, Depth+1)
+ 87     0171  FF 76 FA             push    word ptr [bp+P5]
+ 88     0174  FF 46 04             inc     word ptr [bp+Depth]
+ 89     0177  FF 76 04             push    word ptr [bp+Depth]
+ 90     017A  E8 FFA0              call    DrawTree
+ 91
+ 92     017D  FF 76 F              push    word ptr [bp+P5] ;DrawTree(X5, Y5, X3, Y3, Depth+1)
+ 93     0180  FF 76 FE             push    word ptr [bp+P3]
+ 94     0183  FF 76 04             push    word ptr [bp+Depth]
+ 95     0186  E8 FF94              call    DrawTree
+ 96     0189               dt90:
+ 97     0189  C9                   leave                   ;release local variable stack frame
+ 98     018A  C2 0006              ret     3*2             ;drop 3 args
+ 99
+100                        ;------------------------------------------------------------
+101                        ;Draw horizontal, vertical or diagonal line from X0,Y0 to X,Y
+102                        ; Line(X, Y, Color)
+103                        ; al=X; ah=Y; Color= 2Ah+[bp+Depth]
+104                        ; bl=X0; bh=Y0; di=Y0*ScrW+X0
+105                        ;
+106     018D               DrawLine:
+107     018D  50                   push    ax              ;save end of line X,Y
+108
+109     018E  33 F6                xor     si, si          ;Step:= 0
+110     0190  2A E7                sub     ah, bh          ;DY:= Y - Y0
+111     0192  74 09                je      dl10            ;if DY # 0 then
+112     0194  BE 0140               mov    si, ScrW        ;  Step:= ScrW
+113     0197  77 04                 ja     dl10            ;  if DY < 0 then
+114     0199  F7 DE                  neg   si              ;    Step:= -ScrW
+115     019B  F6 DC                  neg   ah              ;    abs(DY)
+116     019D  2A C3        dl10:   sub     al, bl          ;DX:= X - X0
+117     019F  74 07                je      dl20            ;if DX # 0 then
+118     01A1  77 04                 ja     dl15            ;  if DX < 0 then
+119     01A3  4E                     dec   si              ;    Step--
+120     01A4  F6 D8                  neg   al              ;    abs(DX)
+121     01A6  3C                     db    3Ch             ;    cmp al, imm; skips one byte
+122     01A7  46           dl15:    inc    si              ;  else Step++
+123     01A8               dl20:
+124     01A8  0F B6 FF             movzx   di, bh          ;di:= Y1*ScrW + X1
+125     01AB  69 FF 0140           imul    di, ScrW
+126     01AF  0F B6 DB             movzx   bx, bl
+127     01B2  03 FB                add     di, bx
+128
+129     01B4  5B                   pop     bx              ;X0:= X; Y0:= Y; = new end of line
+130
+131     01B5  8A CC                mov     cl, ah          ;cl:= Max(DY,DX)
+132     01B7  3A E0                cmp     ah, al
+133     01B9  73 02                jae     dl70
+134     01BB  8A C8                 mov    cl, al
+135     01BD               dl70:
+136     01BD  8A 46 04             mov     al, [bp+Depth]  ;Color:= $2A + Depth
+137     01C0  AA           dl80:   stosb                   ;es:[di++]:= al
+138     01C1  4F                   dec     di              ;undo di++
+139     01C2  03 FE                add     di, si          ;+ Step
+140     01C4  E2 FA                loop    dl80            ;cx--
+141     01C6  AA                   stosb                   ;draw end point
+142     01C7               dl90:
+143     01C7  C3                   ret
+144                                end     start

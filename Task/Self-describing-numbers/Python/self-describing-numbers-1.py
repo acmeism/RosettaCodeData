@@ -1,6 +1,6 @@
 >>> def isSelfDescribing(n):
-	s = str(n)
-	return all(s.count(str(i)) == int(ch) for i, ch in enumerate(s))
+   s = str(n)
+   return all(s.count(str(i)) == int(ch) for i, ch in enumerate(s))
 
 >>> [x for x in range(4000000) if isSelfDescribing(x)]
 [1210, 2020, 21200, 3211000]

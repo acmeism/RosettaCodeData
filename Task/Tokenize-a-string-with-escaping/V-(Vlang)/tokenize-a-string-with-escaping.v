@@ -1,4 +1,4 @@
-fn tokenize_string(s string, sep u8, escape u8) ?[]string {
+fn tokenize_string(s string, sep u8, escape u8) ![]string {
     mut tokens := []string{}
 	mut runes := []u8{}
 	mut in_escape := false
@@ -10,7 +10,7 @@ fn tokenize_string(s string, sep u8, escape u8) ?[]string {
 			in_escape = true
         } else if r == sep {
 			tokens << runes.bytestr()
-			runes = runes[..0]
+			runes = runes[..0].clone()
 		} else {
             runes << r
         }
@@ -27,6 +27,6 @@ const separator = `|`
 const escape = `^`
 fn main() {
 	println("Input:   $sample")
-	tokens := tokenize_string(sample, separator, escape)?
+	tokens := tokenize_string(sample, separator, escape)!
 	println("Tokens: $tokens")
 }

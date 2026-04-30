@@ -1,0 +1,10 @@
+(require 'seq)
+
+(defun quicksort (xs)
+  (if (null xs)
+      ()
+    (let* ((head (car xs))
+           (tail (cdr xs))
+           (lower-part (quicksort (seq-filter (lambda (x) (<= x head)) tail)))
+           (higher-part (quicksort (seq-filter (lambda (x) (> x head)) tail))))
+      (append lower-part (list head) higher-part))))

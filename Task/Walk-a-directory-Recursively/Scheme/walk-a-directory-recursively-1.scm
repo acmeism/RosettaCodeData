@@ -6,11 +6,11 @@
   (for-each (lambda (ENTRY)
     (cond ((not (null? ENTRY))
 
-	   (let ((MYPATH (make-pathname PATH ENTRY)))
+      (let ((MYPATH (make-pathname PATH ENTRY)))
 
-	     (cond ((directory-exists? MYPATH)
-		    (walk FN MYPATH) ))
+        (cond ((directory-exists? MYPATH)
+          (walk FN MYPATH) ))
 
-	     (FN MYPATH) )))) (directory PATH #t) ))
+        (FN MYPATH) )))) (directory PATH #t) ))
 
 (walk (lambda (X) (cond ((string-suffix? ".scm" X) (display X)(newline) ))) "/home/user/")

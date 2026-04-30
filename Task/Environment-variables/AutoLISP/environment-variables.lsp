@@ -1,0 +1,2 @@
+(getenv "PATH")
+(getenv "USERNAME")

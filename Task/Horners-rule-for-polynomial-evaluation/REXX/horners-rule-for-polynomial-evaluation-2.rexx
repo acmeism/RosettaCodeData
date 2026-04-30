@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 21 Feb 2026
 include Setting
 
 say 'POLYNOMIAL HORNER''S RULE'
@@ -13,7 +13,8 @@ exit
 
 Evaluate:
 arg x,y
-say Lst2FormP(x) '| x='y '=' EvalP(x,y)/1
+say Poly2form(x) '| x='y '=' EvalP(x,y)/1
 return
 
+-- Poly2form; EvalP; Pi
 include Math

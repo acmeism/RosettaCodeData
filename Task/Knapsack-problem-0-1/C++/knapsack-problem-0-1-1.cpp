@@ -41,7 +41,7 @@ int main( ) {
    int totalweight = 0 ;
    std::cout << "The following items should be packed in the knapsack:\n" ;
    for ( std::set<int>::const_iterator si = bestItems.begin( ) ;
-	 si != bestItems.end( ) ; si++ ) {
+    si != bestItems.end( ) ; si++ ) {
       std::cout << (items.begin( ) + *si)->get<0>( ) << "\n" ;
       totalweight += (items.begin( ) + *si)->get<1>( ) ;
    }
@@ -61,35 +61,35 @@ int findBestPack( const std::vector<boost::tuple<std::string , int , int> > & it
    std::set<int> emptyset ;
    for ( int i = 0 ; i < n ; i++ ) {
       for ( int j = 0 ; j < weightlimit  ; j++ ) {
-	 bestValues[ i ][ j ] = 0 ;
-	 solutionSets[ i ][ j ] = emptyset ;
+    bestValues[ i ][ j ] = 0 ;
+    solutionSets[ i ][ j ] = emptyset ;
        }
     }
     for ( int i = 0 ; i < n ; i++ ) {
        for ( int weight = 0 ; weight < weightlimit ; weight++ ) {
-	  if ( i == 0 )
-	     bestValues[ i ][ weight ] = 0 ;
-	  else  {
-	     int itemweight = (items.begin( ) + i)->get<1>( ) ;
-	     if ( weight < itemweight ) {
-		bestValues[ i ][ weight ] = bestValues[ i - 1 ][ weight ] ;
-		solutionSets[ i ][ weight ] = solutionSets[ i - 1 ][ weight ] ;
-	     } else { // weight >= itemweight
-		if ( bestValues[ i - 1 ][ weight - itemweight ] +
-		   (items.begin( ) + i)->get<2>( ) >
-		        bestValues[ i - 1 ][ weight ] ) {
-		   bestValues[ i ][ weight ] =
-		       bestValues[ i - 1 ][ weight - itemweight ] +
-	        	(items.begin( ) + i)->get<2>( ) ;
-		  solutionSets[ i ][ weight ] =
-		      solutionSets[ i - 1 ][ weight - itemweight ] ;
-		  solutionSets[ i ][ weight ].insert( i ) ;
-	     }
-	     else {
-		bestValues[ i ][ weight ] = bestValues[ i - 1 ][ weight ] ;
-		solutionSets[ i ][ weight ] = solutionSets[ i - 1 ][ weight ] ;
-	     }
-	  }
+     if ( i == 0 )
+        bestValues[ i ][ weight ] = 0 ;
+     else  {
+        int itemweight = (items.begin( ) + i)->get<1>( ) ;
+        if ( weight < itemweight ) {
+      bestValues[ i ][ weight ] = bestValues[ i - 1 ][ weight ] ;
+      solutionSets[ i ][ weight ] = solutionSets[ i - 1 ][ weight ] ;
+        } else { // weight >= itemweight
+      if ( bestValues[ i - 1 ][ weight - itemweight ] +
+         (items.begin( ) + i)->get<2>( ) >
+              bestValues[ i - 1 ][ weight ] ) {
+         bestValues[ i ][ weight ] =
+             bestValues[ i - 1 ][ weight - itemweight ] +
+            (items.begin( ) + i)->get<2>( ) ;
+        solutionSets[ i ][ weight ] =
+            solutionSets[ i - 1 ][ weight - itemweight ] ;
+        solutionSets[ i ][ weight ].insert( i ) ;
+        }
+        else {
+      bestValues[ i ][ weight ] = bestValues[ i - 1 ][ weight ] ;
+      solutionSets[ i ][ weight ] = solutionSets[ i - 1 ][ weight ] ;
+        }
+     }
        }
       }
     }

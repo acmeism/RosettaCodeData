@@ -1,0 +1,88 @@
+;; The name of this wont get confusing :]
+
+%macro prolog 1
+    push rbp
+    mov rbp, rsp
+    sub rsp, %1
+%endmacro
+
+%macro epilog 1
+    add rsp, %1
+    pop rbp
+%endmacro
+
+;;default rel does some crazy shit
+;;so here we are because of it. T_T
+%macro xcall 1
+    call [rel %1 wrt ..got]
+%endmacro
+
+%macro xlea 2
+    lea %1, [rel %2]
+%endmacro
+
+
+extern curl_easy_init
+extern curl_easy_setopt
+extern curl_easy_perform
+extern curl_easy_cleanup
+extern printf
+
+%define CURLOPT_URL             0x2712
+%define CURLOPT_FOLLOWLOCATION  0x34
+%define CURLOPT_ERRORBUFFER     0x271A
+%define CURLE_OK                0
+
+section .rodata
+szformat    db "%s",10,0
+sznoargs    db "usage:",10,"   curl <url>",10,0
+
+section .bss
+buff    resb 1024
+
+section .text
+    global main
+
+    main:
+        prolog 4*8
+        %define url [rbp-1*8]
+        %define curl [rbp-2*8]
+
+        cmp edi, 1
+        jle __main_noargs
+        mov rax, qword [rsi+1*8]
+        mov qword url, rax
+        xcall curl_easy_init
+        mov qword curl, rax
+        cmp rax, 0
+        je __main_exit
+        mov rdi, qword curl
+        mov rdx, qword url
+        mov esi, CURLOPT_URL
+        xcall curl_easy_setopt
+        mov rdi, qword curl
+        mov esi, CURLOPT_FOLLOWLOCATION
+        mov edx, 1
+        xcall curl_easy_setopt
+        mov rdi, qword curl
+        xlea rdx, buff
+        mov esi, CURLOPT_ERRORBUFFER
+        xcall curl_easy_setopt
+        mov rdi, qword curl
+        xcall curl_easy_perform
+        cmp eax, 0
+        je __main_exit
+        xlea rdi, szformat
+        xlea rsi, buff
+        xcall printf
+        jmp __main_exit
+
+        __main_noargs:
+            xlea rdi, sznoargs
+            xcall printf
+
+        __main_exit:
+            mov rdi, qword curl
+            xcall curl_easy_cleanup
+            epilog 4*8
+            ret

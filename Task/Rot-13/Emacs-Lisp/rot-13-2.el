@@ -1,0 +1,15 @@
+(defun rot-13 (string)
+  (let* ((len (length string))
+         (output (make-string len ?\s)))
+    (dotimes (i len)
+      (let ((char (aref string i)))
+        (cond
+         ((or (and (>= char ?n) (<= char ?z))
+              (and (>= char ?N) (<= char ?Z)))
+          (aset output i (- char 13)))
+         ((or (and (>= char ?a) (<= char ?m))
+              (and (>= char ?A) (<= char ?M)))
+          (aset output i (+ char 13)))
+         (t
+          (aset output i char)))))
+    output))

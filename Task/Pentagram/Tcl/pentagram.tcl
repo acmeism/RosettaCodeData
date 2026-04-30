@@ -1,4 +1,4 @@
-package require Tk 8.6   	;# lmap is new in Tcl/Tk 8.6
+package require Tk 8.6     ;# lmap is new in Tcl/Tk 8.6
 
 set pi [expr 4*atan(1)]
 

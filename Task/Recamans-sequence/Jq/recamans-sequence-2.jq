@@ -24,11 +24,11 @@ def covers(s):
   . as $required
   | first(foreach s as $x ( { i: -1, found: {}, nfound: 0};
             .i += 1
-	    | ($x|tostring) as $xs
+      | ($x|tostring) as $xs
             | if .found[$xs] then .
-	      elif $x <= $required
-	      then .found[$xs] = true | .nfound += 1
-	      | if .nfound > $required then .emit=.i else . end
-	      else .
-	      end;
+        elif $x <= $required
+        then .found[$xs] = true | .nfound += 1
+        | if .nfound > $required then .emit=.i else . end
+        else .
+        end;
             select(.emit).emit) );

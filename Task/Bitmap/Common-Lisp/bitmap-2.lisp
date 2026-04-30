@@ -59,11 +59,11 @@
   (declare (type rgb-pixel-buffer buffer))
   (declare (type rgb-pixel pixel))
   (let* ((dimensions (array-dimensions buffer))
-	 (width (first dimensions))
-	 (height (second dimensions)))
+    (width (first dimensions))
+    (height (second dimensions)))
     (loop
        :for y :of-type fixnum :upfrom 0 :below height
        :do (loop
-	      :for x :of-type fixnum :upfrom 0 :below width
-	      :do (setf (rgb-pixel buffer x y) pixel)))
+         :for x :of-type fixnum :upfrom 0 :below width
+         :do (setf (rgb-pixel buffer x y) pixel)))
     buffer))

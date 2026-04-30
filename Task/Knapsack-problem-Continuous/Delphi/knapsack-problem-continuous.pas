@@ -9,16 +9,16 @@ type PButcherInfo = ^TButcherInfo;
 {Array of actual data}
 
 var Items: array [0..8] of TButcherInfo =(
-	(Name: 'beef';    Weight: 3.8; Cost: 36.0),
-	(Name: 'pork';    Weight: 5.4; Cost: 43.0),
-	(Name: 'ham';     Weight: 3.6; Cost: 90.0),
-	(Name: 'greaves'; Weight: 2.4; Cost: 45.0),
-	(Name: 'flitch';  Weight: 4.0; Cost: 30.0),
-	(Name: 'brawn';   Weight: 2.5; Cost: 56.0),
-	(Name: 'welt';    Weight: 3.7; Cost: 67.0),
-	(Name: 'salami';  Weight: 3.0; Cost: 95.0),
-	(Name: 'sausage'; Weight: 5.9; Cost: 98.0)
-	);
+   (Name: 'beef';    Weight: 3.8; Cost: 36.0),
+   (Name: 'pork';    Weight: 5.4; Cost: 43.0),
+   (Name: 'ham';     Weight: 3.6; Cost: 90.0),
+   (Name: 'greaves'; Weight: 2.4; Cost: 45.0),
+   (Name: 'flitch';  Weight: 4.0; Cost: 30.0),
+   (Name: 'brawn';   Weight: 2.5; Cost: 56.0),
+   (Name: 'welt';    Weight: 3.7; Cost: 67.0),
+   (Name: 'salami';  Weight: 3.0; Cost: 95.0),
+   (Name: 'sausage'; Weight: 5.9; Cost: 98.0)
+   );
 
 
 function CompareButcher(List: TStringList; Index1, Index2: Integer): Integer;
@@ -43,43 +43,43 @@ SL:=TStringList.Create;
 try
 {Calculate the per Kilogram cost for each item}
 for I:=0 to High(Items) do
-	begin
-	Items[I].PerKG:=Items[I].Cost/Items[I].Weight;
-	SL.AddObject(Items[I].Name,@Items[I]);
-	end;
+   begin
+   Items[I].PerKG:=Items[I].Cost/Items[I].Weight;
+   SL.AddObject(Items[I].Name,@Items[I]);
+   end;
 {Sort most expensive items to top of list}
 SL.CustomSort(CompareButcher);
 
 {Take the most expensive items }
 Weight:=0; Cost:=0;
 for I:=0 to SL.Count-1 do
-	begin
-	Info:=PButcherInfo(SL.Objects[I])^;
-	{Item exceeds the weight limit? }
-	if (Weight+Info.Weight)>=Limit then
-		begin
-		{Calculate percent to fill gap}
-		Diff:=(Limit-Weight)/Info.Weight;
-		{Save index}
-		Inx:=I;
-		break;
-		end
-	else
-		begin
-		{Add up totals}
-		Weight:=Weight+Info.Weight;
-		Cost:=Cost+Info.Cost;
-		end;
-	end;
+   begin
+   Info:=PButcherInfo(SL.Objects[I])^;
+   {Item exceeds the weight limit? }
+   if (Weight+Info.Weight)>=Limit then
+      begin
+      {Calculate percent to fill gap}
+      Diff:=(Limit-Weight)/Info.Weight;
+      {Save index}
+      Inx:=I;
+      break;
+      end
+   else
+      begin
+      {Add up totals}
+      Weight:=Weight+Info.Weight;
+      Cost:=Cost+Info.Cost;
+      end;
+   end;
 
 {Display all items}
 Memo.Lines.Add('Item      Portion    Value');
 Memo.Lines.Add('--------------------------');
 for I:=0 to Inx-1 do
-	begin
-	Info:=PButcherInfo(SL.Objects[I])^;
-	Memo.Lines.Add(Format('%-8s %8.2f %8.2f',[Info.Name,Info.Weight,Info.Cost]));
-	end;
+   begin
+   Info:=PButcherInfo(SL.Objects[I])^;
+   Memo.Lines.Add(Format('%-8s %8.2f %8.2f',[Info.Name,Info.Weight,Info.Cost]));
+   end;
 Info:=PButcherInfo(SL.Objects[Inx])^;
 {Calculate cost and weight to fill gap}
 weight:=Weight+Info.Weight*Diff;

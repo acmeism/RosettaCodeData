@@ -1,0 +1,149 @@
+// -----------------------------------------------
+//  Wagstaff primes
+//  Using FutureBasic 7.0.36
+//
+//  November 2025, R.W
+//
+// -----------------------------------------------
+
+include "gmp.incl"
+
+_kPrimeReps = 25
+_kNeedFirst = 10
+_kNeedMore  = 14
+
+// mpz_sizeinbase sometimes would return one digit too many especially
+// when the value is close to the edge of power of 10. This helper
+// accounts for that and adjusts.
+
+local fn mpz_digits10( z as mpz_t ) as int
+  int d
+  mpz_t pow10
+  d = fn mpz_sizeinbase( z, 10 )
+  if d <= 1 then RETURN d
+  mpz_init( pow10 )
+  // pow10 = 10^(d-1)
+  fn mpz_ui_pow_ui( pow10, 10, d - 1 )
+  // If z < 10^(d-1) then mpz_sizeinbase returned one too many
+  if fn mpz_cmp( z, pow10 ) < 0 then d = d - 1   //if so -> decrement
+  mpz_clear( pow10 )
+end fn = d
+
+local fn IsSmallPrime( n as UInt32 ) as boolean
+  if n < 2 then RETURN _false
+  if n = 2 then RETURN _true
+  if (n AND 1) == 0 then RETURN _false
+  mpz_t t
+  mpz_init( t )
+  fn mpz_set_ui( t, n )
+  int r : r = fn mpz_probab_prime_p( t, _kPrimeReps )
+  mpz_clear( t )
+  if r > 0 then RETURN _true
+end fn = _false
+
+// Find the next upstream prime
+
+local fn NextPrimeAfter( startN as UInt32 ) as UInt32
+  UInt32 p
+  if startN < 2 then RETURN 2
+  p = startN + 1
+  if (p AND 1) = 0 then p = p + 1
+  while _true
+    if fn IsSmallPrime( p ) then RETURN p
+    p = p + 2
+  wend
+end fn = 0
+
+// Abbreviate long strings
+
+local fn AbbrevLongStr( longStr as CFStringRef ) as CFStringRef
+  CFStringRef outStr, leftStr,rightStr
+  CFIndex strlen
+  outStr = @""
+  strlen = len(longStr)
+  if strlen < 60 then return longStr
+  leftStr  =  left(longStr, 27 )
+  rightStr = right(longStr, 28 )
+  outStr = concat( leftStr, @"...", rightStr)
+end fn = outStr
+
+// WagStaff_P = (2^p + 1) / 3 → outW
+
+local fn WagstaffFromExponent( p as UInt32, outW as mpz_t ) as boolean
+  mpz_t N
+  mpz_init( N )
+  fn mpz_ui_pow_ui( N, 2, p )
+  fn mpz_add_ui( N, N, 1 )
+  unsigned long remd
+  remd = fn mpz_fdiv_q_ui( outW, N, 3 )
+  mpz_clear( N )
+  if remd != 0 then RETURN _false
+end fn = _true
+
+// Use GMP probable prime function with 25 reps
+// sufficient to determine a large prime
+
+local fn IsWagstaffPrime( p as UInt32, outW as mpz_t ) as boolean
+  if fn WagstaffFromExponent( p, outW ) = _false then RETURN _false
+  int res : res = fn mpz_probab_prime_p( outW, _kPrimeReps )
+  // 0 = composite, 1 = probable, 3 = positive
+  if res > 0 then RETURN _true
+end fn = _false
+
+//  MAIN
+//
+local fn Main
+  UInt32 p
+  UInt32 foundFirst, foundMore
+  foundFirst = 0 : foundMore = 0
+  CFStringRef s2
+
+  CFTimeInterval t0, t1
+  t0 = fn CACurrentMediaTime
+
+  // Rosetta requirement for 10 Wagstaff primes
+  print @"First 10 Wagstaff primes:\n"
+  p = fn NextPrimeAfter( 1 )
+  while foundFirst < _kNeedFirst
+    mpz_t W
+    mpz_init( W )
+    if fn IsWagstaffPrime( p, W )
+      foundFirst = foundFirst + 1
+      // FB has a handy wrapper to obtain CFString from mpz_t output
+      // toolbox fn mpz_cf2( mpz_t op ) = CFStringRef   // mpz_t → CFString (base 10)
+      CFStringRef s = fn mpz_cf2( W )
+      printf @"%4lu: %@", p,s
+    end if
+    mpz_clear( W )
+    p = fn NextPrimeAfter( p )
+  wend
+  t1 = fn CACurrentMediaTime
+  printf @"\nElapsed time: %.3f ms\n\n", (t1 - t0) * 1000.0
+
+  // Rosetta additional task
+
+  print @"Wagstaff next 14:\n"
+
+  CFTimeInterval t2 = fn CACurrentMediaTime
+  foundMore = 0
+  while foundMore < _kNeedMore
+    mpz_t W2
+    mpz_init( W2 )
+    if fn IsWagstaffPrime( p, W2 )
+      foundMore = foundMore + 1
+      int digits : digits = fn mpz_digits10( W2 )
+      s2 = fn mpz_cf2( W2 )    //mpz_cf2 is an FB wrapper
+      s2 = fn AbbrevLongStr(s2)
+      printf @"%4lu: %@ (%d digits)", p, s2, digits
+    end if
+    mpz_clear( W2 )
+    p = fn NextPrimeAfter( p )
+  wend
+
+  CFTimeInterval t3 = fn CACurrentMediaTime
+  printf @"\nElapsed time: %.3f secs\n", (t3 - t2)
+end fn
+
+Window 1,@"Wagstaff Primes",(0,0,640,540)
+fn Main
+HandleEvents

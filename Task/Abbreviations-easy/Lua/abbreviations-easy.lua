@@ -44,10 +44,10 @@ local function is_valid(cmd,abbrev)
 
    -- test if any lowercase in "cmd"
    if false then do -- NOTE!: requirement spec error .. put not equal PUT
-	 local lowcase = string.match(cmd,"%l+")
-	 if lowcase == nil then return -2 end
-	 if #lowcase < 1 then return -3 end
-		 end
+   local lowcase = string.match(cmd,"%l+")
+   if lowcase == nil then return -2 end
+   if #lowcase < 1 then return -3 end
+     end
    end
 
    -- test if abbrev is too long
@@ -75,13 +75,13 @@ local function start()
    for i = 1,#t2 do
       good = 0
       for j = 1,#t1 do
-	 local abbrev = t2[i]
-	 local cmd = t1[j]
-	 good = is_valid(cmd,abbrev)
-	 if good==1 then do
-	       result[#result+1] = t1[j]:upper()
-	       break end
-	 end  --if
+   local abbrev = t2[i]
+   local cmd = t1[j]
+   good = is_valid(cmd,abbrev)
+   if good==1 then do
+         result[#result+1] = t1[j]:upper()
+         break end
+   end  --if
       end --for j
       if good < 1 then result[#result+1] = "*error*" end
    end --for i

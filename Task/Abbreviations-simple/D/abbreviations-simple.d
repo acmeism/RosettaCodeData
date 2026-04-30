@@ -1,36 +1,36 @@
 class Abbreviations
 {
-	import std.array: split, join;
-	import std.uni:toUpper;
+  import std.array: split, join;
+  import std.uni:toUpper;
 
-	string[string] replaces;
-	
-	this(string table)
-	{
-		import std.ascii;
-		import std.conv:parse;
+  string[string] replaces;
 
-		string saved;
-		auto add = (string word){ if(word.length) replaces[word] = word; };
+  this(string table)
+  {
+    import std.ascii;
+    import std.conv:parse;
 
-		foreach(word; table.toUpper.split)
-			if(isDigit(word[0]))
-			{
-				for(int length=parse!int(word); length<=saved.length; ++length)
-					replaces[saved[0..length]] = saved;
-			} else
-			{
-				add(saved);
-				saved = word;
-			}
-		add(saved);
-	}
+    string saved;
+    auto add = (string word){ if(word.length) replaces[word] = word; };
 
-	string expand(string input) // pre-filled hashtable is used
-	{
-		import std.algorithm: map;
-		return input.toUpper.split.map!(word => word in replaces ? replaces[word] : "*error*").join(" ");
-	}
+    foreach(word; table.toUpper.split)
+      if(isDigit(word[0]))
+      {
+        for(int length=parse!int(word); length<=saved.length; ++length)
+          replaces[saved[0..length]] = saved;
+      } else
+      {
+        add(saved);
+        saved = word;
+      }
+    add(saved);
+  }
+
+  string expand(string input) // pre-filled hashtable is used
+  {
+    import std.algorithm: map;
+    return input.toUpper.split.map!(word => word in replaces ? replaces[word] : "*error*").join(" ");
+  }
 }
 
 string table = "
@@ -48,16 +48,16 @@ string expected = "RIGHT REPEAT *error* PUT MOVE RESTORE *error* *error* *error*
 
 unittest // 'dmd -unittest ...' to activate it
 {
-	auto expander = new Abbreviations(table);
-	assert(expander.expand(input) == expected);
-	assert(expander.expand("") == "");
-	assert(expander.expand("addadd") == "*error*");
+  auto expander = new Abbreviations(table);
+  assert(expander.expand(input) == expected);
+  assert(expander.expand("") == "");
+  assert(expander.expand("addadd") == "*error*");
 }
 
 void main()
 {
-	import std.stdio:writeln;
+  import std.stdio:writeln;
 
-	writeln("Input : ", input);
-	writeln("Output: ", new Abbreviations(table).expand(input));
+  writeln("Input : ", input);
+  writeln("Output: ", new Abbreviations(table).expand(input));
 }

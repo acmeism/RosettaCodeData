@@ -1,12 +1,12 @@
 look_and_say(L) :-
-	maplist(write, L), nl,
-	encode(L, L1),
-	look_and_say(L1).
+  maplist(write, L), nl,
+  encode(L, L1),
+  look_and_say(L1).
 
 % This code is almost identical to the code of "run-length-encoding"
 encode(In, Out) :-
-	packList(In, R1),
-	append(R1,Out).
+  packList(In, R1),
+  append(R1,Out).
 
 
 % use of library clpfd allows packList(?In, ?Out) to works

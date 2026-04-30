@@ -1,0 +1,131 @@
+bdos	equ	5	
+getch	equ	1
+putch	equ	2	
+puts	equ	9	
+cr	equ	13
+lf	equ	10
+wboot	equ	0
+	;
+	org	100h
+	lxi	sp,stack	; set our own stack
+	;
+	; obtain two numbers from the console
+	;
+	lxi	d,pmt1st
+	mvi	c,puts
+	call	bdos
+	call	getdec
+	shld	first
+	call	crlf
+	lxi	d,pmt2nd
+	mvi	c,puts
+	call	bdos
+	call	getdec
+	shld	second
+	call	crlf
+	;
+	; compare them (1st in HL, 2nd in DE)
+	;
+	lhld	second
+	xchg
+	lhld	first
+	call	cmp16
+	cz	isequal
+	call	cmp16
+	cc	isless
+	call	cmp16
+	jz	$+6
+	cnc	isgreater
+	jmp	done
+isequal:
+	push	d
+	push	h
+	lxi	d,eqmsg
+	mvi	c,puts
+	call	5
+	pop	h
+	pop	d
+	ret
+isless:	push	d
+	push	h
+	lxi	d,ltmsg
+	mvi	c,puts
+	call	5
+	pop	h
+	pop	d
+	ret
+isgreater:
+	push	d
+	push	h
+	lxi	d,gtmsg
+	mvi	c,puts
+	call	5
+	pop	h
+	pop	d
+	ret
+done:	jmp	wboot
+	;----------------------------------------------------
+	; unsigned comparison of HL and DE
+	; return with zero flag set if HL=DE
+	; return with carry set if HL < DE (NC if HL >= DE)
+	;----------------------------------------------------
+cmp16:	mov	a,h
+	cmp	d
+	rnz
+	mov	a,l
+	cmp	e
+	ret
+	;-------------------------------------------------------
+	; read decimal number from keyboard and return with
+	; unsigned binary equivalent in HL
+	;-------------------------------------------------------
+getdec:	lxi	h,0
+newdig:	push	h
+	mvi	c,getch
+	call	bdos	
+	pop	h
+	sui	30h	; convert from ASCII to binary
+	rm		; return if less than 0
+	cpi	10
+	rp		; return if greater than 9
+	; multiply HL by 10 then add new digit
+	push	h
+	pop	d
+	dad	h	; double HL (= HL*2)
+	dad	h	; double it again (= HL*4)
+	dad	d	; add starting value (= HL*5)
+	dad	h	; then double it (= HL*10)
+	mvi	d,0
+	mov	e,a
+	dad	d	; add new digit to number
+	jmp	newdig
+	;-----------------------------------------------------
+	; write CRLF to console
+	;-----------------------------------------------------
+crlf:	push	b
+	push	d
+	push	h	
+	mvi	e,cr
+	mvi	c,putch
+	call	bdos
+	mvi	e,lf
+	mvi	c,putch
+	call	bdos
+	pop	h
+	pop	d
+	pop	b
+	ret
+	;-----------------------------------------------------
+	; data and stack
+	;-----------------------------------------------------
+first:	dw	0
+second: dw	0
+pmt1st: db	'First number : $'
+pmt2nd:	db	'Second number: $'
+eqmsg:	db	'The two numbers are equal',cr,lf,'$'
+gtmsg:	db	'The first number is greater than the second'
+	db	cr,lf,'$'
+ltmsg:	db	'The first number is less than the second'
+	db	cr,lf,'$'
+stack	equ	$+128
+	end

@@ -1,5 +1,4 @@
 len fact[] 12
-arrbase fact[] 0
 #
 fact[0] = 1
 for n = 1 to 11

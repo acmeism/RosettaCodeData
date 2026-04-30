@@ -1,0 +1,22 @@
+do  -- list the first 30 numbers that are squares but not cubes
+    -- also indicate the numbers that are both squares and cubes
+
+    local maxCount <const> = 30
+    local count, c, c3, s, sq = 0, 1, 1, 0
+
+    while count < maxCount do
+        s  = s + 1
+        sq = s * s
+        while c3 < sq do
+            c  = c + 1
+            c3 = c * c * c
+        end
+        io.write( string.format( "%5d", sq ) )
+        if c3 == sq then
+            io.write( " is also the cube of " .. c )
+        else
+            count = count + 1
+        end
+        io.write( "\n" )
+    end
+end

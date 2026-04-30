@@ -4,7 +4,7 @@ fn main() {
    s := [
       "apples, pears # and bananas",
       "apples, pears ; and bananas",
-      "no bananas"	
+      "no bananas"
    ]
    for element in s {
       println('source: $element')

@@ -9,11 +9,11 @@ begin
 DC:=Trunc(Log10(N))+1;
 SetLength(IA,DC);
 for I:=DC-1 downto 0 do
-	begin
-	T:=N mod 10;
-	N:=N div 10;
-	IA[I]:=T;
-	end;
+   begin
+   T:=N mod 10;
+   N:=N div 10;
+   IA[I]:=T;
+   end;
 end;
 
 
@@ -28,9 +28,9 @@ GetDigitsRev(N,IA);
 for I:=0 to High(CA) do CA[I]:=0;
 {Count number of each digit 0..9}
 for I:=0 to High(IA) do
-	begin
-	CA[IA[I]]:=CA[IA[I]]+1;
-	end;
+   begin
+   CA[IA[I]]:=CA[IA[I]]+1;
+   end;
 Result:=False;
 {Compare original number with counts}
 for I:=0 to High(IA) do
@@ -44,7 +44,7 @@ var I: integer;
 begin
 for I:=0 to 100000000-1 do
  if IsSelfDescribing(I) then
-	begin
-	Memo.Lines.Add(IntToStr(I));
-	end;
+   begin
+   Memo.Lines.Add(IntToStr(I));
+   end;
 end;

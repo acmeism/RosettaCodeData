@@ -21,8 +21,8 @@ struct VLQ {
                 "Too large for ulong or invalid format.");
         else
             value = (t << 7) | v[idx];
-        return idx + 1;
-    }
+        return cast(uint) idx + 1;
+   }
 
     VLQ from(in ubyte[] v) pure {
         extract(v);
@@ -53,7 +53,6 @@ struct VLQ {
         return format("(%(%02X:%))", this.toVLQ);
     }
 }
-
 
 void main() { // VLQ demo code.
     VLQ a = VLQ(0x7f),

@@ -1,0 +1,84 @@
+// ------------------------------------------------------------
+//  Deceptive numbers
+//  Using FutureBasic 7.0.36
+//  November 2025, R.W.
+//
+//  A composite n such that n | R_{n-1}, where
+//  R_k = (10^k - 1) / 9 is the k-digit repunit.
+// ------------------------------------------------------------
+
+include "gmp.incl"
+
+_kPrimeReps = 25 // Miller–Rabin rounds for mpz_probab_prime_p
+_kDeceptiveLimit = 152  //should fit in the window
+CFTimeInterval t
+
+// ------------------------------------------------------------
+//  Probable prime test using GMP
+//  Returns _true if n is (probably) prime, _false otherwise.
+// ------------------------------------------------------------
+local fn IsProbablePrime( n as UInt32 ) as Boolean
+  mpz_t z
+  int   r
+  if n < 2 then RETURN _false
+  mpz_init( z )
+  fn mpz_set_ui( z, n )
+  r = fn mpz_probab_prime_p( z, _kPrimeReps )
+  mpz_clear( z )
+  if r > 0 then RETURN _true
+end fn = _false
+
+// ------------------------------------------------------------
+//  Find and print the first `limit` deceptive numbers
+// ------------------------------------------------------------
+local fn PrintDeceptiveNumbers( limit as Int )
+  mpz_t repunit
+  long n
+  int    count
+  mpz_init( repunit )
+  fn mpz_set_ui( repunit, 0 )
+  n     = 1
+  count = 0
+  print @"\nThe first "; limit; @" deceptive numbers are:\n"
+  t = fn CACurrentMediaTime
+
+  while (count < limit)
+    // Only odd n; repunit holds R_{n-1}
+    n = n + 2
+    // repunit = repunit * 100 + 11
+    // This appends two '1' digits each step:
+    //   0 → 11 → 1111 → 111111 → ...
+    fn mpz_mul_ui( repunit, repunit, 100 )
+    fn mpz_add_ui( repunit, repunit, 11 )
+
+    // Skip all multiples of 3 or 5.
+
+    if ( (n MOD 3) != 0 ) && ( (n MOD 5) != 0 )
+      // We want composite n, so reject primes.
+      if fn IsProbablePrime( n ) == _false
+        // Check if repunit is divisible by n
+        if fn mpz_divisible_ui_p( repunit, n ) != 0
+          count = count + 1
+          CFStringRef s = fn CFStringCreateWithFormat¬
+          ( _kCFAllocatorDefault, 0, @"%8ld ", n )
+          print s;
+          CFRelease( s )
+          if (count MOD 8) == 0 then print
+        end if
+      end if
+    end if
+  wend
+  // Tidy final newline if the last row wasn't complete
+  if (count MOD 8) != 0 then print
+  printf @"\nElapsed time: %.3f secs", (fn CACurrentMediaTime-t)
+  mpz_clear( repunit )
+end fn
+
+// ------------------------------------------------------------
+//  Main
+// ------------------------------------------------------------
+Window 1,@"Deceptive Numbers"
+
+fn PrintDeceptiveNumbers( _kDeceptiveLimit )
+
+HandleEvents

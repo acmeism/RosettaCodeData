@@ -6,7 +6,7 @@ import javax.swing.ImageIcon
 
 object Pixmap {
    private case class PpmHeader(format:String, width:Int, height:Int, maxColor:Int)
-	
+
    def load(filename:String):Option[RgbBitmap]={
       implicit val in=new BufferedInputStream(new FileInputStream(filename))
       val header=readHeader
@@ -22,7 +22,7 @@ object Pixmap {
 
    private def readHeader(implicit in:InputStream)={
       var format=readLine
-		
+
       var line=readLine
       while(line.startsWith("#"))   //skip comments
          line=readLine
@@ -31,7 +31,7 @@ object Pixmap {
       val width=parts(0).toInt
       val height=parts(1).toInt
       val maxColor=readLine.toInt
-		
+
       new PpmHeader(format, width, height, maxColor)
    }
 

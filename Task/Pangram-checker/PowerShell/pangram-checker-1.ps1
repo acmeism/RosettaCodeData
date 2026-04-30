@@ -1,0 +1,13 @@
+function Test-Pangram ( [string]$Text, [string]$Alphabet = 'abcdefghijklmnopqrstuvwxyz' )
+    {
+    $Text = $Text.ToLower()
+    $Alphabet = $Alphabet.ToLower()
+
+    $IsPangram = @( $Alphabet.ToCharArray() | Where-Object { $Text.Contains( $_ ) } ).Count -eq $Alphabet.Length
+
+    return $IsPangram
+    }
+
+Test-Pangram 'The quick brown fox jumped over the lazy dog.'
+Test-Pangram 'The quick brown fox jumps over the lazy dog.'
+Test-Pangram 'Съешь же ещё этих мягких французских булок, да выпей чаю' 'абвгдежзийклмнопрстуфхцчшщъыьэюяё'

@@ -13,7 +13,7 @@ Directory extend [
       ((File name: fn) isDirectory)
       ifTrue: [
         twoBlock value: (n, ps) value: l.
-	(Directory name: fn) wholeContent: aPattern withLevel: (l+1) do: twoBlock.
+   (Directory name: fn) wholeContent: aPattern withLevel: (l+1) do: twoBlock.
       ]
       ifFalse: [
         ( n =~ aPattern )

@@ -3,7 +3,7 @@
   s" P6" compare abort" Only P6 supported."
   pad dup 80 fid read-line throw 0= abort" Partial line"
   0. 2swap >number
-  1 /string		\ skip space
+  1 /string   \ skip space
   0. 2swap >number
   2drop drop nip    ( w h )
   bitmap { bmp }

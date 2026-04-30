@@ -15,20 +15,20 @@
 
 ;; compute best score (i), assuming best (i-1 rest) is known
 (define (score i restant)
-	(if (< i 0) 0
-	(hash-ref! H (t-idx i restant)
-		(if ( >= restant (poids i))
-			(max
-				(score (1- i) restant)
-			    (+ (score (1- i) (- restant (poids i))) (valeur i)))
-		    (score (1- i) restant)))))
+   (if (< i 0) 0
+   (hash-ref! H (t-idx i restant)
+      (if ( >= restant (poids i))
+         (max
+            (score (1- i) restant)
+             (+ (score (1- i) (- restant (poids i))) (valeur i)))
+          (score (1- i) restant)))))
 
 ;; compute best scores, starting from last item
 (define (task W)
         (define restant W)
         (define N (1- (table-count T)))
-		(writeln 'total-value (score N W))
-		(for/list  ((i (in-range N -1 -1)))
-			#:continue (= (t-get i restant) (t-get (1- i) restant))
-			(set! restant (- restant (poids i)))
-			(name i)))
+      (writeln 'total-value (score N W))
+      (for/list  ((i (in-range N -1 -1)))
+         #:continue (= (t-get i restant) (t-get (1- i) restant))
+         (set! restant (- restant (poids i)))
+         (name i)))

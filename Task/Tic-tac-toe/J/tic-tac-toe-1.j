@@ -1,5 +1,5 @@
 '`c t b'=. (?@#{])@([:I.0=b)`{.`}.                            NB. cpu's move; extract turn/board
-i=. (0=]{b@[) ::0 *: ]e.i.@9                                 NB. invalid posn? (x: state; y: posn)
+i=. (0=]{b@[) ::0 *: ]e.i.@9                                  NB. invalid posn? (x: state; y: posn)
 y=. [ ($:@[ echo@'no')^:i  _1+0".1!:1@1@echo@'move (1-9):'    NB. your move
 m=. (-,])@t [`(0,1+c`y@.(1=t)@])} ]                           NB. apply current player's move to board
 o=. 'tie'"_`(' wins',~ {&'.XO'@-@t)@.w                        NB. print game outcome

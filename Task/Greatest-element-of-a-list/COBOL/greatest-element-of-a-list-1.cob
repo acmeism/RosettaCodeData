@@ -1,0 +1,1 @@
+DISPLAY FUNCTION MAX(nums (ALL))

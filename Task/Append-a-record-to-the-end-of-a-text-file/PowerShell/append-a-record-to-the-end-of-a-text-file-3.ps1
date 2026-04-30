@@ -1,0 +1,1 @@
+$records | Format-Table -AutoSize

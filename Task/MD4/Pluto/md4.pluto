@@ -1,0 +1,108 @@
+require "table2"
+
+local function to_bytes(val)
+    local bytes = {0, 0, 0, 0}
+    bytes[1] = val         & 255
+    bytes[2] = (val >> 8)  & 255
+    bytes[3] = (val >> 16) & 255
+    bytes[4] = (val >> 24) & 255
+    return bytes
+end
+
+local function to_int(bytes)
+    return bytes[1] | bytes[2] << 8 | bytes[3] << 16 | bytes[4] << 24
+end
+
+local mask32 = 0xffffffff
+
+local function md4(initmsg)
+    local f = |x, y, z| -> do
+        x, y, z = x & mask32, y & mask32, z & mask32
+        return (x & y) | (~x & z)
+    end
+    local g = |x, y, z| -> do
+        x, y, z = x & mask32, y & mask32, z & mask32
+        return (x & y) | (x & z) | (y & z)
+    end
+    local h = |x, y, z| -> do
+        x, y, z = x & mask32, y & mask32, z & mask32
+        return x ~ y ~ z
+    end
+    local r = |v, s|    -> do
+        v = v & mask32
+        return ((v << s) & mask32) | (v >> (32 - s))
+    end
+    local a = 0x67452301
+    local b = 0xefcdab89
+    local c = 0x98badcfe
+    local d = 0x10325476
+    local initbytes = {string.byte(initmsg, 1, -1)}
+    local initlen = #initbytes
+    local newlen = initlen + 1
+    while newlen % 64 != 56 do newlen += 1 end
+    local msg = table.rep(newlen + 8, 0)
+    for i = 1, initlen do msg[i] = initbytes[i] end
+    msg[initlen + 1] = 0x80  -- remaining bytes already 0
+    local lenbits = to_bytes(initlen * 8)
+    for i = newlen + 1, newlen + 4 do msg[i] = lenbits[i - newlen] end
+    local extrabits = to_bytes(initlen >> 29)
+    for i = newlen + 5, newlen + 8 do msg[i] = extrabits[i - newlen - 4] end
+    local offset = 0
+    local x = table.rep(16, 0)
+    while offset < newlen do
+        for i = 0, 15 do x[i + 1] = to_int(msg:slice(offset + i * 4 + 1, offset + i * 4 + 4)) end
+        local a2 = a
+        local b2 = b
+        local c2 = c
+        local d2 = d
+        for {0, 4, 8, 12} as i do
+            a = r(a + f(b, c, d) + x[i + 1],  3)
+            d = r(d + f(a, b, c) + x[i + 2],  7)
+            c = r(c + f(d, a, b) + x[i + 3], 11)
+            b = r(b + f(c, d, a) + x[i + 4], 19)
+        end
+        for i = 0, 3 do
+            a = r(a + g(b, c, d) + x[i + 1]  + 0x5a827999,  3)
+            d = r(d + g(a, b, c) + x[i + 5]  + 0x5a827999,  5)
+            c = r(c + g(d, a, b) + x[i + 9]  + 0x5a827999,  9)
+            b = r(b + g(c, d, a) + x[i + 13] + 0x5a827999, 13)
+        end
+        for {0, 2, 1, 3} as i do
+            a = r(a + h(b, c, d) + x[i + 1]  + 0x6ed9eba1,  3)
+            d = r(d + h(a, b, c) + x[i + 9]  + 0x6ed9eba1,  9)
+            c = r(c + h(d, a, b) + x[i + 5]  + 0x6ed9eba1, 11)
+            b = r(b + h(c, d, a) + x[i + 13] + 0x6ed9eba1, 15)
+        end
+        a += a2
+        b += b2
+        c += c2
+        d += d2
+        offset += 64
+    end
+    local digest = table.rep(16, 0)
+    local dbytes = to_bytes(a)
+    for i = 1, 4 do digest[i] = dbytes[i] end
+    dbytes = to_bytes(b)
+    for i = 1, 4 do digest[i + 4] = dbytes[i] end
+    dbytes = to_bytes(c)
+    for i = 1, 4 do digest[i + 8] = dbytes[i] end
+    dbytes = to_bytes(d)
+    for i = 1, 4 do digest[i + 12] = dbytes[i] end
+    return digest
+end
+
+local strings = {
+    "",
+    "a",
+    "abc",
+    "message digest",
+    "abcdefghijklmnopqrstuvwxyz",
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
+    "12345678901234567890123456789012345678901234567890123456789012345678901234567890",
+    "Rosetta Code"
+}
+
+for strings as s do
+    local digest = md4(s):map(|e| -> string.format("%02x", e)):concat("")
+    print($"{digest} <== '{s}'")
+end

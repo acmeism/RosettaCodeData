@@ -1,2 +1,2 @@
-	function step() {
-		if (0<n) {
+ function step() {
+      if (0<n) {

@@ -1,7 +1,5 @@
-# v0.6.0
-
 function printlyrics()
-    const gifts = split("""
+    gifts = split("""
     A partridge in a pear tree.
     Two turtle doves
     Three french hens
@@ -15,7 +13,7 @@ function printlyrics()
     Eleven pipers piping
     Twelve drummers drumming
     """, '\n')
-    const days = split("""
+    days = split("""
     first second third fourth fifth
     sixth seventh eighth ninth tenth
     eleventh twelfth""")

@@ -1,11 +1,6 @@
-int numElements = 10;
-int *myArray = malloc(sizeof(int) * numElements);  /* array of 10 integers */
-if ( myArray != NULL )   /* check to ensure allocation succeeded. */
-{
-  /* allocation succeeded */
-  /* at the end, we need to free the allocated memory */
-  free(myArray);
-}
-                    /* calloc() additionally pre-initializes to all zeros */
-short *myShorts = calloc( numElements, sizeof(short)); /* array of 10 */
-if (myShorts != NULL)....
+When defining autosized multidimensional arrays, all the dimensions except the first (leftmost) need to be defined. This is required in order for the compiler to generate the proper indexing for the array.
+<syntaxhighlight lang="c">long a2D_Array[3][5];    /* 3 rows, 5 columns. */
+float my2Dfloats[][3] = {
+   1.0, 2.0, 0.0,
+   5.0, 1.0, 3.0 };
+printf("rows: %zu\n",countof(my2Dfloats)); /* print row count */

@@ -1,0 +1,151 @@
+//
+// Subfactorials / "Left Factorials"
+//
+// Using FutureBasic 7.0.35
+//
+// September 2025, R.W.
+//
+
+include "GMP.incl"
+
+_MAXN = 10000   // supports init(10000)
+
+dim InitN as long
+dim lf_list( _MAXN ) as mpz_t //lf_list(k) holds k! for k = 0..InitN
+dim lf_psum( _MAXN ) as mpz_t //lf_psum(n) = 1! + 2! + ... + n!
+
+// ------------------------------
+// init vars
+// ------------------------------
+local fn InitLF( n as long )
+  long i
+
+  if n < 0 then n = 0
+  if n > _MAXN then n = _MAXN
+  InitN = n
+
+  // Initialize all mpz_t slots we'll use
+  for i = 0 to n
+    fn mpz_init( lf_list(i) )
+    fn mpz_init( lf_psum(i) )
+  next
+
+  // lf_list(0) = 0! = 1
+  fn mpz_set_ui( lf_list(0), 1 )
+  fn mpz_set_ui( lf_psum(0), 1 )
+
+  // Build up factorials iteratively:
+  // lf_list(k) = k! for k = 1..n
+  // f will carry the running factorial value
+  mpz_t f
+  fn mpz_init_set_ui( f, 1 )
+  for i = 1 to n
+    fn mpz_mul_ui( f, f, i )      // f *= i
+    fn mpz_set( lf_list(i), f )   // lf_list(i) = f
+    fn mpz_add( lf_psum(i), lf_psum(i-1), lf_list(i) )
+  next
+  fn mpz_clear( f )
+end fn
+
+// Sum of 1! + 2! + ... + n!
+//
+local fn LF_Sum( n as long, sum_out as mpz_t )
+  if n <= 0
+    fn mpz_set_ui( sum_out, 0 )
+    exit fn
+  end if
+  if n > InitN then n = InitN
+  fn mpz_set( sum_out, lf_psum(n-1) )
+end fn
+
+// Number of base-10 digits in the LF sum
+
+// Exact base-10 digit count for !n (sum of 0!..(n-1)!)
+
+local fn LF_NumDigitsBase10_Exact( n as long ) as long
+  mpz_t s, p10
+  long d
+  fn mpz_init( s )
+  fn LF_Sum( n, s )
+
+  // mpz_sizeinbase(x, 10) in GMP is not guaranteed exact for bases
+  // that are not powers of two. The manual notes it may return a
+  // value that’s “either exact or one too big.” Ch 5, page 45.
+  // Because of this we need to add an extra guard, basically use
+  // mpz_sizeinbase as an upper bound d, then compare the number
+  // against 10^(d-1). If the value is smaller, subtract 1 to
+  // yield the exact count.
+
+  d = fn mpz_sizeinbase( s, 10 )       // may be exact or 1 too big for base 10
+
+  if d > 0
+    fn mpz_init( p10 )
+    fn mpz_ui_pow_ui( p10, 10, d-1 )    // p10 = 10^(d-1)
+    if fn mpz_cmp( s, p10 ) < 0
+      d = d - 1
+    end if
+    fn mpz_clear( p10 )
+  end if
+  fn mpz_clear( s )
+end fn = d
+
+// Cleanup
+
+local fn CleanupLF
+  long i
+  for i = 0 to InitN
+    fn mpz_clear( lf_list(i) )
+    fn mpz_clear( lf_psum(i) )
+  next
+end fn
+
+// ----------------------------------
+// Subfactorials / Left Factorials
+// ----------------------------------
+local fn Main
+  long i, d
+  mpz_t s
+  // start the clock
+  CFTimeInterval t
+  t = fn CACurrentMediaTime
+
+  fn InitLF( 10000 )
+
+  // Factorial 0..10
+  fn mpz_init( s )
+  for i = 0 to 10
+    fn LF_Sum( i, s )
+    print @"!"; i; @" = ";
+    print @fn mpz_cf2(s)
+  next
+
+  // Factorial 20..110 step 10
+
+  for i = 20 to 110 step 10
+    fn LF_Sum( i, s )
+    print @"!"; i; @" = ";
+    print @fn mpz_cf2(s)
+  next
+
+  // Number of digits from 1,000..10,000 step 1000
+
+  for i = 1000 to 10000 step 1000
+    d = fn LF_NumDigitsBase10_Exact( i )
+    print @"!"; i; " contains "; d; " digits"
+  next
+
+  fn mpz_clear( s )
+
+  printf @"\nCompute time: %.3f ms", (fn CACurrentMediaTime-t)*1000
+  handleEvents
+
+  fn CleanupLF
+end fn
+
+window 1,@"Left Factorials",(0,0,980,500)
+
+fn Main
+
+handleEvents
+
+//

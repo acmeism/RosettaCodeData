@@ -79,7 +79,7 @@ GHashTable *create_table_from_array(const char *table[ROWS][COLS], bool is_encod
         numprefix_col = i;
         numprefix_row = j;
         has_numprefix = true;
-	break;
+   break;
       }
     }
   }
@@ -92,21 +92,21 @@ GHashTable *create_table_from_array(const char *table[ROWS][COLS], bool is_encod
       if (table[i][j] == NULL) continue;
       if (strlen(table[i][j]) > 1)
       {
-	fprintf(stderr, "symbols must be 1 byte long\n");
-	continue; // we continue just ignoring the issue
+   fprintf(stderr, "symbols must be 1 byte long\n");
+   continue; // we continue just ignoring the issue
       }
       if (has_numprefix && i == (ROWS-1) && j == numprefix_col && i == numprefix_row) continue;
       if (has_numprefix && i == 0)
       {
-	snprintf(buf, sizeof(buf), "%s%s%s", table[0][selectors[SELNUM-1]], table[0][numprefix_col], table[0][j]);
+   snprintf(buf, sizeof(buf), "%s%s%s", table[0][selectors[SELNUM-1]], table[0][numprefix_col], table[0][j]);
       }
       else if (i == 1)
       {
-	snprintf(buf, sizeof(buf), "%s", table[0][j]);
+   snprintf(buf, sizeof(buf), "%s", table[0][j]);
       }
       else
       {
-	snprintf(buf, sizeof(buf), "%s%s", table[0][selectors[i-2]], table[0][j]);
+   snprintf(buf, sizeof(buf), "%s%s", table[0][selectors[i-2]], table[0][j]);
       }
       if (is_encoding) g_hash_table_insert(r, strdup(table[i][j]), strdup(buf));
       else g_hash_table_insert(r, strdup(buf), strdup(table[i][j]));
@@ -179,8 +179,8 @@ char *encode(GHashTable *et, const char *plaintext, int (*trasf)(int), bool comp
     else
     {
       fprintf(stderr, "char '%s' is not encodable%s\n",
-	      isprint(buf[0]) ? buf : "?",
-	      !compress_spaces ? ", replacing with a space" : "");
+         isprint(buf[0]) ? buf : "?",
+         !compress_spaces ? ", replacing with a space" : "");
       if (!compress_spaces) g_string_append_c(s, ' ');
     }
   }

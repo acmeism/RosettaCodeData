@@ -1,0 +1,4 @@
+var a = [1, 2, 3, 4];
+
+for (i in a)
+  Sys.println(i);

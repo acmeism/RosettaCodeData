@@ -12,7 +12,7 @@ auto compress(in string original) pure nothrow {
             w = w ~ ch;
         else {
             result ~= dict[w];
-            dict[w ~ ch] = dict.length;
+            dict[w ~ ch] = cast(int)dict.length;
             w = [ch];
         }
     return w.empty ? result : (result ~ dict[w]);

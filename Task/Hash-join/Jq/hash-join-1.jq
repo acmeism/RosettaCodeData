@@ -31,5 +31,5 @@ def hashJoin(table1; key1; table2; key2):
        ($row[key2]|h) as $key
        | if $hash|has($key) then
            reduce $hash[$key][] as $r (.; . +  [ $row + $r ] )
-  	 else . end)
+     else . end)
 ;

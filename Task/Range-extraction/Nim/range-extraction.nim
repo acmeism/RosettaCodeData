@@ -7,7 +7,7 @@ proc extractRange(input: string): string =
   while i < list.len:
     var first = list[i] # first element in the current range
     var offset = i
-    while True: # skip ahead to the end of the current range
+    while true: # skip ahead to the end of the current range
       if i + 1 >= list.len:
         # reached end of the list
         break

@@ -1,0 +1,83 @@
+local board  = "ET AON RISBCDFGHJKLMPQ/UVWXYZ."
+local digits = "0123456789"
+local rows   = " 26"
+local escape = "62"
+local key    = "0452"
+
+local function encrypt(message)
+    local msg = message:upper():split("")
+                               :filtered(|c| -> (c in board or c in digits) and !(c in " /"))
+                               :reorder()
+    local sb = ""
+    for msg as c do
+        local idx = board:find(c, 1, true)
+        if idx then
+            idx -= 1
+            local row = idx // 10
+            local col = idx % 10
+            sb ..= (row == 0) ? $"{col}" : $"{rows[row + 1]}{col}"
+        else
+            sb ..= $"{escape}{c}"
+        end
+    end
+    local enc = {sb:byte(1, #sb)}
+    local i = 0
+    for enc as c do
+        local k = key[i % 4 + 1]:byte() - 48
+        if k != 0 then
+            local j = c - 48
+            enc[i + 1] = 48 + ((j + k) % 10)
+        end
+        i += 1
+    end
+
+    return enc:map(|b| -> string.char(b)):concat("")
+end
+
+local function decrypt(encoded)
+    local enc = {encoded:byte(1, #encoded)}
+    local i = 0
+    for enc as c do
+        local k = key[i % 4 + 1]:byte() - 48
+        if k != 0 then
+            local j = c - 48
+            enc[i + 1] = 48 + ((j >= k) ? (j - k) % 10 : (10 + j - k) % 10)
+        end
+        i += 1
+    end
+    local len = #enc
+    local sb = ""
+    i = 0
+    while i < len do
+        local c = enc[i + 1]
+        local idx = rows:find(tostring(c - 48), 1, true)
+        if !idx then
+            local idx2 = c - 48
+            sb ..= board[idx2 + 1]
+            i += 1
+        elseif $"{c - 48}{enc[i + 2] - 48}" == escape then
+            sb ..= tostring(enc[i + 3] - 48)
+            i += 3
+        else
+            local idx2 = (idx - 1) * 10 + enc[i + 2] - 48
+            sb ..= board[idx2 + 1]
+            i += 2
+        end
+    end
+    return sb
+end
+
+local messages = {
+    "Attack at dawn",
+    "One night-it was on the twentieth of March, 1888-I was returning",
+    "In the winter 1965/we were hungry/just barely alive",
+    "you have put on 7.5 pounds since I saw you.",
+    "The checkerboard cake recipe specifies 3 large eggs and 2.25 cups of flour."
+}
+for messages as message do
+    local encrypted = encrypt(message)
+    local decrypted = decrypt(encrypted)
+    print($"\nMessage   : {message}")
+    print($"Encrypted : {encrypted}")
+    print($"Decrypted : {decrypted}")
+end

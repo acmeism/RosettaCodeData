@@ -1,14 +1,20 @@
-function binom(n, k) {
-    var coeff = 1;
-    var i;
+/**
+ * Calculates the binomial coefficient n choose k
+ *
+ * @param {number} n
+ * @param {number} k
+ */
+function nCk(n, k) {
+  if (k < 0 || k > n) return 0;
 
-    if (k < 0 || k > n) return 0;
+  let result = 1;
 
-    for (i = 0; i < k; i++) {
-        coeff = coeff * (n - i) / (i + 1);
-    }
+  for (let i = 0; i < k; i++) {
+    // `result *= (n - i) / (i + 1)` can cause floating point errors
+    result = result * (n - i) / (i + 1);
+  }
 
-    return coeff;
+  return result;
 }
 
-console.log(binom(5, 3));
+console.log(nCk(5, 3));

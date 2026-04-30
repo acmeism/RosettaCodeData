@@ -34,17 +34,17 @@ set "gift1=A partridge in a pear tree"
 ::Display It!
 setlocal enabledelayedexpansion
 for /l %%i in (1,1,12) do (
-	echo On the !day%%i! day of Christmas
+  echo On the !day%%i! day of Christmas
         echo My true love gave to me:
 
-	for /l %%j in (%%i,-1,1) do (
-		if %%j equ 1 (
-			if %%i neq 1 <nul set /p ".=And "
-			echo !gift1!.
-		) else (
-			echo !gift%%j!,
-		)
-	)
-	echo(
+  for /l %%j in (%%i,-1,1) do (
+    if %%j equ 1 (
+      if %%i neq 1 <nul set /p ".=And "
+      echo !gift1!.
+    ) else (
+      echo !gift%%j!,
+    )
+  )
+  echo(
 )
 exit /b

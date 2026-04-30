@@ -1,0 +1,17 @@
+(setq valid-strings '("3" "0" "-0" "2." "1000" "-4" "-5." "6.2" "-8.45" "+15e2" "-15e2" "#b101100" "#o54" "#x2c" "1500.0" "#24r1k" "3"))
+
+(setq invalid-strings '("3cat" "1,000" "5.6.7" "cat3" "def" "zero"))
+
+(with-current-buffer (pop-to-buffer "my-test")
+  (erase-buffer)
+  (insert "Test for valid strings:\n")
+  (dolist (test-string valid-strings)
+  (let ((test-result))
+    (setq test-result (string-valid-number-p test-string))
+    (insert (format "%-8s - %s \n" test-string test-result))))
+  (insert "\n" "\n")
+  (insert "Test for invalid strings:\n")
+  (dolist (test-string invalid-strings)
+  (let ((test-result))
+    (setq test-result (string-valid-number-p test-string))
+    (insert (format "%-5s - %s \n" test-string test-result)))))

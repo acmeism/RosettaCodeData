@@ -3,7 +3,7 @@ import std.stdio, std.random, std.algorithm, std.traits, std.array;
 enum DutchColors { red, white, blue }
 
 void dutchNationalFlagSort(DutchColors[] items) pure nothrow @nogc {
-    int lo, mid, hi = items.length - 1;
+    ulong lo, mid, hi = items.length - 1;
 
     while (mid <= hi)
         final switch (items[mid]) {

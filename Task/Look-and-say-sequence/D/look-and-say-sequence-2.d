@@ -13,5 +13,5 @@ pure string lookAndSay(string s){
 void main(){
   auto s="1";
   for(auto i=0; i<10; i++)
-    (s = s.lookAndSay).writeln;	
+    (s = s.lookAndSay).writeln;
 }

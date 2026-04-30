@@ -16,8 +16,8 @@ cell_pid( X, Y, Maze ) -> dict:fetch( {X, Y}, Maze#maze.dict ).
 cell_position( Pid ) -> read( Pid, position ).
 
 display( #maze{dict=Dict, max_x=Max_x, max_y=Max_y} ) ->
-	Position_pids = dict:to_list( Dict ),
-	display( Max_x, Max_y, reads(Position_pids, content), reads(Position_pids, walls) ).
+   Position_pids = dict:to_list( Dict ),
+   display( Max_x, Max_y, reads(Position_pids, content), reads(Position_pids, walls) ).
 
 generation( Max_x, Max_y ) ->
        Controller = erlang:self(),
@@ -52,13 +52,13 @@ cell_create( Controller, Max_x, Max_y, {X, Y} ) -> erlang:spawn_link( fun() -> r
 display( Max_x, Max_y, Position_contents, Position_walls ) ->
         All_rows = [display_row( Max_x, Y, Position_contents, Position_walls ) || Y <- lists:seq(Max_y, 1, -1)],
         [io:fwrite("~s+~n~s|~n", [North, West]) || {North, West} <- All_rows],
-	io:fwrite("~s+~n", [lists:flatten(lists:duplicate(Max_x, display_row_north(true)))] ).
+   io:fwrite("~s+~n", [lists:flatten(lists:duplicate(Max_x, display_row_north(true)))] ).
 
 display_row( Max_x, Y, Position_contents, Position_walls ) ->
-	North_wests = [display_row_walls(proplists:get_value({X,Y}, Position_contents), proplists:get_value({X,Y}, Position_walls)) || X <- lists:seq(1, Max_x)],
-	North = lists:append( [North || {North, _West} <- North_wests] ),
-	West = lists:append( [West || {_X, West} <- North_wests] ),
-	{North, West}.
+   North_wests = [display_row_walls(proplists:get_value({X,Y}, Position_contents), proplists:get_value({X,Y}, Position_walls)) || X <- lists:seq(1, Max_x)],
+   North = lists:append( [North || {North, _West} <- North_wests] ),
+   West = lists:append( [West || {_X, West} <- North_wests] ),
+   {North, West}.
 
 display_row_walls( Content, Walls ) -> {display_row_north( lists:member(north, Walls) ), display_row_west( lists:member(west, Walls), Content )}.
 
@@ -71,47 +71,47 @@ display_row_west( false, Content ) -> "  " ++ Content ++ " ".
 loop( State ) ->
     receive
     {accessible_neighbours, Pid} ->
-    	Pid ! {accessible_neighbours, loop_accessible_neighbours( State#state.neighbours, State#state.walls ), erlang:self()},
+      Pid ! {accessible_neighbours, loop_accessible_neighbours( State#state.neighbours, State#state.walls ), erlang:self()},
         loop( State );
     {content, Pid} ->
-    	Pid ! {content, State#state.content, erlang:self()},
+      Pid ! {content, State#state.content, erlang:self()},
         loop( State );
     {content, Content, _Pid} ->
         loop( State#state{content=Content} );
     {dig, Pid} ->
-	    Not_dug_neighbours = loop_not_dug( State#state.neighbours ),
-	    New_walls = loop_dig( Not_dug_neighbours, lists:delete( loop_wall_from_pid(Pid, State#state.neighbours), State#state.walls), Pid ),
-	    loop( State#state{is_dug=true, walls=New_walls, walk_done=Pid} );
+       Not_dug_neighbours = loop_not_dug( State#state.neighbours ),
+       New_walls = loop_dig( Not_dug_neighbours, lists:delete( loop_wall_from_pid(Pid, State#state.neighbours), State#state.walls), Pid ),
+       loop( State#state{is_dug=true, walls=New_walls, walk_done=Pid} );
     {dig_done} ->
-	    Not_dug_neighbours = loop_not_dug( State#state.neighbours ),
-	    New_walls = loop_dig( Not_dug_neighbours, State#state.walls, State#state.walk_done ),
-	    loop( State#state{walls=New_walls} );
+       Not_dug_neighbours = loop_not_dug( State#state.neighbours ),
+       New_walls = loop_dig( Not_dug_neighbours, State#state.walls, State#state.walk_done ),
+       loop( State#state{walls=New_walls} );
     {is_dug, Pid} ->
-    	    Pid ! {is_dug, State#state.is_dug, erlang:self()},
-	    loop( State );
+          Pid ! {is_dug, State#state.is_dug, erlang:self()},
+       loop( State );
     {position, Pid} ->
-    	Pid ! {position, State#state.position, erlang:self()},
+      Pid ! {position, State#state.position, erlang:self()},
         loop( State );
     {position_pids, Position_pids} ->
         {_My_position, Neighbours} = lists:foldl( fun loop_neighbours/2, {State#state.position, []}, Position_pids ),
         erlang:garbage_collect(), % Shrink process after using large Pid_positions. For memory starved systems.
         loop( State#state{neighbours=Neighbours} );
     {stop, Controller} when Controller =:= State#state.controller ->
-    	   ok;
+         ok;
     {walls, Pid} ->
-    	    Pid ! {walls, State#state.walls, erlang:self()},
-	    loop( State )
+          Pid ! {walls, State#state.walls, erlang:self()},
+       loop( State )
     end.
 
 loop_accessible_neighbours( Neighbours, Walls ) -> [Pid || {Direction, Pid} <- Neighbours, not lists:member(Direction, Walls)].
 
 loop_dig( [], Walls, Pid ) ->
-	Pid ! {dig_done},
-	Walls;
+   Pid ! {dig_done},
+   Walls;
 loop_dig( Not_dug_neighbours, Walls, _Pid ) ->
         {Dig_pid, Dig_direction} = lists:nth( random:uniform(erlang:length(Not_dug_neighbours)), Not_dug_neighbours ),
         Dig_pid ! {dig, erlang:self()},
-	lists:delete( Dig_direction, Walls ).
+   lists:delete( Dig_direction, Walls ).
 
 loop_neighbours( {{X, Y}, Pid}, {{X, My_y}, Acc} ) when Y =:= My_y + 1 -> {{X, My_y}, [{north, Pid} | Acc]};
 loop_neighbours( {{X, Y}, Pid}, {{X, My_y}, Acc} ) when Y =:= My_y - 1 -> {{X, My_y}, [{south, Pid} | Acc]};
@@ -120,17 +120,17 @@ loop_neighbours( {{X, Y}, Pid}, {{My_x, Y}, Acc} ) when X =:= My_x - 1 -> {{My_x
 loop_neighbours( _Position_pid, Acc ) -> Acc.
 
 loop_not_dug( Neighbours ) ->
-	My_pid = erlang:self(),
-	[Pid ! {is_dug, My_pid} || {_Direction, Pid} <- Neighbours],
-	[{Pid, Direction} || {Direction, Pid} <- Neighbours, not read_receive(Pid, is_dug)].
+   My_pid = erlang:self(),
+   [Pid ! {is_dug, My_pid} || {_Direction, Pid} <- Neighbours],
+   [{Pid, Direction} || {Direction, Pid} <- Neighbours, not read_receive(Pid, is_dug)].
 
 loop_wall_from_pid( Pid, Neighbours ) -> loop_wall_from_pid_result( lists:keyfind(Pid, 2, Neighbours) ).
 loop_wall_from_pid_result( {Direction, _Pid} ) -> Direction;
 loop_wall_from_pid_result( false ) -> controller.
 
 read( Pid, Key ) ->
-	Pid ! {Key, erlang:self()},
-	read_receive( Pid, Key ).
+   Pid ! {Key, erlang:self()},
+   read_receive( Pid, Key ).
 
 read_receive( Pid, Key ) ->
         receive

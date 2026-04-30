@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 21 Feb 2026
 include Setting
 numeric digits 12
 
@@ -6,8 +6,11 @@ say 'CHOWLA NUMBERS'
 say version
 say
 call ChowlaNumbers
+call Timer 'R'
 call PrimeCount
+call Timer 'R'
 call PerfectNumbers
+call Timer 'R'
 exit
 
 ChowlaNumbers:
@@ -19,13 +22,11 @@ do i = 1 to m
    say Right(i,2) Right(Chowla(i),9)
 end
 say sep
-say Format(Time('e'),,3) 'seconds'
-say
 return
 
 PrimeCount:
 procedure expose Memo. work.
-call Time('r'); sep = Copies('-',17)
+sep = Copies('-',17)
 say sep; say Right('n',8) Right('Primes<n',8); say sep
 d = 1; work. = 1; m = 1e7; n = 0
 do i = 1 by 2 to m+1
@@ -47,13 +48,11 @@ do i = 1 by 2 to m+1
    end
 end
 say sep
-say Format(Time('e'),,3) 'seconds'
-say
 return
 
 PerfectNumbers:
-procedure expose divi.
-call Time('r'); sep = Copies('-',12)
+procedure expose Divi. Memo.
+sep = Copies('-',12)
 say sep; say Right('Perfect',12); say sep
 k = 2; kk = 3; m = 140e9; n = 0
 do forever
@@ -68,8 +67,7 @@ do forever
 end
 say sep
 say n 'perfect numbers found below 140e9'
-say Format(Time('e'),,3) 'seconds'
-say
 return
 
+-- Chowla; Xpon; Timer
 include Math

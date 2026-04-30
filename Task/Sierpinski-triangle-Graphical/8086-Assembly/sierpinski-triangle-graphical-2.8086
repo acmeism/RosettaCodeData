@@ -1,0 +1,130 @@
+use16
+org 0x7c00
+
+start:
+;graphics mode 11h
+    mov    ax, 0x0011
+    int    0x10
+;reserve 8 bytes on the stack
+;word [bp+6] is the state of the xorshift16 prng
+;word [bp+2] is the current x position
+;word [bp+4] is the current y position
+    sub    sp, 8
+    mov    bp, sp
+    mov cx, [numbers]
+outerloop:
+    push cx
+    mov  word [bp], cx
+    dec  word [bp]
+    shl  word [bp], 2
+;seed the random number generator with 1
+    mov    word [bp+6], 1
+;initialize the current position
+    mov    word [bp+2], 320
+    mov    word [bp+4], 240
+;run the main loop 65535 times
+    mov    cx, 0xffff
+mainloop0:
+    mov    di, 3
+    call   rand
+    mov    di, ax
+    add    di, word [bp]
+    call   ave
+    mov    di, [bp + 2]
+    mov    si, [bp + 4]
+    call   pset
+    loop   mainloop0
+    pop    cx
+    loop   outerloop
+busyloop:
+    jmp    $
+
+ave:
+    push   ax
+    push   bx
+    push   cx
+    push   dx
+    shl    di, 2
+    mov    ax, [corners + di]
+    mov    bx, [corners + di + 2]
+    mov    cx, [bp + 2]
+    mov    dx, [bp + 4]
+    add    cx, ax
+    add    dx, bx
+    shr    cx, 1
+    shr    dx, 1
+    mov    [bp + 2], cx
+    mov    [bp + 4], dx
+    pop    dx
+    pop    cx
+    pop    bx
+    pop    ax
+    ret
+
+rand:
+    push   bx
+    push   cx
+    push   dx
+    mov    ax, [bp+6]
+    mov    bx, ax
+    shl    bx, 7
+    xor    ax, bx
+    mov    bx, ax
+    shr    bx, 9
+    xor    ax, bx
+    mov    bx, ax
+    shl    bx, 8
+    xor    ax, bx
+    mov    [bp+6], ax
+    xor    dx, dx
+    div    di
+    mov    ax, dx
+    pop    dx
+    pop    cx
+    pop    bx
+    ret
+
+pset:
+    push   ds
+    mov    bx, 0xa000
+    mov    ds, bx
+    push   ax
+    push   bx
+    push   cx
+    push   dx
+    xor    dx, dx
+    mov    cx, di
+    shr    di, 3
+    and    cx, 0x07
+    mov    bl, 0x80
+    shr    bl, cl
+    mov    cl, bl
+    mov    ax, 80
+    mul    si
+    add    ax, di
+    mov    bx, ax
+    mov    al, [bx]
+    or     al, cl
+    mov    [bx], al
+    pop    dx
+    pop    cx
+    pop    bx
+    pop    ax
+    pop    ds
+    ret
+
+    ;this calculates the number of triangles.
+numbers:
+    dw    ((filler-corners) / 16)
+    ;--------------------------------------------------------------
+    ;the format for the corners is x1, y1, x2, y2, x3, y3, 4 bytes filler
+    ;you can theorically have up to 65536 triangles.
+    ;It'll draw them one at a time.
+    ;But, you have only 512 bytes. That not enough for 65536 triangles. :(
+corners:
+    dw 320, 0, 0, 480, 640, 480, 0xffff, 0xffff
+    ;just put more triangles here.
+filler:
+    times 510-($-$$) db 0
+magic:
+    dw 0xaa55

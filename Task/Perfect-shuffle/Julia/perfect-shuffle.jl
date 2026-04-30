@@ -3,7 +3,7 @@ using Printf
 function perfect_shuffle(a::Array)::Array
     if isodd(length(a)) error("cannot perform perfect shuffle on odd-length array") end
 
-    rst = zeros(a)
+    rst = zeros(length(a))
     mid = div(length(a), 2)
     for i in 1:mid
         rst[2i-1], rst[2i] = a[i], a[mid+i]

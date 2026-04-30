@@ -2,11 +2,11 @@ import term.ui as tui
 
 struct App {
 mut:
-	tui &tui.Context = 0
+	tui &tui.Context = unsafe { nil }
 }
 
 fn event(e &tui.Event, x voidptr) {
-	mut app := &App(x)
+	mut app := unsafe { &App(x) }
 	app.tui.clear()
 	app.tui.set_cursor_position(0, 0)
 	app.tui.write('V term.input event viewer (type `y`, `Y`, `n`, or `N` to exit)\n\n')
@@ -46,5 +46,5 @@ fn main() {
 		use_alternate_buffer: false
 	)
 	println('V term.input event viewer (type `y`, `Y`, `n`, or `N` to exit)\n\n')
-	app.tui.run()?
+	app.tui.run()!
 }

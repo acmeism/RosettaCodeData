@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 10 Mar 2026
 include Setting
 
 say 'Factorial'
@@ -10,7 +10,7 @@ if pos('Regina',version) > 0 then
    call Recursive 10, '1 13 71 450 3249 25206 205022'
 else
    call Recursive 10, '1 13 71 450 3249'
-call Imperative 1E5,'1 13 71 450 3249 25206'
+call Imperative 100000,'1 13 71 450 3249 25206'
 call Timer
 exit
 
@@ -24,10 +24,10 @@ say
 return
 
 Imperative:
-call ResetMemo
+Memo.=''
 call Time('R')
 arg d,p
-numeric digits d; Fact. = 0
+numeric digits d
 say 'Imperative in' d 'digits precision...'
 do i = 1 to Words(p)
    call Time('r'); f = Word(p,i); h = Fact(f)
@@ -41,10 +41,10 @@ say
 return
 
 Recursive:
-call ResetMemo
+Memo.=''
 call Time('R')
 arg d,p
-numeric digits d; Fact. = 0
+numeric digits d
 say 'Recursive in' d 'digits precision...'
 do i = 1 to Words(p)
    call Time('r'); f = Word(p,i); h = Recurs(f)

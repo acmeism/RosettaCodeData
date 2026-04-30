@@ -1,6 +1,8 @@
+using Printf
+
 const COLORS = ["red", "white", "blue"]
 
-function dutchsort!(a::Array{ASCIIString,1}, lo=COLORS[1], hi=COLORS[end])
+function dutchsort!(a::AbstractVector, lo=COLORS[1], hi=COLORS[end])
     i = 1
     j = 1
     n = length(a)
@@ -19,6 +21,6 @@ function dutchsort!(a::Array{ASCIIString,1}, lo=COLORS[1], hi=COLORS[end])
     return a
 end
 
-function dutchsort(a::Array{ASCIIString,1}, lo=COLORS[1], hi=COLORS[end])
+function dutchsort(a::AbstractVector, lo=COLORS[1], hi=COLORS[end])
     dutchsort!(copy(a), lo, hi)
 end

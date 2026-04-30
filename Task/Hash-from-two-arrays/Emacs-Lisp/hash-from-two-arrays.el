@@ -1,0 +1,11 @@
+(defun hash-from-two-arrays (seq1 seq2)
+  (let ((hash (make-hash-table :test 'equal))
+        (list1 (if (listp seq1) seq1 (append seq1 nil)))
+        (list2 (if (listp seq2) seq2 (append seq2 nil))))
+    (while (and list1 list2)
+      (puthash (car list1) (car list2) hash)
+      (setq list1 (cdr list1)
+            list2 (cdr list2)))
+    hash))
+
+(hash-from-two-arrays (list 'a 'b 'c) [1 2 3])

@@ -22,7 +22,7 @@ int confirm( const char *id)
         else {
             s += (k!=9)? (2*k)%9 : 9;
         }
-	is_odd_dgt = !is_odd_dgt;
+   is_odd_dgt = !is_odd_dgt;
     }
     return 0 == s%10;
 }

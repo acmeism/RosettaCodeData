@@ -1,1 +1,1 @@
-"HOME : " & (do shell script "echo $HOME" & ", PATH : " & (do shell script "echo $PATH" & ", USER : " & (do shell script "echo $USER")))
+tell application "Finder" to get name of home

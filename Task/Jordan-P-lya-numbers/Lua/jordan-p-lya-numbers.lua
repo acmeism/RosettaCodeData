@@ -1,0 +1,47 @@
+do  -- Jordan-Pólya numbers - translation of XPL0 via Oberon-07
+
+    local  maxFactorial = 11
+    local  f = {}
+    f[ 1 ] = 1 for i = 2, maxFactorial do f[ i ] = f[ i - 1 ] * i end
+
+    local function isJordanPolya( m )
+        local result, limite = false, maxFactorial + 1
+        while not result and limite > 1 do
+            limite = limite - 1
+            local n, i = m, limite
+            local fac  = f[ limite ]
+            repeat
+                if n % fac == 0 then
+                    n      = math.floor( n / fac )
+                    result = n == 1
+                else
+                    fac    = math.floor( fac / i )
+                    i      = i - 1
+                end
+            until i == 1 or result
+        end
+        return result
+    end
+
+    local function next( n0 )
+        local n = n0
+        repeat
+            n = n + 2
+        until isJordanPolya( n )
+        return n
+    end
+
+    do
+        io.write( "1" )
+        local n = 0
+        for c = 2, 50 do
+            n = next( n )
+            io.write( " " .. n )
+        end
+        n = 100000000
+        while n > 1 and not isJordanPolya( n ) do
+            n = n - 2
+        end
+        io.write( "\nThe largest Jordan-Pólya number before 100 million: " .. n .. "\n" )
+    end
+end

@@ -48,12 +48,12 @@ func draw
 
        for n = 1 to 5
              theta = fabs(180-144-phi)
-	     p1x = floor(cx + nn * cos(phi * 0.01745329252))
-	     p1y = floor(cy + nn * sin(phi * 0.01745329252))
-	     p2x = floor(cx - nn * cos(theta * 0.01745329252))
-	     p2y = floor(cy - nn * sin(theta * 0.01745329252))
-	     phi+= 72
-	     drawpolygon([[p1x,p1y],[cx,cy],[p2x,p2y]],0)
+        p1x = floor(cx + nn * cos(phi * 0.01745329252))
+        p1y = floor(cy + nn * sin(phi * 0.01745329252))
+        p2x = floor(cx - nn * cos(theta * 0.01745329252))
+        p2y = floor(cy - nn * sin(theta * 0.01745329252))
+        phi+= 72
+        drawpolygon([[p1x,p1y],[cx,cy],[p2x,p2y]],0)
         next
 
         endpaint()

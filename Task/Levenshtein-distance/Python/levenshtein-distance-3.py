@@ -1,4 +1,4 @@
-def ld(a, b, mx=-1):	
+def ld(a, b, mx=-1):
     def result(d): return d if mx < 0 else False if d > mx else True
 
     if a == b: return result(0)

@@ -15,7 +15,7 @@ fn main() {
     let mut x = 0.;
     let mut y = 0.;
     for _ in 0..max_iterations {
-        let r = rng.gen::<f32>();
+        let r = rng.r#gen::<f32>();
         let cx: f64;
         let cy: f64;
 

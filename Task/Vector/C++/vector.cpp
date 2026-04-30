@@ -1,5 +1,6 @@
 /*
- * CXXFLAGS=-march=native -O3 -std=<c|gnu>++23 -mfpmath=<your SIMD implementation>
+ * CXXFLAGS=-march=native -O3 -std=<c|gnu>++23 -mfpmath=<your SIMD implementation> -ftree-vectorize -fopenmp-simd
+ * See: [https://learn.microsoft.com/en-us/cpp/parallel/openmp/openmp-simd?view=msvc-180 Microsoft Visual Studio OpenMP SIMD]
  * compatible with every compiler and any SIMD platform.
  * Based on aligned vector type using cstdout not iostream.
  */

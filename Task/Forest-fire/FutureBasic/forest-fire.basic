@@ -1,0 +1,222 @@
+//
+//    FOREST FIRE SIMULATION
+//
+//   Using FutureBasic 7.0.34
+//  August 2025, R.W.
+//
+Boolean running
+BlockOperationRef dCode
+OperationQueueRef cQueue
+OperationQueueRef opQueue
+
+long N, M
+double pfire, ptree, generation
+long dimx, dimy
+long f(142,142)          // the forest
+long future(142,142)     // the predicted future
+CFStringRef gen
+CGFloat red, green, blue
+colorRef colR
+float rndf
+pfire=0.00002: ptree=0.002  //probabilities
+
+begin enum 1
+  _window
+  _generation
+  _toggle
+end enum
+
+// Build window
+
+void local fn BuildWindow
+  CGRect r = fn CGRectMake( 0, 0, 570, 570 )
+  window _window, @"Forest Fire Simulation", r, NSWindowStyleMaskTitled + ¬
+     NSWindowStyleMaskClosable
+  WindowSetBackgroundColor( _window, fn ColorBlack) //ColorWindowBackground )
+  ViewSetFlipped( _WindowContentViewTag, YES )
+  WindowSubclassContentView(_Window)
+  ViewSetNeedsDisplay( _windowContentViewTag )
+  windowcenter (_Window)
+  AppSetAppearance(fn AppearanceNamed(NSAppearanceNameDarkAqua))
+  WindowMakeFirstResponder( _Window, _windowContentViewTag )
+  ViewSetAcceptsFirstResponder( _Window, _true )
+end fn
+
+void local fn DrawControls
+  gen = @""
+  CGRect r = fn CGRectMake( 10, 532, 220, 32 )
+  textlabel _generation, gen,r,_window
+  r = fn CGRectMake( 450, 530, 100, 24 )
+  button _toggle,,, @"Start", r, , , _Window
+end fn
+
+//
+// Populate the array with empty and tree cells according to a
+// specific probability
+// (e.g. a cell has the probability 0.5 to be a tree)
+
+void local fn buildForest
+  int x, y
+  // Initialize forest with trees (1) or empty (0)
+  for y = 1 to N
+    for x = 1 to M
+      rndf =  (rnd(65536)-1)/65536.0
+      // a cell has the probability 0.5 to be a tree
+      if rndf < 0.5 then f(x,y) = 1 else f(x,y) = 0
+    next
+  next
+end fn
+
+//
+// Draw the forest
+
+local fn DrawForest
+  int x, y
+  cls
+  for y = 1 to N
+    for x = 1 to M
+      red = 0.0: green = 0.0:   blue = 0.0 //black
+      if f(x,y) == 1
+        red = 0: green = 0.50:  blue = 0 //green
+      else
+        if f(x,y) == 2
+          red = 0.97: green = 0.49:  blue = 0 //red
+        end if
+      end if
+      Colr = fn ColorWithRGB(red,green,blue,1.0)
+      pen 1, colr
+      oval fill (x*4,y*4,3.2,3.2), colr
+    next
+  next
+end fn
+
+//
+// Simulates the forest fire
+
+local fn simulate
+
+  int x, y, xx, yy, localfire
+
+  // A burning cell turns into an empty cell
+  // A tree will burn if at least one neighbor is burning
+  // A tree ignites with probability pfire even if no neighbor is burning
+  // An empty space grows a tree with probability ptree
+  //
+  for y = 1 to N
+    for x = 1 to M
+      rndf =  (rnd(65536)-1)/65536.0
+      select case f(x,y)
+        case 0  // empty
+          if rndf < ptree
+            future(x,y) = 1
+          else
+            future(x,y) = 0
+          end if
+        case 1  // tree
+          if rndf < pfire
+            future(x,y) = 2    // probability of ignition
+          else
+            // check neighbors for fire
+            localFire = 0
+            for yy = y-1 to y+1
+              for xx = x-1 to x+1
+                if f(xx,yy) == 2 then localFire = 1
+              next
+            next
+            if localFire == 1
+              future(x,y) = 2
+            else
+              future(x,y) = 1
+            end if
+          end if
+        case 2  // burning
+          future(x,y) = 0
+      end select
+    next
+  next
+
+  // Copy future to forest
+  for y = 1 to N
+    for x = 1 to M
+      f(x,y) = future(x,y)
+    next
+  next
+  generation++
+end fn
+
+//
+// Executed as long as we are running
+//
+local fn tillTheCowsComeHome (dPtr as Ptr)
+  while running
+    dispatchmain
+      fn drawforest
+    dispatchend
+    fn Simulate
+    delay 110
+  wend
+  // callback canned
+  OperationCancel (dCode )
+end fn
+
+// Begin animation
+void local fn Animate
+  // setup dispatch queue w/ callback
+  dCode = fn BlockOperationWithCallback( @fn tillTheCowsComeHome, NULL )
+  cQueue = fn OperationQueueInit           // Init queue
+  OperationQueueSetMaxConcurrentOperationCount( cQueue, 1 )  // serial only
+  OperationQueueAddOperations( cQueue, @[dCode], NO )        // add to queue
+end fn
+
+//
+// App Event handler
+//
+void local fn DoAppEvent( ev as long )
+  select ( ev )
+    case _appWillTerminate
+      if running then OperationCancel (dCode )
+  end select
+end fn
+
+//
+// Dialog handler
+
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case _toggle
+          running = !running  // toggles run status
+          if running
+            button _toggle,,, @"Stop"
+            fn Animate
+            textlabel _generation, @""
+          else
+            button _toggle,,, @"Start"
+            gen = concat(@"Stopped at Generation: ",str(generation))
+            textlabel _generation, gen
+          end if
+      end select
+    case _windowShouldClose
+      if running then OperationCancel (dCode )
+      end
+  end select
+end fn
+//==========================================
+
+on dialog fn DoDialog
+
+fn BuildWindow
+fn DrawControls
+
+randomize
+
+N = 130    // number of rows
+M = 140    // number of columns
+generation = 1
+running = _False
+
+fn buildForest
+fn drawForest
+
+handleEvents

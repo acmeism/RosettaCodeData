@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 4 Mar 2026
 include Setting
 numeric digits 30
 
@@ -19,9 +19,8 @@ call MillerRabin 1e21,1e21+999
 exit
 
 TrialDivision:
-procedure
+procedure expose Memo. Glob.
 arg xx,yy
-call Time('r')
 say 'Primes between' Std(xx) 'and' Std(yy) 'by trial division...'
 n = 0; w = Xpon(yy)+2
 do i = xx to yy
@@ -34,14 +33,12 @@ do i = xx to yy
 end
 say
 say n 'found'
-say Format(Time('e'),,3) 'seconds'
-say
+call Timer 'R'
 return
 
 MillerRabin:
-procedure
+procedure expose Glob.
 arg xx,yy
-call Time('r')
 say 'Primes between' Std(xx) 'and' Std(yy) 'by Miller-Rabin primality test...'
 n = 0; w = Xpon(yy)+2
 do i = xx to yy
@@ -54,12 +51,11 @@ do i = xx to yy
 end
 say
 say n 'found'
-say Format(Time('e'),,3) 'seconds'
-say
+call Timer 'R'
 return
 
 Isprime:
-procedure
+procedure expose Memo.
 arg xx
 if xx < 3 then
    return (xx = 2)
@@ -71,4 +67,5 @@ do i = 3 by 2 to Isqrt(xx)
 end
 return 1
 
+-- Xpon; Std; Prime; Even; Isqrt
 include Math

@@ -24,14 +24,14 @@ void fill_img(image img,
         color_component g,
         color_component b );
 void put_pixel_unsafe(
-       	image img,
+         image img,
         unsigned int x,
         unsigned int y,
         color_component r,
         color_component g,
         color_component b );
 void put_pixel_clip(
-       	image img,
+         image img,
         unsigned int x,
         unsigned int y,
         color_component r,

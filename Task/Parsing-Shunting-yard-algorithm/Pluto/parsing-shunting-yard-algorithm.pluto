@@ -1,0 +1,54 @@
+local buffer = require "pluto:buffer"
+require "queue"
+
+local ops <const> = "-+/*^"
+
+--[[ To find out the precedence, we take the 0-based index of the
+     token in the OPS string and divide by 2 (rounding down).
+     This will give us: 0, 0, 1, 1, 2
+]]
+local function infix_to_postfix(infix)
+    local sb = new buffer()
+    local s = new stack()
+    for token in infix:gmatch("%S+") do
+        local c = token[1]
+        local idx = ops:find(c, 1, true)
+
+        -- Check for operator.
+        if idx then
+            if s:empty() then
+                s:push(idx)
+            else
+                while !s:empty() do
+                    local prec2 = (s:peek() - 1) // 2
+                    local prec1 = (idx - 1) // 2
+                    if prec2 > prec1 or (prec2 == prec1 and c != "^") then
+                        sb:append(ops[s:pop()] .. " ")
+                    else
+                        break
+                    end
+                end
+                s:push(idx)
+            end
+        elseif c == "(" then
+            s:push(-2)  -- -2 stands for "("
+        elseif c == ")" then
+            -- Until "(" on stack, pop operators.
+            while s:peek() != -2 do sb:append(ops[s:pop()] .. " ") end
+            s:pop()
+        else
+            sb:append(token .. " ")
+        end
+    end
+    while !s:empty() do sb:append(ops[s:pop()] .. " ") end
+    return sb:tostring()
+end
+
+local es = {
+    "3 + 4 * 2 / ( 1 - 5 ) ^ 2 ^ 3",
+    "( ( 1 + 2 ) ^ ( 3 + 4 ) ) ^ ( 5 + 6 )"
+}
+for es as e do
+    print($"Infix   : {e}")
+    print($"Postfix : {infix_to_postfix(e)}\n")
+end

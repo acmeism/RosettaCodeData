@@ -1,6 +1,6 @@
 import std.stdio, std.algorithm, std.string, std.numeric, std.ascii;
 
-char sedolChecksum(in char[] sedol) pure nothrow @safe /*@nogc*/
+char sedolChecksum(in char[] sedol) pure @safe /*@nogc*/
 in {
     assert(sedol.length == 6, "SEDOL must be 6 chars long.");
     enum uint mask = 0b11_1110_1111_1011_1110_1110_1110;
@@ -16,7 +16,7 @@ in {
     }
     immutable int d = sedol.map!c2v.dotProduct([1, 3, 1, 7, 3, 9]);
     assert((d + result - '0') % 10 == 0);
-} body {
+} do {
     static immutable int[] weights = [1, 3, 1, 7, 3, 9];
 
     int sum = 0;

@@ -1,0 +1,164 @@
+bdos	equ	5h	        ; location of jump to BDOS entry point
+wboot   equ     0       ; BDOS warm boot function
+conout  equ     2       ; write character to console
+prtstr  equ     9       ; write $-terminated string to console
+cr      equ     13      ; carriage return
+lf      equ     10      ; line feed
+limit	equ	    100
+	;------------------------------------------------------
+	; main code
+	;------------------------------------------------------
+	org	100h	; program load point under CP/M
+	lxi	sp,stack ; set our own stack
+	;
+	; initialize flag array
+	;
+	lxi	b,limit	
+	lxi	h,table+1
+init:	mov	a,b	; have we reached the last element?
+	ora	c	; (i.e., does BC = 0?)
+	jz	sieve
+	mvi	m,1	; 1 signifies prime
+	inx	h	; point to next element
+	dcx	b	; decrease count
+	jmp	init
+	;
+	; sieve by striking out multiples of each prime
+	; encountered
+	;
+sieve:	lxi     d,2	; 2 is the first prime
+oloop:  mov     h,d	; HL = DE
+        mov     l,e
+iloop: 	dad     d	; HL = HL + DE
+        push    h	; remember inner loop index
+        lxi     b,table
+        dad     b
+	    mvi	    m,0
+        pop     h
+        push    h
+        lxi     b,-limit
+        dad     b	; CY if HL >= limit
+        pop     h
+        jnc     iloop
+oloop2:	inx     d	; find next number not yet struck
+	    push	h
+	    lxi	    h,table
+	    dad	    d
+	    cpi	    m,0
+	    pop	    h
+	    jz	    oloop2  ; already struck out
+        mov     h,d	; ready for another go if DE < limit
+        mov     l,e	;
+        dad     b
+        jnc     oloop	; or fall through when finished
+	;
+	; show primes and total found
+	;
+show:	lxi	b,limit
+	lxi	d,2
+	lxi	h,table+2  ; first prime is 2
+show2:	mov	a,b	; have we reached the end?
+	ora	c	; if so (BC=0), we're done
+	jz	show4
+	mov	a,m	; fetch byte pointed to by HL
+	cpi	1	; is it prime?
+	jnz	show3	; no, continue
+	push	h	; otherwise, save position
+	lhld	count	; increment count
+	inx	h
+	shld	count
+	pop	h
+	xchg
+	call	putdec
+	xchg
+	mvi	a,' '	; separate with a space
+	call	putchr
+show3:	dcx	b
+	inx	d
+	inx	h
+	jmp	show2
+show4:	call	crlf	; show how many were found
+	lhld	count
+	call	putdec
+	lxi	d,result
+	call	message
+	;
+	; all finished. clean up and exit.
+	;
+	jmp	wboot
+	;-------------------------------------------------------
+	; console output of $-terminated string pointed to by DE
+	;-------------------------------------------------------
+message:
+	push	h
+	push	d
+	push	b
+	mvi	    c,prtstr
+	call	bdos
+	pop	b
+	pop	d
+	pop	h
+	ret
+	;------------------------------------------------------
+	; output CRLF to console
+	;------------------------------------------------------
+crlf:	push 	h
+	push 	d
+	push	b
+	mvi	e,cr
+	mvi	c,conout
+	call	bdos
+	mvi	e,lf
+	mvi	c,conout
+	call	bdos
+	pop	b
+	pop	d
+	pop	h
+	ret
+	;------------------------------------------------------
+	; console output of char in A register
+	;------------------------------------------------------
+putchr:	push	h
+	push	d
+	push	b
+	mov	e,a
+	mvi	c,conout
+	call	bdos
+	pop	b
+	pop	d
+	pop	h
+	ret
+	;------------------------------------------------------
+	; Output unsigned decimal number in HL to console
+	;------------------------------------------------------
+putdec: push	b
+	push	d
+	push	h
+	lxi	b,-10
+	lxi	d,-1
+putdec2:
+	dad	b
+	inx	d
+	jc	putdec2
+	lxi	b,10
+	dad	b
+	xchg
+	mov	a,h
+	ora	l
+	cnz	putdec	; recursive call
+	mov	a,e
+	adi	'0'
+	call	putchr
+	pop	h
+	pop	d
+	pop	b
+	ret
+	;------------------------------------------------------
+	;  message and data area
+	;------------------------------------------------------
+result:	db	' primes were found.',cr,lf,'$'
+count:	dw	0
+table:	ds	limit+1
+stack	equ	$+256	; 128-level stack
+	;
+	end

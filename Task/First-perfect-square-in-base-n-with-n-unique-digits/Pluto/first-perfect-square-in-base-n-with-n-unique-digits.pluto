@@ -1,0 +1,99 @@
+require "bignum"
+require "table2"
+local fmt = require "fmt"
+
+local maxbase  <const> = 21
+local minsq36  <const> = "1023456789abcdefghijklmnopqrstuvwxyz"
+local minsq36x <const> = "10123456789abcdefghijklmnopqrstuvwxyz"
+local zero     <const> = bigint.new(0)
+
+local function contains_all(sq, base)
+    local found = table.rep(maxbase, 0)
+    local le = #sq
+    local reps = 0
+    for sq as r do
+        local d = r:byte() - 48
+        if d > 38 then d -= 39 end
+        found[d + 1] += 1
+        if found[d + 1] > 1 then
+            reps += 1
+            if le - reps < base then return false end
+        end
+    end
+    return true
+end
+
+local function sum_digits(n, base)
+    local sum = zero
+    while n > zero do
+        sum += n % base
+        n /= base
+    end
+    return sum
+end
+
+local function digital_root(n, base)
+    while n > base - 1 do n = sum_digits(n, base) end
+    return bigint.toplain(n)
+end
+
+local function min_start(base)
+    local ms = minsq36:sub(1, base)
+    local nn = bigint.frombase(ms, base)
+    local bdr = digital_root(nn, base)
+    local drs = {}
+    local ixs = {}
+    for n = 1, 2 * base - 1 do
+        nn = bigint.new(n * n)
+        local dr = digital_root(nn, base)
+        if dr == 0 then dr = n * n end
+        if dr == bdr then ixs:insert(n) end
+        if n < base and dr >= bdr then drs:insert(dr) end
+    end
+    local inc = 1
+    if #ixs >= 2 and base != 3 then inc = ixs[2] - ixs[1] end
+    if #drs == 0 then return ms, inc, bdr end
+    local min = drs:min()
+    local rd = min - bdr
+    if rd == 0 then return ms, inc, bdr end
+    if rd == 1 then return minsq36x:sub(1, base + 1), 1, bdr end
+    local ins = minsq36[rd + 1]
+    return (minsq36:sub(1, rd) .. ins .. minsq36:sub(rd + 1)):sub(1, base + 1), inc, bdr
+end
+
+local start = os.clock()
+local n = 2
+local k = 1
+local base = 2
+while true do
+    if base == 2 or (n % base) != 0 then
+        local nb = bigint.new(n)
+        local sq = bigint.tobase(nb * nb, base)
+        if contains_all(sq:split(""), base) then
+            local ns = fmt.itoa(n, base)
+            local tt = os.clock() - start
+            fmt.print("Base %2d:%15s² = %-27s in %8.3fs", base, ns, sq, tt)
+            if base == maxbase then break end
+            base += 1
+            local ms, inc, bdr = min_start(base)
+            k = inc
+            local nn = bigint.frombase(ms, base)
+            nb = bigint.sqrt(nn)
+            if nb < n + 1 then nb = bigint.new(n + 1) end
+            if k != 1 then
+                while true do
+                    nn = nb * nb
+                    local dr = digital_root(nn, base)
+                    if dr == bdr then
+                        n = bigint.toplain(nb) - k
+                        break
+                    end
+                    nb += 1
+                end
+            else
+                n = bigint.toplain(nb) - k
+            end
+        end
+    end
+    n += k
+end

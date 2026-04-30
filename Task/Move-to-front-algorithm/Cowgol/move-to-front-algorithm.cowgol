@@ -1,0 +1,100 @@
+include "cowgol.coh";
+include "strings.coh";
+
+sub CheckCharError(ptr: [uint8]) is
+    if ptr == 0 as [uint8] then
+        print("Character not found.\n");
+        ExitWithError();
+    end if;
+end sub;
+
+sub FindChar(chr: uint8, str: [uint8]): (loc: [uint8]) is
+    loc := 0 as [uint8];
+    var begin := str;
+    while [str] != 0 and [str] != chr loop
+        str := @next str;
+    end loop;
+    if [str] == chr then
+        loc := str;
+    end if;
+end sub;
+
+sub FindCharIdx(chr: uint8, str: [uint8]): (idx: intptr) is
+    var locptr := FindChar(chr, str);
+    CheckCharError(locptr);
+    idx := locptr - str;
+end sub;
+
+sub MoveToFront(sym: uint8, symtab: [uint8]) is
+    var symptr := FindChar(sym, symtab);
+    CheckCharError(symptr);
+    while symptr > symtab loop
+        [symptr] := [@prev symptr];
+        symptr := @prev symptr;
+    end loop;
+    [symtab] := sym;
+end sub;
+
+sub Encode(string: [uint8], symtab: [uint8], result: [uint8]) is
+    var symtab_buffer: uint8[256];
+    var st := &symtab_buffer[0];
+    CopyString(symtab, st);
+    while [string] != 0 loop
+        [result] := FindCharIdx([string], st) as uint8;
+        MoveToFront([string], st);
+        string := @next string;
+        result := @next result;
+    end loop;
+end sub;
+
+sub Decode(codes: [uint8], size: intptr, symtab: [uint8], result: [uint8]) is
+    var symtab_buffer: uint8[256];
+    var st := &symtab_buffer[0];
+    CopyString(symtab, st);
+
+    while size > 0 loop
+        [result] := [st + [codes] as intptr];
+        MoveToFront([result], st);
+        codes := @next codes;
+        result := @next result;
+        size := size - 1;
+    end loop;
+    [result] := 0;
+end sub;
+
+sub Test(string: [uint8]) is
+    sub PrintArr(codes: [uint8], size: intptr) is
+        while size > 0 loop
+            print_i8([codes]);
+            print_char(' ');
+            codes := @next codes;
+            size := size - 1;
+        end loop;
+    end sub;
+
+    var symtab := "abcdefghijklmnopqrstuvwxyz";
+
+    var encoded_buf: uint8[256];
+    var decoded_buf: uint8[256];
+    var encoded := &encoded_buf[0];
+    var decoded := &decoded_buf[0];
+    var size := StrLen(string);
+
+    print(string);
+    print(" -> ");
+    Encode(string, symtab, encoded);
+    PrintArr(encoded, size);
+    print("-> ");
+    Decode(encoded, size, symtab, decoded);
+    print(decoded);
+
+    if StrCmp(string, decoded) == 0 then
+        print(" (ok)\n");
+    else
+        print(" (fail)\n");
+    end if;
+end sub;
+
+Test("broood");
+Test("bananaaa");
+Test("hiphophiphop");

@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 25 Apr 2026
 include Setting
 
 say 'RANDOM NUMBERS'
@@ -21,10 +21,10 @@ exit
 GetUniform:
 procedure expose Memo. Work.
 arg xx
-say 'Get' xx 'uniform distributed Random numbers...'
+say 'Get' xx 'uniform distributed random numbers...'
 Work. = 0
 do n = 1 to xx
-   Work.n = Randu()
+   Work.n = Rand12()
 end
 Work.0 = xx
 say 'Done'
@@ -34,7 +34,7 @@ return
 GetNormal:
 procedure expose Memo. Work.
 arg xx
-say 'Get' xx 'normal(1,1/2) distributed Random numbers...'
+say 'Get' xx 'normal(1,1/2) distributed random numbers...'
 Work. = 0
 do n = 1 to xx
    Work.n = Randn(1,0.5)
@@ -56,19 +56,10 @@ return
 ShowStats:
 procedure expose Memo. Work.
 say 'Statistics for' Work.0 'items...'
-sum = 0
-do n = 1 to Work.0
-   sum = sum+Work.n
-end
-avg = sum/Work.0
-sum = 0
-do n = 1 to Work.0
-   sum = sum+(Work.n-avg)**2
-end
-varia = sum/Work.0; stdev = SqRt(varia)/1
-say 'Average  ' Std(avg)
-say 'Deviation' Std(stdev)
-say 'Variance ' Std(varia)
+parse value StatsSt('Work.') with mean dev vari
+say 'Average  ' mean
+say 'Deviation' dev
+say 'Variance ' vari
 say
 return
 
@@ -81,4 +72,5 @@ say 'Variance ' 1/12 '(1/12)'
 say
 return
 
+-- Rand12: Randn; StatsSt; Std; Sqrt; Timer
 include Math

@@ -12,7 +12,7 @@ fn collapse(s string) (string, int, int) {
     if del == 0 {
         return s, le, le
     }
-    r = r[..le-del]
+    r = r[..le-del].clone()
     return r.string(), le, r.len
 }
 

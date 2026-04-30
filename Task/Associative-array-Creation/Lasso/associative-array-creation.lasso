@@ -5,9 +5,9 @@ local(mymap = map)
 
 // Define a map with content
 local(mymap = map(
-	'one'	= 'Monday',
-	'2'	= 'Tuesday',
-	3	= 'Wednesday'
+    'one'   = 'Monday',
+    '2' = 'Tuesday',
+    3   = 'Wednesday'
 ))
 
 // add elements to an existing map
@@ -25,14 +25,14 @@ local(mymap = map(
 
 // Iterate thru a map and get values
 with v in #mymap do {^
-	#v
-	'<br />'
+    #v
+    '<br />'
 ^}
 // Tuesday<br />Thursday<br />Monday<br />Wednesday<br />
 
 // Perform actions on each value of a map
 #mymap -> foreach => {
-	#1 -> uppercase
-	#1 -> reverse
+    #1 -> uppercase
+    #1 -> reverse
 }
 #mymap // map(2 = YADSEUT, fourth = YADSRUHT, one = YADNOM, 3 = YADSENDEW)

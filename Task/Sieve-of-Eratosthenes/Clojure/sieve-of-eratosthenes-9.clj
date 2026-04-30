@@ -18,10 +18,12 @@
                                               (bit-shift-left 1 (bit-and i 63)))))
                            (recur (+ i p))))))),
         cull (fn [] (loop [i 0] (if (<= i rootndx)
-                                  (do (if (isprm i) (cullp i)) (recur (inc i))))))]
+                                  (do (if (isprm i) (cullp i))
+                                      (recur (inc i))))))]
     (letfn [(nxtprm [i] (if (<= i ndx)
-                          (cons (+ i i 3) (lazy-seq (nxtprm (loop [i (inc i)]
-                                                              (if (or (> i ndx) (isprm i)) i
-                                                                (recur (inc i)))))))))]
+                          (cons (+ i i 3)
+                            (lazy-seq (nxtprm (loop [i (inc i)]
+                                                (if (or (> i ndx) (isprm i)) i
+                                                  (recur (inc i)))))))))]
       (if (< n 2) nil
         (cons 3 (if (< n 3) nil (do (cull) (lazy-seq (nxtprm 0)))))))))

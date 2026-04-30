@@ -1,0 +1,62 @@
+with javascript_semantics
+-- (optional) put first part in sma.e for encapsulation/reuse
+sequence sma = {}       -- ((period,history,circnxt))
+integer sma_free = 0
+
+global function new_sma(integer period)
+    integer res
+    if sma_free then
+        res = sma_free
+        sma_free = sma[sma_free]
+        sma[res] = {period,{},0}
+    else
+        sma = append(sma,{period,{},0})
+        res = length(sma)
+    end if
+    return res
+end function
+
+global procedure add_sma(integer sidx, atom val)
+    integer period, circnxt
+    sequence history
+    {period, history, circnxt} = sma[sidx]
+    sma[sidx][2] = 0 -- (kill refcount)
+    if length(history)<period then
+        history = append(history,val)
+    else
+        circnxt += 1
+        if circnxt>period then
+            circnxt = 1
+        end if
+        sma[sidx][3] = circnxt
+        history[circnxt] = val
+    end if
+    sma[sidx][2] = history
+end procedure
+
+global function get_sma_average(integer sidx)
+    sequence history = sma[sidx][2]
+    integer l = length(history)
+    return iff(l=0?0:sum(history)/l)
+end function
+
+global function moving_average(integer sidx, atom val)
+    add_sma(sidx,val)
+    return get_sma_average(sidx)
+end function
+
+global procedure free_sma(integer sidx)
+    sma[sidx] = sma_free
+    sma_free = sidx
+end procedure
+--</sma.e>
+--include sma.e
+
+constant sma3 = new_sma(3)
+constant sma5 = new_sma(5)
+printf(1," x  sma3  sma5\n")
+for x in {1,2,3,4,5,5,4,3,2,1} do
+    atom a3 = moving_average(sma3,x),
+         a5 = moving_average(sma5,x)
+    printf(1,"%2g %=6.3g %=4.3g\n",{x,a3,a5})
+end for

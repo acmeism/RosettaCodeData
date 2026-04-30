@@ -1,0 +1,152 @@
+#width = 9      \ no of columns and lines, avoid literal numbers
+\(
+    Find solution
+\)
+solve (cells):
+    \ if there are free cells left, try them:
+    while cells.count < #width^2
+        \ get point (pt) with smallest number of candidates (vals)
+        pt, vals =: grid (cells) calc next
+        if pt = ()
+            return #false
+        for k =: tuple vals give values
+            cells[pt] =: k      \ set the point (pt) and try value (k)
+            if solve cells
+                :> #true
+            cells[pt] =: ()
+            cells.backtracks =+ 1
+        \ caller must retry
+        :> #false
+    \ all filled, this is a solution
+    :> #true
+
+\(  provide a point with the minimal number of choices,
+    and the choices for this point as tuple.
+\)
+grid (cells) calc next:
+    max =: #width + 1
+    for pt =: from 0 upto #width^2 - 1
+        ? cells[pt] ~= ()                 \ not free
+            continue
+        vals =: choices cells at pt
+        \ determine minimal number of choices
+        if vals.Count < max
+            max =: vals.Count
+            res =: pt, vals               \ point and tuple of choices
+    :> res                                \ void if none found
+
+\(  calculate the choices at (pt)
+    use a row with 9 elements, initially set not void.
+    set void each elements that is found in same row, column or box
+    return a tuple of the choices (void if none)
+\)
+choices (cells) at (pt):
+    set =: new row size #width set 1
+
+    x, y =: pt // #width, pt %% #width    \ integer quotient and remainder
+
+    \ scan rows and columns
+    for i =: from 0 upto 8
+        v =: cells[x*#width + i]
+        if v ~= ()
+            set[v] =: ()
+        v =: cells[i*#width + y]
+        if v~= ()
+            set[v] =: ()
+
+    \ scan 3x3 square
+    x0 =: x - x %% 3
+    y0 =: y - y %% 3
+    for i =: from x0 upto x0+2
+        for j =: from y0 upto y0+2
+            v =: cells[i*#width + j]
+            if v ~= ()
+                set[v] = ()
+
+    \ return a tuple of choices for better handling
+    rv =: new row
+    for k =: row set give keys          \ ony not void element keys
+        rv[] =: k
+    return rv::as tuple
+
+
+\(  Main program
+\)
+main (parms):+
+    \ read puzzle either from file given, or use default
+    print "Input: " nonl
+    if parms[1] = ()
+        print "(internal default)"
+    else
+        print parms[1]
+
+    \ read the puzzle and show
+    cells =: new grid from parms[1] else simple default puzzle
+    grid cells print
+    if cells.set ~= #width^2
+        print "Input size not 81: ", cells.set, cells.init
+    print "cells to set:", 81 - cells.Count
+    cells.backtracks =: 0
+
+    \ find the solution
+    if solve cells
+        print "Found, retries:", cells.backtracks
+        print format "Time: %5.3f; sec" system cpu seconds
+    |
+        print "No solution found, remain:", 81 - cells.Count
+    grid cells print
+
+\(  print the grid
+\)
+grid (cells) print:
+    for i =: from 0 upto #width^2 - 1
+        if i %% 9 = 0:
+            print ''
+            \~ print format '%2;: ' i nonl
+        c =: cells[i]
+        if c = ()
+            c =: '.'
+        print c _ ' ' nonl
+        if i %% 3 = 2
+            print ' ' nonl
+        if i %% (3*#width) = 3*#width - 1
+            print ''
+    print ''
+
+\(  Create grid from file (fn) or string (init)
+    If the filename is a single minus, read standard input
+    All characters except 1 to 9 and a dot or 0 are ignored,
+    the dot (or 0) indicates a free field
+\)
+new grid from (fn) else (init):
+    \ input a (long) string from file
+    if fn ~= ()
+        if fn = '-': fn =: ()
+        init =: join file fn lines by ' '
+
+    \ create grid
+    cells =: new row size #width^2
+    cells.init =: init
+    ci =: 0                             \ next to be set
+    for c =: string init give characters
+        ? ~ is c in '1234567890.'
+            continue
+        ? is c in '123456789'
+            cells[ci] =: string c as integer
+        ci =+ 1
+    cells.set =: ci
+    \ ready
+    return cells
+
+
+simple default puzzle:
+    defpz =: '... ... ..6 '
+    defpz =_ '.8. 12. .97 '
+    defpz =_ '7.. 85. 1.. '
+    defpz =_ '3.8 4.. ..9 '
+    defpz =_ '.7. 3.2 .5. '
+    defpz =_ '2.. ..5 8.1 '
+    defpz =_ '..7 .19 ..5 '
+    defpz =_ '41. .78 .2. '
+    defpz =_ '5.. ... ...'
+    .> defpz

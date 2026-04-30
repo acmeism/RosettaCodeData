@@ -1,6 +1,6 @@
 import ceylon.random {
 
-	DefaultRandom
+   DefaultRandom
 }
 
 shared void run() {

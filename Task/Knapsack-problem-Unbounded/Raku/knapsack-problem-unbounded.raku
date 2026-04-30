@@ -21,7 +21,7 @@ my %max_items;
 for $panacea, $ichor, $gold -> $item {
     %max_items{$item.name} = floor min
                             $maximum.volume / $item.volume,
-			    $maximum.weight / $item.weight;
+             $maximum.weight / $item.weight;
 }
 
 for 0..%max_items<panacea>

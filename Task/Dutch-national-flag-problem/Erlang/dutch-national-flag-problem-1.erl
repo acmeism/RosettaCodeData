@@ -5,7 +5,7 @@ ball(red)   -> 1;
 ball(white) -> 2;
 ball(blue)  -> 3.
 
-random_ball() -> lists:nth(random:uniform(3), [red, white, blue]).
+random_ball() -> lists:nth(rand:uniform(3), [red, white, blue]).
 
 random_balls(N)   -> random_balls(N,[]).
 random_balls(0,L) -> L;

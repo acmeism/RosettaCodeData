@@ -16,49 +16,49 @@ function urldecode
                 fi
         fi
 
-	rest="${encoded#?}"
-	eval ${bug}
-	c="${encoded%%${rest2}}"
-	encoded="${rest}"
+  rest="${encoded#?}"
+  eval ${bug}
+  c="${encoded%%${rest2}}"
+  encoded="${rest}"
 
-	while [[ -n ${c} ]]; do
-		if [[ ${c} = '%' ]]; then
-			rest="${encoded#?}"
-			eval ${bug}
-			c1="${encoded%%${rest2}}"
-			encoded="${rest}"
+  while [[ -n ${c} ]]; do
+    if [[ ${c} = '%' ]]; then
+      rest="${encoded#?}"
+      eval ${bug}
+      c1="${encoded%%${rest2}}"
+      encoded="${rest}"
 
-			rest="${encoded#?}"
-			eval ${bug}
-			c2="${encoded%%${rest2}}"
-			encoded="${rest}"
+      rest="${encoded#?}"
+      eval ${bug}
+      c2="${encoded%%${rest2}}"
+      encoded="${rest}"
 
-			if [[ -z ${c1} || -z ${c2} ]]; then
-				c="%${c1}${c2}"
-				echo "WARNING: invalid % encoding: ${c}" >&2
-			elif [[ -n ${BASH_VERSION:-} ]]; then
-				c="\\x${c1}${c2}"
-				c=$(\echo -e "${c}")
-			else
-				hex="16#${c1}${c2}"; oct=hex
-				c="\\0${oct#8\#}"
-				c=$(print -- "${c}")
-			fi
-		elif [[ ${c} = '+' ]]; then
-			c=' '
-		fi
+      if [[ -z ${c1} || -z ${c2} ]]; then
+        c="%${c1}${c2}"
+        echo "WARNING: invalid % encoding: ${c}" >&2
+      elif [[ -n ${BASH_VERSION:-} ]]; then
+        c="\\x${c1}${c2}"
+        c=$(\echo -e "${c}")
+      else
+        hex="16#${c1}${c2}"; oct=hex
+        c="\\0${oct#8\#}"
+        c=$(print -- "${c}")
+      fi
+    elif [[ ${c} = '+' ]]; then
+      c=' '
+    fi
 
-		decoded="${decoded}${c}"
+    decoded="${decoded}${c}"
 
-		rest="${encoded#?}"
-		eval ${bug}
-		c="${encoded%%${rest2}}"
-		encoded="${rest}"
-	done
+    rest="${encoded#?}"
+    eval ${bug}
+    c="${encoded%%${rest2}}"
+    encoded="${rest}"
+  done
 
-	if [[ -n ${BASH_VERSION:-} ]]; then
-		\echo -E "${decoded}"
-	else
-		print -r -- "${decoded}"
-	fi
+  if [[ -n ${BASH_VERSION:-} ]]; then
+    \echo -E "${decoded}"
+  else
+    print -r -- "${decoded}"
+  fi
 }

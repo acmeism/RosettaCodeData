@@ -16,10 +16,10 @@ declare
   fun {GetCategories Doc}
      {Map {Regex.allMatches "<li><a[^>]+>([^<]+)</a> \\(([0-9]+) member" Doc}
       fun {$ Match}
-	 Category = {Regex.group 1 Match Doc}
-	 Count = {String.toInt {ByteString.toString {Regex.group 2 Match Doc}}}
+   Category = {Regex.group 1 Match Doc}
+   Count = {String.toInt {ByteString.toString {Regex.group 2 Match Doc}}}
       in
-	 Category#Count
+   Category#Count
       end
      }
   end

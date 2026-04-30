@@ -14,4 +14,4 @@
 (loop for (i r) in *table-B* do
      (let ((val (car (gethash i *hash-table*))))
        (loop for (a b) in val do
-	    (format t "{~a ~a} {~a ~a}~%"  a b i r))))
+      (format t "{~a ~a} {~a ~a}~%"  a b i r))))

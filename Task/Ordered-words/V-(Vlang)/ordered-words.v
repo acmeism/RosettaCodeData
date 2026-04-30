@@ -1,3 +1,5 @@
+import os
+
 fn main() {
     words := os.read_file("./unixdict.txt") or {println(err) exit(-1)}.split_into_lines()
     mut longest_len := 0

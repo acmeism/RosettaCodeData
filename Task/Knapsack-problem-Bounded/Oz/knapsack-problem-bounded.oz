@@ -60,7 +60,7 @@ in
   {Record.forAllInd Best
    proc {$ I V}
       if V > 0 then
-	 {System.showInfo I#": "#V}
+    {System.showInfo I#": "#V}
       end
    end
   }

@@ -1,0 +1,1 @@
+$data | Sort-Object -Unique

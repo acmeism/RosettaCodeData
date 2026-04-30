@@ -5,21 +5,21 @@ local(f = curl('http://rosettacode.org/mw/index.php?title=Special:Categories&lim
 local(ff) = xml_tree(#f)
 local(lis = #ff->body->div(3)->div(3)->div(3)->div->ul->getnodes)
 with li in #lis do => {
-	local(title = #li->a->attribute('title'))
-	#title->removeLeading('Category:')
-	local(num = #li->asString->split('(')->last)
-	#num->removeTrailing(')')
-	#num->removeTrailing('members')
-	#num->removeTrailing('member')
-	#num->trim
-	#num = integer(#num)
-	#lang->insert(#title = #num)
+  local(title = #li->a->attribute('title'))
+  #title->removeLeading('Category:')
+  local(num = #li->asString->split('(')->last)
+  #num->removeTrailing(')')
+  #num->removeTrailing('members')
+  #num->removeTrailing('member')
+  #num->trim
+  #num = integer(#num)
+  #lang->insert(#title = #num)
 }
 local(c = 1)
 with l in #lang
 order by #l->second descending
 do => {^
-	#c++
-	'. '+#l->second + '  - ' + #l->first+'\r'
+  #c++
+  '. '+#l->second + '  - ' + #l->first+'\r'
 ^}
 ]</code></pre>

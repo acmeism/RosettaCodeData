@@ -9,7 +9,7 @@ task() ->
 
 
 
-keep_until_comment( String ) ->	lists:takewhile( fun not_comment/1, String ).
+keep_until_comment( String ) ->  lists:takewhile( fun not_comment/1, String ).
 
 not_comment( $# ) -> false;
 not_comment( $; ) -> false;

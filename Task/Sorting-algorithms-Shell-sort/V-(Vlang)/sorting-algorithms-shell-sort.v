@@ -1,6 +1,6 @@
 fn shell(mut arr []int, n int) {
 	mut j := 0
-	for h := n; h /= 2;  {
+	for h := n; h > 0; h /= 2 {
 		for i := h; i < n; i++ {
 			t := arr[i]
 			for j = i; j >= h && t < arr[j - h]; j -= h {

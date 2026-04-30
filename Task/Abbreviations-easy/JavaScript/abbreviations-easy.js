@@ -15,7 +15,7 @@ console.log(input.length==0?null:input.trim().split(/\s+/)
               (s=>abr.filter(
                 a=>(new RegExp('^'+escapeRegex(s),'i'))
                   .test(a)&&s.length>=a.match(/^[A-Z]+/)[0].length
-				  )[0])
-				)
+          )[0])
+        )
             .map(_=>typeof _=="undefined"?"*error*":_).join(' ')
-			)
+      )

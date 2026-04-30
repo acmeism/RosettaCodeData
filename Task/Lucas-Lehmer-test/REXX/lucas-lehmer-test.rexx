@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 3 Mar 2026
 include Setting
 numeric digits 5000
 
@@ -54,9 +54,10 @@ if Prime(m) then do
    if d < 26 then
       a = 'sure'
    else
-      a = 'probable'
+      a = 'probably'
    say Left('M'xx,5) '('Right(d,4) 'digits) is' a 'Prime' Time('e')/1's'
 end
 return
 
+-- Prime; Primell
 include Math

@@ -14,5 +14,5 @@
      e = find(s(ix(k):end)==34,1)-2;
      t = s(ix(k)+[0:e]);    % task
      c = count_examples(['http://rosettacode.org',t]);
-     printf('Task "%s" has %i examples.\n',t(7:end), c);  	
+     printf('Task "%s" has %i examples.\n',t(7:end), c);
   end;

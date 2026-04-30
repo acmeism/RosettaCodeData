@@ -1,0 +1,7 @@
+(let ((i 99))
+  (while (> i 0)
+    (message "%d bottles of beer on the wall" i)
+    (message "%d bottles of beer" i)
+    (message "Take one down, pass it around")
+    (message "%d bottles of beer on the wall" (1- i))
+    (setq i (1- i))))

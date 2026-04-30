@@ -1,0 +1,2 @@
+mkdir docs
+mkdir \docs

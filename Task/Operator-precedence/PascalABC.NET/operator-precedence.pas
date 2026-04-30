@@ -1,7 +1,7 @@
 Table of operations priorities:
 
 **                                     1 (highest)
-@, not,  L , +, - (unary), new 	       2
+@, not,  L , +, - (unary), new         2
 *, /, div, mod, and, shl, shr, as, is  3
 +, - (binary), or, xor                 4
 ..                                     5

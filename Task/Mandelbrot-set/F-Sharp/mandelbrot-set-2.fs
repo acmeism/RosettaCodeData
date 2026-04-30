@@ -3,7 +3,7 @@ let getMandelbrotValues width height maxIter ((xMin,xMax),(yMin,yMax)) =
     let next (zr,zi) = (cr + (zr * zr - zi * zi)), (ci + (zr * zi + zi * zr))
     let rec loop = function
       | step,_ when step=maxIter->0
-      | step,(zr,zi) when ((zr * zr + zi * zi) > 2.0) -> step
+      | step,(zr,zi) when ((zr * zr + zi * zi) > 4.0) -> step
       | step,z -> loop ((step + 1), (next z))
     loop (0,(0.0, 0.0))
   let forPos =

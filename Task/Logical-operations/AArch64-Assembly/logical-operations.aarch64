@@ -1,0 +1,167 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program logicoper.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szMessStart:        .asciz "Program 64 bits start.\n"
+szMessFinOK:        .asciz "Program normal end. \n"
+szCarriageReturn:   .asciz "\n"
+szMessValue1:       .asciz "Value 1 : \n"
+szMessValue2:       .asciz "Value 2 : \n"
+szMessResultAnd:   .asciz "Result of And : \n"
+szMessResultOr:    .asciz "Result of Or : \n"
+szMessResultEor:   .asciz "Result of Exclusive Or : \n"
+szMessResultNot:   .asciz "Result of Not : \n"
+szMessResultClear: .asciz "Result of Bit Clear : \n"
+
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+sZoneBin:                    .skip 80
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:                            // entry of program
+    ldr x0,qAdrszMessStart
+    bl affichageMess
+	
+	ldr x0,qAdrszMessValue1
+	bl affichageMess
+	mov x4,#0b1100              // binary value 1
+	mov x0,x4
+	bl affiche2
+	
+	ldr x0,qAdrszMessValue2
+	bl affichageMess	
+    mov x5,#0b0110              // binary value 2
+	mov x0,x5
+	bl affiche2
+	
+	mov x0,x4
+	mov x1,x5
+    bl logicFunc
+	
+	
+    ldr x0,qAdrszMessFinOK
+    bl affichageMess
+100:                             // standard end of the program */
+    mov x0,0                     // return code
+    mov x8,EXIT                  // request to exit program
+    svc 0                        // perform the system call
+qAdrszMessStart:        .quad szMessStart
+qAdrszMessFinOK:        .quad szMessFinOK
+qAdrszMessValue1:       .quad szMessValue1
+qAdrszMessValue2:       .quad szMessValue2
+qAdrszMessResultAnd:    .quad szMessResultAnd
+qAdrszMessResultOr:     .quad szMessResultOr
+qAdrszMessResultEor:    .quad szMessResultEor
+qAdrszMessResultNot:    .quad szMessResultNot
+qAdrszMessResultClear:  .quad szMessResultClear
+/******************************************************************/
+/*     logics functions                                   */
+/******************************************************************/
+/* x0 contains the first value */
+/* x1 contains the second value */
+logicFunc:                        // INFO: logicFunc
+    stp x2,lr,[sp,-16]!           // save  registers
+    stp x3,x4,[sp,-16]!
+	mov x4,x0                     // save value 1
+	mov x5,x1                     // save value 2
+    ldr x0,qAdrszMessResultAnd    // and
+    bl affichageMess
+    mov x0,x4                     // load value 1 in x0
+    and x0,x0,x5                     // and value 2
+    bl affiche2
+	
+	ldr x0,qAdrszMessResultOr     // Or
+    bl affichageMess
+    mov x0,x4                     // load value 1 in x0
+    orr x0,x0,x5                  // or value 2
+    bl affiche2
+	
+	ldr x0,qAdrszMessResultEor     // xor
+    bl affichageMess
+    mov x0,x4                     // load value 1 in x0
+    eor x0,x0,x5                  // xor value 2
+    bl affiche2
+	
+	ldr x0,qAdrszMessResultNot     // not
+    bl affichageMess
+    mov x0,x4                     // load value 1 in x0
+    mvn x0,x0                     // not value 1
+    bl affiche2
+	
+    ldr x0,qAdrszMessResultClear  // bic
+    bl affichageMess
+    mov x0,x4                     // load value 1 in x0
+    bic x0,x0,x5                  // bic value 2
+    bl affiche2
+	
+100:
+    ldp x4,x5,[sp],16             // restaur  registers
+    ldp x2,lr,[sp],16
+    ret
+/******************************************************************/
+/*     register conversion in binary                              */
+/******************************************************************/
+/* x0 contains the register */
+affiche2:
+    stp x1,lr,[sp,-16]!        // save  registers
+	ldr x1,qAdrsZoneBin
+	bl conversion2
+	ldr x0,qAdrsZoneBin
+	bl affichageMess
+	ldr x0,qAdrszCarriageReturn
+	bl affichageMess
+100:
+    ldp x1,lr,[sp],16          // restaur  2 registres
+    ret                        // retour adresse lr x30
+qAdrszCarriageReturn:       .quad szCarriageReturn	
+/******************************************************************/
+/*     register conversion in binary                              */
+/******************************************************************/
+/* x0 contains the register */
+/* x1 contains the address of receipt area */
+conversion2:
+    stp x2,lr,[sp,-16]!        // save  registers
+    stp x3,x4,[sp,-16]!        // save  registers
+    clz x2,x0                  // number of left zeros bits
+    mov x3,64
+    sub x2,x3,x2               // number of significant bits
+    strb wzr,[x1,x2]           // store 0 final
+    sub x3,x2,1                // position counter of the written character
+2:                             // loop
+    tst x0,1                   // test first bit
+    lsr x0,x0,#1               // shift right one bit
+    bne 3f
+    mov x4,#48                 // bit = 0 => character '0'
+    b 4f
+3:
+    mov x4,#49                 //   bit = 1   => character '1'
+4:
+    strb w4,[x1,x3]            // character in reception area at position counter
+    sub x3,x3,#1
+    subs x2,x2,#1              //  0 bits ?
+    bgt 2b                     // no!  loop
+
+100:
+    ldp x3,x4,[sp],16          // restaur  2 registres
+    ldp x2,lr,[sp],16          // restaur  2 registres
+    ret                        // retour adresse lr x30  	
+qAdrsZoneBin:           .quad sZoneBin
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

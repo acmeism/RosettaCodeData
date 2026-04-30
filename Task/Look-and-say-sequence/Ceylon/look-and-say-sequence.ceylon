@@ -1,5 +1,5 @@
 shared void run() {
-	
+
     function lookAndSay(Integer|String input) {
 
         variable value digits = if (is Integer input) then input.string else input;

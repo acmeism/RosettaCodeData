@@ -1,0 +1,125 @@
+.code
+
+;**************************************
+;  console display
+;**************************************
+; rcx : string address
+; rdx  : length string
+afficherConsole PROC public
+    push rbx
+    push r12
+    sub rsp,28h              ; 40 bytes on stack (shadow variables)
+    mov rbx,rcx              ; string address
+    mov r12,rdx              ; size string
+
+    cmp QWORD ptr hConsole,0 ; console handle ?
+    jne @B3
+    mov rcx,STD_OUTPUT_HANDLE
+    call    GetStdHandle     ; load console handle
+    mov hConsole, rax        ; save in data
+@B3:
+    mov rcx,hConsole         ; handle
+    mov rdx,rbx              ; string address
+    mov r8,r12               ; string length
+    mov r9,0                 ;
+
+    sub rsp,8                ; stack alignement (one push)
+    push    0
+    sub rsp,20h              ; stack for shadow variable
+    call    WriteFile        ; winapi function
+    add rsp,20h
+    add rsp,10h              ; 1 push and alignement
+    add rsp,28h              ; stack alignement
+    pop r12
+    pop rbx
+    ret
+afficherConsole	ENDP
+;***************************************************
+;conversion to unsigned base 10
+;with removal of unnecessary zeros
+;and left shift
+;****************************************************
+; rcx  : value to convert
+; rdx  : conversion area address length > 22
+LONGUEUR equ 24
+conversion10  PROC public
+    push rbx
+    push rdi
+    mov rdi,rdx                    ; conversion area address
+    mov BYTE ptr [rdi+LONGUEUR],0  ; 0 final conversion area
+    mov rax,rcx                    ; value
+    mov rcx,LONGUEUR-1
+    mov rbx ,10
+CA1:                               ; loop begin
+    mov rdx,0                      ; division rax by 10
+    div rbx
+    add rdx,'0'                    ; remainder conversion ascii
+    mov byte ptr [rdi+rcx],dl
+    dec rcx
+    cmp rax,0                      ; end ?
+    jne  CA1
+    xor rax,rax
+    inc rcx
+CA5:                               ; copy loop
+    mov dl,[rdi+rcx]               ; load a result character
+    mov byte ptr [rdi+rax],dl      ; and store at conversion area begin
+    inc rcx
+    inc rax
+    cmp rcx,LONGUEUR               ; loop if not zero final
+    jle CA5
+    pop rdi
+    pop rbx
+    ret
+conversion10  ENDP
+;***************************************************
+;  string concatenation
+;**************************************************
+; rcx destination area address
+; rdx destination area length
+; r8  strings number
+; r9  0
+; on stack address and length of each string
+; in order of insertion
+grouperChaines PROC public
+    enter 0,0
+    push rbx
+    push r12
+    push r13
+    cmp r8,0
+    je fingrp
+    mov r12,rdx
+    mov r9,0                  ; indice strings
+    mov r10,0                 ; number of characters inserted
+bouclezone:
+    mov r13,r8
+    shl r13,1
+    mov rbx,[rbp+8+(r13 * 8)]  ; string address
+    mov rax,[rbp+(r13 * 8)]    ; sring length
+    mov r11,0
+bouclecopie:                   ; loop string copy
+    mov dl,byte ptr[rbx+r11]
+    mov byte ptr[rcx+r10],dl
+    inc r11
+    cmp r11,rax
+    jg finbouclecopie
+    inc r10                     ;number of characters inserted
+    cmp r10,r12                 ; max?
+    jge erreur
+    jmp bouclecopie
+finbouclecopie:
+    dec r8                       ; other string
+    jnz bouclezone
+
+    mov rax,r10                  ; return size final string
+    jmp fingrp
+erreur:
+    displayLib "reception area too small"
+    mov rax,0
+fingrp:
+    pop r13
+    pop r12
+    pop rbx
+    leave
+    ret
+grouperChaines ENDP	
+	end

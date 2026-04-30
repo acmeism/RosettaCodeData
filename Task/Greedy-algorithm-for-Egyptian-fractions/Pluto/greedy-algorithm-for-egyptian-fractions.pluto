@@ -1,0 +1,95 @@
+require "bignum"
+require "table2"
+
+local zero <const> = bigint.zero
+local one  <const> = bigint.one
+
+local function to_egyptian_helper(n, d, fracs)
+    if n == zero then return end
+    local div, rem = d:div(n)
+    if rem > zero then div += one end
+    fracs:insert(bigrat.recip(div))
+    local n2 = (-d) % n
+    if n2 < zero then n2 += n end
+    local d2 = d * div
+    local f = bigrat.of(n2, d2)
+    if f:getNum() == one then
+        fracs:insert(f)
+        return
+    end
+    to_egyptian_helper(f:getNum(), f:getDen(), fracs)
+end
+
+local function to_egyptian(r)
+    if r:getNum() == zero then return {r} end
+    local fracs = {}
+    if r:getNum():abs() >= r:getDen():abs() then
+        local div = bigrat.of(r:getNum() / r:getDen(), one)
+        local rem = r - div
+        fracs:insert(div)
+        to_egyptian_helper(rem:getNum(), rem:getDen(), fracs)
+    else
+        to_egyptian_helper(r:getNum(), r:getDen(), fracs)
+    end
+    return fracs
+end
+
+local fracs = {bigrat.of(43, 48), bigrat.of(5, 121), bigrat.of(2014, 59)}
+for fracs as frac do
+    local list = to_egyptian(frac):mapped(|r| -> r:format("%s", "%s", false))
+    print($"{frac:tostring()} -> {list:concat(" + ")}")
+end
+
+for {98, 998} as r do
+    if r == 98 then
+        print("\nFor proper fractions with 1 or 2 digits:")
+    else
+        print("\nFor proper fractions with 1, 2 or 3 digits:")
+    end
+    local max_size = 0
+    local max_size_fracs = {}
+    local max_den = zero
+    local max_den_fracs = {}
+    local sieve = table.create(r)  -- to eliminate duplicates
+    for i = 1, r do sieve[i] = table.rep(r + 1, false) end
+    for i = 1, r do
+        for j = i + 1, r + 1 do
+            if !sieve[i][j] then
+                local f = bigrat.of(i, j)
+                local list = to_egyptian(f)
+                local list_size = #list
+                if list_size > max_size then
+                    max_size = list_size
+                    max_size_fracs:clear()
+                    max_size_fracs:insert(f)
+                elseif list_size == max_size then
+                    max_size_fracs:insert(f)
+                end
+                local list_den = list:back():getDen()
+                if list_den > max_den then
+                    max_den = list_den
+                    max_den_fracs:clear()
+                    max_den_fracs:insert(f)
+                elseif list_den == max_den then
+                    max_den_fracs:insert(f)
+                end
+                if i < r / 2 then
+                    local k = 2
+                    while true do
+                        if j * k > r + 1 then break end
+                        sieve[i * k][j * k] = true
+                        k += 1
+                    end
+                end
+            end
+        end
+    end
+    print($"  largest number of items = {max_size}")
+    local smsf = max_size_fracs:mapped(|f| -> f:format("%s", "%s", false)):concat(", ")
+    print($"  fraction(s) with this number : \{{smsf}}")
+    local md = max_den:tostring()
+    io.write($"  largest denominator = {#md} digits, ")
+    print($"{md:sub(1, 20)}...{md:sub(-20, -1)}")
+    local smdf = max_den_fracs:mapped(|f| -> f:format("%s", "%s", false)):concat(", ")
+    print($"  fraction(s) with this denominator : \{{smdf}}")
+end

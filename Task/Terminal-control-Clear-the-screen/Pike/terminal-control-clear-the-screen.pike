@@ -1,4 +1,4 @@
 int main() {
-	Process.system("clear");
-	return 0;
+  Process.system("clear");
+  return 0;
 }

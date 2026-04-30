@@ -36,7 +36,7 @@ def next_palindromes(limit):
      | .[1] as $n
      | if $limit <= 0 then empty
        else  myadd($n ; $n|reverse) as $sum
-	| ($sum,
+  | ($sum,
          if ($sum | is_palindrome) then true else [$limit - 1, $sum] | next end)
        end;
   [limit, toa] | next | if type == "boolean" then . else tos end;
@@ -49,12 +49,12 @@ def next_palindromes(limit):
 def lychrel_dictionary(n; maxiter):
     reduce range(0; n) as $i ({};
         ($i | tostring) as $is
-	| if .[$is] then .related += [$i]
-	  else [$is | next_palindromes(maxiter)] as $seq
-	  | . as $dict
+  | if .[$is] then .related += [$i]
+    else [$is | next_palindromes(maxiter)] as $seq
+    | . as $dict
           # | ([$i, $seq] | debug) as $debug
           | if $seq[-1] == true then .
-	    else if ($is | explode | is_palindrome) then .palindromic_seed += [$i] else . end
+      else if ($is | explode | is_palindrome) then .palindromic_seed += [$i] else . end
             | if any($seq[]; $dict[.]) then .related += [$i]
               else .seed += [$i]
               end

@@ -1,9 +1,12 @@
-set table to {return}
+set table to ""
 repeat with i from 1 to 10
-	if i < 5 or (i ≥ 6 and i < 10) then
-		set end of table to i & ", "
-	else if i = 5 or i = 10 then
-		set end of table to i & return
-	end if
+	repeat 1 times
+		set table to table & i
+		if i mod 5 = 0 then
+			set table to table & return
+			exit repeat
+		end if
+		set table to table & ", "
+	end repeat
 end repeat
-return table as string
+return table

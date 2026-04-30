@@ -1,0 +1,20 @@
+       >>SOURCE FORMAT IS FREE
+IDENTIFICATION DIVISION.
+PROGRAM-ID. map.
+
+DATA DIVISION.
+LOCAL-STORAGE SECTION.
+01  i                  USAGE IS INDEX.
+01  table-size         CONSTANT AS 30.
+LINKAGE SECTION.
+01  table-param.
+    03 table-values    USAGE IS FLOAT-LONG, OCCURS table-size TIMES.
+01  func-ptr           USAGE IS PROGRAM-POINTER.
+
+PROCEDURE DIVISION USING BY REFERENCE table-param, BY VALUE func-ptr.
+    PERFORM VARYING i FROM 1 BY 1 UNTIL i IS GREATER THAN table-size
+        CALL func-ptr USING BY REFERENCE table-values(i)
+    END-PERFORM
+    GOBACK.
+
+END PROGRAM map.

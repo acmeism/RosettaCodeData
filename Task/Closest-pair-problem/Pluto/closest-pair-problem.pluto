@@ -1,0 +1,75 @@
+local fmt = require "fmt"
+
+local distance = |p1, p2| -> math.hypot(p1[1] - p2[1], p1[2] - p2[2])
+
+local function brute_force_closest_pair(p)
+    local n = #p
+    assert(n >= 2, "There must be at least two points.")
+    local min_points = {p[1], p[2]}
+    local min_dist = distance(p[1], p[2])
+    for i = 1, n - 1 do
+        for j = i + 1, n do
+            local dist = distance(p[i], p[j])
+            if dist < min_dist then
+                min_dist = dist
+                min_points = {p[i], p[j]}
+            end
+        end
+    end
+    return min_dist, min_points
+end
+
+local function optimized_closest_pair(xp, yp)
+    local n = #xp
+    if n <= 3 then return brute_force_closest_pair(xp) end
+    local hn = n // 2
+    local xl = xp:slice(1, hn)
+    local xr = xp:slice(hn + 1)
+    local xm = xp[hn][1]
+    local yl = yp:filtered(|p| -> p[1] <= xm):reorder()
+    local yr = yp:filtered(|p| -> p[1] >  xm):reorder()
+    local dl, pair_l = optimized_closest_pair(xl, yl)
+    local dr, pair_r = optimized_closest_pair(xr, yr)
+    local dmin = dr
+    local pair_min = pair_r
+    if dl < dr then
+        dmin = dl
+        pair_min = pair_l
+    end
+    local ys = yp:filtered(|p| -> math.abs(xm - p[1]) < dmin):reorder()
+    local ns = #ys
+    local closest = dmin
+    local closest_pair = pair_min
+    for i = 1, ns - 1 do
+        local k = i + 1
+        while k <= ns and (ys[k][2] - ys[i][2] < dmin) do
+            local dist = distance(ys[k], ys[i])
+            if dist < closest then
+                closest = dist
+                closest_pair = {ys[k], ys[i]}
+            end
+            k += 1
+        end
+    end
+    return closest, closest_pair
+end
+
+local points = {
+    { {5, 9}, {9, 3}, {2, 0}, {8, 4}, {7, 4}, {9, 10}, {1, 9}, {8, 2}, {0, 10}, {9, 6} },
+
+    {
+        {0.654682, 0.925557}, {0.409382, 0.619391}, {0.891663, 0.888594},
+        {0.716629, 0.996200}, {0.477721, 0.946355}, {0.925092, 0.818220},
+        {0.624291, 0.142924}, {0.211332, 0.221507}, {0.293786, 0.691701},
+        {0.839186, 0.728260}
+    }
+}
+
+for points as p do
+    local dist, pair = brute_force_closest_pair(p)
+    fmt.print($"Closest pair (brute force) is %,s and %,s, distance %s", pair[1], pair[2], dist)
+    local xp = p:sorted(|x, y| -> x[1] < y[1])
+    local yp = p:sorted(|x, y| -> x[2] < y[2])
+    dist, pair = optimized_closest_pair(xp, yp)
+    fmt.print("Closest pair (optimized)   is %,s and %,s, distance %s\n", pair[1], pair[2], dist)
+end

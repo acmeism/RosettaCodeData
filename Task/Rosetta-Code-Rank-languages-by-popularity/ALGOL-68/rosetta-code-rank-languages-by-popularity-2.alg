@@ -17,11 +17,11 @@ PROC count = (STRING sub, str) INT :
    BEGIN
       INT count := 0;
       IF UPB str ≥ UPB sub AND UPB str ≥ 1 THEN
-	 INT p := 1; INT p0;
-	 WHILE p + UPB sub - 1 <= UPB str ANDF (p0 := p; string in string (sub, p, str[p0:])) DO
+   INT p := 1; INT p0;
+   WHILE p + UPB sub - 1 <= UPB str ANDF (p0 := p; string in string (sub, p, str[p0:])) DO
             count +:= 1;
-	    p +:= p0 + UPB sub - 1
-	 OD
+      p +:= p0 + UPB sub - 1
+   OD
       FI;
       count
    END;
@@ -34,10 +34,10 @@ PROC split = (STRING str, sep) FLEX[]STRING :
       INT p;
       [count (sep, str) + 1] STRING list;
       WHILE start ≤ strlen - (seplen - 1)
-	 ANDF string in string (sep, p, str[start:]) DO
-	    p +:= start - 1;
-	    list[cnt +:= 1] := str[start:p-1];
-	    start := p + seplen
+   ANDF string in string (sep, p, str[start:]) DO
+      p +:= start - 1;
+      list[cnt +:= 1] := str[start:p-1];
+      start := p + seplen
       OD;
       IF cnt = 0 THEN list[cnt +:= 1] := str
       ELIF start ≤ strlen THEN list[cnt +:= 1] := str[start:]
@@ -51,7 +51,7 @@ OP REVERSE = ([]STRING org) []STRING :
    BEGIN
       [UPB org]STRING new;
       FOR i TO UPB org DO
-	 new[UPB org - (i - 1)] := org[i]
+   new[UPB org - (i - 1)] := org[i]
       OD;
       new
    END;
@@ -62,12 +62,12 @@ OP TOINT = (STRING str) INT:
       INT p := 1, len := UPB str;
       WHILE p ≤ len ANDF is space (str[p]) DO p +:= 1 OD;
       IF str[1] = "-" OR str[1] = "+" THEN
-	 p +:= 1
+   p +:= 1
       FI;
       INT n := 0;
       WHILE p ≤ len ANDF is space (str[p]) DO p +:= 1 OD;
       FOR i FROM p TO len WHILE is digit (str[i]) DO
-	 n := n × 10 + ABS str[i] - ABS "0"
+   n := n × 10 + ABS str[i] - ABS "0"
       OD;
       n
    END;
@@ -85,25 +85,25 @@ PROC get web page = (STRING host, path) STRING:
       INT rc;
       # 'http content' sometimes fails with interrupted system call, so we loop until succeeding #
       WHILE
-	 # 'http content' makes requests that are not accepted by rosettacode.org, so therefore the hack #
-	 STRING hack = " HTTP/1.0" + crlf +
-	               "Host: rosettacode.org" + crlf +
+   # 'http content' makes requests that are not accepted by rosettacode.org, so therefore the hack #
+   STRING hack = " HTTP/1.0" + crlf +
+                 "Host: rosettacode.org" + crlf +
                        "User-Agent: rank_languages_by_popularity";
          rc := http content (reply, host, path + hack, 0);
-	 rc = 4
+   rc = 4
          DO SKIP
       OD;
       IF rc = 0 AND grep in string ("^HTTP/[0-9.]+ 200", reply, NIL, NIL) = 0 THEN
-	 INT p;
-	 IF string in string (crlf + crlf, p, reply) THEN
-	    STRING headers = reply[:p],
-	           body = reply[p+4:];
-	    body
-	 ELSE
-	    ""
-	 FI
+   INT p;
+   IF string in string (crlf + crlf, p, reply) THEN
+      STRING headers = reply[:p],
+             body = reply[p+4:];
+      body
+   ELSE
+      ""
+   FI
       ELSE
-	 print (strerror (rc)); ""
+   print (strerror (rc)); ""
       FI
    END;
 

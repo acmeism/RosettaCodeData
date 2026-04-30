@@ -37,9 +37,9 @@ val showHand = fn input =>
  | (x as (1,_)::t,ll)      => if  #2 (hd x ) - (#2 (hd (rev x))) =4 orelse ( #2 (hd (rev x))  = 1 andalso #2 (hd (tl (rev x))) =10 )
                                  then
                                     if  List.all (fn x => hd ll=x) ll
-			              then "straight-flush"
-			              else "straight"
-			         else if  List.all (fn x => hd ll=x) ll then "flush" else  "high-card"
+                    then "straight-flush"
+                    else "straight"
+               else if  List.all (fn x => hd ll=x) ll then "flush" else  "high-card"
  | _                       => "invalid"
 
 

@@ -14,22 +14,22 @@ proc random_items { item_list {n 1} {dups no} } {
 
     set count 0
 
-    while { $count < $n } {	
+    while { $count < $n } {
 
-   	    # random integer index 0..len-1
-	    set idx [expr { int(rand() * $max)} ]
+          # random integer index 0..len-1
+       set idx [expr { int(rand() * $max)} ]
 
-	    # pick item
-	    set item [lindex $items $idx]
+       # pick item
+       set item [lindex $items $idx]
 
-	    # check for dups
-	    if {$dups eq no} {
-	        set srch [lsearch $result $item]
-	        if {$srch > -1} { continue }
-	    }
+       # check for dups
+       if {$dups eq no} {
+           set srch [lsearch $result $item]
+           if {$srch > -1} { continue }
+       }
 
-	    lappend result $item
-	    incr count   	
+       lappend result $item
+       incr count
     }
     return  $result
  }

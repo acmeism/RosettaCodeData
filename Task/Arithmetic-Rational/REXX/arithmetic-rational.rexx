@@ -1,31 +1,27 @@
--- 24 Aug 2025
+-- 21 Feb 2026
 include Setting
 
 say 'RATIONAL ARITHMETIC'
 say version
 say
-a = '1 2'; b = '-3 4'; c = '5 -6'; d = '-7 -8'; e = 3; f = 1.666666666
+a='1 2'; b='-3 4'; c='5 -6'; d='-7 -8'; e=3; f=1.666666666
 say 'VALUES'
-say 'a =' Lst2FormQ(a)
-say 'b =' Lst2FormQ(b)
-say 'c =' Lst2FormQ(c)
-say 'd =' Lst2FormQ(d)
+say 'a =' Rat2form(a)
+say 'b =' Rat2form(b)
+say 'c =' Rat2form(c)
+say 'd =' Rat2form(d)
 say 'e =' e
 say 'f =' f
 say
 say 'BASICS'
-say 'a+b     =' Lst2FormQ(AddQ(a,b))
-say 'a+b+c+d =' Lst2FormQ(AddQ(a,b,c,d))
-say 'a-b     =' Lst2FormQ(SubQ(a,b))
-say 'a-b-c-d =' Lst2FormQ(SubQ(a,b,c,d))
-say 'a*b     =' Lst2FormQ(MulQ(a,b))
-say 'a*b*c*d =' Lst2FormQ(MulQ(a,b,c,d))
-say 'a/b     =' Lst2FormQ(DivQ(a,b))
-say 'a/b/c/d =' Lst2FormQ(DivQ(a,b,c,d))
-say '-a      =' Lst2FormQ(NegQ(a))
-say '1/a     =' Lst2FormQ(InvQ(a))
+say 'a+b =' Rat2form(AddQ(a,b))
+say 'a-b =' Rat2form(SubQ(a,b))
+say 'a*b =' Rat2form(MulQ(a,b))
+say 'a/b =' Rat2form(DivQ(a,b))
+say '-a  =' Rat2form(NegQ(a))
+say '1/a =' Rat2form(InvQ(a))
 say
-say 'Compare'
+say 'COMPARE'
 say 'a<b  =' LtQ(a,b)
 say 'a<=b =' LeQ(a,b)
 say 'a=b  =' EqQ(a,b)
@@ -34,30 +30,29 @@ say 'a>b  =' GtQ(a,b)
 say 'a<>b =' NeQ(a,b)
 say
 say 'BONUS'
-say 'Abs(c)      =' Lst2FormQ(AbsQ(c))
+say 'Abs(c)      =' Rat2form(AbsQ(c))
 say 'Float(b)    =' FloatQ(b)
-say 'Neg(d)      =' Lst2FormQ(NegQ(d))
-say 'Power(a,e)  =' Lst2FormQ(PowQ(a,e))
-say 'Rational(f) =' Lst2FormQ(RatQ(f))
+say 'Neg(d)      =' Rat2form(NegQ(d))
+say 'Power(a,e)  =' Rat2form(PowQ(a,e))
+say 'Rational(f) =' Rat2form(RatQ(f))
 say
 say 'FORMULA'
-say 'a^2-2ab+3c-4ad^4+5 = ',
-Lst2FormQ(AddQ(PowQ(a,2),MulQ(-2,a,b),MulQ(3,c),MulQ(-4,a,PowQ(d,4)),5))
+g=SquareQ(a); h=MulQ(-2,MulQ(a,b)); i=MulQ(3,c); j=MulQ(-4,MulQ(a,PowQ(d,4))); k=5
+say 'a^2-2ab+3c-4ad^4+5 =' Rat2form(AddQ(g,AddQ(h,AddQ(i,AddQ(j,k)))))
 say
-say 'Perfect numbers'
-call Time('r')
+say 'PERFECT NUMBERS'
 numeric digits 20
-do c = 6 to 2**19
-   s = 1 c; m = Isqrt(c)
-   do f = 2 to m
-      if c//f = 0 then do
-         s = AddQ(s,1 f,1 c/f)
-      end
-   end
+do c=6 to 2**19
+   s=1 c; m=Isqrt(c)
+   do f=2 to m
+      if c//f=0 then
+         s=AddQ(s,AddQ(1 f,f c))
+   end f
    if EqQ(s,1) then
       say c 'is a perfect number'
 end
-say Time('e')/1's'
+call Timer
 exit
 
+-- All procedures ending with 'Q'; Rat2form; Isqrt; Timer
 include Math

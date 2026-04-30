@@ -1,5 +1,5 @@
 def mean(a) = a.sum(0.0) / a.size
-def mean_square_diff(a, predictions) = mean(predictions.map { |x| square(x - a)**2 })
+def mean_square_diff(a, predictions) = mean(predictions.map { |x| (x - a)**2 })
 
 def diversity_theorem(truth, predictions)
     average = mean(predictions)

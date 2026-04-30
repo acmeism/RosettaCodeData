@@ -3,8 +3,8 @@ function readconf(file)
     for line in eachline(file)
         line = strip(line)
         if !isempty(line) && !startswith(line, '#') && !startswith(line, ';')
-            fspace  = searchindex(line, " ")
-            if fspace == 0
+            fspace  = findfirst(isequal(' '), line)
+            if isnothing(fspace)
                 vars[Symbol(lowercase(line))] = true
             else
                 vname, line = Symbol(lowercase(line[1:fspace-1])), line[fspace+1:end]

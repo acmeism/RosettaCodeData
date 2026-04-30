@@ -1,5 +1,4 @@
 import gg
-import gx
 
 fn main() {
     mut context := gg.new_context(
@@ -12,6 +11,6 @@ fn main() {
 
 fn frame(mut ctx gg.Context) {
     ctx.begin()
-    ctx.draw_pixel(100, 100, gx.red)
+    ctx.draw_pixel(100, 100, gg.red)
     ctx.end()
 }

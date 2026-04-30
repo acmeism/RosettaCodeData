@@ -1,13 +1,12 @@
-const
-(
-   blocks = ["BO","XK","DQ","CP","NA","GT","RE","TG","QD","FS","JW","HU","VI","AN","OB","ER","FS","LY","PC","ZM"]
-   words = ["A", BARK","BOOK","TREAT","COMMON","SQUAD","CONFUSE"]
-)
+const blocks = ["BO","XK","DQ","CP","NA","GT","RE","TG","QD","FS",
+"JW","HU","VI","AN","OB","ER","FS","LY","PC","ZM"]
+
+const words = ["A", "BARK","BOOK","TREAT","COMMON","SQUAD","CONFUSE"]
 
 fn main() {
    for word in words {
       println('>>> can_make_word("${word.to_upper()}"): ')
-      if check_word(word, blocks) == true {println('True')} else {println('False')}
+      if check_word(word, blocks) == true { println("True") } else { println("False") }
    }
 }
 
@@ -18,12 +17,12 @@ fn check_word(word string, blocks []string) bool {
       found = false
       for idx, _ in tblocks {
          if tblocks[idx].contains(chr.ascii_str()) == true {
-            tblocks[idx] =''
+            tblocks[idx] =""
             found = true
             break
          }
       }
-      if found == false {return found}
+      if found == false { return found }
    }
    return found
 }

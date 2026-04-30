@@ -19,5 +19,5 @@ delete(x, "foo")
 
 // make a map with a literal
 x = map[string]int{
-	"foo": 2, "bar": 42, "baz": -1,
+    "foo": 2, "bar": 42, "baz": -1,
 }

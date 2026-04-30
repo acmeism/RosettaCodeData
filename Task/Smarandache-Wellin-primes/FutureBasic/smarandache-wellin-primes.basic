@@ -1,0 +1,328 @@
+// ------------------------------------------------------------
+//  Smarandache-Wellin primes
+//
+//  Using FutureBasic 7.0.37
+//  November 2025, R.W.
+// ------------------------------------------------------------
+
+include "gmp.incl"
+
+_kPrimeLimit    = 12000       // sieve limit for prime values
+_kMaxPrimes     = 2000        // max # of primes we store
+_kPrimeReps     = 25          // Miller–Rabin repetitions
+_kFirstSWP      = 8           // all room we have before idx > limit
+_kDerivedBatch  = 10          // how many derived S-W per [Next] click
+
+// our clock
+CFTimeInterval tim
+
+// Global mpz_t bigints reused for speed
+mpz_t gSW        // current Smarandache–Wellin number
+mpz_t gDSW       // current derived S-W candidate
+
+// Prime table
+long   gPrimes( _kMaxPrimes - 1 )
+long   gPrimeCount
+
+// Derived S-W state
+long   gN              // next prime index (0-based) for derived S-W loop
+long   gDerivedSoFar   // how many derived S-W primes have been found
+UInt32 gFreq( 9 )      // digit frequencies 0..9 over concatenated primes
+
+// -----------------------------------------------------------
+//  Helper: Abbreviate big numeric CFString: head...tail
+// -----------------------------------------------------------
+local fn AbbrevString( s as CFStringRef, head as int, ¬
+  tail as int ) as CFStringRef
+
+  if s == 0 then RETURN @""
+  CFStringRef a, b, out
+  int nLen
+  nLen = len( s )
+  if nLen <= head + tail then RETURN s
+  a   = left( s, head )
+  b   = right( s, tail )
+  out = @""
+  out = concat( a, @"...", b )
+end fn = out
+
+// -----------------------------------------------------------
+// Helper: Get mpz_t result and abbreviate if > ~43 digits
+// -----------------------------------------------------------
+local fn Abbrev( ts as mpz_t ) as CFStringRef
+  CFStringRef result
+  result = fn mpz_cf2( ts )  // FB wrapper mpz_t to CFString
+  int nLen
+  nLen = len( result )
+  if nLen <= 43 then RETURN result
+  result = fn AbbrevString( result, 20, 20 )
+end fn = result
+
+// ------------------------------------------------------------
+//  Helper: decimal digits of unsigned integer (0 -> 1 digit)
+// ------------------------------------------------------------
+local fn UIntDigits( x as UInt32 ) as UInt32
+  UInt32 n, tmp
+  if x == 0 then RETURN 1
+  n = 0
+  tmp = x
+  while tmp > 0
+    n ++
+    tmp = tmp / 10
+  wend
+end fn = n
+
+// ------------------------------------------------------------
+//  Helper: decimal digits of mpz_t, with mpz_sizeinbase fix
+// ------------------------------------------------------------
+local fn MPZDecimalDigits( x as mpz_t ) as long
+  long s
+  mpz_t pow10
+
+  if fn mpz_sgn( x ) == 0 then RETURN 1
+  s = fn mpz_sizeinbase( x, 10 )
+  // Sometimes mpz_sizeinbase gives one digit too many, so check
+  // (see GMP 6.3.0 manual page 45)
+  mpz_init( pow10 )
+  fn mpz_ui_pow_ui( pow10, 10, s - 1 )
+  if fn mpz_cmp( x, pow10 ) < 0 then s-- // decrement
+  mpz_clear( pow10 )
+end fn = s
+
+// ------------------------------------------------------------
+//  Helper: Ordinal string ( n ) -> CFStringRef
+// ------------------------------------------------------------
+local fn Ordinal( n as long ) as CFStringRef
+  CFStringRef s  = @""
+  CFSTringRef pad = @""
+  CFStringRef suf = @"th"
+  long mod100, mod10
+  mod100 = n MOD 100
+  mod10  = n MOD 10
+  // if not 11th, 12th, 13th
+  if (mod100 < 11) || (mod100 > 13)
+    if mod10 == 1 then suf = @"st"
+    if mod10 == 2 then suf = @"nd"
+    if mod10 == 3 then suf = @"rd"
+  end if
+  if n < 10 then pad = @" "
+  s = concat( pad, s, mid(str(n),1), suf )
+end fn = s
+
+// ------------------------------------------------------------
+//  Helper: fill prime table up to _kPrimeLimit
+// ------------------------------------------------------------
+local fn InitPrimes
+  Boolean isComposite( _kPrimeLimit )
+  long i, j
+  long count
+
+  for i = 0 to _kPrimeLimit
+    isComposite(i) = _false
+  next
+  isComposite(0) = _true
+  isComposite(1) = _true
+  count = 0
+  for i = 2 to _kPrimeLimit
+    if isComposite(i) == _false
+      if count < _kMaxPrimes then gPrimes(count) = i
+      count ++
+      j = i + i
+      while j <= _kPrimeLimit
+        isComposite(j) = _true
+        j = j + i
+      wend
+    end if
+  next
+  if count > _kMaxPrimes then count = _kMaxPrimes
+  gPrimeCount = count
+end fn
+
+// ------------------------------------------------------------
+//  Helper: append prime p (in base 10) onto S-W number sw
+//  sw := sw * 10^{digits(p)} + p
+// ------------------------------------------------------------
+local fn AppendPrimeToSW( p as long, sw as mpz_t )
+  UInt32 tmp, digits, pow10, j
+  tmp    = p
+  digits = 0
+  while tmp > 0
+    digits ++
+    tmp = tmp / 10
+  wend
+  if digits == 0 then digits = 1
+
+  pow10 = 1
+  for j = 1 to digits
+    pow10 = pow10 * 10
+  next
+
+  fn mpz_mul_ui( sw, sw, pow10 )
+  fn mpz_add_ui( sw, sw, p )
+end fn
+
+// ------------------------------------------------------------
+//  Helper: build derived S-W mpz from current digit freqs
+//  DSW   = concat_dec(freq[k],...,freq[9]) where k is first
+//          index with freq[k] > 0 (trim leading 0 blocks).
+// ------------------------------------------------------------
+void local fn BuildDerivedDSW( result as mpz_t )
+  long d, startD
+  UInt32 x, digitsX, j, pow10
+
+  mpz_set_ui( result, 0 )
+  // find first non-zero frequency
+  startD = 0
+  while (startD < 10) && (gFreq(startD) == 0)
+    startD ++
+  wend
+  if startD >= 10 then RETURN  // all 0 -> DSW remains 0
+  // initial block
+  mpz_set_ui( result, gFreq(startD) )
+  // append remaining blocks
+  d = startD + 1
+  while d < 10
+    x = gFreq(d)
+    // number of decimal digits for x (0 -> "0")
+    digitsX = fn UIntDigits( x )
+    pow10 = 1
+    for j = 1 to digitsX
+      pow10 = pow10 * 10
+    next
+    fn mpz_mul_ui( result, result, pow10 )
+    fn mpz_add_ui( result, result, x )
+    d ++
+  wend
+end fn
+
+// ------------------------------------------------------------
+//  More_SWP
+//  Show the next _kDerivedBatch derived S-W primes
+// ------------------------------------------------------------
+void local fn More_SWP
+  CFStringRef ordStr, primeStr
+  long found
+  long idx
+  long p
+  UInt32 tmp, digit
+
+  if gPrimeCount == 0 then fn InitPrimes
+  if gDerivedSoFar < 1
+    print  @"\nThe Derived Smarandache-Wellin primes are:\n"
+  end if
+
+  tim = fn CACurrentMediaTime
+  found = 0
+  idx   = gN
+
+  while (found < _kDerivedBatch) && (idx < gPrimeCount)
+    p = gPrimes(idx)
+    // update digit frequencies from decimal digits of p
+    tmp = p
+    if tmp == 0
+      gFreq(0) = gFreq(0) + 1
+    else
+      while tmp > 0
+        digit = tmp mod 10
+        gFreq(digit) = gFreq(digit) + 1
+        tmp = tmp / 10
+      wend
+    end if
+    // build derived S-W number from current freqs
+    fn BuildDerivedDSW( gDSW )
+    // primality test
+    if fn mpz_probab_prime_p( gDSW, _kPrimeReps ) > 0
+      // 0 = composite, 1 = probable prime, 1 = definite prime
+      gDerivedSoFar = gDerivedSoFar + 1
+      found ++
+      ordStr   = fn Ordinal( gDerivedSoFar )
+      primeStr = fn mpz_cf2( gDSW )
+      printf @"%4@: idx %4ld  p = %@", ordStr, idx + 1, primeStr
+    end if
+    idx ++
+  wend
+
+  gN = idx
+  if gN > 1100 then button 2, NO    // no more room
+  printf @"\nElapsed time: %.3f secs\n", (fn CACurrentMediaTime - tim)
+end fn
+
+// ------------------------------------------------------------
+//  Main — compute the first _kFirstSWP S-W primes
+// ------------------------------------------------------------
+local fn Main
+  CFStringRef ordStr, swStr
+  long i, p
+  long count
+  long digitsSW
+
+  // init primes and bigints once
+  fn InitPrimes
+  mpz_init( gSW )
+  mpz_init( gDSW )
+  mpz_set_ui( gSW, 0 )
+  mpz_set_ui( gDSW, 0 )
+
+  // reset derived-state globals
+  gN            = 0
+  gDerivedSoFar = 0
+  for i = 0 to 9
+    gFreq(i) = 0
+  next
+
+  print @"\nThe first 8 known Smarandache-Wellin primes are:\n"
+
+  tim    = fn CACurrentMediaTime
+  count = 0
+  i     = 0
+
+  while (count < _kFirstSWP) && (i < gPrimeCount)
+    p = gPrimes(i)
+    // build next S-W number
+    fn AppendPrimeToSW( p, gSW )
+    // probabilistic primality test
+    if fn mpz_probab_prime_p( gSW, _kPrimeReps ) > 0
+      count ++
+      digitsSW = fn MPZDecimalDigits( gSW )
+      ordStr   = fn Ordinal( count )
+      swStr    = fn Abbrev( gSW )
+      printf @"%4@: idx %4ld  last p = %5ld length = %4ld -> %@", ¬
+      ordStr, i + 1,  p, digitsSW, swStr
+    end if
+    i ++
+  wend
+
+  printf @"\nElapsed time: %.3f secs", (fn CACurrentMediaTime - tim)
+  print  @"Click [next] for Derived Smarandache-Wellin primes."
+end fn
+
+// ------------------------------------------------------------
+//  Dialog handler
+// ------------------------------------------------------------
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ev
+    case _btnClick
+      select tag
+        case 2
+          fn More_SWP
+      end select
+
+    case _windowShouldClose
+      // clear any mpz_t we initialised
+      mpz_clear( gSW )
+      mpz_clear( gDSW )
+      end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+// ------------------------------------------------------------
+//  Main
+// ------------------------------------------------------------
+window 1, @"Smarandache-Wellin primes", (0,0,700,500)
+button 2, YES,, @"Next", (580,20,100,20),,, 1
+
+fn Main
+
+HandleEvents

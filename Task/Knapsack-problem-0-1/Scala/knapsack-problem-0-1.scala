@@ -55,9 +55,9 @@ fn test_dp_results() {
           }
           else {
             m(n)(w) = m(n-1)(w-wn)+vn
-	    plm(n)(w) = plm(n-1)(w-wn)+in
-	  }
-	}
+       plm(n)(w) = plm(n-1)(w-wn)+in
+     }
+   }
       }
     }
 

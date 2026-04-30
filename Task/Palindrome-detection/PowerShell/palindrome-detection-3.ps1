@@ -1,0 +1,1 @@
+Test-Palindrome -Text 'radar'

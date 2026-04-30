@@ -1,17 +1,12 @@
-require "channel"
-require "fiber"
-require "random"
+require "wait_group"
 
-done = Channel(Nil).new
+wg = WaitGroup.new
 
 "Enjoy Rosetta Code".split.map do |x|
-  spawn do
+  wg.spawn do
     sleep Random.new.rand(0..500).milliseconds
     puts x
-    done.send nil
   end
 end
 
-3.times do
-  done.receive
-end
+wg.wait

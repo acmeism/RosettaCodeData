@@ -2,28 +2,28 @@
 code = (char) -> char.charCodeAt()
 
 encrypt = (text, key) ->
-	res = []
-	j = 0
-	
-	for c in text.toUpperCase()
-		continue if c < 'A' or c > 'Z'
-		
-		res.push ((code c) + (code key[j]) - 130) % 26 + 65
-		j = ++j % key.length
-	
-	String.fromCharCode res...
+   res = []
+   j = 0
+
+   for c in text.toUpperCase()
+      continue if c < 'A' or c > 'Z'
+
+      res.push ((code c) + (code key[j]) - 130) % 26 + 65
+      j = ++j % key.length
+
+   String.fromCharCode res...
 
 decrypt = (text, key) ->
-	res = []
-	j = 0
-	
-	for c in text.toUpperCase()
-		continue if c < 'A' or c > 'Z'
-		
-		res.push ((code c) - (code key[j]) + 26) % 26 + 65
-		j = ++j % key.length
-	
-	String.fromCharCode res...
+   res = []
+   j = 0
+
+   for c in text.toUpperCase()
+      continue if c < 'A' or c > 'Z'
+
+      res.push ((code c) - (code key[j]) + 26) % 26 + 65
+      j = ++j % key.length
+
+   String.fromCharCode res...
 
 # Trying it out
 key       = "VIGENERECIPHER"

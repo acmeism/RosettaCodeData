@@ -13,10 +13,10 @@ function drawcircle {
     for y in $( seq $((y0-radius)) $((y0+radius)) )
     do
         echo -en "\e[${y}H"
-    	for x in $( seq $((x0+radius)) )
-	do
-		echo -n "-"
-	done
+      for x in $( seq $((x0+radius)) )
+   do
+      echo -n "-"
+   done
     done
 
     x=$((radius-1))
@@ -38,12 +38,12 @@ function drawcircle {
 
         if [ $err -le 0 ]
         then
-	    ((++y))
+       ((++y))
             ((err+=dy))
             ((dy+=2))
         fi
         if [ $err -gt 0 ]
-	then
+   then
             ((--x))
             ((dx+=2))
             ((err+=dx-(radius<<1)))

@@ -5,5 +5,5 @@ foreach testNumber {
     1234567812345670
 } {
     puts [format "%s is %s" $testNumber \
-	      [lindex {"NOT valid" "valid"} [luhn $testNumber]]]
+         [lindex {"NOT valid" "valid"} [luhn $testNumber]]]
 }

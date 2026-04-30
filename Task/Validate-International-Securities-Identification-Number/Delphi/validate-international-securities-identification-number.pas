@@ -5,24 +5,24 @@ function StrToBase10(S: string): TByteDynArray;
 var I: Integer;
 var B: byte;
 
-	procedure StoreByte(B: byte);
-	begin
-	SetLength(Result,Length(Result)+1);
-	Result[High(Result)]:=B;
-	end;
+  procedure StoreByte(B: byte);
+  begin
+  SetLength(Result,Length(Result)+1);
+  Result[High(Result)]:=B;
+  end;
 
 begin
 SetLength(Result,0);
 for I:=1 to Length(S) do
-	begin
-	if S[I] in ['0'..'9'] then StoreByte(Byte(S[I])-$30)
-	else
-		begin
-		B:=(Byte(S[I])-$41)+10;
-		StoreByte(B div 10);
-		StoreByte(B mod 10);
-		end;
-	end;
+  begin
+  if S[I] in ['0'..'9'] then StoreByte(Byte(S[I])-$30)
+  else
+    begin
+    B:=(Byte(S[I])-$41)+10;
+    StoreByte(B div 10);
+    StoreByte(B mod 10);
+    end;
+  end;
 end;
 
 {Simplifies cases where we have to sum a two digit number}
@@ -71,15 +71,15 @@ BA:=StrToBase10(IDStr);
 LT:=LuhnTest(BA);
 if LT and (SE=seNone) then Memo.Lines.Add(IDStr+': Valid')
 else
-	begin
-	S:=IDStr+': Invalid';
-	if not LT then S:=S+', Luhn Error';
-	case SE of
-	 seLength: S:=S+', Length Error';
-	 seCountry: S:=S+', Country Code Error';
-	 end;
-	Memo.Lines.Add(S);
-	end;
+  begin
+  S:=IDStr+': Invalid';
+  if not LT then S:=S+', Luhn Error';
+  case SE of
+   seLength: S:=S+', Length Error';
+   seCountry: S:=S+', Country Code Error';
+   end;
+  Memo.Lines.Add(S);
+  end;
 end;
 
 

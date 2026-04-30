@@ -8,8 +8,8 @@ sub MAIN ($filename, UInt $top = 10) {
     ;
     for @matcher -> $reg {
         say "\nTop $top using regex: ", $reg.raku;
-	    my @words = $file.comb($reg).Bag.sort(-*.value)[^$top];
-	    my $length = max @words».key».chars;
+      my @words = $file.comb($reg).Bag.sort(-*.value)[^$top];
+      my $length = max @words».key».chars;
         printf "%-{$length}s %d\n", .key, .value for @words;
     }
 }

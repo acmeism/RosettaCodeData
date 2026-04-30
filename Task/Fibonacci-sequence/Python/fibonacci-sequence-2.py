@@ -1,11 +1,11 @@
 def analytic_fibonacci91(m):
-	"""
-	Binet's algebraic formula for the nth Fibonacci number.
-	Good for up to n=91
-	Uses numpy longdoubles:
+   """
+   Binet's algebraic formula for the nth Fibonacci number.
+   Good for up to n=91
+   Uses numpy longdoubles:
 
-	See: https://artofproblemsolving.com/wiki/index.php/Binet%27s_Formula
-	"""
+   See: https://artofproblemsolving.com/wiki/index.php/Binet%27s_Formula
+   """
 
     import numpy as np
     assert isinstance(m,int), "parameter must be an integer."

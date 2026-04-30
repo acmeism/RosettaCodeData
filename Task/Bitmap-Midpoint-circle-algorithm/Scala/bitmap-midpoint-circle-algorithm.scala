@@ -22,7 +22,7 @@ object BitmapOps {
          x+=1
          ddF_x+=2
          f+=ddF_x
-			
+
          bm.setPixel(x0+x, y0+y, c)
          bm.setPixel(x0-x, y0+y, c)
          bm.setPixel(x0+x, y0-y, c)

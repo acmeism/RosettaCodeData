@@ -1,0 +1,2 @@
+(while t
+  (message "SPAM"))

@@ -1,7 +1,5 @@
-fn main() {
-	a := 10
-	if true {
-		a := 20 // error: redefinition of `a`
-	}
-	// warning: unused variable `a`
-}
+mut a := 0
+mut b := 1
+println('$a, $b') // 0, 1
+a, b = b, a // no temp variable needed
+println('$a, $b') // 1, 0

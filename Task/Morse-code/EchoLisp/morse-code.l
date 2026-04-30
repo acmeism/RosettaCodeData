@@ -12,14 +12,14 @@
 ;; use "|" as letters separator
 (define (string->morse str morse)
 (apply append (map string->list
-	(for/list [(a (string-diacritics str))]
-		(string-append
-		(or (hash-ref morse (string-upcase a)) "?") "|")))))
-	
+   (for/list [(a (string-diacritics str))]
+      (string-append
+      (or (hash-ref morse (string-upcase a)) "?") "|")))))
+
 (define (play-morse)
-	(when EMIT ;; else return #f which stops (at-every)
-		(case  (first EMIT)
-		((".") (play-sound 'digit) (write "dot"))
-		(("-") (play-sound 'tick) (write "dash"))
-		(else (writeln) (blink)))
-		(set! EMIT (rest EMIT))))
+   (when EMIT ;; else return #f which stops (at-every)
+      (case  (first EMIT)
+      ((".") (play-sound 'digit) (write "dot"))
+      (("-") (play-sound 'tick) (write "dash"))
+      (else (writeln) (blink)))
+      (set! EMIT (rest EMIT))))

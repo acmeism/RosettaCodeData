@@ -1,0 +1,60 @@
+%macro prolog 1
+  push rbp
+  mov rbp, rsp
+  sub rsp, %1
+%endmacro
+
+%macro epilog 1
+  add rsp, %1
+  pop rbp
+%endmacro
+
+%macro xcall 1
+  call [rel %1 wrt ..got]
+%endmacro
+
+%macro xlea 2
+  lea %1, [rel %2]
+%endmacro
+
+extern printf
+extern exit
+
+section .text
+    global xstrlen
+    xstrlen:
+        push rbp
+        mov rbp, rsp
+
+        mov rax, rdi               ;; Change this to RCX and it works on windoze ABI.
+        mov rsi, rax
+        xor rbx, rbx
+
+        __xlen_count:
+            cmp byte [rsi+rbx], 0
+            je __xlen_exit
+            inc rbx
+            jne __xlen_count
+
+        __xlen_exit:
+            mov rax, rbx
+            pop rbp
+        ret
+
+     ;; This will not work on Windoze. Change the macro LEA and CALL maybe.
+    global main
+    main:
+        prolog 4*8
+        xlea rdi, s1
+        call xstrlen
+        xlea rsi, rax         ;;RDX - windoze ABI
+        xlea rdi, p_tpl       ;;RCX - windoze ABI
+        xcall printf
+        xor edi, edi
+        xcall exit
+        epilog 4*8            ;;Never gets here but w/e.
+        ret
+
+section .rodata
+    s1              db "Good luck getting the stuff below this to assemble.",13,10,0
+    p_tpl           db "len: %i",13,10,0

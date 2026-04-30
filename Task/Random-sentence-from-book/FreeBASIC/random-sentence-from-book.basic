@@ -1,0 +1,255 @@
+Randomize Timer
+
+' Simple associative array for string -> integer
+Type PairSI
+    key   As String
+    value As Integer
+End Type
+
+Type AssocSI
+    dato(Any) As PairSI
+End Type
+
+Sub InitAssocSI(a As AssocSI Ptr)
+    Redim a->dato(-1)
+End Sub
+
+Sub AddOrIncSI(a As AssocSI Ptr, Byref k As String)
+    Dim As Integer ub = Ubound(a->dato)
+    For i As Integer = 0 To ub
+        If a->dato(i).key = k Then
+            a->dato(i).value += 1
+            Exit Sub
+        End If
+    Next
+    ub += 1
+    Redim Preserve a->dato(ub)
+    a->dato(ub).key = k
+    a->dato(ub).value = 11
+End Sub
+
+Function TotalSI(a As AssocSI Ptr) As Integer
+    Dim As Integer s = 0
+    Dim As Integer ub = Ubound(a->dato)
+    For i As Integer = 0 To ub
+        s += a->dato(i).value
+    Next
+    Return s
+End Function
+
+Function WeightedPick(a As AssocSI Ptr) As String
+    Dim As Integer total = TotalSI(a)
+    If total = 0 Then Return ""
+
+    Dim As Integer r = Int(Rnd * total)
+    Dim As Integer sum = 0
+    Dim As Integer ub = Ubound(a->dato)
+
+    For i As Integer = 0 To ub
+        sum += a->dato(i).value
+        If r < sum Then Return a->dato(i).key
+    Next
+
+    Return a->dato(0).key
+End Function
+
+' Dictionary for string -> AssocSI
+Type PairSA
+    key As String
+    value As AssocSI
+End Type
+
+Type AssocSA
+    dato(Any) As PairSA
+End Type
+
+Sub InitAssocSA(a As AssocSA Ptr)
+    Redim a->dato(-1)
+End Sub
+
+Function FindSA(a As AssocSA Ptr, Byref k As String) As Integer
+    Dim As Integer ub = Ubound(a->dato)
+    For i As Integer = 0 To ub
+        If a->dato(i).key = k Then Return i
+    Next
+    Return -1
+End Function
+
+Function GetSA(a As AssocSA Ptr, Byref k As String) As AssocSI Ptr
+    Dim As Integer idx = FindSA(a, k)
+    If idx >= 0 Then Return @a->dato(idx).value
+
+    Dim As Integer ub = Ubound(a->dato) + 1
+    Redim Preserve a->dato(ub)
+    a->dato(ub).key = k
+    InitAssocSI(@a->dato(ub).value)
+    Return @a->dato(ub).value
+End Function
+
+Function ReplaceString(Byval texto As String, Byval buscar As String, Byval poner As String) As String
+    Dim As String resultado
+    Dim As Integer inicio = 1, posic
+    Dim As Integer lb = Len(buscar)
+    posic = Instr(texto, buscar)
+    While posic > 0
+        resultado &= Mid(texto, inicio, posic - inicio)
+        resultado &= poner
+        inicio = posic + lb
+        posic = Instr(inicio, texto, buscar)
+    Wend
+    resultado &= Mid(texto, inicio)
+    Return resultado
+End Function
+
+Sub SplitWords(Byref texto As String, palabras() As String)
+    Erase palabras 'Redim palabras(-1)
+    Dim As String tmp = ""
+    Dim As Integer n = -1, lt = Len(texto)
+
+    For i As Integer = 1 To lt
+        Dim As String c = Mid(texto, i, 1)
+        If c = " " Then
+            If tmp <> "" Then
+                n += 1
+                Redim Preserve palabras(n)
+                palabras(n) = tmp
+                tmp = ""
+            End If
+        Else
+            tmp &= c
+        End If
+    Next
+
+    If tmp <> "" Then
+        n += 1
+        Redim Preserve palabras(n)
+        palabras(n) = tmp
+    End If
+End Sub
+
+Sub SplitPunctuation(palabras() As String, Byref endings As String, Byref pausing As String)
+    Dim As String punct = endings & pausing
+    Redim nuevas() As String
+
+    Dim As Integer i, n
+    Dim As Integer ub = Ubound(palabras)
+    For i = 0 To ub
+        Dim As String w = palabras(i)
+        Dim As Integer lw = Len(w)
+        If lw = 0 Then Continue For
+
+        Dim As String ch = Right(w, 1)
+        Dim As Boolean esPunc = (Instr(punct, ch) > 0)
+
+        If esPunc Then
+            Dim As String bbase = Left(w, lw - 1)
+            If bbase <> "" Then
+                n += 1
+                Redim Preserve nuevas(n)
+                nuevas(n) = bbase
+            End If
+            n += 1
+            Redim Preserve nuevas(n)
+            nuevas(n) = ch
+        Else
+            n += 1
+            Redim Preserve nuevas(n)
+            nuevas(n) = w
+        End If
+    Next
+
+    ''palabras() = nuevas()
+    Redim palabras(Ubound(nuevas))
+    For i = 0 To Ubound(nuevas)
+        palabras(i) = nuevas(i)
+    Next
+End Sub
+
+Sub FixPunctuation(Byref s As String, Byref endings As String, Byref pausing As String)
+    Dim As String punct = endings & pausing
+    For i As Integer = 1 To Len(punct)
+        Dim As String p = Mid(punct, i, 1)
+        s = ReplaceString(s, " " & p, p)
+    Next
+End Sub
+
+' --- Main program ---
+Dim As Integer i
+Dim As String fileName = "36-0.txt"
+Dim As String texto, linea
+Dim As Integer ff = Freefile
+
+Open fileName For Input As #ff
+While Not Eof(ff)
+    Line Input #ff, linea
+    texto &= linea & " "
+Wend
+Close #ff
+
+Dim As Integer ix = Instr(texto, "No one would have believed")
+If ix > 0 Then texto = Mid(texto, ix)
+
+Dim As String removing = Chr(34) & "#$%&()*+/<=>@[\\]^_`{|}~“”"
+For i = 1 To Len(removing)
+    texto = ReplaceString(texto, Mid(removing, i, 1), "")
+Next
+texto = ReplaceString(texto, "—", " ")
+
+Dim As String palabras()
+SplitWords(texto, palabras())
+
+Dim As String endings = ".!?"
+Dim As String pausing = ",:;"
+SplitPunctuation(palabras(), endings, pausing)
+
+Dim As Integer wc = Ubound(palabras)
+
+Dim As AssocSA dict1, dict2
+InitAssocSA(@dict1)
+InitAssocSA(@dict2)
+
+For i = 0 To wc - 2
+    AddOrIncSI(GetSA(@dict1, palabras(i)), palabras(i+1))
+Next
+
+For i = 0 To wc - 3
+    Dim As String clave = palabras(i) & " " & palabras(i+1)
+    AddOrIncSI(GetSA(@dict2, clave), palabras(i+2))
+Next
+
+For i = 1 To 5
+    Dim As String startKey
+    Dim As AssocSI Ptr startDot = GetSA(@dict1, ".")
+    If TotalSI(startDot) > 0 Then
+        startKey = "."
+    Else
+        Do
+            Dim As Integer idx = Int(Rnd * wc)
+            startKey = palabras(idx)
+        Loop While Instr(".!?," & ";:", startKey) > 0
+    End If
+
+    Dim As AssocSI Ptr start = GetSA(@dict1, startKey)
+    Dim As String frase = WeightedPick(start)
+    If frase = "" Then Print: Continue For
+
+    Dim As String last1 = frase
+    Dim As String last2 = startKey & " " & frase
+
+    Do
+        Dim As AssocSI Ptr a = GetSA(@dict2, last2)
+        Dim As String nextw = WeightedPick(a)
+        If nextw = "" Then Exit Do
+
+        frase &= " " & nextw
+        If Instr(endings, nextw) > 0 Then Exit Do
+
+        last2 = last1 & " " & nextw
+        last1 = nextw
+    Loop
+
+    FixPunctuation(frase, endings, pausing)
+    Print frase & Chr(10)
+Next
+
+Sleep

@@ -13,6 +13,6 @@ T♥ j♥ q♥ 9♥ K♥
 q♣ T♣ 7♣ 6♣ 4♣
 )
 loop, parse, hands, `n, `r
-	res .= PokerHand(A_LoopField) "`n"
+  res .= PokerHand(A_LoopField) "`n"
 MsgBox, 262144, , % res
 return

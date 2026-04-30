@@ -1,0 +1,73 @@
+local fmt = require "fmt"
+require "table2"
+
+local function jaro_sim(s1, s2)
+    local le1 = #s1
+    local le2 = #s2
+    if le1 == 0 and le2 == 0 then return 1 end
+    if le1 == 0 or  le2 == 0 then return 0 end
+    local dist = (le2 > le1) ? le2 : le1
+    dist = dist // 2 - 1
+    local matches1 = table.rep(le1, false)
+    local matches2 = table.rep(le2, false)
+    local matches = 0
+    local transpos = 0
+    for i = 0, #s1 - 1 do
+        local start = i - dist
+        if start < 0 then start = 0 end
+        local finish = i + dist + 1
+        if finish > le2 then finish = le2 end
+        local k = start
+        while k < finish do
+            if not(matches2[k + 1] or s1[i + 1] != s2[k + 1]) then
+                matches1[i + 1] = true
+                matches2[k + 1] = true
+                matches += 1
+                break
+            end
+            k += 1
+        end
+    end
+    if matches == 0 then return 0 end
+    local k = 0
+    for i = 0, #s1 - 1 do
+        if matches1[i + 1] then
+            while !matches2[k + 1] do k += 1 end
+            if s1[i + 1] != s2[k + 1] do transpos += 1 end
+            k += 1
+        end
+     end
+     transpos /= 2
+     return (matches / le1 + matches / le2 + (matches - transpos) / matches) / 3
+end
+
+local function jaro_winkler_dist(s, t)
+    local ls = #s
+    local lt = #t
+    local lmax = (ls < lt) ? ls : lt
+    if lmax > 4 then lmax = 4 end
+    local l = 0
+    for i = 1, lmax do
+        if s[i] == t[i] then l += 1 end
+    end
+    local js = jaro_sim(s, t)
+    local p = 0.1
+    local ws = js + l * p * (1 - js)
+    return 1 - ws
+end
+
+local misspelt = {"accomodate", "definately", "goverment", "occured", "publically", "recieve", "seperate", "untill", "wich"}
+local word_list = "unixdict.txt"  -- local copy
+local nl = os.platform == "windows" ? "\r\n" : "\n"
+local words = io.contents(word_list):rstrip():split(nl)
+for misspelt as ms do
+    local closest = {}
+    for words as word do
+       local jwd = jaro_winkler_dist(ms, word)
+       if jwd < 0.15 then closest:insert({word, jwd}) end
+    end
+    print($"Misspelt word: {ms}:")
+    closest:sort(|n1, n2| -> n1[2] < n2[2])
+    for closest:slice(1, 6) as c do fmt.print("%0.4f %s", c[2], c[1]) end
+    print()
+end

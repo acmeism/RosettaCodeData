@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 4 Mar 2026
 include Setting
 arg xx
 say 'THE SIEVE OF SUNDARAM'
@@ -11,7 +11,7 @@ call Timer
 exit
 
 Collect:
-procedure expose prim. work.
+procedure expose prim. work. memo.
 arg xx
 say 'Collecting primes up to' xx'...'
 work. = 1
@@ -54,4 +54,5 @@ say prim.1000000
 say
 return
 
+-- Isqrt; Timer
 include Math

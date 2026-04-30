@@ -1,4 +1,3 @@
-sysconf zero_based
 print "Unsigned Stirling numbers of the second kind:"
 len a[] 13
 len b[] 13

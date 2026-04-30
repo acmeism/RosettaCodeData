@@ -5,7 +5,7 @@ for i = 0 to n - 1
    p5[i + 1] = i * i * i * i * i
    h5[p5[i + 1] mod 65537 + 1] = 1
 .
-func search a s .
+fastfunc search a s .
    y = -1
    b = n
    while a + 1 < b
@@ -21,21 +21,34 @@ func search a s .
    .
    return y
 .
-for x0 = 0 to n - 1
-   for x1 = 0 to x0
-      sum1 = p5[x0 + 1] + p5[x1 + 1]
-      for x2 = 0 to x1
-         sum2 = p5[x2 + 1] + sum1
-         for x3 = 0 to x2
-            sum = p5[x3 + 1] + sum2
-            if h5[sum mod 65537 + 1] = 1
-               y = search x0 sum
-               if y >= 0
-                  print x0 & " " & x1 & " " & x2 & " " & x3 & " " & y
-                  break 4
+len r[] 5
+fastproc .
+   for a = 0 to n - 1
+      for b = 0 to a
+         sum1 = p5[a + 1] + p5[b + 1]
+         for c = 0 to b
+            sum2 = p5[c + 1] + sum1
+            for d = 0 to c
+               sum = p5[d + 1] + sum2
+               if h5[sum mod 65537 + 1] = 1
+                  y = search a sum
+                  if y >= 0
+                     r[1] = a
+                     r[2] = b
+                     r[3] = c
+                     r[4] = d
+                     r[5] = y
+                     break 4
+                  .
                .
             .
          .
       .
    .
 .
+sus$[] = [ "⁵" "⁴" "³" "²" ]
+for i to 4
+   write r[i] & sus$[i]
+   if i <= 3 : write " + "
+.
+print " = " & r[5] & sus$[1]

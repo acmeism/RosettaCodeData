@@ -23,5 +23,5 @@ fn gen(k int, n int) []int {
 }
 
 fn main(){
-    for k in 1..6 {println('$k ${gen(k,10)}')}
+    for k in 1..6 {println("$k ${gen(k,10)}")}
 }

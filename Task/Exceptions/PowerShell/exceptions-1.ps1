@@ -1,0 +1,1 @@
+throw "Any error message."

@@ -1,4 +1,4 @@
-T[] forwardDifference(T)(in T[] data, in int level) pure nothrow
+T[] forwardDifference(T)(in T[] data, in ulong level) pure nothrow
 in {
     assert(level >= 0 && level < data.length);
 } body {

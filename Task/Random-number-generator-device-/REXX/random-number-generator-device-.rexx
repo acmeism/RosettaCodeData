@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 25 Apr 2026
 include Setting
 numeric digits 12
 
@@ -7,11 +7,12 @@ say version
 say
 call ShowSeed
 call Examples
-call Timer
 exit
 
 ShowSeed:
 procedure
+-- Courtesy Walter Pachl:
+-- Function Rand in module Randoms uses a oneliner with Translate
 say 'Datetime =' Date('s')||Time('l')
 say 'Extract  =' '  AABBCCDD EE FF GHI'
 d = Date('s')
@@ -25,11 +26,19 @@ return
 
 Examples:
 procedure expose Memo.
-say 'Randu()       = ' Right(Randu(),14) 'Real, uniform distributed over (0,1)'
-say 'Randu(100)    = ' Right(Randu(100),14)  'Integer, between 0 and 100'
-say 'Randu(-10,10) = ' Right(Randu(-10,10),14)  'Integer, between -10 and 10'
-say 'Randn()       = ' Right(Randn(),14)  'Real, normal distributed, average 0 and deviation 1'
+-- Reset seed
+call Rand(12345)
+-- Real uniform distributed
+say 'Rand5()       = ' Right(Rand5(),14)  '5-digit between 0 and 1'
+say 'Rand12()      = ' Right(Rand12(),14)  '12-digit between 0 and 1'
+-- Integer uniform distributed
+say 'Rand()        = ' Right(Rand(),14) 'Between 0 and 1E12-1'
+say 'Randu(10)     = ' Right(Randu(10),14)  'Between 0 and 10'
+say 'Randu(-10,10) = ' Right(Randu(-10,10),14)  'Between -10 and 10'
+-- Real normal distributed
+say 'Randn(5,2)    = ' Right(Randn(5,2),14)  'Average 5 and deviation 2'
 say
 return
 
+-- Rand; Rand5; Rand12; Randu; Randn
 include Math

@@ -1,8 +1,8 @@
 (define (file-stats file string)
-	(set-plist! 'file-stats null) ; reset counters
-	(writeln (count-letters 'file-stats string))
-	(writeln "Total letters:" (string-length string))
-	(writeln "Total lines:" (getprop 'file-stats "#\\newline")))
+  (set-plist! 'file-stats null) ; reset counters
+  (writeln (count-letters 'file-stats string))
+  (writeln "Total letters:" (string-length string))
+  (writeln "Total lines:" (getprop 'file-stats "#\\newline")))
 
 ; frequency for 'help.html' file
 (file->string file-stats) ; browser 'open' dialog

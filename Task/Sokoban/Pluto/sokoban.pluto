@@ -1,0 +1,108 @@
+require "map"
+require "list"
+
+class board
+    function __construct(public cur, public sol, public x, public y) end
+end
+
+class sokoban
+    function __construct(brd)
+        self.dest_board = ""
+        self.curr_board = ""
+        self.ncols = #brd[1]
+        self.player_x = 0
+        self.player_y = 0
+        for r = 1, #brd do
+            for c = 1, self.ncols do
+                local ch = brd[r][c]
+                self.dest_board ..= (ch != "$" and ch != "@") ? ch : " "
+                self.curr_board ..= (ch != ".") ? ch : " "
+                if ch == "@" then
+                    self.player_x = c - 1
+                    self.player_y = r - 1
+                end
+            end
+        end
+    end
+
+    function move(x, y, dx, dy, trial_board)
+        local new_player_pos = (y + dy) * self.ncols  + x + dx + 1
+        if trial_board[new_player_pos] != " " then return "" end
+        local trial = trial_board:split("")
+        trial[y * self.ncols + x + 1] = " "
+        trial[new_player_pos] = "@"
+        return trial:concat("")
+    end
+
+    function push(x, y, dx, dy, trial_board)
+        local new_box_pos = (y + 2 * dy) * self.ncols + x + 2 * dx + 1
+        if trial_board[new_box_pos] != " " then return "" end
+        local trial = trial_board:split("")
+        trial[y * self.ncols + x + 1] = " "
+        trial[(y + dy) * self.ncols + x + dx + 1] = "@"
+        trial[new_box_pos] = "$"
+        return trial:concat("")
+    end
+
+    function is_solved(trial_board)
+        for i = 1, #trial_board do
+            if (self.dest_board[i] == ".") != (trial_board[i] == "$") then return false end
+        end
+        return true
+    end
+
+    function solve()
+        local dir_labels = { {"u", "U"}, {"r", "R"}, {"d", "D"}, {"l", "L"} }
+        local dirs = { {0, -1}, {1, 0}, {0, 1}, {-1, 0} }
+        local history = new set()
+        history:add(self.curr_board)
+        local open = new dlist()
+        open:push(new board(self.curr_board, "", self.player_x, self.player_y))
+
+        while !open:empty() do
+            local b = open:remove(1)
+            for i = 1, #dirs do
+                local trial = b.cur
+                local dx = dirs[i][1]
+                local dy = dirs[i][2]
+
+                -- Are we standing next to a box ?
+                if trial[(b.y + dy) * self.ncols + b.x + dx + 1] == "$" then
+                    -- Can we push it ?
+                    trial = self:push(b.x, b.y, dx, dy, trial)
+                    if trial != "" then
+                        -- Or did we already try this one ?
+                        if !history:contains(trial) then
+                            local newsol = b.sol .. dir_labels[i][2]
+                            if self:is_solved(trial) then return newsol end
+                            open:push(new board(trial, newsol, b.x + dx, b.y + dy))
+                            history:add(trial)
+                        end
+                    end
+                else   -- otherwise try changing position
+                    trial = self:move(b.x, b.y, dx, dy, trial)
+                    if trial != "" and !history:contains(trial) then
+                        local newsol = b.sol .. dir_labels[i][1]
+                        open:push(new board(trial, newsol, b.x + dx, b.y + dy))
+                        history:add(trial)
+                    end
+                end
+            end
+        end
+        return "No solution"
+    end
+end
+
+local level = {
+    "#######",
+    "#     #",
+    "#     #",
+    "#. #  #",
+    "#. $$ #",
+    "#.$$  #",
+    "#.#  @#",
+    "#######"
+}
+print(level:concat("\n"))
+print()
+print(new sokoban(level):solve())

@@ -9,7 +9,7 @@
 
 ;; using a recursive procedure with memoization
 (define (C2 n) ;; ( Σ  ...)is the same as (sigma ..)
-	(Σ (lambda(i) (* (C2 i) (C2 (- n i 1))))  0 (1- n)))
+  (Σ (lambda(i) (* (C2 i) (C2 (- n i 1))))  0 (1- n)))
 (remember 'C2 #(1)) ;; first term defined here
 
 (for ((i [1 .. 16])) (write (C2 i)))

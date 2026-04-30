@@ -1,0 +1,10 @@
+HAI 1.3
+
+    I HAS A FRANK ITZ "Hello,"
+    I HAS A PAUL ITZ "World!"
+    VISIBLE FRANK " " PAUL
+
+    FRANK R PAUL
+    VISIBLE FRANK " " PAUL
+
+KTHXBYE

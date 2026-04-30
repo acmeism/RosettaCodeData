@@ -1,0 +1,22 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. SOLOWAY.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01 AVERAGE       PIC 9(9)V9(9) VALUE ZERO.
+       01 AMOUNT        PIC 9(9) VALUE ZERO.
+       01 CURRENT       PIC 9(9).
+       01 OUTPUT-VAL    PIC Z(8)9.9(9).
+
+       PROCEDURE DIVISION.
+       READ-VALUE.
+           ACCEPT CURRENT.
+           IF CURRENT IS EQUAL TO 99999, GO TO DONE.
+           ADD 1 TO AMOUNT.
+           COMPUTE AVERAGE =
+                AVERAGE * (AMOUNT - 1) / AMOUNT + CURRENT / AMOUNT.
+           GO TO READ-VALUE.
+       DONE.
+           MOVE AVERAGE TO OUTPUT-VAL.
+           DISPLAY OUTPUT-VAL.
+           STOP RUN.

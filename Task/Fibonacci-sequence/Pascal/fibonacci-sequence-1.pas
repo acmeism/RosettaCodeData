@@ -9,9 +9,47 @@ Program FastFibonacciGMP;
 // AI Assistant: DeepSeek
 // Description: Multiple Fibonacci algorithms with arbitrary precision
 //              AI translated from my own 2016 python app ( the hybrid part )
-// License: Public Domain for Rosetta Code contribution
+//
+// LICENSE & ATTRIBUTION:
+// ----------------------------------------------------------------------------
+// 1. This Pascal source file (`FastFibonacciGMP.pas`) is released to the
+//    PUBLIC DOMAIN for Rosetta Code contribution. Author waives all copyright.
+//
+// 2. This program uses the Free Pascal `GMP` unit, which is a binding to the
+//    GNU MP Library (GMP). The `GMP` unit is part of Free Pascal's RTL-extra
+//    package, licensed under the GNU Lesser General Public License (LGPL)
+//    with a static linking exception.
+//
+// 3. The underlying GNU MP Library (libgmp) itself is licensed under:
+//    - GNU Lesser General Public License version 3 or later (LGPLv3+), OR
+//    - GNU General Public License version 2 or later (GPLv2+).
+//
+// 4. When compiled, this program links to the external GMP C library.
+//    For license compliance, users must have access to the GMP library
+//    source code (available at https://gmplib.org/).
 // ============================================================================
-
+// MATHEMATICAL FOUNDATION ATTRIBUTION:
+// ----------------------------------------------------------------------------
+// 1. Fast Doubling Formulas (Fibonacci Squaring):
+//    F(2k) = F(k) × [2×F(k+1) - F(k)]
+//    F(2k+1) = F(k+1)² + F(k)²
+//    Derived from Cassini's identity (1680) and Catalan's identity (1879).
+//    Modern algorithmic presentation: Dijkstra (1978), Cohn (1963).
+//
+// 2. Fibonacci Tripling Formulas:
+//    F(3k) = 5×F(k)³ + 3×(-1)ᵏ×F(k)
+//    F(3k+1) = F(k+1)³ + 3×F(k+1)×F(k)² - F(k)³
+//    Derived from Binet's formula (1843).
+//    Algorithmic optimization: Various number theory sources.
+//
+// 3. Hybrid Decomposition Algorithm:
+//    Recursive decomposition using factors 2 and 3 based on divisibility.
+//    Original implementation concept: jpd (2016 Python implementation).
+//    Ported to Pascal with algorithmic corrections: DeepSeek AI (2025).
+//
+// NOTE: These mathematical identities are in the public domain.
+//       This specific implementation is original work.
+// ----------------------------------------------------------------------------
 Uses
     SysUtils,
     DateUtils,

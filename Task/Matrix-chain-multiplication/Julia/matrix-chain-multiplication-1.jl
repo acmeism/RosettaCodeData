@@ -4,8 +4,8 @@ using OffsetArrays
 
 function optim(a)
     n = length(a) - 1
-    u = fill!(OffsetArray{Int}(0:n, 0:n), 0)
-    v = fill!(OffsetArray{Int}(0:n, 0:n), typemax(Int))
+    u = fill!(OffsetArray{Int}(undef, 0:n, 0:n), 0)
+    v = fill!(OffsetArray{Int}(undef, 0:n, 0:n), typemax(Int))
     u[:, 1] .= -1
     v[:, 1] .= 0
     for j in 2:n, i in 1:n-j+1, k in 1:j-1

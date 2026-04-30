@@ -6,8 +6,8 @@ inv = [("map",9,150), ("compass",13,35), ("water",153,200), ("sandwich",50,160),
        ("sunglasses",7,20), ("towel",18,12), ("socks",4,50), ("book",30,10)]
 
 knapsack = foldr addItem (repeat (0,[])) where
-	addItem (name,w,v) list = left ++ zipWith max right newlist where
-		newlist = map (\(val, names)->(val + v, name:names)) list
-		(left,right) = splitAt w list
+   addItem (name,w,v) list = left ++ zipWith max right newlist where
+      newlist = map (\(val, names)->(val + v, name:names)) list
+      (left,right) = splitAt w list
 
 main = print $ (knapsack inv) !! 400

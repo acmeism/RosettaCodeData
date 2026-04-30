@@ -1,49 +1,49 @@
--- 23 Aug 2025
+-- 25 Apr 2026
 include Setting
 
 say 'COMPLEX ARITHMETIC'
 say version
 say
-a = '1 2'; b = '3 4'; c = '5 6'; d = '7 8'; i = I()
+t = '1 2'; u = '3 4'; v = '5 6'; w = '7 8'; i = I()
 say 'VALUES'
-say 'a =' Rec2FormC(a)
-say 'b =' Rec2FormC(b)
-say 'c =' Rec2FormC(c)
-say 'd =' Rec2FormC(d)
+say 't =' Rec2FormC(t)
+say 'u =' Rec2FormC(u)
+say 'v =' Rec2FormC(v)
+say 'w =' Rec2FormC(w)
 say
 say 'BASICS'
-say 'i*i     =' Rec2FormC(SquareC(i()))
-say 'a+b     =' Rec2FormC(AddC(a,b))
-say 'a-b     =' Rec2FormC(SubC(a,b))
-say 'a*b     =' Rec2FormC(MulC(a,b))
-say 'a/b     =' Rec2FormC(DivC(a,b))
-say 'a^2     =' Rec2FormC(SquareC(a,2))
-say 'a^5     =' Rec2FormC(PowC(a,5))
-say '-a      =' Rec2FormC(NegC(a))
-say '1/a     =' Rec2FormC(InvC(a))
-say 'a+b+c+d =' Rec2FormC(AddC(a,b,c,d))
-say 'a-b-c-d =' Rec2FormC(SubC(a,b,c,d))
-say 'a*b*c*d =' Rec2FormC(MulC(a,b,c,d))
-say 'a/b/c/d =' Rec2FormC(Normal(DivC(a,b,c,d)))
+say 'i*i =' Rec2FormC(SquareC(i))
+say 't+u =' Rec2FormC(AddC(t,u))
+say 't-u =' Rec2FormC(SubC(t,u))
+say 't*u =' Rec2FormC(MulC(t,u))
+say 't/u =' Rec2FormC(DivC(t,u))
+say 't^2 =' Rec2FormC(SquareC(t,2))
+say 't^5 =' Rec2FormC(PowC(t,5))
+say '-t  =' Rec2FormC(NegC(t))
+say '1/t =' Rec2FormC(InvC(t))
+say
+say 'SUM AND PRODUCT OF A LIST'
+say 't+u+v+w =' Rec2FormC(AddCL(t';'u';'v';'w))
+say 't*u*v*w =' Rec2FormC(MulCL(t';'u';'v';'w))
 say
 say 'FORMULA'
-say 'a^2-2ab+3c-4ad^4+5 =' ,
-Rec2FormC(AddC(SquareC(a),MulC(-2,a,b),MulC(3,c),MulC(-4,a,PowerC(d,4)),5))
+say 't^2-2tu+3v-4tw^4+5 =' ,
+Rec2FormC(AddCL(SquareC(t)';'MulCL(-2';'t';'u)';'MulC(3,v)';'MulCL(-4';'t';'PowC(w,4))';'5))
 say
 say 'BONUS'
-say 'Argument(a)  =' ArgC(a)+0
-say 'Conjugate(a) =' Rec2FormC(ConjC(a))
-say 'Imag(a)      =' ImC(a)
-say 'Modulus(a)   =' ModC(a)+0
-say 'Polar(a)     =' Pol2FormC(Normal(Rec2PolC(a)))
-say 'Real(a)      =' ReC(a)
+say 'Argument(t)  =' ArgC(t)+0
+say 'Conjugate(t) =' Rec2FormC(ConjC(t))
+say 'Imag(t)      =' ImC(t)
+say 'Modulus(t)   =' ModC(t)+0
+say 'Polar(t)     =' Pol2FormC(Normal(Rec2PolC(t)))
+say 'Real(t)      =' ReC(t)
 say
 say 'MORE'
-say 'Arcsin(a) =' Rec2FormC(Normal(ArcSinC(a)))
-say 'Exp(a)    =' Rec2FormC(Normal(ExpC(a)))
-say 'Ln(a)     =' Rec2FormC(Normal(LnC(a)))
-say 'Sin(a)    =' Rec2FormC(Normal(SinC(a)))
-say 'Sqrt(a)   =' Rec2FormC(Normal(SqRtC(a)))
+say 'Arcsin(t) =' Rec2FormC(Normal(ArcSinC(t)))
+say 'Exp(t)    =' Rec2FormC(Normal(ExpC(t)))
+say 'Ln(t)     =' Rec2FormC(Normal(LnC(t)))
+say 'Sin(t)    =' Rec2FormC(Normal(SinC(t)))
+say 'Sqrt(t)   =' Rec2FormC(Normal(SqRtC(t)))
 say 'i^i       =' Rec2FormC(Normal(PowerC(i,i)))
 exit
 

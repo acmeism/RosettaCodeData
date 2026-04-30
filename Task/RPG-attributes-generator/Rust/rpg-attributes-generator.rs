@@ -1,6 +1,5 @@
-use rand::distributions::Uniform;
-use rand::prelude::{thread_rng, ThreadRng};
-use rand::Rng;
+use rand::distr::Uniform;
+use rand::prelude::*;
 
 fn main() {
     for _ in 0..=10 {
@@ -8,7 +7,7 @@ fn main() {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct Dice {
     amount: i32,
     range: Uniform<i32>,
@@ -22,8 +21,8 @@ impl Dice {
     pub fn new(amount: i32, size: i32) -> Self {
         Self {
             amount,
-            range: Uniform::new(1, size + 1),
-            rng: thread_rng(),
+            range: Uniform::new(1, size + 1).unwrap(),
+            rng: rand::rng(),
         }
     }
 
@@ -35,7 +34,7 @@ impl Dice {
 
     fn attribute_out(&self) -> i32 {
         // Sort dice pool lowest to high and drain all results to exclude the lowest before summing.
-        let mut attribute_array: Vec<i32> = self.roll_pool();
+        let mut attribute_array: Vec<i32> = self.clone().roll_pool();
         attribute_array.sort();
         attribute_array.drain(1..=3).sum()
     }

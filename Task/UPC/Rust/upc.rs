@@ -104,9 +104,7 @@ fn decode_upc(input: &str) {
             return (false, output);
         }
         let part = &candidate[pos..pos + END_SENTINEL.len()];
-        if part == END_SENTINEL {
-            pos += END_SENTINEL.len();
-        } else {
+        if part != END_SENTINEL {
             return (false, output);
         }
 

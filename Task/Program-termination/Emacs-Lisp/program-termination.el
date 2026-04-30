@@ -1,0 +1,2 @@
+(when something
+  (kill-emacs))

@@ -81,11 +81,11 @@ def play:
       then pChoice as $pChoice
       | if $pChoice == null
         then .prompt = false
-	| .emit = "OK, quitting", break $out
+   | .emit = "OK, quitting", break $out
         elif $pChoice == false
-	then .emit = "Valid responses are one of r p s q\nPlease try again."
+   then .emit = "Valid responses are one of r p s q\nPlease try again."
         else getComputerChoice as $cChoice
-	| .prompt = false
+   | .prompt = false
         | .emit = "Computer's choice   : \($cChoice)\n"
         | update($pChoice; $cChoice)
         end

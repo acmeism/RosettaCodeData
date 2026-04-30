@@ -1,5 +1,5 @@
-function josephus(n::Integer, k::Integer, m::Integer=1)
-    p, i, seq = collect(0:n-1), 0, Vector{typeof(n)}(0)
+function josephus(n::T, k::T, m::T=one(T)) where T <: Integer
+    p, i, seq = collect(0:n-1), 0, [zero(T)]
     while length(p) > m
         i = (i + k - 1) % length(p)
         push!(seq, splice!(p, i + 1))

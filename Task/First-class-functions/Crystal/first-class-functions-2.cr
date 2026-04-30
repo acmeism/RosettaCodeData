@@ -1,0 +1,1 @@
+->(n : Float64) { Math.sin(n) }

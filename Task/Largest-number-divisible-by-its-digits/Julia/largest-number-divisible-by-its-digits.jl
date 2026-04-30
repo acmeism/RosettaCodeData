@@ -3,14 +3,14 @@ function main()
     dif = [4, 2, 2, 2]
     local k = 1
     @label start
-    local str = dec(num)
+    local str = string(num)
     for (i, ch) in enumerate(str)
         if ch in ('0', '5') || num % (ch - '0') != 0
             num -= dif[k]
             k = (k + 1) % 4 + 1
             @goto start
         end
-        for j in i+1:endof(str)
+        for j in i+1:lastindex(str)
             if str[i] == str[j]
                 num -= dif[k]
                 k = (k + 1) % 4 + 1

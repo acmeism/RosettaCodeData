@@ -1,0 +1,156 @@
+/* ARM assembly Raspberry PI  */
+/*  program guessnumber.s   */
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.include "../constantes.inc"
+.equ STDIN,  0     @ Linux input console
+.equ READ,   3     @ Linux syscall
+.equ OPEN,   5
+.equ CLOSE,  6
+.equ O_RDONLY, 0                         @ open for reading only
+.equ BUFFERSIZE, 100
+/*******************************************/
+/*   Macros                              */
+/*******************************************/
+//.include "../../ficmacros32.inc"            @ for developer debugging
+
+/*******************************************/
+/* Initialized data */
+/*******************************************/
+.data
+szMessDebutPgm:       .asciz "Program 32 bits start. \n"
+szCarriageReturn:     .asciz "\n"
+szMessFinOK:          .asciz "Program normal end. \n"
+
+szMessNum:            .asciz "I'm thinking of a number between 1 and 10. \n Try to guess it:\n"
+
+szMessError:          .asciz "That's not my number. Try another guess:\n"
+szMessSucces:         .asciz "Correct.\n"
+
+szFileName:              .asciz "/dev/urandom"      @ see linux doc
+szMessErrRandom:      .asciz "Error read file urandom."
+
+/*******************************************/
+/* UnInitialized data */
+/*******************************************/
+.bss
+sBuffer: .skip BUFFERSIZE
+.align 2
+
+/*******************************************/
+/*  code section */
+/*******************************************/
+.text
+.global main
+main:
+    ldr r0,iAdrszMessDebutPgm
+    bl affichageMess
+	
+	bl randomNumber
+	mov r4,r0
+	ldr r0,iAdrszMessNum
+    bl affichageMess
+	
+1:
+    bl saisie
+    ldr r0,iAdrsBuffer     @ buffer address
+	bl conversionAtoD      @ conversion string -> decimal
+	cmp r0,r4              @ compare number
+	beq 2f
+	ldr r0,iAdrszMessError
+	bl affichageMess
+	b 1b
+2:
+	ldr r0,iAdrszMessSucces
+	bl affichageMess
+
+	ldr r0,iAdrszMessFinOK
+	bl affichageMess
+100:                              @ standard end of the program
+    mov r0, #0                    @ return code
+    mov r7, #EXIT                 @ request to exit program
+    svc 0                         @ perform system call
+iAdrszMessDebutPgm:       .int szMessDebutPgm
+iAdrszMessFinOK:          .int szMessFinOK
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszMessNum:            .int szMessNum
+iAdrszMessError:          .int szMessError
+iAdrszMessSucces:         .int szMessSucces
+
+
+/******************************************************************/
+/*            string saisie                                       */
+/******************************************************************/
+/* r0 return the first character of human entry */
+saisie:
+    push {r1-r7,lr}        @ save registers
+    mov r0,#STDIN          @ Linux input console
+    ldr r1,iAdrsBuffer     @ buffer address
+    mov r2,#BUFFERSIZE     @ buffer size
+    mov r7,#READ           @ request to read datas
+    svc 0                  @ call system
+    ldr r1,iAdrsBuffer     @ buffer address
+100:
+    pop {r1-r7,lr}
+    bx lr                   @ return
+
+
+/***************************************************/
+/*   Generation random number                  */
+/***************************************************/
+/* r0 contains limit  */
+randomNumber:
+    push {r1-r8,lr}
+
+    ldr r0,iAdrszFileName               @ File name
+    mov r1,#O_RDONLY                    @  flags
+    mov r2,#0                           @ mode
+    mov r7,#OPEN                        @ open file
+    svc #0
+    cmp r0,#0                           @ error ?
+    ble 99f
+    mov r8,r0                           @ save FD
+    mov r4,#0                           @ loop counter
+1:
+    mov r0,r8                           @ File Descriptor
+    ldr r1,iAdrsBuffer                  @ buffer address
+    mov r2,#BUFFERSIZE                  @ buffer size
+    mov r7,#READ                        @ call system read file
+    svc 0
+    cmp r0,#0                           @ read error ?
+    ble 99f
+    ldr r1,iAdrsBuffer                  @ buffer address
+	ldrb r0,[r1]
+	cmp r0,#0
+	moveq r0,#8
+	mov r1,#10
+	bl division
+	mov r4,r3
+
+	mov r0,r8
+    mov r7, #CLOSE                      @ call system close file
+    svc #0
+	
+	mov r0,r4
+	b 100f
+99:
+	ldr r0,iAdrszMessErrRandom
+	bl affichageMess
+    mov r0,#-1	
+100:                                                  @ end function
+    pop {r1-r8,lr}                                     @ restaur registers
+    bx lr
+iAdrszFileName:      .int szFileName	
+iAdrsBuffer:         .int sBuffer
+iAdrszMessErrRandom: .int szMessErrRandom
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

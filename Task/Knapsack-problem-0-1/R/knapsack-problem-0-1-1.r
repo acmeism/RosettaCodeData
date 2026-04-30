@@ -11,68 +11,68 @@ Full_Data<-structure(list(item = c("map", "compass", "water", "sandwich",
 
 Bounded_knapsack<-function(Data,W)
 {
-	K<-matrix(NA,nrow=W+1,ncol=dim(Data)[1]+1)
-	0->K[1,]->K[,1]
-	matrix_item<-matrix('',nrow=W+1,ncol=dim(Data)[1]+1)
-	for(j in 1:dim(Data)[1])
-	{
-		for(w in 1:W)
-		{
-			wj<-Data$weigth[j]
-			item<-Data$item[j]
-			value<-Data$value[j]
-			if( wj > w )
-			{
-				K[w+1,j+1]<-K[w+1,j]
-				matrix_item[w+1,j+1]<-matrix_item[w+1,j]
-			}
-			else
-			{
-				if( K[w+1,j] >= K[w+1-wj,j]+value )
-				{
-					K[w+1,j+1]<-K[w+1,j]
-					matrix_item[w+1,j+1]<-matrix_item[w+1,j]					
-				}
-				else
-				{
-					K[w+1,j+1]<-K[w+1-wj,j]+value
-					matrix_item[w+1,j+1]<-item
-				}
-			}
-		}
-	}
+   K<-matrix(NA,nrow=W+1,ncol=dim(Data)[1]+1)
+   0->K[1,]->K[,1]
+   matrix_item<-matrix('',nrow=W+1,ncol=dim(Data)[1]+1)
+   for(j in 1:dim(Data)[1])
+   {
+      for(w in 1:W)
+      {
+         wj<-Data$weigth[j]
+         item<-Data$item[j]
+         value<-Data$value[j]
+         if( wj > w )
+         {
+            K[w+1,j+1]<-K[w+1,j]
+            matrix_item[w+1,j+1]<-matrix_item[w+1,j]
+         }
+         else
+         {
+            if( K[w+1,j] >= K[w+1-wj,j]+value )
+            {
+               K[w+1,j+1]<-K[w+1,j]
+               matrix_item[w+1,j+1]<-matrix_item[w+1,j]
+            }
+            else
+            {
+               K[w+1,j+1]<-K[w+1-wj,j]+value
+               matrix_item[w+1,j+1]<-item
+            }
+         }
+      }
+   }
 return(list(K=K,Item=matrix_item))
 }
 
 backtracking<-function(knapsack, Data)
 {
-	W<-dim(knapsack$K)[1]
-	itens<-c()
-	col<-dim(knapsack$K)[2]
-	selected_item<-knapsack$Item[W,col]
-	while(selected_item!='')
-	{
-		selected_item<-knapsack$Item[W,col]
-		if(selected_item!='')
-		{
-			selected_item_value<-Data[Data$item == selected_item,]
-			if(-knapsack$K[W - selected_item_value$weigth,col-1]+knapsack$K[W,col]==selected_item_value$value)
-			{
-				W <- W - selected_item_value$weigth
-				itens<-c(itens,selected_item)
-			}
-			col <- col - 1
-		}
-	}
+   W<-dim(knapsack$K)[1]
+   itens<-c()
+   col<-dim(knapsack$K)[2]
+   selected_item<-knapsack$Item[W,col]
+   while(selected_item!='')
+   {
+      selected_item<-knapsack$Item[W,col]
+      if(selected_item!='')
+      {
+         selected_item_value<-Data[Data$item == selected_item,]
+         if(-knapsack$K[W - selected_item_value$weigth,col-1]+knapsack$K[W,col]==selected_item_value$value)
+         {
+            W <- W - selected_item_value$weigth
+            itens<-c(itens,selected_item)
+         }
+         col <- col - 1
+      }
+   }
 return(itens)
 }
 
 print_output<-function(Data,W)
 {
-	Bounded_knapsack(Data,W)->Knap
-	backtracking(Knap, Data)->Items
-	output<-paste('You must carry:', paste(Items, sep = ', '), sep=' ' )
-	return(output)
+   Bounded_knapsack(Data,W)->Knap
+   backtracking(Knap, Data)->Items
+   output<-paste('You must carry:', paste(Items, sep = ', '), sep=' ' )
+   return(output)
 }
 
 print_output(Full_Data, 400)

@@ -1,7 +1,7 @@
 using Gee;
 
 void main(){
-    var	map = new HashMap<string, int>(); // creates a HashMap with keys of type string, and values of type int
+    var map = new HashMap<string, int>(); // creates a HashMap with keys of type string, and values of type int
 
     // two methods to set key,value pair
     map["one"] = 1;

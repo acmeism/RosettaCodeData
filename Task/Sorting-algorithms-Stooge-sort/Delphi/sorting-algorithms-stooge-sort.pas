@@ -2,18 +2,18 @@ procedure StoogeSort(var L: array of integer; I,J: integer);
 var T,M: integer;
 begin
 if L[j] < L[i] then
-	begin
-	M:=L[I];
-	L[I]:=L[J];
-	L[J]:=M;
-	end;
+  begin
+  M:=L[I];
+  L[I]:=L[J];
+  L[J]:=M;
+  end;
 if (J - I) > 1 then
-	begin
-	T:=(J - I + 1) div 3;
-	StoogeSort(L, I, J-T);
-	StoogeSort(L, I+T, J);
-	StoogeSort(L, I, J-T);
-	end;
+  begin
+  T:=(J - I + 1) div 3;
+  StoogeSort(L, I, J-T);
+  StoogeSort(L, I+T, J);
+  StoogeSort(L, I, J-T);
+  end;
 end;
 
 
@@ -31,10 +31,10 @@ var I: integer;
 begin
 Result:='[';
 for I:=0 to High(IA) do
- 	begin
-	if I>0 then Result:=Result+' ';
- 	Result:=Result+Format('%3d',[IA[I]]);
- 	end;
+  begin
+  if I>0 then Result:=Result+' ';
+  Result:=Result+Format('%3d',[IA[I]]);
+  end;
 Result:=Result+']';
 end;
 

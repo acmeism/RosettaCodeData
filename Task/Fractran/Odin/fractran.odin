@@ -25,7 +25,7 @@ main :: proc() {
 
     ss := strings.split(string(data), " ")
     defer delete(ss)
-	
+
 
     a: [dynamic]string
     dummy:[]string

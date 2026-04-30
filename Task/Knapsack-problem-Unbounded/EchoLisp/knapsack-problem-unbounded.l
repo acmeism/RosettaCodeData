@@ -31,35 +31,35 @@
 
 ;; compute best quantity.score (i), assuming best (i-1 p v) is known
 (define (score-qty i p v (q) (score)(smax)(qmax))
-	 (or
-	 (t-get i p v) ;; already known
-	 (begin
- 		(set! q (min (quotient p (poids i)) (quotient v (volume i)))) ;; max possible q
- 		(set! smax -Infinity)
-		    ( for ((k (1+ q))) ;; try all legal quantities
-		      (set! score (+
-		         (first (score-qty (1- i) (- p (* k (poids i))) (- v (* k (volume i)))))
-		         (* k (valeur i))))
-		     #:continue (< score smax)
-		      (set! smax score)
-		      (set! qmax k))
-		 (hash-set H (t-key i p v) (cons smax qmax)))))
-		
-		
+    (or
+    (t-get i p v) ;; already known
+    (begin
+      (set! q (min (quotient p (poids i)) (quotient v (volume i)))) ;; max possible q
+      (set! smax -Infinity)
+          ( for ((k (1+ q))) ;; try all legal quantities
+            (set! score (+
+               (first (score-qty (1- i) (- p (* k (poids i))) (- v (* k (volume i)))))
+               (* k (valeur i))))
+           #:continue (< score smax)
+            (set! smax score)
+            (set! qmax k))
+       (hash-set H (t-key i p v) (cons smax qmax)))))
+
+
 ;; compute best scores, starting from last item
 (define (task P V)
         (define N (1- (table-count T)))
         (define qty 0)
         (set! H (make-hash))
-	(writeln 'total-value (first (score-qty N P V)))
-		
-	(for/list  ((i (in-range N -1 -1)))
-			(set! qty (rest (t-get i P V)))
-			#:continue (= qty 0)
-			(begin0
-			(cons (name i) (t-get i P V))
-			(set! P (- P (* (poids i) qty)))
-			(set! V (- V (* (volume i) qty))))))
+   (writeln 'total-value (first (score-qty N P V)))
+
+   (for/list  ((i (in-range N -1 -1)))
+         (set! qty (rest (t-get i P V)))
+         #:continue (= qty 0)
+         (begin0
+         (cons (name i) (t-get i P V))
+         (set! P (- P (* (poids i) qty)))
+         (set! V (- V (* (volume i) qty))))))
 
 ;; output
 (task 25000 250)

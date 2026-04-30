@@ -5,8 +5,8 @@ function hashJoin($table1, $index1, $table2, $index2) {
         $h[$s[$index1]][] = $s;
     // join phase
     foreach ($table2 as $r)
-    	foreach ($h[$r[$index2]] as $s)
-	    $result[] = array($s, $r);
+      foreach ($h[$r[$index2]] as $s)
+      $result[] = array($s, $r);
     return $result;
 }
 

@@ -3,8 +3,9 @@
 (define libc (or
    (load-dynamic-library "libc.so") ; General Posix
    (load-dynamic-library "libc.so.6") ; Linux
+   (load-dynamic-library "libc.so.6.1") ; Linux (DEC Alpha)
    (load-dynamic-library "libc.so.7") ; Latest *BSD
-   (load-dynamic-library "libSystem.B.dylib") ; Mac
+   (load-dynamic-library "libSystem.B.dylib") ; macOS / Darwin
    (load-dynamic-library "shlwapi.dll") )) ; Windows
 
 (define strdup (or

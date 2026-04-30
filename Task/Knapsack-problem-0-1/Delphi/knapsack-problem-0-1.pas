@@ -55,13 +55,13 @@ function TBitIterator.Next(var Index: integer): boolean;
 begin
 Result:=False;
 while FNumber>0 do
-	begin
-	Result:=(FNumber and 1)=1;
-	if Result then Index:=FIndex;
-	FNumber:=FNumber shr 1;
-	Inc(FIndex);
-	if Result then break;
-	end;
+   begin
+   Result:=(FNumber and 1)=1;
+   if Result then Index:=FIndex;
+   FNumber:=FNumber shr 1;
+   Inc(FIndex);
+   if Result then break;
+   end;
 end;
 
 {=============================================================================}
@@ -78,10 +78,10 @@ try
 BI.Start(N);
 Weight:=0; Value:=0;
 while BI.Next(Inx) do
-	begin
-	Weight:=Weight+ItemsList[Inx].Weight;
-	Value:=Value+ItemsList[Inx].Value;
-	end;
+   begin
+   Weight:=Weight+ItemsList[Inx].Weight;
+   Value:=Value+ItemsList[Inx].Value;
+   end;
 finally BI.Free; end;
 end;
 
@@ -104,30 +104,30 @@ Max:=1 shl Length(ItemsList)-1;
 BestValue:=0;
 {Iterate through all combinations of bits}
 for I:=1 to Max do
-	begin
-	{Get the sum of the weights and values}
-	GetSums(I,WeightSum,ValueSum);
-	{Ignore any weight greater than 400}
-	if WeightSum>400 then continue;
-	{Test if this is the best value so far}
-	if ValueSum>BestValue then
-		begin
-		BestValue:=ValueSum;
-		BestWeight:=WeightSum;
-		BestIndex:=I;
-		end;
-	end;
+   begin
+   {Get the sum of the weights and values}
+   GetSums(I,WeightSum,ValueSum);
+   {Ignore any weight greater than 400}
+   if WeightSum>400 then continue;
+   {Test if this is the best value so far}
+   if ValueSum>BestValue then
+      begin
+      BestValue:=ValueSum;
+      BestWeight:=WeightSum;
+      BestIndex:=I;
+      end;
+   end;
 {Display the best result}
 Memo.Lines.Add('  Item                    Weight  Value');
 Memo.Lines.Add('---------------------------------------');
 BI.Start(BestIndex);
 while BI.Next(Inx) do
-	begin
-	S:='  '+Format('%-25s',[ItemsList[Inx].Name]);
-	S:=S+Format('%5d',[ItemsList[Inx].Weight]);
-	S:=S+Format('%7d',[ItemsList[Inx].Value]);
-	Memo.Lines.Add(S);
-	end;
+   begin
+   S:='  '+Format('%-25s',[ItemsList[Inx].Name]);
+   S:=S+Format('%5d',[ItemsList[Inx].Weight]);
+   S:=S+Format('%7d',[ItemsList[Inx].Value]);
+   Memo.Lines.Add(S);
+   end;
 Memo.Lines.Add('---------------------------------------');
 Memo.Lines.Add(Format('Total                     %6d %6d',[BestWeight,BestValue]));
 Memo.Lines.Add('Best Inx: '+IntToStr(BestIndex));

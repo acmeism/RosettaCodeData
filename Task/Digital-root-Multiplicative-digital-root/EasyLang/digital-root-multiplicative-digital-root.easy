@@ -23,9 +23,7 @@ for v in [ 123321 7739 893 899998 ]
 .
 width = 5
 len table[] 10 * width
-arrbase table[] 0
 len tfill[] 10
-arrbase tfill[] 0
 numfmt 0 0
 while total < 10 * width
    mdr i md mp

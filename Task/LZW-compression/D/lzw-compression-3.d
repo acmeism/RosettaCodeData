@@ -8,7 +8,7 @@ enum Marker: ushort {
 ubyte[] lzwEncode(scope const(ubyte)[] inp, in uint maxBits) pure nothrow
 in {
     assert(maxBits >= 9 && maxBits <= 16);
-} body {
+} do {
     // Encode dictionary array. For encoding, entry at
     // code index is a list of indices that follow current one,
     // i.e. if code 97 is 'a', code 387 is 'ab', and code 1022 is 'abc',
@@ -148,7 +148,7 @@ ubyte[] lzwDecode(scope const(ubyte)[] inp) pure {
     }
 
     clearTable(); // In case encoded bits didn't start with Marker.CLR.
-    for (len = inp.length; len;) {
+    for (len = cast(int)inp.length; len;) {
         getCode();
         if (code == Marker.EOD)
             break;

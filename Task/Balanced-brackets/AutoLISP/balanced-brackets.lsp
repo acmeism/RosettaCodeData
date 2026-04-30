@@ -1,0 +1,12 @@
+(defun BalancedBrackets (str / cntOpen curr)
+  (setq cntOpen 0)
+  (setq str (vl-string->list str))
+  (while (and (>= cntOpen 0) str)
+    (setq curr (car str) str (cdr str))
+    (cond
+      ((= 91 curr) (setq cntOpen (1+ cntOpen)))
+      ((= 93 curr) (setq cntOpen (1- cntOpen)))
+    )
+  )
+  (and (null str) (zerop cntOpen))
+)

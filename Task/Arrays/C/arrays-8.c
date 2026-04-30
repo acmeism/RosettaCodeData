@@ -1,10 +1,3 @@
-#define XSIZE 20
-double *kernel = malloc(sizeof(double)*2*XSIZE+1);
-if (kernel) {
-   kernel += XSIZE;
-   for (ix=-XSIZE; ix<=XSIZE; ix++) {
-       kernel[ix] = f(ix);
-   ....
-   free(kernel-XSIZE);
-   }
-}
+*(array + index) = 1;
+printf("%d\n", *(array + index));
+3[array] = 5;

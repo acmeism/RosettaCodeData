@@ -11,6 +11,6 @@ U50378331005
 US03378331005
 AU0000XVGZA3
 AU0000VXGZA3
-FR0000988040).map{|tc| valid_isin?(tc) }	
+FR0000988040).map{|tc| valid_isin?(tc) }
 
 # => [true, false, false, false, true, true, true]

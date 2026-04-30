@@ -19,7 +19,6 @@ nbins = 20
 histsz = 200
 binsz = 1 / nbins
 len bins[] nbins
-arrbase bins[] 0
 #
 for i to n
    rn = rand

@@ -9,10 +9,10 @@ RightRec := RECORD
   STRING6   Name;
   STRING7   Nemesis;
 END;
-	
+
 RightFile := DATASET([{'Jonah','Whales'},{'Jonah','Spiders'},{'Alan','Ghosts'},{'Alan','Zombies'},{'Glory','Buffy'}],
                      RightRec);
-										
+
 HashJoin := JOIN(LeftFile,RightFile,Left.Name = RIGHT.Name,HASH);
 
 HashJoin;

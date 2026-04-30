@@ -1,8 +1,10 @@
-// 'pub'
+// all fields below 'pub mut:' would be public and mutable, while those above it, would not
 
 pub struct Public {
-	pub:
-	data string
+	data_1 string = "Hello" // other modules can not change
+	pub mut:
+	data_2 string // other modules can change
+	data_3 string // other modules can change
 }
 
 struct Private {
@@ -19,8 +21,8 @@ module sample
 
 @[noinit]
 pub struct Information {
-pub:
-	data string
+	pub:
+	data string = "Mike"
 }
 
 // factory function

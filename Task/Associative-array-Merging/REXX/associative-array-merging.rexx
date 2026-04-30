@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 21 Feb 2026
 include Setting
 
 say 'ASSOCIATIVE ARRAY: MERGE'
@@ -10,7 +10,7 @@ call CreateUpdate
 call ShowUpdate
 call MergeBaseUpdate
 call ShowBase 'Merged'
-call DumpVariables
+call Showvars
 exit
 
 CreateBase:
@@ -76,4 +76,5 @@ if WordPos(k,upda) = 0 then
 upda.k=v
 return
 
+-- Showvars
 include Math

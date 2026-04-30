@@ -1,9 +1,13 @@
-local lines = {}
-for line in (s .. "\n"):gmatch("(.-)\n") do
-	local this = {}
-	for word in line:gmatch("%S+") do
-		table.insert(this, 1, word)
-	end
-	lines[#lines + 1] = table.concat(this, " ")
+function splittokens(s)
+    local res = {}
+    for w in s:gmatch("%S+") do
+        res[#res+1] = w
+    end
+    return res
 end
-print(table.concat(lines, "\n"))
+
+function reverse(a,b) return a>b end
+
+for line in io.lines"input.txt" do
+    print(table.concat(table.sort(splittokens(line), reverse), ' '))
+end

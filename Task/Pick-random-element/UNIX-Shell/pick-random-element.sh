@@ -1,7 +1,7 @@
 # borrowed from github.com/search?q=bashnative
 
 rand() {
-	printf $((  $1 *  RANDOM  / 32767   ))
+   printf $((  $1 *  RANDOM  / 32767   ))
 }
 rand_element () {
     local -a th=("$@")

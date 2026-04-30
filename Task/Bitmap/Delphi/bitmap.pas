@@ -12,21 +12,21 @@ Image.Canvas.Brush.Color:=clBlue;
 Image.Canvas.FloodFill(55,55,clRed,fsBorder);
 {Draw random dots on the screen}
 for I:=1 to 1000 do
-	begin
-	X:=trunc((Random * 450) + 50);
-	Y:=trunc((Random * 250) + 50);
-	C:=RGB(Random(255),Random(255),Random(255));
-	{draw 9 pixels for each point to make dots more visible}
-	Image.Canvas.Pixels[X-1,Y-1]:=C;
-	Image.Canvas.Pixels[X  ,Y-1]:=C;
-	Image.Canvas.Pixels[X+1,Y-1]:=C;
-	Image.Canvas.Pixels[X-1,Y  ]:=C;
-	Image.Canvas.Pixels[X  ,Y  ]:=C;
-	Image.Canvas.Pixels[X+1,Y  ]:=C;
-	Image.Canvas.Pixels[X-1,Y+1]:=C;
-	Image.Canvas.Pixels[X  ,Y+1]:=C;
-	Image.Canvas.Pixels[X+1,Y+1]:=C;
-	end;
+   begin
+   X:=trunc((Random * 450) + 50);
+   Y:=trunc((Random * 250) + 50);
+   C:=RGB(Random(255),Random(255),Random(255));
+   {draw 9 pixels for each point to make dots more visible}
+   Image.Canvas.Pixels[X-1,Y-1]:=C;
+   Image.Canvas.Pixels[X  ,Y-1]:=C;
+   Image.Canvas.Pixels[X+1,Y-1]:=C;
+   Image.Canvas.Pixels[X-1,Y  ]:=C;
+   Image.Canvas.Pixels[X  ,Y  ]:=C;
+   Image.Canvas.Pixels[X+1,Y  ]:=C;
+   Image.Canvas.Pixels[X-1,Y+1]:=C;
+   Image.Canvas.Pixels[X  ,Y+1]:=C;
+   Image.Canvas.Pixels[X+1,Y+1]:=C;
+   end;
 {Draw lime-green line from corner to cornder}
 Image.Canvas.Pen.Color:=clLime;
 Image.Canvas.MoveTo(50,50);

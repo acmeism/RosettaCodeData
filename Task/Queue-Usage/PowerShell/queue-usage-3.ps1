@@ -1,0 +1,1 @@
+Get-Member -InputObject $queue

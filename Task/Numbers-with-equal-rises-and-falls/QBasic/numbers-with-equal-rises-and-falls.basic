@@ -1,0 +1,35 @@
+DECLARE FUNCTION eqrf! (n AS LONG)
+
+DIM c AS LONG, i AS LONG
+c = 0: i = 1
+
+WHILE c < 10000001
+    IF eqrf(i) THEN
+        c = c + 1
+        IF c <= 200 THEN PRINT USING "### "; i;
+        IF c = 1E+07 THEN PRINT : PRINT i
+    END IF
+    i = i + 1
+WEND
+END
+
+FUNCTION eqrf (n AS LONG)
+    DIM sn AS STRING
+    sn = LTRIM$(STR$(n))
+    DIM q AS INTEGER, i AS INTEGER
+    q = 0
+
+    FOR i = 2 TO LEN(sn)
+        IF ASC(MID$(sn, i, 1)) > ASC(MID$(sn, i - 1, 1)) THEN
+            q = q + 1
+        ELSEIF ASC(MID$(sn, i, 1)) < ASC(MID$(sn, i - 1, 1)) THEN
+            q = q - 1
+        END IF
+    NEXT i
+
+    IF q = 0 THEN
+        eqrf = -1
+    ELSE
+        eqrf = 0
+    END IF
+END FUNCTION

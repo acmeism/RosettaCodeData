@@ -46,11 +46,11 @@ loop % width * height
 
       if (j == width)
 {
-	j := 1
-	i += 1
+  j := 1
+  i += 1
 }
       else
-	j++
+  j++
 }
  return bitmap
   }

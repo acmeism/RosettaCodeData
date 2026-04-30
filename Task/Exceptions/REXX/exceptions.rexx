@@ -1,4 +1,4 @@
--- 12 Sep 2025
+-- 25 Apr 2026
 include Setting
 
 say 'EXCEPTIONS'
@@ -9,4 +9,5 @@ say 'Square root of 0 is' SqRt(0)
 say 'Square root of -1 is' SqRt(-1)
 exit
 
+-- Abend; Sqrt
 include Math

@@ -22,4 +22,4 @@ for sedol in '''
     585284
     B0YBKT
     '''.split():
-    print sedol + checksum(sedol)
+    print (sedol + checksum(sedol))

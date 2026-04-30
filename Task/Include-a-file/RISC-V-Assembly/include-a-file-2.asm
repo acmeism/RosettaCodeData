@@ -66,7 +66,7 @@ conversion2:                # INFO: conversion2
     addi    sp, sp, 8
     ret
 /**********************************************/
-/*   decimal conversion                       */
+/*   decimal conversion  unsigned                     */
 /**********************************************/
 /* a0    value */
 /* a1    conversion array address */
@@ -78,11 +78,11 @@ conversion10:
     li t1,LGZONECONV
     li t2,10               # divisor
 1:
-    rem t4,a0,t2           # division remainder by  10
+    remu t4,a0,t2           # division remainder by  10
     addi t4,t4,48          # convert to decimal
     add t5,a1,t1           # store character position
     sb t4,(t5)             # store byte
-    div a0,a0,t2           # compute quotient
+    divu a0,a0,t2           # compute quotient
     beq a0,x0,2f           # compare to 0
     addi t1,t1,-1          # decrement store position
     bgt t1,x0,1b           # and loop if position is ok

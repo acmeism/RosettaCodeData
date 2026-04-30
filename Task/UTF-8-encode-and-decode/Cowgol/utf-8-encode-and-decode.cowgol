@@ -1,0 +1,80 @@
+include "cowgol.coh";
+
+sub UTF8Encode(char: uint32, buf: [uint8]): (len: uint8) is
+    if char < 0x80 then
+        [buf] := char as uint8;
+        len := 1;
+    elseif char < 0x800 then
+        [buf] := (0xC0 | (char >> 6)) as uint8;
+        buf := @next buf;
+        [buf] := (0x80 | (char & 0x3F)) as uint8;
+        len := 2;
+    elseif char < 0x10000 then
+        [buf] := (0xE0 | (char >> 12)) as uint8;
+        buf := @next buf;
+        [buf] := (0x80 | ((char >> 6) & 0x3F)) as uint8;
+        buf := @next buf;
+        [buf] := (0x80 | (char & 0x3F)) as uint8;
+        len := 3;
+    elseif char < 0x110000 then
+        [buf] := (0xF0 | (char >> 18)) as uint8;
+        buf := @next buf;
+        [buf] := (0x80 | ((char >> 12) & 0x3F)) as uint8;
+        buf := @next buf;
+        [buf] := (0x80 | ((char >> 6) & 0x3F)) as uint8;
+        buf := @next buf;
+        [buf] := (0x80 | (char & 0x3F)) as uint8;
+        len := 4;
+    else
+        len := 0;
+    end if;
+end sub;
+
+sub UTF8Decode(buf: [uint8]): (len: uint8, char: uint32) is
+    len := 1;
+    var start := [buf];
+    var mask: uint8 := 0;
+    while start & 0x80 == 0x80 loop
+        start := start << 1;
+        mask := (mask >> 1) | 0x80;
+        len := len + 1;
+    end loop;
+
+    char := ([buf] & ~mask) as uint32;
+
+    var steps := len - 2;
+    while steps > 0 loop
+        buf := @next buf;
+        char := (char << 6) | ([buf] & 0x3F) as uint32;
+        steps := steps - 1;
+    end loop;
+end sub;
+
+sub Test(char: uint32) is
+    var buf: uint8[5];
+
+    print_hex_i32(char);
+    print(" ->");
+    var len := UTF8Encode(char, &buf[0]);
+
+    var i: uint8 := 0;
+    while i<len loop
+        print_char(' ');
+        print_hex_i8(buf[i]);
+        i := i+1;
+    end loop;
+
+    print(" (");
+    buf[len] := 0;
+    print(&buf[0]);
+    print(") -> ");
+    (len, char) := UTF8Decode(&buf[0]);
+    print_hex_i32(char);
+    print_nl();
+end sub;
+
+Test(0x00041);
+Test(0x000F6);
+Test(0x00416);
+Test(0x020AC);
+Test(0x1D11E);

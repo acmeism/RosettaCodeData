@@ -1,19 +1,17 @@
 #include <functional>
 #include <iostream>
 
-typedef std::function<int()> F;
+typedef std::function_ref<int()> F;
 
-static int A(int k, const F &x1, const F &x2, const F &x3, const F &x4, const F &x5)
+static int A(int k, F x1, F x2, F x3, F x4, F x5)
 {
-	F B = [=, &k, &B]
-	{
+	auto B = [&](this const auto& B) -> int {
 		return A(--k, B, x1, x2, x3, x4);
 	};
-
 	return k <= 0 ? x4() + x5() : B();
 }
 
-static F L(int n)
+static auto L(int n)
 {
 	return [n] { return n; };
 }
@@ -21,5 +19,4 @@ static F L(int n)
 int main()
 {
 	std::cout << A(10, L(1), L(-1), L(-1), L(1), L(0)) << std::endl;
-	return 0;
 }

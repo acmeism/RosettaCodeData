@@ -30,7 +30,7 @@ fn is_part_sum(d []int, sum int) bool {
         return false
     }
     last := divs[le-1]
-    divs = divs[0 .. le-1]
+    divs = divs[0 .. le-1].clone()
     if last > sum {
         return is_part_sum(divs, sum)
     }

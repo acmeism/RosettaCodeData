@@ -39,7 +39,7 @@ bool boundaryDoesntCollideChk(const Point *p1, const Point *p2, const Point *p3,
 }
 
 bool triTri2D(Point t1[], Point t2[], double eps, bool allowReversed, bool onBoundary) {
-    bool(*chkEdge)(Point*, Point*, Point*, double);
+    bool(*chkEdge)(const Point*, const Point*, const Point*, double);
     int i;
 
     // Triangles must be expressed anti-clockwise

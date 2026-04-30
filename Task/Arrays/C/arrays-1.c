@@ -1,2 +1,5 @@
-int myArray2[10] = { 1, 2, 0 }; /* the rest of elements get the value 0 */
-float myFloats[] ={1.2, 2.5, 3.333, 4.92, 11.2, 22.0 }; /* automatically sizes */
+#ifdef _MSC_VER
+#define INLINE __force_inline __flatten __declspec(nothrow) __declspec(noalias) inline
+#else
+#define INLINE __attribute__((always_inline,flatten,nothrow,const)) inline
+#endif

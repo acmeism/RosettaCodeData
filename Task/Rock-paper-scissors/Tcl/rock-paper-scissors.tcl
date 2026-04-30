@@ -8,21 +8,21 @@ package require Tcl 8.5
 # How to ask for a move from the human player
 proc getHumanMove {} {
     while 1 {
-	puts -nonewline "Your move? \[R\]ock, \[P\]aper, \[S\]cissors: "
-	flush stdout
-	gets stdin line
-	if {[eof stdin]} {
-	    puts "\nBye!"
-	    exit
-	}
-	set len [string length $line]
-	foreach play {0 1 2} name {"rock" "paper" "scissors"} {
-	    # Do a prefix comparison
-	    if {$len && [string equal -nocase -length $len $line $name]} {
-		return $play
-	    }
-	}
-	puts "Sorry, I don't understand that. Try again please."
+   puts -nonewline "Your move? \[R\]ock, \[P\]aper, \[S\]cissors: "
+   flush stdout
+   gets stdin line
+   if {[eof stdin]} {
+       puts "\nBye!"
+       exit
+   }
+   set len [string length $line]
+   foreach play {0 1 2} name {"rock" "paper" "scissors"} {
+       # Do a prefix comparison
+       if {$len && [string equal -nocase -length $len $line $name]} {
+      return $play
+       }
+   }
+   puts "Sorry, I don't understand that. Try again please."
     }
 }
 
@@ -31,10 +31,10 @@ proc getMachineMove {} {
     global states
     set choice [expr {int(rand() * [::tcl::mathop::+ {*}$states 3])}]
     foreach play {1 2 0} count $states {
-	if {[incr sum [expr {$count+1}]] > $choice} {
-	    puts "I play \"[lindex {Rock Paper Scissors} $play]\""
-	    return $play
-	}
+   if {[incr sum [expr {$count+1}]] > $choice} {
+       puts "I play \"[lindex {Rock Paper Scissors} $play]\""
+       return $play
+   }
     }
 }
 
@@ -50,13 +50,13 @@ while 1 {
     set humanMove [getHumanMove]
     # Report on what happened
     if {$humanMove == $machineMove} {
-	puts "A draw!"
+   puts "A draw!"
     } elseif {($humanMove+1)%3 == $machineMove} {
-	puts "I win!"
-	incr machineWins
+   puts "I win!"
+   incr machineWins
     } else {
-	puts "You win!"
-	incr humanWins
+   puts "You win!"
+   incr humanWins
     }
     puts "Cumulative scores: $humanWins to you, $machineWins to me"
     # Update the state of how the human has played in the past

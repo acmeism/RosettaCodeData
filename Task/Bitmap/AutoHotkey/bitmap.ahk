@@ -21,13 +21,13 @@ background := black
     if !BitmapType
         BitmapType
         := Object("fill", "Bitmap_Fill"
-	         ,"write", "Bitmap_write_ppm3")
+            ,"write", "Bitmap_write_ppm3")
 
-	img := Object("width", width
+   img := Object("width", width
                 ,"height", height
                 , "base"    , BitmapType)
 
-	img._SetCapacity(height) ; an array of rows
+   img._SetCapacity(height) ; an array of rows
   img.fill(background)
 Return img
 }

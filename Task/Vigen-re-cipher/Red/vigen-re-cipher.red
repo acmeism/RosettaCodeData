@@ -60,7 +60,7 @@ either decrypt [                ;; collect utf-8 characters
 ;----------------------------------------------------------
 ; start of program
 ;----------------------------------------------------------
-view layout [title  "vigenere cyphre"	;Define nice GUI :- )
+view layout [title  "vigenere cyphre"  ;Define nice GUI :- )
 ;----------------------------------------------------------
   backdrop silver      ;; define window background colour
   text "message:" pad 99x1 button "get-clip" [tx1/text: read-clipboard]

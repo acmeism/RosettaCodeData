@@ -2,7 +2,7 @@
 // 2nd arg is a slice to recycle, to reduce garbage.
 fn hs(nn int, recycle []int) []int {
     mut n := nn
-    mut s := recycle[..0]
+    mut s := recycle[..0].clone()
     s << n
     for n > 1 {
         if n&1 == 0 {

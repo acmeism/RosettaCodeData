@@ -43,9 +43,9 @@ fib(2, 1) :- !.
 fib(1, 1) :- !.
 fib(0, 0) :- !.
 fib(A, D) :-
-	B is A+ -1,
-	fib(B, E),
-	C is A+ -2,
-	fib(C, F),
-	D is E+F,
-	asserta((fib(A, D):-!)).
+   B is A+ -1,
+   fib(B, E),
+   C is A+ -2,
+   fib(C, F),
+   D is E+F,
+   asserta((fib(A, D):-!)).

@@ -1,6 +1,6 @@
-var IS32: integer;	{Signed 32-bit integer}
-var IS64: Int64;	{Signed 64-bit integer}
-var IU32: cardinal;	{Unsigned 32-bit integer}
+var IS32: integer;  {Signed 32-bit integer}
+var IS64: Int64;  {Signed 64-bit integer}
+var IU32: cardinal; {Unsigned 32-bit integer}
 
 {============ Signed 32 bit tests ===================================}
 

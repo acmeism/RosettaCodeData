@@ -1,0 +1,58 @@
+local fmt = require "fmt"
+
+local cycles = {"Physical day ", "Emotional day", "Mental day   "}
+local lengths = {23, 28, 33}
+local quadrants = {
+    {"up and rising",    "peak"},
+    {"up but falling",   "transition"},
+    {"down and falling", "valley"},
+    {"down but rising",  "transition"}
+}
+
+local function date_parse(date)
+    local year  = tonumber(date:sub(1, 4))
+    local month = tonumber(date:sub(6, 7))
+    local day   = tonumber(date:sub(9, 10))
+    return year, month, day
+end
+
+local function biorhythms(birth_date, target_date)
+    local y, m, d = date_parse(birth_date)
+    local bday = os.time({year = y + 400, month = m, day = d})
+    y, m, d  = date_parse(target_date)
+    local tday = os.time({year = y + 400, month = m, day = d})
+    local days = math.round((tday - bday) / 86400)
+    print($"Born {birth_date}, Target {target_date}")
+    print($"Day {days}")
+    for i = 1, 3 do
+        local length   = lengths[i]
+        local cycle    = cycles[i]
+        local position = days % length
+        local quadrant = math.floor(position / length * 4)
+        local percent  = math.floor(math.sin(2 * math.pi * position / length) * 1000) / 10
+        local descript = (percent > 95)          ? " peak" :
+                         (percent < -95)         ? " valley" :
+                         (math.abs(percent) < 5) ? " critical transition" : "other"
+        if descript == "other" then
+            local add_days = math.floor((quadrant + 1) / 4 * length) - position
+            local transition = os.time({year = y + 400, month = m, day = d + add_days})
+            local trans_date = os.date("%F", transition)
+            local ty, tm, td = date_parse(trans_date)
+            ty -= 400
+            trans_date = string.format("%04d-%02d-%02d", ty, tm, td)
+            local tn = quadrants[quadrant + 1]
+            local trend = tn[1]
+            local nxt = tn[2]
+            descript = string.format("%5.1f%% (%s, next %s %s)", percent, trend, nxt, trans_date)
+        end
+        fmt.print("%s %2d : %s", cycle, position, descript)
+    end
+    print()
+end
+
+local date_pairs = {
+    {"1943-03-09", "1972-07-11"},
+    {"1809-01-12", "1863-11-19"},
+    {"1809-02-12", "1863-11-19"}  -- correct DOB for Abraham Lincoln
+}
+for date_pairs as date_pair do biorhythms(date_pair[1], date_pair[2]) end

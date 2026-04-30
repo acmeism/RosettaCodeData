@@ -14,4 +14,4 @@ dict_append( {Key, Value}, Acc ) -> dict:append( Value, {Key, Value}, Acc ).
 dict_find( {Key, Value}, Dict ) -> dict_find( dict:find(Key, Dict), Key, Value ).
 
 dict_find( error, _Key, _Value ) -> [];
-dict_find( {ok,	Values}, Key, Value ) -> [{X, {Key, Value}} || X <- Values].
+dict_find( {ok, Values}, Key, Value ) -> [{X, {Key, Value}} || X <- Values].

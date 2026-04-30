@@ -1,0 +1,291 @@
+// ------------------------------------------------------------
+//
+//  Distribution of 0 digits in factorial series
+//
+//  Using FutureBasic 7.0.37
+//  November 2025, R.W.
+//
+//  Using the excellent "string math" idea from PHIX
+// ------------------------------------------------------------
+
+CFTimeInterval tim, elapsed
+
+// ------------------------------------------------------------
+// Global big-int in base 1000 state
+// ------------------------------------------------------------
+// gF1000(k) holds factorial in base 1000, little endian
+//   value = Σ gF1000(i) * 1000^i
+// For 50,000! we need ~ 213,237 digits and  ~ 71,100 limbs
+// to 100,000!         ~ 490,000 digits and ~ 163,100 limbs
+
+long   gF1000(170000)    // base-1000 limbs (up to 100,000)
+long   gWordCount        // number of used limbs
+long   gTrailIndex       // first non-zero limb index (0-based)
+long   gZC(998)          // zero-count lookup for 1..999
+Double gTotalDRatio      // Σ zeros(k!)/digits(k!) over k
+long   gCurrentF         // current n (last factorial index computed)
+long   gLastZeros        // "Last step" values (for current f)
+long   gLastDigits
+Double gLastDRatio
+// Recorded “special N” results
+Double gDRatio100,  gDRatio1000,  gDRatio10000,  gDRatio50000
+long   gDigits100,  gDigits1000,  gDigits10000,  gDigits50000
+long   gFirstBelow16N
+Double gFirstBelow16DRatio
+long   gCurrentMaxN     // highest N we’ve extended to so far
+
+// -----------------------------------------------------------
+// Helper: returns elapsed time in CFStringRef in ms if < 1
+// -----------------------------------------------------------
+local fn timeElapsed( et as CFTimeInterval ) as CFStringRef
+  CFStringRef pline
+  if et < 1
+    pline = fn StringWithFormat( @"%.3f ms", et * 1000 )
+  else
+    pline = fn StringWithFormat( @"%.3f secs", et )
+  end if
+end fn = pline
+
+// ------------------------------------------------------------
+//  InitZeroCountLUT
+//  Build zero-count table for 3-digit blocks 001..999
+//  gZC[d - 1] = number of '0' digits in the 3-digit decimal
+//  representation of d, including leading zeros.
+// ------------------------------------------------------------
+void local fn InitZeroCountLUT
+  long x, y
+  for x = 1 to 9
+    // 00x, 0x0, x00  -> 2 zeros
+    gZC( x - 1 )       = 2
+    gZC( 10 * x - 1 )  = 2
+    gZC( 100 * x - 1 ) = 2
+    y = 10
+    while y <= 90
+      // 0 y x,  y 0 x,  y x 0 -> 1 zero
+      gZC( y + x - 1 )        = 1
+      gZC( 10 * y + x - 1 )   = 1
+      gZC( 10 * (y + x) - 1 ) = 1
+      y = y + 10
+    wend
+  next
+end fn
+
+// ------------------------------------------------------------
+//  InitFactorialState
+//  Start at 1! = 1 represented as a single limb 1.
+// ------------------------------------------------------------
+void local fn InitFactorialState
+  gF1000(0)              = 1
+  gWordCount           = 1
+  gTrailIndex          = 0
+  gCurrentF            = 1
+  gTotalDRatio         = 0.0
+  gFirstBelow16N       = 0
+  gFirstBelow16DRatio  = 0.0
+  gLastZeros           = 0
+  gLastDigits          = 1
+  gLastDRatio          = 0.0
+  gCurrentMaxN         = 1
+end fn
+
+// ------------------------------------------------------------
+// StepFactorial
+//  Multiply current factorial by f (in-place base-1000).
+//
+//  Updates globals:
+//    gLastZeros  <- number of '0' digits in f! (base 10)
+//    gLastDigits <- total decimal digits in f!
+//    gLastDRatio <- mean proportion up to f
+// ------------------------------------------------------------
+void local fn StepFactorial( f as long )
+
+  long   carry
+  long   CM1000
+  long   zerosLocal
+  long   j
+  long   top
+  long   correction
+  Double proportion
+  Double dratioLocal
+  carry      = 0
+  zerosLocal = gTrailIndex * 3   // full-zero limbs before trail
+
+  j = gTrailIndex
+  while ( j < gWordCount ) || ( carry != 0 )
+    if j < gWordCount
+      carry = gF1000(j) * f + carry
+    end if
+    CM1000 = carry MOD 1000
+    if j < gWordCount
+      gF1000(j) = CM1000
+    else
+      gF1000(j) = CM1000
+      gWordCount ++
+    end if
+    if CM1000 = 0
+      zerosLocal = zerosLocal + 3
+    else
+      zerosLocal = zerosLocal + gZC( CM1000 - 1 )
+    end if
+    carry = fix(carry / 1000)
+    j ++
+  wend
+
+  // Advance trail past leading zero limbs
+  while gF1000( gTrailIndex ) = 0
+    gTrailIndex ++
+  wend
+
+  // Correct for the MSL not being a full 3 digits
+  top = gF1000( gWordCount - 1 ) // most significant limb check
+  if top < 10
+    correction = 2
+  else
+    if top < 100
+      correction = 1
+    else
+      correction = 0
+    end if
+  end if
+
+  zerosLocal   = zerosLocal - correction
+  gLastDigits  = gWordCount * 3 - correction
+  gLastZeros   = zerosLocal
+  // Current proportion for this factorial
+  proportion   = zerosLocal
+  proportion   = proportion / gLastDigits
+  gTotalDRatio = gTotalDRatio + proportion
+  gCurrentF    = f
+  dratioLocal  = gTotalDRatio / gCurrentF
+  gLastDRatio  = dratioLocal
+  // Rosetta Task
+  // Track last point where the mean dips permanently below 0.16
+  if dratioLocal >= 0.16
+  gFirstBelow16N      = 0
+  gFirstBelow16DRatio = 0.0
+else
+  if gFirstBelow16N = 0
+    gFirstBelow16N      = f
+    gFirstBelow16DRatio = dratioLocal
+  end if
+end if
+end fn
+
+// ------------------------------------------------------------
+//  ComputeUpTo (maxN)
+//  Continues from current gCurrentF+1 up to maxN.
+//  Records Rosetta Task milestone points:
+//  (100, 1000, 10,000, 50,000...)
+// ------------------------------------------------------------
+void local fn ComputeUpTo( maxN as long )
+  long f
+  for f = gCurrentF + 1 to maxN
+    fn StepFactorial( f )
+    select f
+      case 100
+        gDRatio100    = gLastDRatio
+        gDigits100    = gLastDigits
+      case 1000
+        gDRatio1000   = gLastDRatio
+        gDigits1000   = gLastDigits
+      case 10000
+        gDRatio10000  = gLastDRatio
+        gDigits10000  = gLastDigits
+      case 50000
+        gDRatio50000  = gLastDRatio
+        gDigits50000  = gLastDigits
+    end select
+  next
+  gCurrentMaxN = maxN
+end fn
+
+// ------------------------------------------------------------
+//  More_F0
+//  On click:
+//    * if currently at ≤ 10,000, jump to 50,000
+//    * otherwise, extend in +10,000 chunks each click
+// ------------------------------------------------------------
+void local fn More_F0
+  CFStringRef pline
+  long        targetN
+
+  if gCurrentMaxN < 50000
+    targetN = 50000
+  else
+    targetN = gCurrentMaxN + 10000
+  end if
+  tim = fn CACurrentMediaTime
+  fn ComputeUpTo( targetN )
+  elapsed = fn CACurrentMediaTime - tim
+
+  pline = fn StringWithFormat( @"%7ld = %.10f, factorial has %ld ¬
+  digits", targetN, gLastDRatio, gLastDigits )
+  print @pline;@" (";fn timeElapsed(elapsed);@")"
+
+  if targetN == 50000
+    pline = fn StringWithFormat( @"  The mean proportion dips ¬
+    permanently below 0.16 at %ld.", gFirstBelow16N )
+    print @pline
+  end if
+  if targetN > 90000 then button 2, NO    //no more table space
+end fn
+
+// ------------------------------------------------------------
+//  Main — compute up to 10,000 and print the first group
+// ------------------------------------------------------------
+local fn Main
+  CFStringRef pline
+
+  print @"The mean proportion of zero digits in ¬
+  factorials up to:\n"
+
+  fn InitZeroCountLUT
+  fn InitFactorialState
+
+  tim = fn CACurrentMediaTime
+  fn ComputeUpTo( 10000 )
+  elapsed = fn CACurrentMediaTime - tim
+
+  // Rosetta Task 100, 1,000, and 10,000
+
+  pline = fn StringWithFormat( @"%7ld = %.10f  factorial has %ld digits", ¬
+  100, gDRatio100, gDigits100 )
+  print @pline
+  pline = fn StringWithFormat( @"%7ld = %.10f  factorial has %ld digits", ¬
+  1000, gDRatio1000, gDigits1000 )
+  print @pline
+  pline = fn StringWithFormat( @"%7ld = %.10f  factorial has %ld digits", ¬
+  10000, gDRatio10000, gDigits10000 )
+  print @pline
+
+  print @"\nElapsed Time: "; fn timeElapsed( elapsed )
+  print @"Click [Next] to extend.\n"
+end fn
+
+// ------------------------------------------------------------
+//  Dialog handler
+// ------------------------------------------------------------
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case 2
+          fn More_F0
+      end select
+
+    case _windowShouldClose
+      end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+// ------------------------------------------------------------
+//  UI setup and kickoff
+// ------------------------------------------------------------
+window 1, @"Distribution of 0 digits in factorial series", (0,0,620,500)
+button 2, YES,, @"Next", (500,20,100,20),,, 1
+
+fn Main
+
+HandleEvents

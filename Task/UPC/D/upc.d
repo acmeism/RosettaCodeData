@@ -41,7 +41,7 @@ void decodeUPC(string input) {
             part = candidate[pos .. next];
             auto i = countUntil(LEFT_DIGITS, part);
             if (i >= 0) {
-                output ~= i;
+                output ~= cast(int) i;
                 pos = next;
             } else {
                 return tuple(false, cast(int[])[]);
@@ -61,7 +61,7 @@ void decodeUPC(string input) {
             part = candidate[pos .. next];
             auto i = countUntil(RIGHT_DIGITS, part);
             if (i >= 0) {
-                output ~= i;
+                output ~= cast(int) i;
                 pos = next;
             } else {
                 return tuple(false, cast(int[])[]);

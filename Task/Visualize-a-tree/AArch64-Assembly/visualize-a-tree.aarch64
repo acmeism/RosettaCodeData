@@ -1,0 +1,264 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program displaytree64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ HEAPSIZE,   50000
+.equ NBVAL,    9
+
+/************************************/
+/* Macros                           */
+/************************************/
+//.include "../../ficmacros64.inc"        // use for developper debugging
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure tree     */
+    .struct  0
+tree_root:                             // root pointer
+    .struct  tree_root + 8
+tree_size:                             // number of element of tree
+    .struct  tree_size + 8
+tree_fin:
+/* structure node tree */
+    .struct  0
+node_left:                             // left pointer
+    .struct  node_left + 8
+node_right:                            // right pointer
+    .struct  node_right + 8
+node_value:                            // element value
+    .struct  node_value + 8
+node_fin:
+/* structure queue*/
+
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data                           // INFO: data
+szMessDebutPgm:       .asciz "Program 64 bits start. \n"
+szMessFinOK:          .asciz "Program normal end. \n"
+szMessDisplayTree:    .asciz "Tree display :\n"
+szCarriageReturn:     .asciz "\n"
+/* datas error display */
+szMessErreur:         .asciz "Error detected.\n"
+/* datas message display */
+szMessResult:         .ascii "Element value : @ \n"
+szIndent:             .asciz "|-->"
+szIndent1:            .asciz "|   "
+.align 4
+ptHeapReserve:        .quad heapReserve
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss                              // INFO: bss
+.align 4
+sConvArea:            .skip 24
+stTree:               .skip tree_fin    // place to structure tree
+heapReserve:          .skip HEAPSIZE
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:                                   // INFO: main
+    ldr x0,qAdrszMessDebutPgm
+    bl affichageMess
+    mov x1,1                            // node tree value
+1:
+    ldr x0,qAdrstTree                   // structure tree address
+    bl insertElement                    // add element value x1
+    cmp x0,-1
+    beq 99f
+    add x1,x1,1                         // increment value
+    cmp x1,NBVAL                        // end ?
+    ble 1b                              // no -> loop
+
+    ldr x0,qAdrszMessDisplayTree
+    bl affichageMess
+    ldr x3,qAdrstTree                   // tree root address (begin structure)
+    ldr x0,[x3,#tree_root]
+    mov x1,0                            // level
+    bl displayTree
+
+    ldr x0,qAdrszMessFinOK
+    bl affichageMess
+    b 100f
+99:                                     // display error
+    ldr x0,qAdrszMessErreur
+    bl affichageMess
+100:                                    // standard end of the program
+    mov x8,EXIT                         // request to exit program
+    svc 0                               // perform system call
+qAdrszMessDebutPgm:        .quad szMessDebutPgm
+qAdrszMessFinOK:           .quad szMessFinOK
+qAdrszMessDisplayTree:     .quad szMessDisplayTree
+qAdrszMessErreur:          .quad szMessErreur
+qAdrszCarriageReturn:      .quad szCarriageReturn
+qAdrstTree:                .quad stTree
+qAdrdisplayElement:        .quad displayElement
+/******************************************************************/
+/*     insert element in the tree                                 */
+/******************************************************************/
+/* x0 contains the address of the tree structure */
+/* x1 contains the value of element              */
+/* x0 returns address of element or - 1 if error */
+insertElement:                    // INFO: insertElement
+    stp x1,lr,[sp,-16]!           // save  registers
+    mov x4,x0
+    mov x0,node_fin               // reservation place one element
+    bl allocHeap
+    cmp x0,-1                     // allocation error
+    beq 100f
+    mov x5,x0
+    str x1,[x5,node_value]        // store value in address heap
+    mov x1,0
+    str x1,[x5,node_left]         // init left pointer with zero
+    str x1,[x5,node_right]        // init right pointer with zero
+    ldr x2,[x4,tree_size]         // load tree size
+    cbnz x2,1f                    // 0 element ?
+    str x5,[x4,tree_root]         // yes -> store in root
+    b 6f
+1:                                // else search free address in tree
+    ldr x3,[x4,tree_root]         // start with address root
+    add x6,x2,1                   // increment tree size
+    clz x7,x6                     // compute zeroes left bits
+    add x7,x7,1                   // for sustract the first left bit
+    lsl x6,x6,x7                  // shift number in left
+2:
+    tst x6,1<<63                  // test left bit
+    lsl x6,x6,1                   // shift left bit
+    bne 3f                        // bit at one
+    ldr x1,[x3,node_left]         // no store node address in left pointer
+    cbz x1,4f                     // if equal zero
+    mov x3,x1                     // else loop with next node
+    b 2b
+3:                                    // yes
+    ldr x1,[x3,node_right]           // store node address in right pointer
+    cbz x1,5f                         // if equal zero
+    mov x3,x1                         // else loop with next node
+    b 2b
+4:
+    str x5,[x3,node_left]
+    b 6f
+5:
+    str x5,[x3,node_right]
+6:
+    add x2,x2,1                         // increment tree size
+    str x2,[x4,tree_size]
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/******************************************************************/
+/*     display tree                                   */
+/******************************************************************/
+/* x0 contains the address of the tree */
+/* x1 level                 */
+displayTree:
+    stp x2,lr,[sp,-16]!           // save  registers
+    stp x3,x4,[sp,-16]!           // save  registers
+    stp x5,x6,[sp,-16]!
+    cmp x0,#-1
+    beq 100f
+    mov x4,x0
+    mov x5,x1
+    mov x2,#0
+    ldr x3,qAdrszIndent1
+1:
+    cmp x2,x1
+    bge 2f
+    mov x0,x3
+    bl affichageMess
+    add x2,x2,#1
+    b 1b
+2:
+    ldr x0,qAdrszIndent
+    bl affichageMess
+    ldr x0,[x4,#node_value]
+    ldr x1,qAdrsConvArea
+    bl conversion10S
+   // ldr x0,qAdrsConvArea
+   // bl shiftResult
+    ldr x0,qAdrsConvArea
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    ldr x0,[x4,#node_left]
+    cmp x0,#0
+    beq 3f
+    add x1,x5,#1                 // increment level
+    bl displayTree
+3:
+    ldr x0,[x4,#node_right]
+    cmp x0,#0
+    beq 4f
+    add x1,x5,#1                 // increment level
+    bl displayTree
+    b 100f
+4:
+    mov x0,#-1
+100:
+    ldp x5,x6,[sp],16
+    ldp x3,x4,[sp],16              // restaur  2 registers
+    ldp x2,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrszIndent:     .quad szIndent
+qAdrszIndent1:    .quad szIndent1
+qAdrsConvArea:    .quad sConvArea
+/******************************************************************/
+/*     display node                                               */
+/******************************************************************/
+/* x0 contains node  address          */
+displayElement:
+    stp x1,lr,[sp,-16]!           // save  registers
+    ldr x0,[x0,#node_value]
+    ldr x1,qAdrsConvArea
+    bl conversion10S
+    ldr x0,qAdrszMessResult
+    ldr x1,qAdrsConvArea
+    bl strInsertAtCharInc         // insert result at @ character
+    bl affichageMess
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrszMessResult:          .quad szMessResult
+
+/******************************************************************/
+/*     memory allocation on the heap                                  */
+/******************************************************************/
+/* x0 contains the size to allocate */
+/* x0 returns address of memory heap or - 1 if error */
+/* CAUTION : The size of the allowance must be a multiple of 4  */
+allocHeap:                       // INFO: allocHeap
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+                                 // allocation
+    ldr x1,qAdrptHeapReserve
+    ldr x2,[x1]                     // free heap address
+    add x3,x2,x0                    // reserve area on heap
+    ldr x4,qAdrheapReserve
+    mov x0,#HEAPSIZE
+    add x4,x4,x0                    // compute heap end
+    cmp x3,x4
+    blt 1f                          // allocation address < heap end ?
+    mov x0,#-1                      // allocation error
+    b 100f
+1:
+    str x3,[x1]                     // store new start free address heap
+    mov x0,x2                       // return address
+100:
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16            // restaur  2 registers
+    ret                          // return to address lr x30
+qAdrptHeapReserve:    .quad ptHeapReserve
+qAdrheapReserve:      .quad heapReserve
+/***********************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

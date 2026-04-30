@@ -1,4 +1,4 @@
-function deal!{T<:Integer}(d::Deck, hlen::T)
+function deal!(d::Deck, hlen::T) where T<:Integer
     if hlen < length(d)
         hand = Deck(d.cards[1:hlen], d.design)
         d.cards = d.cards[hlen+1:end]
@@ -19,7 +19,7 @@ function pretty(d::Deck)
     dlen = length(d)
     for i in 1:llen:dlen
         j = min(i+llen-1, dlen)
-        s *= print(d[i:j])*"\n"
+        s *= string(d[i:j]) * "\n"
     end
-    chop(s)
+    strip(s)
 end

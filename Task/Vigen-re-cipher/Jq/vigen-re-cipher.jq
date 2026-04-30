@@ -5,11 +5,11 @@ def vigenere(text; key; encryptp):
    (text | n) as [$xtext, $length]
   | (key | n) as [$xkey, $keylength]
   | reduce range(0; $length) as $i (null;
-	($i % $keylength) as $ki
-	| . + [if encryptp
-	       then (($xtext[$i] + $xkey[$ki] - 130) % 26) + 65
+   ($i % $keylength) as $ki
+   | . + [if encryptp
+          then (($xtext[$i] + $xkey[$ki] - 130) % 26) + 65
                else (($xtext[$i] - $xkey[$ki] +  26) % 26) + 65
-	       end] )
+          end] )
   | implode;
 
 # Input: sample text

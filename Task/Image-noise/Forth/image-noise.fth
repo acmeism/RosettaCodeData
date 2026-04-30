@@ -1,8 +1,8 @@
 \ Bindings to SDL2 functions
 s" SDL2" add-lib
 \c #include <SDL2/SDL.h>
-c-function sdl-init	            SDL_Init                n -- n
-c-function sdl-quit	            SDL_Quit                -- void
+c-function sdl-init              SDL_Init                n -- n
+c-function sdl-quit              SDL_Quit                -- void
 c-function sdl-createwindow     SDL_CreateWindow        a n n n n n -- a
 c-function sdl-createrenderer   SDL_CreateRenderer      a n n -- a
 c-function sdl-setdrawcolor     SDL_SetRenderDrawColor  a n n n n -- n

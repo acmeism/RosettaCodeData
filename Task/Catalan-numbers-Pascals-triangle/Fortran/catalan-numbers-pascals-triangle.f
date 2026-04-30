@@ -11,10 +11,10 @@
   program calc_catalan
   implicit none
 
-  integer,  parameter :: nMax=15		! Number of catalan numbers to print
-  integer				   	  :: catalan		! result of calculation
-  integer     				:: i, j				! Loop indices
-  integer					    :: t(nMax+3)	! 1 line of pascal's triangle
+  integer,  parameter :: nMax=15    ! Number of catalan numbers to print
+  integer             :: catalan    ! result of calculation
+  integer             :: i, j       ! Loop indices
+  integer             :: t(nMax+3)  ! 1 line of pascal's triangle
 
   ! straight copy of the algorithm presented in the C++ solution
   !
@@ -57,7 +57,7 @@
     ! (remember  i is 5 to calculate C4.)
     catalan = t(i+1) - t(i)
 
-    write (*, '(I0,x) ', ADVANCE='NO')  catalan	  ! all in 1 line
+    write (*, '(I0,x) ', ADVANCE='NO')  catalan   ! all in 1 line
   end do
 
   write (*,*) ' '                                 ! Terminate output line

@@ -1,9 +1,10 @@
-using DataStructures
+using DataStructures, Printf
+
 entropy(s::AbstractString) = -sum(x -> x / length(s) * log2(x / length(s)), values(counter(s)))
 
 function fibboword(n::Int64)
     # Initialize the result
-    r = Array{String}(n)
+    r = fill("", n)
     # First element
     r[1] = "0"
     # If more than 2, set the second element
@@ -17,10 +18,9 @@ end
 
 function testfibbo(n::Integer)
     fib = fibboword(n)
-    for i in 1:length(fib)
+    for i in eachindex(fib)
         @printf("%3d%9d%12.6f\n", i, length(fib[i]), entropy(fib[i]))
     end
-    return 0
 end
 
 println("  n\tlength\tentropy")

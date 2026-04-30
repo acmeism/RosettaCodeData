@@ -1,0 +1,52 @@
+' Linux: fbc programa.bas
+' Windows: install wget (winget install GnuWin32.WGet) & fbc programa.bas
+
+Dim As String sContent, sUTC, sRFC850, tmpFile, cmd
+
+' Detect system and use temporary folder
+#Ifdef __FB_WIN32__
+    tmpFile = Environ("TEMP") & "\utctime.html"
+    cmd = "wget -q -O """ & tmpFile & """ https://www.utctime.net"
+#Else
+    tmpFile = "/tmp/utctime.html"
+    cmd = "wget -q -O " & tmpFile & " https://www.utctime.net"
+#EndIf
+
+Shell cmd
+
+Dim As Integer ff = Freefile
+If Open(tmpFile For Input As #ff) <> 0 Then
+    Print "Error: wget failed or file is not accessible."
+    Sleep: End
+End If
+
+' Read full content
+sContent = ""
+While Not Eof(ff)
+    Dim As String linea
+    Line Input #ff, linea
+    sContent &= linea & Chr(10)
+Wend
+Close #ff
+
+' Extract UTC and RFC 850
+Dim As Integer utcStart = Instr(sContent, "UTC</td><td>")
+If utcStart > 0 Then
+    utcStart += 12
+    Dim As Integer utcEnd = Instr(utcStart, sContent, "</td>")
+    If utcEnd > 0 Then sUTC = Rtrim(Mid(sContent, utcStart, utcEnd - utcStart))
+End If
+
+Dim As Integer rfcStart = Instr(sContent, "RFC 850</td><td>")
+If rfcStart > 0 Then
+    rfcStart += 16
+    Dim As Integer rfcEnd = Instr(rfcStart, sContent, "</td>")
+    If rfcEnd > 0 Then sRFC850 = Rtrim(Mid(sContent, rfcStart, rfcEnd - rfcStart))
+End If
+
+Kill tmpFile
+
+If sUTC <> "" Then Print "UTC:     " & sUTC
+If sRFC850 <> "" Then Print "RFC 850: " & sRFC850
+
+Sleep

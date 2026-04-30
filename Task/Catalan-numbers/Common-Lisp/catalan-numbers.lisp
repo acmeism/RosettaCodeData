@@ -5,18 +5,18 @@
 
 ;; cache
 (defparameter *catalans* (make-array 5
-				     :fill-pointer 0
-				     :adjustable t
-				     :element-type 'integer))
+             :fill-pointer 0
+             :adjustable t
+             :element-type 'integer))
 (defun catalan2 (n)
     (if (zerop n) 1
     ;; check cache
     (if (< n (length *catalans*)) (aref *catalans* n)
       (loop with c = 0 for i from 0 to (1- n) collect
-	    (incf c (* (catalan2 i) (catalan2 (- n 1 i))))
-	    ;; lower values always get calculated first, so
-	    ;; vector-push-extend is safe
-	    finally (progn (vector-push-extend c *catalans*) (return c))))))
+      (incf c (* (catalan2 i) (catalan2 (- n 1 i))))
+      ;; lower values always get calculated first, so
+      ;; vector-push-extend is safe
+      finally (progn (vector-push-extend c *catalans*) (return c))))))
 
 (defun catalan3 (n)
   (if (zerop n) 1 (/ (* 2 (+ n n -1) (catalan3 (1- n))) (1+ n))))

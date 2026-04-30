@@ -17,13 +17,13 @@ create inversemove 1 , 2 , 0 ,
 
 : sum-history ( -- n )
     0 historylen 0 ?do
-	i rpshistory @a 1+ + loop ;
+   i rpshistory @a 1+ + loop ;
 
 : probable-choice ( -- n ) \ Simple linear search
     sum-history random
     historylen 0 ?do
-	i rpshistory @a -
-	dup 0< if drop i leave then
+   i rpshistory @a -
+   dup 0< if drop i leave then
     loop inversemove @a ;
 
 : rps-print ( addr u -- )

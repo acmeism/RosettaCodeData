@@ -1,6 +1,6 @@
-extern crate rand;
+extern crate rand; // 0.10.0 used
 
-use rand::Rng;
+use rand::prelude::*;
 
 // Color enums will be sorted by their top-to-bottom declaration order
 #[derive(Eq,Ord,PartialOrd,PartialEq,Debug)]
@@ -19,20 +19,19 @@ fn is_sorted(list: &Vec<Color>) -> bool {
     true
 }
 
-
 fn main() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut colors: Vec<Color> = Vec::new();
 
     for _ in 1..10 {
-        let r = rng.gen_range(0, 3);
+        let r = rng.random_range(0..3);
         if      r == 0 { colors.push(Color::Red); }
         else if r == 1 { colors.push(Color::White); }
         else if r == 2 { colors.push(Color::Blue); }
     }
 
     while is_sorted(&colors) {
-        rng.shuffle(&mut colors);
+        colors.shuffle(&mut rng);
     }
 
     println!("Before: {:?}", colors);

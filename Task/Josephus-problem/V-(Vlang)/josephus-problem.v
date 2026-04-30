@@ -1,7 +1,7 @@
 // basic task fntion
 fn final_survivor(n int, kk int) int {
     // argument validation omitted
-    mut circle := []int{len: n, init: it}
+    mut circle := []int{len: n, init: index}
     k := kk-1
     mut ex_pos := 0
     for circle.len > 1 {
@@ -14,7 +14,7 @@ fn final_survivor(n int, kk int) int {
 // extra
 fn position(n int, kk int, p int) int {
     // argument validation omitted
-    mut circle := []int{len: n, init: it}
+    mut circle := []int{len: n, init: index}
     k := kk-1
 	mut pos := p
     mut ex_pos := 0

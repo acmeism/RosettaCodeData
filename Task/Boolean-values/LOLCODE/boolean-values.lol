@@ -1,0 +1,15 @@
+HAI 1.3
+
+    FAIL, O RLY?, YA RLY, VISIBLE "  0"!, NO WAI, VISIBLE " -0"!, OIC    BTW GET -0
+    WIN,  O RLY?, YA RLY, VISIBLE "  1"!, NO WAI, VISIBLE " -1"!, OIC    BTW GET  1
+    "",   O RLY?, YA RLY, VISIBLE "  2"!, NO WAI, VISIBLE " -2"!, OIC    BTW GET -2
+    ".",  O RLY?, YA RLY, VISIBLE "  3"!, NO WAI, VISIBLE " -3"!, OIC    BTW GET  3
+    0,    O RLY?, YA RLY, VISIBLE "  4"!, NO WAI, VISIBLE " -4"!, OIC    BTW GET -4
+    1,    O RLY?, YA RLY, VISIBLE "  5"!, NO WAI, VISIBLE " -5"!, OIC    BTW GET  5
+    0.0,  O RLY?, YA RLY, VISIBLE "  6"!, NO WAI, VISIBLE " -6"!, OIC    BTW GET -6
+    1.0,  O RLY?, YA RLY, VISIBLE "  7"!, NO WAI, VISIBLE " -7"!, OIC    BTW GET  7
+
+    I HAS A N0 ITZ A NOOB
+    N0,   O RLY?, YA RLY, VISIBLE "  8"!, NO WAI, VISIBLE " -8"!, OIC    BTW GET -8
+
+KTHXBYE

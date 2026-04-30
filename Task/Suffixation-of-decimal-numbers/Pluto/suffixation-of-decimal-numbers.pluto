@@ -1,0 +1,77 @@
+require "bignum"
+local fmt = require "fmt"
+
+local suffixes = " KMGTPEZYXWVU"
+local googol = bigrat.decimal(1e100)
+
+local function suffize(arg)
+    local fields = arg:split(" "):filter(|s| -> s != ""):reorder()
+    if #fields == 0 then fields:insert("0") end
+    local a = fields[1]
+    local places, base
+    local frac, radix  = "", ""
+    local fc = #fields
+    if fc == 1 then
+        places = -1
+        base = 10
+    elseif fc == 2 then
+        places = tonumber(fields[2])
+        base = 10
+        frac = tostring(places)
+    elseif fc == 3 then
+        if fields[2] == "," then
+            places = 0
+            frac = ","
+        else
+            places = tonumber(fields[2])
+            frac = tostring(places)
+        end
+        base = tonumber(fields[3])
+        if base != 2 and base != 10 then base = 10 end
+        radix = tostring(base)
+    end
+    a = a:replace(",", "")  -- get rid of any commas
+    local sign = ""
+    if a[1] == "+" or a[1] == "-" then
+        sign = a[1]
+        a = a:sub(2) -- remove any sign after storing it
+    end
+    local b = bigrat.decimal(a)
+    local g = b >= googol
+    local d = (!g and base == 2)  ? bigrat.int(1024) :
+              (!g and base == 10) ? bigrat.int(1000) : (googol:clone())
+    local c = 0
+    while b >= d and c < 12 do  -- allow b >= 1K if c would otherwise exceed 12
+        b /= d
+        c += 1
+    end
+    local suffix = !g ? suffixes[c + 1] : "googol"
+    if base == 2 then suffix ..= "i" end
+    print($"   input number = {fields[1]}")
+    print($"  fraction digs = {frac}")
+    print($"specified radix = {radix}")
+    io.write("     new number = ")
+    if places >= 0 then
+        fmt.print("%s%s%s", sign, b:todecimal(places), suffix)
+    else
+        fmt.print("%s%s%s", sign, b:todecimal(), suffix)
+    end
+    print()
+end
+
+local tests = {
+    "87,654,321",
+    "-998,877,665,544,332,211,000      3",
+    "+112,233                          0",
+    "16,777,216                        1",
+    "456,789,100,000,000",
+    "456,789,100,000,000               2      10",
+    "456,789,100,000,000               5       2",
+    "456,789,100,000.000e+00           0      10",
+    "+16777216                         ,       2",
+    "1.2e101",
+    "446,835,273,728                   1",
+    "1e36",
+    "1e39" -- there isn't a big enough suffix for this one but it's less than googol
+}
+for tests as test do suffize(test) end

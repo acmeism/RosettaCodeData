@@ -1,0 +1,108 @@
+// ------------------------------------------------------------
+//  Ultra-useful primes sequence
+//  Using FutureBasic 7.0.36
+//  November 2025, R.W
+//
+//  a(n) = smallest odd k such that 2^(2^n) - k
+//  is (probable) prime
+// ------------------------------------------------------------
+
+include "gmp.incl"
+
+_kPrimeReps = 25
+_kMaxExp    = 32767
+
+int gN
+CFTimeInterval t
+
+// Abbreviate big numeric string
+local fn AbbrevCFNumber( s as CFStringRef, head as int, tail as int ) as CFStringRef
+  if s = 0 then RETURN @""
+  int n : n = len(s)
+  if n <= head + tail then RETURN s
+  CFStringRef a, b
+  a = left (s, head)
+  b = right(s, tail)
+  CFStringRef out = @""
+  out = concat ( a , @"...", b)
+end fn = out
+
+
+// Compute a(n), print n, a(n), and abbreviated prime
+void local fn ComputeAndPrint( n as Int )
+  UInt32 mexp : mexp = 1
+  int i
+  for i = 1 to n
+    mexp = mexp << 1
+  next
+
+  // Guard against overflow in 32-bit exp; once it explodes, bail
+  if mexp > _kMaxExp
+    print using "##";n;" ** exp beyond ";_kMaxExp
+    RETURN
+  end if
+
+  mpz_t p
+  mpz_init(p)
+
+  // p = 2^mexp - 1
+  fn mpz_ui_pow_ui(p, 2, mexp)
+  fn mpz_sub_ui(p, p, 1)
+
+  long k : k = 1
+  while fn mpz_probab_prime_p(p, _kPrimeReps) = 0
+    k = k + 2
+    fn mpz_sub_ui(p, p, 2)
+  wend
+
+  // Convert to string and abbreviate
+  CFStringRef pStr = fn mpz_cf2(p)
+  CFStringRef shortStr = fn AbbrevCFNumber(pStr, 36, 36)
+  print using "##";n; using "######"; k;"  "; shortStr
+  mpz_clear(p)
+end fn
+
+// Get next 5 sequence
+local fn next5
+  t = fn CACurrentMediaTime
+  for int n = gN to gN+4
+    fn ComputeAndPrint(n)
+  next
+  printf @"\nElapsed time time: %.3f secs\n", (fn CACurrentMediaTime-t)
+  gN = n
+end fn
+
+
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case 2
+          fn next5
+      end select
+  end select
+end fn
+
+on dialog fn DoDialog
+
+//  Main
+
+window 1, @"Ultra-useful primes sequence", (60,60,640,520)
+button 2,YES,,@"Next 5",(10,20,100,20),,,1
+
+on dialog fn doDialog
+
+print @" n"; @"\t"; @"a(n)"; @"\t"; @"prime"
+print string$(60, "-")
+
+// start the clock
+
+t = fn CACurrentMediaTime
+int n
+for n = 1 to 10
+  fn ComputeAndPrint(n)
+next
+gN = n
+printf @"\nElapsed time time: %.3f secs\n", (fn CACurrentMediaTime-t)
+
+HandleEvents

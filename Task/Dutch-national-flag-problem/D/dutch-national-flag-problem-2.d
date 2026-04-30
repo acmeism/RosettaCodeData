@@ -62,7 +62,7 @@ void main() {
 
     // More tests:
     foreach (i; 0 .. 100_000) {
-        int n = uniform(0, balls.length);
+        ulong n = uniform(0, balls.length);
         foreach (ref ball; balls[0 .. n])
             ball = [EnumMembers!DutchColors][uniform(0, $)];
         balls[0 .. n].dutchNationalFlagSort(DutchColors.red,

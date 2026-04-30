@@ -1,12 +1,11 @@
-function sprintfrange{T<:Integer}(a::Array{T,1})
+function sprintfrange(a::Vector{T}) where T<:Integer
+    isempty(a) && return ""
     len = length(a)
-    0 < len || return ""
     dropme = falses(len)
     dropme[2:end-1] = Bool[a[i-1]==a[i]-1 && a[i+1]==a[i]+1 for i in 2:(len-1)]
-    s = [string(i) for i in a]
-    s[dropme] = "X"
+    s = [dropme[i] ? "X" : string(a[i]) for i in 1:len]
     s = join(s, ",")
-    replace(s, r",[,X]+,", "-")
+    replace(s, r",[,X]+," => "-")
 end
 
 testa = [ 0,  1,  2,  4,  6,  7,  8, 11, 12, 14,

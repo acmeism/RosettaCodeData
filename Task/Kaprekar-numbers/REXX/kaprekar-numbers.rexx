@@ -1,4 +1,4 @@
--- 15 Nov 2025
+-- 21 Feb 2026
 include Setting
 numeric digits 30
 
@@ -8,20 +8,20 @@ say
 -- Brute-force
 call Task1 1E4
 call Task1 1E6
-call Timer 'r'
+call Timer 'R'
 -- Generator
 call Generator 1E9
 call Task2 1E9
-call Timer 'r'
+call Timer 'R'
 -- Generator stretched
 call Generator 1E15
 call Task2 1E12
 call Task3 1E15
-call Timer 'r'
+call Timer 'R'
 -- Definition base NN
 call Task4 1E6,17
 call Task4 1E6,36
-call Timer 'r'
+call Timer 'R'
 exit
 
 Task1:
@@ -72,7 +72,7 @@ do y=1 until yy=xx-1
    end i
 end y
 Kapr.0=n
-call Sort 'Kapr.'
+call SortSt 'Kapr.'
 say n 'found'
 say
 return 0
@@ -169,14 +169,5 @@ end i
 say
 return
 
--- AddB (add 2 numbers in base n)
--- D2n (convert decimal to base n)
-include Base
--- DivisorS (find all divisors)
-include Sequence
--- Gcd (greatest common divisor)
-include Special
--- Sort (sort array)
-include Utility
--- Timer
-include Timer
+-- AddB; D2n; DivisorS; Gcd; SortSt; Timer
+include Math

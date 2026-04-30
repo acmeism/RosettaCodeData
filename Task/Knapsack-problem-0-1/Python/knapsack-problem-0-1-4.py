@@ -1,4 +1,4 @@
-n, G = 5, 5	# KNAPSACK 0-1 DANILIN
+n, G = 5, 5 # KNAPSACK 0-1 DANILIN
 N = n + 1 # rextester.com/BCKP19591
 a = 2 ** N
 L, C, j, q, s, d, e = [1]*n, [1]*n, [1]*n, [0]*a, [0]*a, [0]*a, [""]*a
@@ -26,5 +26,5 @@ print()
 max, m = 0, 1
 for i in range(a):
     if d[i] <= G and q[i] > max:
-        max, m = q[i], i	
+        max, m = q[i], i
 print(d[m], q[m], e[m])

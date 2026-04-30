@@ -14,16 +14,16 @@ begin
            for diceroll:=1 to 4 do dice[diceroll]:=random(6)+1; {roll 4 six sided die}
 
            {find lowest rolled dice. If we roll two or more equal low rolls then we
-	    eliminate the first of them, change '<' to '<=' to eliminate last low die}
+      eliminate the first of them, change '<' to '<=' to eliminate last low die}
            lowroll:=7;
-	   lowdie:=0;
-	   for diceroll:=1 to 4 do if (dice[diceroll] < lowroll) then begin
-	       lowroll := dice[diceroll];
-	       lowdie := diceroll;
-	   end;
+     lowdie:=0;
+     for diceroll:=1 to 4 do if (dice[diceroll] < lowroll) then begin
+         lowroll := dice[diceroll];
+         lowdie := diceroll;
+     end;
            {add up higest three dice}
-	   roll:=0;
-	   for diceroll:=1 to 4 do if (diceroll <> lowdie) then roll := roll + dice[diceroll];
+     roll:=0;
+     for diceroll:=1 to 4 do if (diceroll <> lowdie) then roll := roll + dice[diceroll];
            atribs[score]:=roll;
            total := total + roll;
            if (roll>15) then count:=count+1;

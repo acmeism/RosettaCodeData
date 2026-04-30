@@ -1,0 +1,9 @@
+sample output:
+inp=002 stddev=+00000.0000
+inp=004 stddev=+00001.0000
+inp=004 stddev=+00000.9427
+inp=004 stddev=+00000.8660
+inp=005 stddev=+00000.9797
+inp=005 stddev=+00001.0000
+inp=007 stddev=+00001.3996
+inp=009 stddev=+00002.0000

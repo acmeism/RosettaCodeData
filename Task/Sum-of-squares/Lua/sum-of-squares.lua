@@ -1,3 +1,4 @@
+local unpack = table.unpack or unpack
 function squaresum(a, ...) return a and a^2 + squaresum(...) or 0 end
 function squaresumt(t) return squaresum(unpack(t)) end
 

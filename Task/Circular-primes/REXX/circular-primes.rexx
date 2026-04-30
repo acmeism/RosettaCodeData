@@ -1,24 +1,27 @@
--- 23 Aug 2025
+-- 25 Apr 2026
 include Setting
 
 say 'CIRCULAR PRIMES'
 say version
 say
 call First19
+call Timer 'r'
 call Next3
-call HigherReps
+call Timer 'r'
+call Rep1031
+call Timer 'r'
 exit
 
 First19:
-procedure expose Memo. prim.
-call Time('r')
+procedure expose Memo. Prim.
 numeric digits 10
 say 'First 19 circular primes:'
 p = Primes(200000)
 do i = 1 to p
-   a = prim.i
-   if Verify(a,'024568','m') > 0 then
-      iterate i
+   a = Prim.i
+   if a>10 then
+      if Verify(a,'024568','m') > 0 then
+         iterate i
    b = a; l = Length(b)
    do l-1
       b = Right(b,l-1)||Left(b,1)
@@ -30,14 +33,11 @@ do i = 1 to p
    call Charout ,a' '
 end
 say
-say Format(Time('e'),,3) 'seconds'
-say
 return
 
 Next3:
 procedure expose Memo.
-call Time('r')
-numeric digits 320
+numeric digits 1000
 say 'Next 3 circular primes:'
 do i = 7 to 320
    r = Repunit(i)
@@ -45,21 +45,18 @@ do i = 7 to 320
       call Charout ,'R('i') '
 end
 say
-say Format(Time('e'),,3) 'seconds'
-say
 return
 
-HigherReps:
+Rep1031:
 procedure expose Memo.
 call Time('r')
-numeric digits 1040
+numeric digits 10000
 say 'Primality of R(1031):'
 if Prime(Repunit(1031)) then
-   say 'R(1031) is probable prime'
+   say 'R(1031) is probably prime'
 else
    say 'R(1031) is composite'
-say Format(Time('e'),,3) 'seconds'
-say
 return
 
+-- Primes Prime Repunit Timer
 include Math

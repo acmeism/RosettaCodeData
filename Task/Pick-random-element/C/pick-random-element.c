@@ -9,7 +9,7 @@ int main(){
    srand((unsigned)time(&t));
 
    for(i=0;i<30;i++){
-		printf("%c\n", array[rand()%10]);
+      printf("%c\n", array[rand()%10]);
    }
 
    return 0;

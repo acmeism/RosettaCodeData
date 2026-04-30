@@ -31,7 +31,7 @@ void fill_img(
 }
 
 void put_pixel_unsafe(
-       	image img,
+         image img,
         unsigned int x,
         unsigned int y,
         color_component r,
@@ -46,7 +46,7 @@ void put_pixel_unsafe(
 }
 
 void put_pixel_clip(
-       	image img,
+         image img,
         unsigned int x,
         unsigned int y,
         color_component r,

@@ -1,5 +1,5 @@
 fn main() {
-    println(stripped("\ba\x00b\n\rc\fd\xc3"))
+    println(stripped("\ba\x00b\n\rc\fd\u00c3"))
 }
 
 fn stripped(source string) string {

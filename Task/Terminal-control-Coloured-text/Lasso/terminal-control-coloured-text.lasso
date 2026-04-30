@@ -2,18 +2,18 @@
 
 define ec(code::string) => {
 
-	local(esc		= decode_base64('Gw=='))
-	local(codes		= map('esc' = #esc,
-		'normal'	= #esc + '[0m',
-		'blink'		= #esc + '[5;31;49m',
-		'red'		= #esc + '[31;49m',
-		'blue'		= #esc + '[34;49m',
-		'green'		= #esc + '[32;49m',
-		'magenta'	= #esc + '[35;49m',
-		'yellowred'	= #esc + '[33;41m'
-	))
+  local(esc   = decode_base64('Gw=='))
+  local(codes   = map('esc' = #esc,
+    'normal'  = #esc + '[0m',
+    'blink'   = #esc + '[5;31;49m',
+    'red'   = #esc + '[31;49m',
+    'blue'    = #esc + '[34;49m',
+    'green'   = #esc + '[32;49m',
+    'magenta' = #esc + '[35;49m',
+    'yellowred' = #esc + '[33;41m'
+  ))
 
-	return #codes -> find(#code)
+  return #codes -> find(#code)
 }
 
 stdout( ec('red'))

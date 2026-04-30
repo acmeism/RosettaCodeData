@@ -1,14 +1,14 @@
--- 19 Jan 2026
+-- 4 Mar 2026
 include Setting
 
 say 'SORT COMPOSITE ARRAY'
 say version
 say
-call Stemread 'States.txt','states.state. states.city. states.pop.'
+call ReadSt 'states.state. states.city. states.pop.','States.txt'
 call Show 'Not ordered','A'
-call Stemsort 'states.state. states.city.','states.pop.'
+call SortSt 'states.state. states.city.','states.pop.'
 call Show 'By state and city','A'
-call Stemsort 'states.pop.','states.state. states.city.'
+call SortSt 'states.pop.','states.state. states.city.'
 call Show 'By pop (desc)','D'
 exit
 
@@ -29,4 +29,5 @@ end
 say
 return
 
+-- ReadSt; SortSt
 include Math

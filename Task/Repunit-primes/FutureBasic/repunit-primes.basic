@@ -1,0 +1,164 @@
+// ------------------------------------------------------------
+//  Repunit Primes for different bases
+//
+//  Using FutureBasic 7.0.36
+//  November 2025, R.W.
+// ------------------------------------------------------------
+include "gmp.incl"
+
+_kPrimeReps  = 25    // Miller–Rabin rounds for mpz_probab_prime_p
+_kMaxLimit   = 2700  // global max size of arrays
+
+// Prime table for 2.._kMaxLimit (digit counts)
+int gPrimes( _kMaxLimit )
+int gPrimeCount
+
+int gRep          // Repunit base starting point for button
+int limit, bLimit
+int baseVal       // loop var for bases
+CFTimeInterval t
+
+// Global mpz_t bigints reused everywhere
+mpz_t gR         // current repunit value
+mpz_t gBaseZ     // current base as big-int
+
+// ------------------------------------------------------------
+//  PrintRepunitPrimesForBase(baseN, maxLen)
+//  Builds R_n incrementally up to 'maxLen' and tests
+//  only when n is prime.
+// ------------------------------------------------------------
+local fn PrintRepunitPrimesForBase( baseN as int, maxLen as int )
+  int n, pIndex, r, reps
+
+  // gBaseZ = baseN, gR = 0
+  fn mpz_set_ui( gBaseZ, baseN )
+  fn mpz_set_ui( gR, 0 )
+
+  pIndex = 0
+  reps   = 0
+
+  print "Base "; using "##"; baseN; ": {";
+
+  for n = 1 to maxLen
+    // gR = gR * base + 1
+    fn mpz_mul( gR, gR, gBaseZ )
+    fn mpz_add_ui( gR, gR, 1 )
+    // Advance prime index until gPrimes[pIndex] >= n
+    while (pIndex < gPrimeCount) and (gPrimes(pIndex) < n)
+      pIndex = pIndex + 1
+    wend
+    if (pIndex < gPrimeCount) and (gPrimes(pIndex) = n)
+      // n is prime → test R_n
+      r = fn mpz_probab_prime_p( gR, _kPrimeReps )
+      if r > 0
+        if reps > 0
+          print ", ";
+        end if
+        print n;
+        reps = reps + 1
+      end if
+      pIndex = pIndex + 1
+    end if
+  next
+  if reps = 0 then   print "none";
+  print "}"    // close set
+end fn
+
+// ------------------------------------------------------------
+//  Build list of primes <= plimit using a simple sieve
+// ------------------------------------------------------------
+local fn BuildPrimeList( plimit as int )
+  int isComposite( _kMaxLimit )
+  int i, j
+
+  // clear composite flags only up to plimit
+  for i = 0 to plimit
+    isComposite(i) = 0
+  next
+  gPrimeCount = 0
+  for i = 2 to plimit
+    if isComposite(i) = 0
+      gPrimes(gPrimeCount) = i
+      gPrimeCount = gPrimeCount + 1
+      j = i * i
+      while j <= plimit
+        isComposite(j) = 1
+        j = j + i
+      wend
+    end if
+  next
+end fn
+
+// ------------------------------------------------------------
+//  Repunit plus 8 more bases
+// ------------------------------------------------------------
+local fn RepunitPlus8
+  int b
+  // primes up to 2700 for the "stretched" task
+  fn BuildPrimeList( 2700 )
+
+  t = fn CACurrentMediaTime
+  // next 10 bases after gRep
+  for b = gRep + 1 to gRep + 8
+    fn PrintRepunitPrimesForBase( b, 2700 )
+  next b
+  printf @"\nElapsed time time: %.3f secs\n", (fn CACurrentMediaTime - t)
+  gRep = gRep + 8
+end fn
+
+// ------------------------------------------------------------
+//  Main driver (bases 2..16, limit 1000)
+// ------------------------------------------------------------
+local fn Main
+  int b
+
+  // init global mpz_t’s once
+  fn mpz_init( gR )
+  fn mpz_init( gBaseZ )
+
+  // primes only up to 1000 for bases 2..16
+  fn BuildPrimeList( 1000 )
+
+  t = fn CACurrentMediaTime
+
+  for b = 2 to 16
+    fn PrintRepunitPrimesForBase( b, 1000 )
+  next b
+
+  gRep = 16   // starting point for the button-based extension
+
+  printf @"\nElapsed time time: %.3f secs\n", (fn CACurrentMediaTime - t)
+  print @"For stretched set, the limit will be 2700.\n"
+end fn
+
+// ------------------------------------------------------------
+//  Dialog handler
+// ------------------------------------------------------------
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case 2
+          fn RepunitPlus8
+      end select
+
+    case _windowShouldClose
+      fn mpz_clear( gR )
+      fn mpz_clear( gBaseZ )
+      end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+// ------------------------------------------------------------
+//  Main UI setup
+// ------------------------------------------------------------
+window 1, @"Repunit Bases", (0,0,600,640)
+button 2, YES,, @"Repunit+8", (440,20,100,20),,, 1
+
+print @"\nRepunit base 2 through 16 (limit 1000):\n"
+
+fn Main
+
+HandleEvents

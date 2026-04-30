@@ -1,11 +1,9 @@
 ; matching:
-(define regex (string->regex "m/aa(bb|cc)dd/"))
-(print (regex "aabbddx")) ; => true
-(print (regex "aaccddx")) ; => true
-(print (regex "aabcddx")) ; => false
+(print (m/aa(bb|cc)dd/ "aabbddx")) ; => true
+(print (m/aa(bb|cc)dd/ "aaccddx")) ; => true
+(print (m/aa(bb|cc)dd/ "aabcddx")) ; => false
 
 ; substitute part of a string:
-(define regex (string->regex "s/aa(bb|cc)dd/HAHAHA/"))
-(print (regex "aabbddx")) ; => HAHAHAx
-(print (regex "aaccddx")) ; => HAHAHAx
-(print (regex "aabcddx")) ; => false
+(print (s/aa(bb|cc)dd/HAHAHA/ "aabbddx")) ; => HAHAHAx
+(print (s/aa(bb|cc)dd/HAHAHA/ "aaccddx")) ; => HAHAHAx
+(print (s/aa(bb|cc)dd/HAHAHA/ "aabcddx")) ; => false

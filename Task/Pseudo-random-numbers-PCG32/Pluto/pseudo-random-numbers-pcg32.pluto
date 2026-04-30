@@ -1,0 +1,47 @@
+require "bignum"
+
+local const <const>  = bigint.new("6364136223846793005")
+local mask64 <const> = bigint.shl(bigint.one, 64) - bigint.one
+local mask32 <const> = bigint.shl(bigint.one, 32) - bigint.one
+
+mpz.init()
+
+class pcg32
+    function __construct()
+        self.state = bigint.frombase("853c49e6748fea9b", 16)
+        self.inc   = bigint.frombase("da3e39cb94b95bdb", 16)
+    end
+
+    function seed(seed_state, seed_seq)
+        self.state = bigint.zero
+        self.inc = mpz.band(mpz.bor(mpz.shl(seed_seq, 1), 1), mask64)
+        self:nextInt()
+        self.state += seed_state
+        self:nextInt()
+    end
+
+    function nextInt()
+        local old = self.state
+        self.state = mpz.band(old * const + self.inc, mask64)
+        local xorshifted = mpz.band(mpz.shr(mpz.bxor(mpz.shr(old, 18), old), 27), mask32)
+        local rot = mpz.band(mpz.shr(old, 59), mask32)
+        local irot = bigint.toplain(rot)
+        local irot2 = bigint.toplain(mpz.band(-rot, 31))
+        return mpz.band(mpz.bor(mpz.shr(xorshifted, irot), mpz.shl(xorshifted, irot2)), mask32)
+    end
+
+    function nextFloat() return bigint.tonum(self:nextInt()) / (2.0 ^ 32) end
+end
+
+local randomGen = new pcg32()
+randomGen:seed(bigint.new(42), bigint.new(54))
+for _ = 1, 5 do print(randomGen:nextInt()) end
+
+local counts = {0, 0, 0, 0, 0}
+randomGen:seed(bigint.new(987654321), bigint.one)
+for _ = 1, 100_000 do
+    local i = math.floor(randomGen:nextFloat() * 5)
+    counts[i + 1] += 1
+end
+print("\nThe counts for 100,000 repetitions are:")
+for i = 1, 5 do print($"  {i - 1} : {counts[i]}") end

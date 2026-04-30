@@ -10,31 +10,31 @@ define
       F = {New Open.file init(name:Filename)}
 
       fun {ReadColor8 _}
-	 Bytes = {F read(list:$ size:3)}
+   Bytes = {F read(list:$ size:3)}
       in
-	 {List.toTuple color Bytes}
+   {List.toTuple color Bytes}
       end
 
       fun {ReadColor16 _}
-	 Bytes = {F read(list:$ size:6)}
+   Bytes = {F read(list:$ size:6)}
       in
-	 {List.toTuple color {Map {PairUp Bytes} FromBytes}}
+   {List.toTuple color {Map {PairUp Bytes} FromBytes}}
       end
    in
       try
-	 Magic = {F read(size:2 list:$)}
-	 if Magic \= "P6" then raise bitmapIO(read unsupportedFormat(Magic)) end end
-	 Width = {ReadNumber F}
-	 Height = {ReadNumber F}
-	 MaxVal = {ReadNumber F}
-	 MaxVal =< 0xffff = true
-	 Reader = if MaxVal =< 0xff then ReadColor8 else ReadColor16 end
-	 B = {Bitmap.new Width Height}
+   Magic = {F read(size:2 list:$)}
+   if Magic \= "P6" then raise bitmapIO(read unsupportedFormat(Magic)) end end
+   Width = {ReadNumber F}
+   Height = {ReadNumber F}
+   MaxVal = {ReadNumber F}
+   MaxVal =< 0xffff = true
+   Reader = if MaxVal =< 0xff then ReadColor8 else ReadColor16 end
+   B = {Bitmap.new Width Height}
       in
-	 {Bitmap.transform B Reader}
-	 B
+   {Bitmap.transform B Reader}
+   B
       finally
-	 {F close}
+   {F close}
       end
    end
 
@@ -43,12 +43,12 @@ define
    in
       {SkipWS F}
       Ds = for collect:Collect break:Break do
-	      [C] = {F read(list:$ size:1)}
-	   in
-	      if {Char.isDigit C} then {Collect C}
-	      else {Break}
-	      end
-	   end
+        [C] = {F read(list:$ size:1)}
+     in
+        if {Char.isDigit C} then {Collect C}
+        else {Break}
+        end
+     end
       {SkipWS F}
       {String.toInt Ds}
    end
@@ -58,9 +58,9 @@ define
    in
       if {Char.isSpace C} then {SkipWS F}
       elseif C == &# then
-	 {SkipLine F}
+   {SkipLine F}
       else
-	 {F seek(whence:current offset:~1)}
+   {F seek(whence:current offset:~1)}
       end
    end
 

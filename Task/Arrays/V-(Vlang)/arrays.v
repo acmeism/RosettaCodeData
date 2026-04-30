@@ -46,9 +46,23 @@ pub fn main() {
    println("array4: $array4")
 
    // Arrays can be sliced, creating a copy
-   mut array5 := array4[0..3]
+   mut array5 := array4[0..3].clone()
    println("array5: $array5")
    array5[2] = 10
    println("array4: $array4")
    println("array5: $array5")
+
+   // Multidimensional Arrays
+   // adjust details: {len: , cap: , init:}
+   mut multi_array_a := [][]int{len: 2, init: []int{len: 3}}
+   multi_array_a[0][1] = 2
+   // easy initialization of fixed-size multidimensional arrays
+   mut multi_array_b := [2][3]int{}
+   multi_array_b[0][1] = 2
+   // dynamic
+   mut multi_array_c := [][]int{}
+   multi_array_c << [[0, 2, 0], [0, 0, 0]] // appended by using push operator `<<`
+   println("multi_array_a: $multi_array_a") // [[0, 2, 0], [0, 0, 0]]
+   println("multi_array_b: $multi_array_b") // [[0, 2, 0], [0, 0, 0]]
+   println("multi_array_c: $multi_array_c") // [[0, 2, 0], [0, 0, 0]]
 }

@@ -27,6 +27,6 @@ object BitmapOps {
       val c2=Color.WHITE
       for(x <- 0 until bm.width; y <- 0 until bm.height; l=luminosity(bm.getPixel(x,y)))
          image.setPixel(x, y, if(l>threshold) c2 else c1)
-      image		
+      image
    }
 }

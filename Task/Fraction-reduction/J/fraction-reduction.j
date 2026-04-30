@@ -20,9 +20,9 @@ assert -. common 1 2 3
 
 o=: '123456789' {~ [: -.@:common"1 Filter odometer@:(#&9) NB. o is y unique digits, all of them
 
-f=: ,:"1/&g~        	     NB. f computes a table of all numerators and denominators pairs
+f=: ,:"1/&g~               NB. f computes a table of all numerators and denominators pairs
 
-mask=: [: </~&i. #  	     NB. the lower triangle will become proper fractions
+mask=: [: </~&i. #         NB. the lower triangle will become proper fractions
 
 av=:  (([: , mask) # ,/)@:f  NB. anti-vulgarization
 

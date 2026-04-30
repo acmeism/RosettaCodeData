@@ -1,0 +1,84 @@
+require "queue"
+require "io2"
+
+class Variable
+    function __construct(public name, public value) end
+end
+
+-- Use integer constants as bools don't support bitwise operators.
+local FALSE = 0
+local TRUE = 1
+
+local expr = ""
+local variables = {}
+
+local is_operator = |op| -> op in "&|!~"
+
+local is_variable = |s| -> variables:mapped(|v| -> v.name):contains(s)
+
+local function eval_expression()
+    local stk = new stack()
+    for expr:split("") as e do
+        local v
+        if (e == "T") then
+            v = TRUE
+        elseif e == "F" then
+            v = FALSE
+        elseif is_variable(e) then
+            local vs = variables:filtered(|va| -> va.name == e):reorder()
+            assert(#vs == 1, $"Can only be one variable with name {e}.")
+            v = vs[1].value
+        elseif e == "&" then
+            v = stk:pop() & stk:pop()
+        elseif e == "|" then
+            v = stk:pop() | stk:pop()
+        elseif e == "!" then
+            v = (stk:pop() == TRUE) ? FALSE : TRUE
+        elseif e == "~" then
+            v = stk:pop() ~ stk:pop()
+        else
+            Fiber.abort($"Non-conformant character {e} in expression.")
+        end
+        stk:push(v)
+    end
+    assert(stk:size() == 1, "Something went wrong!")
+    return stk:peek()
+end
+
+local function set_variables(pos)
+    local vc = #variables
+    assert(pos <= vc, $"Argument cannot exceed {vc}.")
+    if pos == vc then
+        local vs = variables:mapped(|v| -> (v.value == TRUE) ? "T" : "F")
+        local es = eval_expression() == TRUE ? "T" : "F"
+        print($"{vs:concat("  ")}  {es}")
+        return
+    end
+    variables[pos + 1].value = FALSE
+    set_variables(pos + 1)
+    variables[pos + 1].value = TRUE
+    set_variables(pos + 1)
+end
+
+print("Accepts single-character variables (except for 'T' and 'F',")
+print("which specify explicit true or false values), postfix, with")
+print("&|!~ for and, or, not, xor, respectively; optionally")
+print("seperated by spaces or tabs. Just enter nothing to quit.")
+
+while true do
+    expr = io.readStr("\nBoolean expression: ")
+    if expr == "" then break end
+    expr = expr:upper():replace(" ", ""):replace("\t", "")
+    variables:clear()
+    for expr:split("") as e do
+        if !is_operator(e) and !"TF":contains(e) and !is_variable(e) then
+            variables:insert(new Variable(e, FALSE))
+        end
+    end
+    if #variables == 0 then break end
+    local vs = variables:mapped(|v| -> v.name):concat("  ")
+    print($"\n{vs}  {expr}")
+    local h = #vs + #expr + 2
+    print(string.rep("=", h))
+    set_variables(0)
+end

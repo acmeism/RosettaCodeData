@@ -9,11 +9,11 @@ shared void run() {
 
     function encrypt(String clearText, String key) =>
             crypt(clearText, key, (Character a, Character b) =>
-				('A'.integer + ((a.integer + b.integer - 130) % 26)).character);
+            ('A'.integer + ((a.integer + b.integer - 130) % 26)).character);
 
     function decrypt(String cipherText, String key) =>
             crypt(cipherText, key, (Character a, Character b) =>
-        		('A'.integer + ((a.integer - b.integer + 26) % 26)).character);
+            ('A'.integer + ((a.integer - b.integer + 26) % 26)).character);
 
     value key = "VIGENERECIPHER";
     value message = "Beware the Jabberwock, my son! The jaws that bite, the claws that catch!";

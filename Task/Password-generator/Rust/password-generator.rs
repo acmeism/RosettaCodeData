@@ -1,6 +1,5 @@
-use rand::distributions::Alphanumeric;
-use rand::prelude::IteratorRandom;
-use rand::{thread_rng, Rng};
+use rand::prelude::*;
+use rand::distr::Alphanumeric;
 use std::iter;
 use std::process;
 use structopt::StructOpt;
@@ -8,13 +7,13 @@ const OTHER_VALUES: &str = "!\"#$%&'()*+,-./:;<=>?@[]^_{|}~";
 
 // the core logic that creates our password
 fn generate_password(length: u8) -> String {
-    // cache thread_rng for better performance
-    let mut rng = thread_rng();
+    // cache rng for better performance
+    let mut rng = rand::rng();
     // the Alphanumeric struct provides 3/4
     // of the characters for passwords
     // so we can sample from it
     let mut base_password: Vec<char> = iter::repeat(())
-        .map(|()| rng.sample(Alphanumeric))
+        .map(|()| rng.sample(Alphanumeric) as char)
         .take(length as usize)
         .collect();
     let mut end_range = 10;
@@ -24,7 +23,7 @@ fn generate_password(length: u8) -> String {
         end_range = length;
     }
     // create a random count of how many other characters to add
-    let mut to_add = rng.gen_range(1, end_range as usize);
+    let mut to_add = rng.random_range(1..end_range as usize);
     loop {
         // create an iterator of required other characters
         let special = OTHER_VALUES.chars().choose(&mut rng).unwrap();

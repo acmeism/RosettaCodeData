@@ -12,13 +12,13 @@ def play($tokens):
            | .tokens += -4
            else .emit = "Please enter a number from 1 to \([3, .tokens]|min) inclusive."
            end
-	 end;
-	
+    end;
+
      .emit,
-	 if .tokens == 0
+    if .tokens == 0
      then "\nComputer wins!", break $out
      elif .tokens < 0 then "\nCongratulations!", break $out
-	 else "\(.tokens) tokens remain. How many tokens will you take?"
+    else "\(.tokens) tokens remain. How many tokens will you take?"
      end )) ;
 
 play(12)

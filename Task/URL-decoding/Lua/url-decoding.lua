@@ -1,10 +1,10 @@
 function decodeChar(hex)
-	return string.char(tonumber(hex,16))
+  return string.char(tonumber(hex,16))
 end
 
 function decodeString(str)
-	local output, t = string.gsub(str,"%%(%x%x)",decodeChar)
-	return output
+  local output, t = string.gsub(str,"%%(%x%x)",decodeChar)
+  return output
 end
 
 -- will print "http://foo bar/"

@@ -1,0 +1,132 @@
+//
+// Canonicalize CIDR
+//
+// Using FutureBasic 7.0.34
+// August 25, R.W
+//
+// Given a Classless Inter-Domain Routing (CIDR)
+// IPv4 address, returns the canonical form.
+//
+
+Int networkWidth        // network width in bits
+CFStringRef errorCode   // global err and CCIDR
+CFStringRef CCIDR       // canonical CIDR IPv4
+
+// Type for IP address
+begin record IPv4_Address
+  Int octets[3]          // xxx.xxx.xxx.xx/xx
+end record
+
+// Validate CIDR string
+local fn ValidateCIDR(ip as IPv4_Address, SnetworkWidth as Int, cidr as CFStringRef) as Boolean
+  Int i
+  boolean result
+  result = _True
+  if instr(0, cidr, @"/") == NSNotFound
+    errorCode = concat(@"Bad CIDR ",cidr)
+    result = _False
+    return result
+  end if
+  if SnetworkWidth < 1 || SnetworkWidth > 32    //validate network width
+    errorCode = concat(@"Bad Net Width",str(networkWidth))
+    result = _False
+    return result
+  end if
+  for i = 0 to 3
+    if ip.octets[i] > 255
+      errorCode = concat(@"Bad Octet ",str(ip.octets[i]))
+      result = _False
+      return result
+    end if
+  next
+end fn = result
+
+// Check if a character is a digit
+local fn IsDigit(ch as CFStringRef) as boolean
+  Boolean IsDigit
+  IsDigit = (ucc(ch) > 47) && (ucc(ch) < 58)
+end fn = IsDigit
+
+// Parse CIDR string into IP structure and network width
+local fn ParseIPv4_Address(cidr as CFStringRef) as IPv4_Address
+  IPv4_Address ip
+  Int i, slashPos, currentOctet, octetValue
+  CFStringRef ipPart
+  ipPart = @""
+  slashPos = instr(0, cidr, @"/")
+  if slashPos > 0
+    ipPart = left(cidr, slashPos)
+    networkWidth = Intval(mid(cidr, slashPos + 1))
+  else
+    ipPart = cidr
+    networkWidth = -1
+  end if
+  currentOctet = 0:   octetValue = 0
+  for i = 0 to len(ipPart)-1
+    select case mid(ipPart, i, 1)
+      case @"."
+        ip.octets[currentOctet] = octetValue
+        currentOctet ++
+        octetValue = 0
+      case else
+        if fn IsDigit(mid(ipPart, i, 1))
+          octetValue = octetValue * 10 + Intval(mid(ipPart, i, 1))
+        end if
+    end select
+  next
+  ip.octets[currentOctet] = octetValue
+end fn = ip
+
+// Apply network mask to IP
+local fn ApplyNetworkMask(ip as IPv4_Address, SnetworkWidth as Int) as IPv4_Address
+  IPv4_Address result
+  Int completeOctets, remainingBits, i
+  result = ip
+  completeOctets = SnetworkWidth \ 8    //octet bits
+  remainingBits = SnetworkWidth AND 7
+  if completeOctets < 4
+    result.octets[completeOctets] = result.octets[completeOctets] AND (255 - 2^(8 - remainingBits) + 1)
+    for i = completeOctets + 1 to 3
+      result.octets[i] = 0
+    next
+  end if
+end fn = result
+
+// Process a CIDR string, sets global CCIDR
+local fn ProcessCIDR(cidr as CFStringRef) as CFStringRef
+  IPv4_Address ip
+  CFStringRef result
+  Int i
+  result = @""
+  ip = fn ParseIPv4_Address(cidr)
+  if fn ValidateCIDR(ip, networkWidth, cidr) // validate
+    ip = fn ApplyNetworkMask(ip, networkWidth)
+    result = mid(str(ip.octets[0]),1)
+    for i = 1 to 3
+      result = concat(result,@".",mid(str(ip.octets[i]),1))
+    next
+    result = concat(result,@"/",mid(str(networkWidth),1))
+  else
+    print@ errorCode
+  end if
+  CCIDR = result
+end fn = result
+
+//
+// Main
+
+Window 1,@"Canonicalize CIDR"
+print@
+
+// Test data from the Rosetta Stone task
+
+CFStringRef cidr(5) = {@"87.70.141.1/22", @"36.18.154.103/12", @"62.62.197.11/29", ¬
+@"67.137.119.181/4", @"161.214.74.21/24", @"184.232.176.184/18"}
+
+for Int i = 0 to 5
+  print@ fn ProcessCIDR(cidr(i))
+next
+
+HandleEvents
+
+//

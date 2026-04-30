@@ -1,4 +1,4 @@
--- 20 Jan 2026
+-- 4 Mar 2026
 include Setting
 
 say 'SORT A LIST OF OBJECT IDENTIFIERS'
@@ -7,7 +7,7 @@ say
 call Prepare
 call Show 'BEFORE'
 -- Sort key while syncing data (string compare)
-call Stemsort 'stem.key.','stem.data.'
+call SortSt 'stem.key.','stem.data.'
 call Show 'AFTER'
 exit
 
@@ -54,5 +54,5 @@ end
 say
 return
 
--- Stemsort
+-- SortSt
 include Math

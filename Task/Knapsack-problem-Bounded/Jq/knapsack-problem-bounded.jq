@@ -34,14 +34,14 @@ def knapsack($w):
   | reduce range(1; $n+1) as $i (.;
       reduce range (0; $w + 1) as $j (.;
             .m[$i][$j] = .m[$i-1][$j]
-	    | label $out
+       | label $out
             | foreach (range(1; 1 + ((items[$i - 1].count))), null) as $k (.stop = false;
-	          if $k == null then .
-		  elif ($k * items[$i - 1].weight > $j) then .stop = true
+             if $k == null then .
+        elif ($k * items[$i - 1].weight > $j) then .stop = true
                   else (.m[$i - 1][$j - ($k * items[$i - 1].weight)] + $k * items[$i - 1].value) as $v
                   | if $v > .m[$i][$j] then .m[$i][$j] = $v else . end
-		  end;
-		if .stop or ($k == null)  then ., break $out else empty end)
+        end;
+      if .stop or ($k == null)  then ., break $out else empty end)
             ) )
   | .s = ($n|list(0))
   | .j = $w
@@ -78,9 +78,9 @@ def task(maxWeight):
         | .sumNumber  += .number
         | .sumWeight  += .weight
         | .sumValue   += .value
-	| .emit += [[.name, .weight, .value, .number]]
-	else .
-	end )
+   | .emit += [[.name, .weight, .value, .number]]
+   else .
+   end )
     | (.emit[] | f),
     "---------------------- ------  ----- ------",
      f("Items chosen \(.itemCount|lpad(4))"; .sumWeight; .sumValue; .sumNumber) );

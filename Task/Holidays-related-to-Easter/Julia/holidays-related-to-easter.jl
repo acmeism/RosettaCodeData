@@ -1,6 +1,5 @@
-# v0.6
-
 using Dates
+using Printf
 
 function easter(year::Int)::Date
     a = rem(year, 19)

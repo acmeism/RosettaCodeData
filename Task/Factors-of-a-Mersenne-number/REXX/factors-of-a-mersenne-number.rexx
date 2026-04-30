@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 25 Apr 2026
 include Setting
 
 say 'FACTORS OF A MERSENNE NUMBER'
@@ -44,4 +44,5 @@ if c <> 1 then
    say a 'is prime'
 return
 
+-- Timer; Primes; Isqrt
 include Math

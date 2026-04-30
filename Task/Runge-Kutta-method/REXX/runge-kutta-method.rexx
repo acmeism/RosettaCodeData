@@ -1,11 +1,13 @@
--- 18 Sep 2025
+-- 25 Apr 2026
 include Setting
 numeric digits 16
 
 say "RUNGE-KUTTA METHOD FOR ODE y'=x*Sqrt(y)"
 say version
 say
+call Task 0,10,1,1
 call Task 0,10,1/10,1
+call Task 0,10,1/100,1
 exit
 
 Task:
@@ -48,4 +50,5 @@ procedure
 arg xx
 return (xx**2+4)**2/16
 
+-- Integer; Std; Sqrt
 include Math

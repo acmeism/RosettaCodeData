@@ -18,8 +18,8 @@ array set ignore {
     "Solutions by Programming Task"     1
     "Unimplemented tasks by language"   1
     "WikiStubs"                         1
-    "Examples needing attention"	1
-    "Impl needed"			1	
+    "Examples needing attention"  1
+    "Impl needed"     1
 }
 # need substring filter
 proc filterLang {n} {

@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 21 Feb 2026
 include Setting
 numeric digits 40
 
@@ -9,7 +9,7 @@ say
 call GetSmooth
 call GetPierpont
 call ShowPierpont
-say Format(Time('e'),,3) 'seconds'; say
+call Timer
 exit
 
 GetSmooth:
@@ -65,4 +65,5 @@ say seco.250
 say
 return
 
+-- Smooths; Prime; Timer
 include Math

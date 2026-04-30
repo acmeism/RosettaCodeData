@@ -1,0 +1,74 @@
+use fmt;
+use fs;
+use io;
+use os;
+
+export fn main() void = {
+	if (len(os::args) != 2) {
+		fmt::print("Please provide a parameter pointing to a brain**** file.\n")!;
+		return;
+	};
+
+	let program = slurp(os::args[1])!;
+	let tape: [30000]u8 = [0...];
+	let tp: u16 = 0;
+	defer free(program);
+
+	let matches_k: []size = [];
+	let matches_v: []size = [];
+	defer free(matches_k);
+	defer free(matches_v);
+
+	for (let pp: size = 0; pp < len(program); pp += 1) {
+		switch (program[pp]) {
+		case '>' => tp += 1;
+		case '<' => tp -= 1;
+		case '+' => tape[tp] += 1;
+		case '-' => tape[tp] -= 1;
+		case '.' => io::write(os::stdout, tape[tp..tp+1])!;
+		case ',' => io::read(os::stdin, tape[tp..tp+1])!;
+		case '[' => if (tape[tp] == 0) pp = find_match(pp, program, matches_k, matches_v)!;
+		case ']' => if (tape[tp] != 0) pp = find_match(pp, program, matches_k, matches_v)!;
+		case => continue;
+		};
+	};
+};
+
+fn find_match(pos: size, program: []u8, matches_k: []size, matches_v: []size) (size | !void) = {
+	for (let i: u16 = 0; i < len(matches_k); i += 1)
+		if (pos == matches_k[i])
+			return matches_v[i];
+	let r = pos;
+	switch (program[pos]) {
+	case '[' => {
+		r += 1;
+		for (let level = 1; level > 0; r += 1) {
+			switch (program[r]) {
+			case '[' => level += 1;
+			case ']' => level -= 1;
+			case => continue;
+			};
+		};
+	};
+	case ']' => {
+		r -= 1;
+		for (let level = 1; level > 0; r -= 1) {
+			switch (program[r]) {
+			case ']' => level += 1;
+			case '[' => level -= 1;
+			case => continue;
+			};
+		};
+	};
+	case => return;
+	};
+	append(matches_k, pos)!;
+	append(matches_v, r)!;
+	return r;
+};
+
+fn slurp(filename: str) ([]u8 | fs::error | io::error) = {
+	const file = os::open(filename)?;
+	defer io::close(file)!;
+	return io::drain(file)?;
+};

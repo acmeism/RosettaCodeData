@@ -5,5 +5,5 @@ typedef struct {
 typedef rgb_color *rgb_color_p;
 
 void floodfill(image img, int px, int py,
-	       rgb_color_p bankscolor,
-	       rgb_color_p rcolor);
+         rgb_color_p bankscolor,
+         rgb_color_p rcolor);

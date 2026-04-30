@@ -8,7 +8,7 @@ task() ->
       set( Pid, "kalle", "hobbe" ),
       V1 = get( Pid, 1 ),
       V2 = get( Pid, "kalle" ),
-      true = (V1 =:= ett) and (V2	=:= "hobbe"),
+      true = (V1 =:= ett) and (V2   =:= "hobbe"),
       erlang:exit( Pid, normal ).
 
 
@@ -16,15 +16,15 @@ task() ->
 get( Pid, Key ) ->
      Pid ! {get, Key, erlang:self()},
      receive
-	{value, Value, Pid} -> Value
+   {value, Value, Pid} -> Value
      end.
 
 loop( List ) ->
       receive
-	{set, Key, Value} -> loop( [{Key, Value} | proplists:delete(Key, List)] );
-	{get, Key, Pid} ->
-	      Pid ! {value, proplists:get_value(Key, List), erlang:self()},
-	      loop( List )
-	end.
+   {set, Key, Value} -> loop( [{Key, Value} | proplists:delete(Key, List)] );
+   {get, Key, Pid} ->
+         Pid ! {value, proplists:get_value(Key, List), erlang:self()},
+         loop( List )
+   end.
 
 set( Pid, Key, Value ) -> Pid ! {set, Key, Value}.

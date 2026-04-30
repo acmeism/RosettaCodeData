@@ -1,19 +1,19 @@
 define fibonacci(n::integer) => {
 
-	#n < 1 ? return false
+   #n < 1 ? return false
 
-	local(
-		swap	= 0,
-		n1		= 0,
-		n2		= 1
-	)
+   local(
+      swap  = 0,
+      n1    = 0,
+      n2    = 1
+   )
 
-	loop(#n) => {
+   loop(#n) => {
         #swap = #n1 + #n2;
         #n2 = #n1;
         #n1 = #swap;
-	}
-	return #n1
+   }
+   return #n1
 
 }
 

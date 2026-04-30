@@ -8,9 +8,9 @@
 (define (table-hash table source key-proc )
 (local-make-store table)
 (for ((r source))
-	(local-put-value
-		(key-proc r)
-		(append (list r) (local-get-value (key-proc r) table)) table)))
+  (local-put-value
+    (key-proc r)
+    (append (list r) (local-get-value (key-proc r) table)) table)))
 
 ;; build the two tables
 (define-syntax-rule (second record) (cadr record))
@@ -22,6 +22,6 @@
 
 ;; join
 (for* ((k (local-keys 'AGES))
-	  (a (local-get-value k 'AGES))
-	  (n (local-get-value k 'NEMESIS)))
-	  (writeln a n))
+    (a (local-get-value k 'AGES))
+    (n (local-get-value k 'NEMESIS)))
+    (writeln a n))

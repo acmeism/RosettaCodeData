@@ -12,9 +12,9 @@ fn range_expand(range : &str) -> Vec<i32> {
                         None => item.rfind('-').unwrap(),
                     };
                 let rstart=i32::from_str(
-                    unsafe{ item.slice_unchecked(0,dashpos)} ).unwrap();
+                    unsafe{ item.get_unchecked(0..dashpos)} ).unwrap();
                 let rend=i32::from_str(
-                    unsafe{ item.slice_unchecked(dashpos+1,item.len()) } ).unwrap();
+                    unsafe{ item.get_unchecked((dashpos+1)..item.len()) } ).unwrap();
                 rstart..rend+1
             },
         }

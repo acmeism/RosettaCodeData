@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 21 Feb 2026
 include Setting
 
 say 'POLYNOMIAL LONG DIVISION'
@@ -17,8 +17,9 @@ exit
 Divide:
 arg x,y
 z = DivP(x,y); parse var z q','r
-say 'Formula:' Lst2FormP(x) '/' Lst2FormP(y) '=' Lst2FormP(q) 'Rem' Lst2FormP(r)
-say 'Check  :' Lst2FormP(q) '*' Lst2FormP(y) '+' Lst2FormP(r) '=' Lst2FormP(AddP(MulP(q,y),r))
+say 'Formula:' Poly2form(x) '/' Poly2form(y) '=' Poly2form(q) 'Rem' Poly2form(r)
+say 'Check  :' Poly2form(q) '*' Poly2form(y) '+' Poly2form(r) '=' Poly2form(AddP(MulP(q,y),r))
 return
 
+-- AddP; MulP; DivP; Poly2form
 include Math

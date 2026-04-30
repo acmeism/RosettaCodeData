@@ -5,9 +5,9 @@ proc continuousKnapsack {items massLimit} {
     # Add in the unit prices
     set idx -1
     foreach item $items {
-	lassign $item name mass value
-	lappend item [expr {$value / $mass}]
-	lset items [incr idx] $item
+   lassign $item name mass value
+   lappend item [expr {$value / $mass}]
+   lset items [incr idx] $item
     }
 
     # Sort by unit prices
@@ -18,18 +18,18 @@ proc continuousKnapsack {items massLimit} {
     set total 0.0
     set totalValue 0
     foreach item $items {
-	lassign $item name mass value unit
-	if {$total + $mass < $massLimit} {
-	    lappend result [list $name $mass $value]
-	    set total [expr {$total + $mass}]
-	    set totalValue [expr {$totalValue + $value}]
-	} else {
-	    set mass [expr {$massLimit - $total}]
-	    set value [expr {$unit * $mass}]
-	    lappend result [list $name $mass $value]
-	    set totalValue [expr {$totalValue + $value}]
-	    break
-	}
+   lassign $item name mass value unit
+   if {$total + $mass < $massLimit} {
+       lappend result [list $name $mass $value]
+       set total [expr {$total + $mass}]
+       set totalValue [expr {$totalValue + $value}]
+   } else {
+       set mass [expr {$massLimit - $total}]
+       set value [expr {$unit * $mass}]
+       lappend result [list $name $mass $value]
+       set totalValue [expr {$totalValue + $value}]
+       break
+   }
     }
 
     # We return the total value too, purely for convenience

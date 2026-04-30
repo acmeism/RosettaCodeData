@@ -1,0 +1,195 @@
+-- demo\rosetta\LZW_compression.exw
+with javascript_semantics
+constant CLR = 256,   -- Clear table marker
+         EOD = 257,   -- End-of-data marker
+         NEW = 258    -- New code index
+
+integer bits, tmp, oBits
+
+function finished_bytes(integer x)
+    sequence bytes = {}
+    tmp = (tmp << bits) + x
+    oBits += bits
+    while oBits >= 8 do
+        oBits -= 8
+        assert(floor(tmp/power(2,oBits)) <= 255)
+        bytes &= floor(tmp/power(2,oBits))
+        tmp = and_bits(tmp, power(2,oBits)-1)
+    end while
+    return bytes
+end function
+
+function lzwEncode(sequence inp, integer maxBits)
+    assert(maxBits>=9 and maxBits<=16)
+
+    // Encode dictionary array. For encoding, entry at code index
+    // is a list of indices that follow current one, for example
+    // if code 97 is 'a', code 287 is 'ab', and code 922 is 'abc',
+    // then dict[97]['b'+1] = 287, dict[287]['c'+1] = 922, etc.
+    sequence dict = repeat(repeat(0,256),512),
+           result = {}
+    oBits = 0
+    tmp = 0
+    bits = 9
+
+    integer nextCode = NEW,
+           nextShift = 512
+    integer code = inp[1]
+    for c in inp from 2 do
+        integer nc = dict[code+1][c+1]
+        if nc!=0 then
+            code = nc
+        else
+            result &= finished_bytes(code)
+            nc = nextCode
+            dict[code+1][c+1] = nc
+            nextCode += 1
+            code = c
+        end if
+
+        // Next new code would be too long for current table.
+        if nextCode = nextShift then
+            // "Early increment", matches compress and GIF use,
+            // some TIFF variants do a "Late increment" instead.
+            bits += 1
+            // Either reset table back to 9 bits...
+            if bits>maxBits then
+                // Table clear marker must occur before bit reset.
+                result &= finished_bytes(CLR)
+                bits = 9
+                nextShift = 512
+                nextCode = NEW
+                dict = repeat(repeat(0,256),512)
+            else // ... or extend table.
+                nextShift *= 2
+                while length(dict)<nextShift do
+                    dict = append(dict,repeat(0,256))
+                end while
+            end if
+        end if
+    end for
+
+    result &= finished_bytes(code)
+    result &= finished_bytes(EOD)
+    if tmp!=0 then
+        assert(tmp<=#FFFF,"tmp > 16 bits")
+        result &= finished_bytes(tmp)
+    end if
+
+    return result
+end function
+
+--
+-- For decoding, dictionary contains index of whatever prefix
+-- index plus trailing ubyte.  i.e. like previous example,
+--     dict[1022] = { c: 'c', prev: 387 },
+--     dict[387]  = { c: 'b', prev: 97 },
+--     dict[97]   = { c: 'a', prev: 0 }
+-- the "back" element is used for temporarily chaining indices
+-- when resolving a code to bytes.
+--
+enum PREV, BACK, CH -- decode dict entry subscripts
+sequence dict
+integer nextShift, nextCode -- (and re-using bits)
+
+procedure clearTable()
+    dict = repeat({0,0,0},512)
+    for j=0 to 255 do
+        dict[j+1][CH] = j
+    end for
+    nextCode = NEW
+    nextShift = 512
+    bits = 9
+end procedure
+
+function lzwDecode(sequence inp)
+
+    sequence result = {}
+    integer len = length(inp),
+            idx = 1,
+           code = 0,
+          nBits = 0,
+            tmp = 0
+    clearTable() // In case encoded bits didn't start with CLR.
+    while idx<=len do
+        while nBits < bits do
+            if idx<=len then
+                tmp = (tmp << 8) + inp[idx]
+                idx += 1
+                nBits += 8
+            else
+                tmp = tmp << (bits-nBits)
+                nBits = bits
+            end if
+        end while
+        nBits -= bits
+        code = floor(tmp/power(2,nBits))
+        tmp = and_bits(tmp,power(2,nBits)-1)
+
+        if code=EOD then exit end if
+        if code=CLR then
+            clearTable()
+        elsif code>=nextCode then
+            crash("Bad sequence")
+        else
+            integer c = code
+            dict[nextCode+1][PREV] = c
+            while c>255 do
+                integer t = dict[c+1][PREV]
+                dict[t+1][BACK] = c
+                c = t
+            end while
+            dict[nextCode][CH] = c
+            integer cc = c+1
+            while dict[cc][BACK]!=0 do
+                result &= dict[cc][CH]
+                integer t = dict[cc][BACK]
+                dict[cc][BACK] = 0
+                cc = t+1
+            end while
+            result &= dict[cc][CH]
+
+            nextCode += 1
+            if nextCode>=nextShift then
+                // "Early increment", must match encode.
+                bits += 1
+                // If input was correct, we'd have hit a CLR.
+                if bits>16 then crash("Too many bits") end if
+                nextShift *= 2
+                while length(dict)<nextShift do
+                    dict = append(dict,repeat(0,3))
+                end while
+            end if
+        end if
+    end while
+
+    if code!=EOD then crash("Bits did not end in EOD") end if
+    return result
+end function
+
+procedure main()
+    sequence inputData = get_text(`demo\unixdict.txt`,GT_BINARY)
+    integer li = length(inputData)
+    printf(1,"Input size:   %d\n",li)
+
+    sequence encoded = lzwEncode(inputData,12)
+    integer le = length(encoded)
+    printf(1,"Encoded size: %d (%d%%)\n",{le,le/li*100})
+
+    sequence decoded = lzwDecode(encoded)
+    printf(1,"Decoded size: %d\n",length(decoded))
+
+    if length(inputData)!=length(decoded) then
+        printf(1,"Error: decoded size differs\n")
+        return
+    end if
+    for i=1 to length(inputData) do
+        if inputData[i]!=decoded[i] then
+            printf(1,"Bad decode at %d\n",i)
+            return
+        end if
+    end for
+    puts(1,"Decoded OK.\n")
+end procedure
+
+main()

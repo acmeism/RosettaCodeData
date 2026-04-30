@@ -8,24 +8,24 @@ my ($n, @P) = map Math::BigRat->new($_), qw{
 
 $|=1;
 MAIN: for( 1 .. 5000 ) {
-	print " " if $_ > 1;
-	my ($pow, $rest) = (0, $n->copy);
-	until( $rest->is_odd ) {
-		++$pow;
-		$rest->bdiv(2);
-	}
-	if( $rest->is_one ) {
-		print "2**$pow";
-	} else {
-		#print $n;
-	}
-	for my $f_i (@P) {
-		my $nf_i = $n * $f_i;
-		next unless $nf_i->is_int;
-		$n = $nf_i;
-		next MAIN;
-	}
-	last;
+   print " " if $_ > 1;
+   my ($pow, $rest) = (0, $n->copy);
+   until( $rest->is_odd ) {
+      ++$pow;
+      $rest->bdiv(2);
+   }
+   if( $rest->is_one ) {
+      print "2**$pow";
+   } else {
+      #print $n;
+   }
+   for my $f_i (@P) {
+      my $nf_i = $n * $f_i;
+      next unless $nf_i->is_int;
+      $n = $nf_i;
+      next MAIN;
+   }
+   last;
 }
 
 print "\n";

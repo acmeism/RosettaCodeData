@@ -1,0 +1,313 @@
+//
+// Largest number divisible by its digits
+// Using FutureBasic 7.0.35
+//
+// September 2025, R.W.
+//
+include "gmp.incl"
+
+char gHexBuf(64)  // shared C buffer for mpz_get_str / mpz_set_str (hex text)
+long gDset(16)    // current hex digit subset, values in 1..15 (hex 1..f)
+long gK           // size of current subset
+long iter         // itertion counter
+
+//
+// Helper: mpz_t -> CFStringRef (base 10 or 16)
+// (Uses a local C buffer internally to receive GMP.)
+//
+local fn CFStrFromMPZ( n as mpz_t, base as long ) as CFStringRef
+  CFStringRef s
+  char buf(4096)
+  fn mpz_get_str( @buf(0), base, n )
+  s = fn CFStringCreateWithCString( 0, @buf(0), _kCFStringEncodingASCII )
+end fn = s
+
+//
+// Helper: Base 10 digit analyzer
+// Returns a bitmask of present digits 1..9
+// (bit i set if digit i appears exactly once)
+// Returns -1 if invalid: contains 0 or 5, non-digit, or dupes.
+//
+local fn DigitMaskBase10( s as CFStringRef ) as long
+  long counts(10)
+  long i, n, c
+  long mask
+
+  for i = 0 to 9:   counts(i) = 0:  next i
+
+  n = fn CFStringGetLength( s )
+  i = 0
+  while i < n
+    c = fn CFStringGetCharacterAtIndex( s, i )
+    if (c < _"0") || (c > _"9")
+      return -1
+    end if
+    counts(c - _"0") = counts(c - _"0") + 1
+    i ++
+  wend
+
+  // Exclude 0 and 5: invalidate if present at all
+  if (counts(0) != 0) || (counts(5) != 0)
+    return -1
+  end if
+
+  // Build mask; ensure each used digit appears exactly once
+  mask = 0
+  for i = 1 to 9
+    select case counts(i)
+      case 0
+        // not present -> ok
+      case 1
+        mask = mask OR (1 << i)
+      case else
+        return -1
+    end select
+  next
+end fn = mask
+
+// Build gHexBuf() from gDset(1..gK) in DESC order;
+// write NUL at end.
+
+local fn BuildHexBufFromGlobalSubsetDesc
+  long i, v
+  for i = 1 to gK
+    v = gDset(i)
+    if (v >= 1) && (v <= 9)
+      gHexBuf(i-1) = _"0" + v
+    else
+      // 10..15 -> 'a'..'f'
+      gHexBuf(i-1) = _"a" + (v - 10)
+    end if
+  next
+  gHexBuf(gK) = 0
+end fn
+
+
+// Check that gHexBuf() uses EXACTLY the digits
+// in gDset(1..gK), each once.
+
+local fn HexBufIsExactlyGlobalSubset as Boolean
+  long want(16), got(16)
+  long i, c, idx, nlen
+
+  for i = 0 to 15 : want(i) = 0 : got(i) = 0 : next
+  for i = 1 to gK : want(gDset(i)) = 1 : next
+
+  nlen = 0
+  while gHexBuf(nlen) != 0
+    c = gHexBuf(nlen)
+    if (c >= _"1") && (c <= _"9")
+      idx = c - _"0"
+    else
+      if (c >= _"a") && (c <= _"f")
+        idx = 10 + (c - _"a")
+      else
+        return _false
+      end if
+    end if
+    if idx = 0 then return _false
+    got(idx) = got(idx) + 1
+    nlen = nlen + 1
+  wend
+
+  if nlen != gK then return _false
+
+  for i = 1 to 15
+    if want(i) = 0
+      if got(i) != 0 then return _false
+    else
+      if got(i) != 1 then return _false
+    end if
+  next
+end fn = _true
+
+
+// Compute L = lcm of current subset gDset(1..gK)
+
+local fn LCM_CurrentSubset( outL as mpz_t )
+  mpz_t tZ
+  long i
+  mpz_init( tZ )
+  mpz_set_ui( outL, 1 )
+  for i = 1 to gK
+    mpz_set_ui( tZ, gDset(i) )
+    mpz_lcm( outL, outL, tZ )
+  next
+  mpz_clear( tZ )
+end fn
+
+
+// Largest Base 16 Lynch–Bell via subset pruning
+// Tries k = 15 down to 8; subset = top-k digits {f,e,...}.
+// Returns outHex CFStringRef.
+
+local fn FindLynchBellBase16( outHex as CFStringRef ) as CFStringRef
+  long k, i, ok, found
+  CFStringRef ans
+
+  mpz_t upperZ, lcmZ, curZ, qZ, rem2Z, oneZ
+
+  ans   = _Nil
+  found = _false
+  iter = 0
+
+  mpz_init( upperZ )
+  mpz_init( lcmZ )
+  mpz_init( curZ )
+  mpz_init( qZ )
+  mpz_init( rem2Z )
+  mpz_init_set_ui( oneZ, 1 )
+
+  // Try largest subsets first
+  for k = 15 to 8 step -1
+    gK = k
+    // Fill global subset with top-k digits: 15,14,...,(16-k)
+    for i = 1 to gK
+      gDset(i) = 16 - i
+    next
+
+    // lcm of subset
+    fn LCM_CurrentSubset( lcmZ )
+
+    // upper bound = descending permutation value
+    fn BuildHexBufFromGlobalSubsetDesc
+    fn mpz_set_str( upperZ, @gHexBuf(0), 16 )
+
+    // curZ = floor(upperZ / lcmZ) * lcmZ
+    mpz_tdiv_qr( qZ, rem2Z, upperZ, lcmZ )
+    if fn mpz_sgn( rem2Z ) <> 0
+      mpz_mul( curZ, qZ, lcmZ )
+    else
+      mpz_set( curZ, upperZ )
+    end if
+
+    // Scan down in multiples of lcmZ
+    while fn mpz_cmp( curZ, oneZ ) >= 0
+
+      fn mpz_get_str( @gHexBuf(0), 16, curZ )
+
+      if fn HexBufIsExactlyGlobalSubset
+        // extra safety: verify divisibility by each included digit
+        ok = _true
+        for i = 1 to gK
+          if fn mpz_divisible_ui_p( curZ, gDset(i) ) == 0
+            ok = _false
+            exit for
+          end if
+        next
+        if ok
+          if ans != _Nil then CFRelease(ans)
+          ans = fn CFStringCreateWithCString( 0, @gHexBuf(0), _kCFStringEncodingASCII )
+          found = _true
+          exit while
+        end if
+      end if
+      iter++
+      // curZ -= lcmZ
+      mpz_sub( curZ, curZ, lcmZ )
+    wend
+
+    if found then exit for
+  next
+
+  outHex = ans
+
+  mpz_clear( upperZ ) : mpz_clear( lcmZ ) : mpz_clear( curZ )
+  mpz_clear( qZ )     : mpz_clear( rem2Z ) : mpz_clear( oneZ )
+
+end fn = outHex
+
+//
+// Find largest base-10 Lynch–Bell number
+// Returns result in decimal CFString outS
+//
+local fn FindLynchBellBase10( outN as mpz_t, outS as CFStringRef ) as CFStringRef
+  _kStep = 504       // LCM(1,2,3,4,6,7,8,9)
+  _kHigh = 9876432 // top bound w/ no 0 or 5; distinct digits
+  long i, mask
+  CFStringRef sd
+  sd = _Nil
+  mpz_t n, tmp
+
+  mpz_init( n )
+  mpz_init( tmp )
+
+  // Start from the largest multiple of step under _kHigh
+  mpz_set_ui( n, ( _kHigh / _kStep ) * _kStep )
+
+  iter = 0
+
+  while (1)
+    sd = fn CFStrFromMPZ( n, 10 )
+    mask = fn DigitMaskBase10( sd )
+
+    if mask != -1
+      for i = 1 to 9
+        if (mask AND (1 << i)) != 0
+          if fn mpz_mod_ui( tmp, n, i ) != 0
+            mask = -1
+            exit for
+          end if
+        end if
+      next
+      if mask != -1
+        mpz_set( outN, n )
+        outS = sd
+        break
+      end if
+    end if
+
+    if sd != _Nil then CFRelease(sd)
+    iter++
+
+    if fn mpz_cmp_ui( n, _kStep ) < 0
+      // not found
+      break
+    end if
+    mpz_sub_ui( n, n, _kStep )
+  wend
+
+  mpz_clear( n )
+  mpz_clear( tmp )
+end fn = outS
+
+
+// =======================================================
+// Run Lynch-Bell search for base 10 and base 16
+// =======================================================
+local fn RunLynchBellSearches
+  mpz_t best10
+  CFStringRef s10, s16
+
+  mpz_init( best10 )
+
+  s10 = @""
+  // start the clock
+  CFTimeInterval t
+  t = fn CACurrentMediaTime
+
+  s10 = fn FindLynchBellBase10( best10, s10 )
+  print @"Base 10: Largest number "; s10
+  print @" (it took ";iter; @" iterations)";
+  printf @" Compute time: %.4f ms", (fn CACurrentMediaTime-t)*1000
+  print @
+
+  s16 = @""
+  // start the clock
+  t = fn CACurrentMediaTime
+
+  s16 = fn FindLynchBellBase16( s16 )
+  print @"Base 16: Largest number "; s16
+  print @" (it took ";iter; @" iterations)";
+  printf @" Compute time: %.4f ms", (fn CACurrentMediaTime-t)*1000
+  mpz_clear( best10 )
+end fn
+
+//   Main
+
+window 1, @"Largest number divisible by its digits"
+print @
+
+fn RunLynchBellSearches
+
+handleEvents

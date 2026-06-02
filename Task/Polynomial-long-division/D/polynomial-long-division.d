@@ -5,7 +5,7 @@ nothrow pure @safe {
     // Code smell: a function that does two things.
     static int trimAndDegree(T)(ref T[] poly) nothrow pure @safe @nogc {
         poly = poly.retro.find!q{ a != b }(0.0).retro;
-        return poly.length.signed - 1;
+        return cast(int)poly.length.signed - 1;
     }
 
     auto N = inN.dup;

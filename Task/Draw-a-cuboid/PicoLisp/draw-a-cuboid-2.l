@@ -9,7 +9,7 @@
 (glutInitWindowPosition 10 50)
 (glutCreateWindow "PicoLisp Cube")
 
-(glClearColor 1.0 1.0 1.0 1.0)	# The background color
+(glClearColor 1.0 1.0 1.0 1.0)   # The background color
 (glEnable GL_DEPTH_TEST)
 (glEnable GL_LIGHTING)
 (glEnable GL_LIGHT0)
@@ -41,19 +41,19 @@
       (glViewport 0 0 Width Height) ) )
 
 (displayPrg
-	(glClear (| GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
-	(glLoadIdentity)
-	(glTranslatef 0.0 0.0 -3.0)
-	(glRotatef *AngleX 1 0 0)
-	(glRotatef *AngleY 0 1 0)
-	(glutSolidCube 1.0)
-	
-	(glDisable GL_LIGHTING)
-	(glColor4f 0.4 0.4 0.4 1.0)
-	(glutWireCube 1.002)
-	(glEnable GL_LIGHTING)
-	
-	(glFlush)
-	(glutSwapBuffers) )
+   (glClear (| GL_COLOR_BUFFER_BIT GL_DEPTH_BUFFER_BIT))
+   (glLoadIdentity)
+   (glTranslatef 0.0 0.0 -3.0)
+   (glRotatef *AngleX 1 0 0)
+   (glRotatef *AngleY 0 1 0)
+   (glutSolidCube 1.0)
+
+   (glDisable GL_LIGHTING)
+   (glColor4f 0.4 0.4 0.4 1.0)
+   (glutWireCube 1.002)
+   (glEnable GL_LIGHTING)
+
+   (glFlush)
+   (glutSwapBuffers) )
 
 (glutMainLoop)

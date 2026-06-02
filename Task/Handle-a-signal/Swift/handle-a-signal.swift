@@ -14,3 +14,4 @@ for var i = 0;; {
 
 let endTime = NSDate()
 print("Program has run for \(endTime.timeIntervalSinceDate(startTime)) seconds")
+

@@ -59,3 +59,4 @@ fn main() {
 
     println!("{:02}:{:02}:{:02}", mean.h, mean.m, mean.s);
 }
+

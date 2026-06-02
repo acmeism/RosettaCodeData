@@ -53,3 +53,5 @@ TestDisplayNumber(Memo,Num2);
 TestDisplayNumber(Memo,Num3);
 TestDisplayNumber(Memo,Num4);
 end;
+
+

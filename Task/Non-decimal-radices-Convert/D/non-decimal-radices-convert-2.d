@@ -9,7 +9,7 @@ nothrow {
         immutable char d = dc.toLower;
         if (digit.length == 0) // Not init yet.
             foreach (i, c; mDigits)
-                digit[c] = i;
+                digit[c] = cast(int) i;
         if (radix > 1 && radix <= digit.length &&
             d in digit && digit[d] < radix)
             return digit[d];
@@ -35,7 +35,7 @@ nothrow {
 string itoaRadix(ulong num, in uint radix=10) pure nothrow
 in {
     assert(radix > 1 && radix <= mDigits.length);
-} body {
+} do {
     string result;
     while (num > 0) {
         immutable uint d = num % radix;

@@ -36,7 +36,6 @@ T[] flatten(T)(in TreeList!T t) pure nothrow {
 
 void main() {
     alias TreeList!int L;
-    static assert(L.sizeof == 12);
     auto l = L(L(1), 2, L(L(3,4), 5), L(L(L())), L(L(L(6))),7,8,L());
     l.writeln;
     l.flatten.writeln;

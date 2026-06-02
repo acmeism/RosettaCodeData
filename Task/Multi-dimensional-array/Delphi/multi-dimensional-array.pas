@@ -29,3 +29,4 @@ for I := Low(A) to High(A) do
 	A[I,J] := IntToStr(I) + ',' + IntToStr(J) + ' ';
 	end;
 end;
+

@@ -2,8 +2,8 @@
 
 fun countingSort(array: IntArray) {
     if (array.isEmpty()) return
-    val min = array.min()!!
-    val max = array.max()!!
+    val min = array.min()
+    val max = array.max()
     val count = IntArray(max - min + 1)  // all elements zero by default
     for (number in array) count[number - min]++
     var z = 0

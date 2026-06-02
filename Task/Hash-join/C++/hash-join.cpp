@@ -62,3 +62,4 @@ int main(int argc, char const *argv[])
   cout << "Joined tables: " << endl << tab3 << endl;
   return ret;
 }
+

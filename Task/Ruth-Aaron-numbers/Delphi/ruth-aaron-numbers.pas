@@ -118,3 +118,4 @@ RuthAaronNumbers(Memo, True);
 Memo.Lines.Add('The first 30 Ruth-Aaron numbers using divisors');
 RuthAaronNumbers(Memo, False);
 end;
+

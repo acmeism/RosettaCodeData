@@ -77,3 +77,7 @@ S:=VigenereDecrypt(S, TestKey);
 {Show decrypted text}
 Memo.Lines.Add(S);
 end;
+
+
+
+

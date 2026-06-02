@@ -1,4 +1,4 @@
--- 31 Mar 2026
+-- 15 May 2026
 include Setting
 numeric digits 4
 
@@ -12,12 +12,12 @@ call CopySt 'stem.','copy.'
 
 say 'Single function Square'
 call MapSt 'stem.','square'
-call ShowSt 'stem.','after square',,7
+call ShowSt 'stem.','after Square',,7
 
-say 'Your own function Cubic...'
+say 'Your own function Cube...'
 call CopySt 'copy.','stem.'
 call MapSt 'stem.','cube'
-call ShowSt 'stem.','after cube',,7
+call ShowSt 'stem.','after Cube',,7
 
 say 'Expression x^2+2x+3...'
 call CopySt 'copy.','stem.'
@@ -30,9 +30,9 @@ call MapSt 'stem.','sin(x)+square(x)'
 call ShowSt 'stem.','after more involved formula',,7
 exit
 
-Cubic:
+Cube:
 arg xx
 return xx**3
 
--- MapSt; Struct2stem; ShowSt; CopySt; Square; Sin
+-- MapSt Struct2stem ShowSt CopySt Square Sin
 include Math

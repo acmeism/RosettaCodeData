@@ -6,3 +6,4 @@ function pascal(n)
    t=triangle(n)
    println.(join.([filter(!iszero, t[i,:]) for i in 1:(n+1)], " "))
 end
+

@@ -1,23 +1,12 @@
-def spiral(n):
-    def spiral_part(x, y, n):
-        if x == -1 and y == 0:
-            return -1
-        if y == (x+1) and x < (n // 2):
-            return spiral_part(x-1, y-1, n-1) + 4*(n-y)
-        if x < (n-y) and y <= x:
-            return spiral_part(y-1, y, n) + (x-y) + 1
-        if x >= (n-y) and y <= x:
-            return spiral_part(x, y-1, n) + 1
-        if x >= (n-y) and y > x:
-            return spiral_part(x+1, y, n) + 1
-        if x < (n-y) and y > x:
-            return spiral_part(x, y-1, n) - 1
-
-    array = [[0] * n for j in xrange(n)]
-    for x in xrange(n):
-        for y in xrange(n):
-            array[x][y] = spiral_part(y, x, n)
-    return array
-
-for row in spiral(5):
-    print " ".join("%2s" % x for x in row)
+def spiral_matrix(n):
+    m = [[0] * n for _ in range(n)]
+    dx, dy = [0, 1, 0, -1], [1, 0, -1, 0]
+    x, y, c = 0, -1, 1
+    for i in range(n + n - 1):
+        for _ in range((n + n - i) // 2):
+            x += dx[i % 4]
+            y += dy[i % 4]
+            m[x][y] = c
+            c += 1
+    return m
+for i in spiral_matrix(5): print(*i)

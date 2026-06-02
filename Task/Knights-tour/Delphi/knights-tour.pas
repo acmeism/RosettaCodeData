@@ -219,3 +219,4 @@ ClearBoard;
 DrawBoard(Image.Canvas);
 TryAllMoves(Image, Point(0,0));
 end;
+

@@ -30,3 +30,4 @@ for I:=1 to High(QArray) do
  if QArray[I]>QArray[I-1] then Inc(LessCount);
 Memo.Lines.Add('Count of Q(n)<Q(n-1) = '+IntToStr(LessCount));
 end;
+

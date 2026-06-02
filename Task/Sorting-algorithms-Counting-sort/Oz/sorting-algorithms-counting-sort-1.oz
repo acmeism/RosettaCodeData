@@ -12,8 +12,8 @@ declare
      %% recreate array from frequencies
      for I in Min..Max do
         for C in 1..Count.I do
-  	 Arr.(@Z) := I
-  	 Z := @Z + 1
+    Arr.(@Z) := I
+    Z := @Z + 1
         end
      end
   end

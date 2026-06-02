@@ -26,3 +26,5 @@ for I:=0 to 4-1 do
 	DrawVerticalStripes(Image,I+1,SHeight*I,SHeight*(I+1));
 	end;
 end;
+
+

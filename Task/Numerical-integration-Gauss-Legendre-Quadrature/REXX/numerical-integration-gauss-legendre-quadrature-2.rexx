@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 23 May 2026
 include Setting
 arg digs
 if digs = '' then
@@ -48,24 +48,24 @@ arg ff,aa,bb,nn
 -- Legendre polynomials
 p0=1; poly1.1=1; p1=2; poly2.1=1; poly2.2=0
 do i = 2 to nn
-   work1.0=p1+1
+   Wrk1.0=p1+1
    do j = 1 to p1
-      work1.j=poly2.j
+      Wrk1.j=poly2.j
    end
-   work1.j=0; work2.0=p0+2; work2.1=0; work2.2=0
+   Wrk1.j=0; Wrk2.0=p0+2; Wrk2.1=0; Wrk2.2=0
    do j = 1 to p0
-      j2=j+2; work2.j2=poly1.j
+      j2=j+2; Wrk2.j2=poly1.j
    end
-   do j = 1 to work1.0
-      work1.j=((2*i-1)*work1.j-(i-1)*work2.j)/i
+   do j = 1 to Wrk1.0
+      Wrk1.j=((2*i-1)*Wrk1.j-(i-1)*Wrk2.j)/i
    end
    p0=p1
    do j = 1 to p0
       poly1.j=poly2.j
    end
-   p1=work1.0
+   p1=Wrk1.0
    do j = 1 to p1
-      poly2.j=work1.j
+      poly2.j=Wrk1.j
    end
 end
 -- Roots and weights
@@ -89,4 +89,5 @@ do i = 1 to nn
 end
 return bm*zz
 
+-- Sin Cos Pi Exp Ln Tan Gamma Std Eval
 include Math

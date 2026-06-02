@@ -12,8 +12,8 @@ ARGB := 0xFFFF0000 ; Color=Solid Red
 
 If !pToken := Gdip_Startup() ; Start gdi+
 {
-	MsgBox, 48, gdiplus error!, Gdiplus failed to start. Please ensure you have gdiplus on your system
-	ExitApp
+   MsgBox, 48, gdiplus error!, Gdiplus failed to start. Please ensure you have gdiplus on your system
+   ExitApp
 }
 OnExit, Exit
 

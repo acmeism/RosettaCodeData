@@ -27,3 +27,4 @@
               (- (cdr P) (cdr A)) )
            (* (- (cdr B) (cdr A))
               (- (car P) (car A)) ))))
+

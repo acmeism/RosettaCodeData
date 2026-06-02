@@ -35,3 +35,4 @@ const buf2 = IOBuffer(halpha2)
 
 merge(buf1, buf2, Char)
 println("\nDone.")
+

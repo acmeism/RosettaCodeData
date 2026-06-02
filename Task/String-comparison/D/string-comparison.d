@@ -1,5 +1,4 @@
 import std.stdio, std.string, std.algorithm;
-
 void main() {
     auto s = "abcd";
 
@@ -12,12 +11,12 @@ void main() {
     /* Comparing the lexical order of two strings;
     -1 means smaller, 0 means equal, 1 means larger */
 
-    assert(s.icmp("Bcde") == -1); // case insensitive
-    assert(s.cmp("Bcde") == 1); // case sensitive
+    assert(s.icmp("Bcde") < 0); // case insensitive
+    assert(s.cmp("Bcde") > 0); // case sensitive
 
-    assert(s.icmp("Aabc") == 1); // case insensitive
-    assert(s.cmp("Aabc") == 1); // case sensitive
+    assert(s.icmp("Aabc") > 0); // case insensitive
+    assert(s.cmp("Aabc") > 0); // case sensitive
 
     assert(s.icmp("ABCD") == 0); // case insensitive
-    assert(s.cmp("ABCD") == 1); // case sensitive
+    assert(s.cmp("ABCD") > 0); // case sensitive
 }

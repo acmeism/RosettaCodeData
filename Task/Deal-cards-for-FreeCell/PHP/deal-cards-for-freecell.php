@@ -58,3 +58,4 @@ foreach ( $tests as $game_num ) {
     $deal = new FreeCell_Deal( $game_num );
     $deal->print();
 }
+

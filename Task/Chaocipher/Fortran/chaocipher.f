@@ -188,3 +188,4 @@ END SUBROUTINE initialize_alphabets
   END SUBROUTINE permute_right
 
 END PROGRAM Chaocipher
+

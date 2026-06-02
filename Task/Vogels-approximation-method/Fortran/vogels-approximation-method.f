@@ -94,3 +94,4 @@ contains
   end subroutine calculate_penalties
 
 end program vogels_approximation_method
+

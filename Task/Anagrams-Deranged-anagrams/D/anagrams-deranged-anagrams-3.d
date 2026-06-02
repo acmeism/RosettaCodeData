@@ -22,7 +22,7 @@ void main() /*@safe*/ {
     foreach (const ws; wClasses[].map!q{ a.data }.filter!(not!empty)) {
         string[][const ubyte[]] anags; // Assume ASCII input.
         foreach (immutable w; ws)
-            anags[w.dup.representation.sort().release.assumeUnique] ~= w;
+            anags[cast(immutable ubyte[])w.dup.representation.sort().release] ~= w;
         auto pairs = anags.byValue.map!findDeranged.joiner;
         if (!pairs.empty)
             return writefln("Longest deranged: %-(%s %)", pairs.front);

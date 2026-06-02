@@ -33,3 +33,4 @@ enddo                                     ! Repeat this until no more digits
 
 end function digitSum
 end program minimumMultiple
+

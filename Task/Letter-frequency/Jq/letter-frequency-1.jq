@@ -7,3 +7,4 @@ def counter:
 # For neatness we sort the keys:
 explode | map( [.] | implode ) | counter | . as $counter
  | keys | sort[] | [., $counter[.] ]
+

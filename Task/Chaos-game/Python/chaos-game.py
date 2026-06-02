@@ -113,3 +113,4 @@ if __name__ == "__main__":
     arg_parser.add_argument("-i", dest="interval", type=int, default=10)
 
     main(arg_parser.parse_args())
+

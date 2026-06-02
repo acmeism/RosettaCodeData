@@ -35,3 +35,4 @@ mergesorted <- function(vecvec) {
 set.seed(123)
 random_list <- sample(1:1000, 12)
 print(patiencesort(random_list))
+

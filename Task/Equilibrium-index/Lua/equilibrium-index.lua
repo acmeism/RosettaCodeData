@@ -20,3 +20,4 @@ function equilibrium_index(t)
 end
 
 print(equilibrium_index({-7, 1, 5, 2, -4, 3, 0}))
+

@@ -155,3 +155,4 @@ extension MagicSquare {
 try MagicSquare(base: 3).createOdd()
 try MagicSquare(base: 5).createOdd()
 try MagicSquare(base: 7).createOdd()
+

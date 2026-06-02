@@ -54,3 +54,4 @@ contains
   end subroutine report
 
 end program primality
+

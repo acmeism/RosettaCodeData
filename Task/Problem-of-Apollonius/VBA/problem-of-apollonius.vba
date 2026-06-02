@@ -194,3 +194,4 @@ Public Function fApollonius(ByRef C1 As tCircle, _
     fApollonius = True
 
 End Function
+

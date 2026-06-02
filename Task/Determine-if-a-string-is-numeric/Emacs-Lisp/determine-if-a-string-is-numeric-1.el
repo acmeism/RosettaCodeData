@@ -10,3 +10,5 @@ valid ELisp numbers if the quotation marks were removed."
    (not (string-match-p "," str))
    ;; no errors from numberp function testing if a number
    (ignore-errors (numberp (read str)))))
+
+

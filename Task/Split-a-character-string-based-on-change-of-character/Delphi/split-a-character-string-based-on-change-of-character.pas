@@ -22,3 +22,4 @@ Memo.Lines.Add(S1);
 S2:=SplitStringCharChange(S1);
 Memo.Lines.Add(S2);
 end;
+

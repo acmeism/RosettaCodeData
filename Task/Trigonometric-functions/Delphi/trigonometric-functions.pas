@@ -16,3 +16,6 @@ Memo.Lines.Add(Format('Arccosine:  Degrees: %3.6f   Radians: %3.6f',[DegToRad(Ar
 ArcTangent:=ArcTan(tan(AngleRad));
 Memo.Lines.Add(Format('Arctangent: Degrees: %3.6f   Radians: %3.6f',[DegToRad(ArcTangent),ArcTangent]));
 end;
+
+
+

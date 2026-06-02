@@ -21,6 +21,6 @@ for i, s1 in enumerate(states[:-1]):
     for s2 in states[i + 1:]:
         smap["".join(sorted(s1 + s2))].append(s1 + " + " + s2)
 
-for pairs in sorted(smap.itervalues()):
+for pairs in sorted(smap.values()):
     if len(pairs) > 1:
-        print " = ".join(pairs)
+        print(" = ".join(pairs))

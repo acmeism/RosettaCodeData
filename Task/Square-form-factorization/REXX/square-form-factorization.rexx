@@ -1,7 +1,6 @@
--- 25 Apr 2026
+-- 16 May 2026
 include Setting
 numeric digits 40
-Memo.cache=0
 
 say 'SQUARE FORM FACTORIZATION'
 say version
@@ -91,5 +90,5 @@ end
 say
 return
 
--- Even; Xpon; Squfof; Pollardrho; Trialdiv; Digitsum
+-- Even Xpon Squfof Pollardrho Trialdiv Digitsum
 include Math

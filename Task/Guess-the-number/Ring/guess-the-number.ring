@@ -21,3 +21,4 @@ while answer != myNumber
     See "Give up. My number is: "+ myNumber +nl
   ok
 end
+

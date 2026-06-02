@@ -142,3 +142,4 @@ each node visited"
                    (push (list i j k) ll))))
              ll)
            *random-target*))
+

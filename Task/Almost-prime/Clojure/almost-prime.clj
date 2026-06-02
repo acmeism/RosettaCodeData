@@ -19,3 +19,4 @@
 
 (println (for [k (range 1 6)]
           (println "k:" k (divisors-k k 10))))
+

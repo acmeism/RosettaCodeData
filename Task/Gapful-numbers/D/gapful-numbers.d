@@ -4,7 +4,7 @@ import std.stdio;
 string commatize(ulong n) {
     auto s = n.to!string;
     auto le = s.length;
-    for (int i = le - 3; i >= 1; i -= 3) {
+    for (int i = cast(int) le - 3; i >= 1; i -= 3) {
         s = s[0..i]
           ~ ","
           ~ s[i..$];

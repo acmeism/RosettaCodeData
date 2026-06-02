@@ -69,3 +69,4 @@ begin
   PrintRandom(10, False);
   readln;
 end.
+

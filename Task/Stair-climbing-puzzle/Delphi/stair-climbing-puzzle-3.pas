@@ -22,3 +22,4 @@ Position:=0;
 Randomize;
 StepUp(Memo);
 end;
+

@@ -1,11 +1,34 @@
-/*REXX program sums the first    N    terms of     1/(k**2),          k=1 ──►  N.       */
-parse arg N D .                                  /*obtain optional arguments from the CL*/
-if N=='' | N==","  then N=1000                   /*Not specified?  Then use the default.*/
-if D=='' | D==","  then D=  60                   /* "      "         "   "   "     "    */
-numeric digits D                                 /*use D digits (9 is the REXX default).*/
-$=0                                              /*initialize the sum to zero.          */
-          do k=1  for N                          /* [↓]  compute for   N   terms.       */
-          $=$  +  1/k**2                         /*add a squared reciprocal to the sum. */
-          end   /*k*/
+-- 16 May 2026
+include Setting
+numeric digits 16
 
-say 'The sum of'     N     "terms is:"    $      /*stick a fork in it,  we're all done. */
+say 'SUM OF A SERIES'
+say version
+say
+call Task 10
+call Task 100
+call Task 1000
+call Task 10000
+call Task 100000
+call Task 1000000
+call Zeta2
+call Timer
+exit
+
+Zeta2:
+say Zeta(2) '= Zeta(2)'
+return
+
+Task:
+procedure expose Memo.
+arg n
+-- Generate array 1,2...n
+call MakeSt 'Zeta.','N',n,'A'
+-- Map 1/x^2 to all items
+call MapSt 'Zeta.','1/(x*x)'
+-- Add all items
+say SumSt('Zeta.') '= sum' n 'terms'
+return
+
+-- Zeta MakeSt MapSt SumSt Timer
+include Math

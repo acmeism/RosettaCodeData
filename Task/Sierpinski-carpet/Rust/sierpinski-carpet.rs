@@ -21,3 +21,4 @@ fn sierpinski_carpet(n: u32) -> String {
     }
     carpet.join("\n")
 }
+

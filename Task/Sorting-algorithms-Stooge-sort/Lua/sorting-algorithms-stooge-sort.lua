@@ -24,3 +24,4 @@ function stoogesort(L, pred)
 end
 
 print(unpack(stoogesort{9,7,8,5,6,3,4,2,1,0}))
+

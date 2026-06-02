@@ -34,3 +34,4 @@
   (simple-viewer-window 'pendulum)
   (glut-full-screen)
   (simple-viewer-run :rescue-errors #f))
+

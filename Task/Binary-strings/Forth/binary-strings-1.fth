@@ -94,3 +94,4 @@
 
   : STR<   ( string1 string2 -- flag)
              comparestr 1 = ;
+

@@ -9,3 +9,4 @@ end
 foreach(p -> print(rpad(p[2], 10), p[1] % 10 == 0 ? "\n" : ""), enumerate(ascendingprimes()))
 
 @time ascendingprimes()
+

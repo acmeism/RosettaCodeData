@@ -6,12 +6,12 @@ inout(T[]) maxSubseq(T)(inout T[] sequence) pure nothrow @nogc {
     foreach (immutable j, immutable x; sequence) {
         thisSum += x;
         if (thisSum < 0) {
-            i = j + 1;
+            i = cast(int)j + 1;
             thisSum = 0;
         } else if (thisSum > maxSum) {
             maxSum = thisSum;
             start = i;
-            end   = j;
+            end   = cast(int)j;
         }
     }
 

@@ -18,3 +18,4 @@ foreach(m;; string value)
     write(value);
 }
 Result: bac
+

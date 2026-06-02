@@ -9,3 +9,4 @@ plurals := #('' 's').
  Transcript show: (bottles format: {(v asString) . (plurals atPin:v) . ((v -1) asString). (plurals atPin:v) }); cr; cr].
 
 Transcript show: 'hic!'; cr.
+

@@ -48,3 +48,4 @@ feature -- Access
 		end
 
 end
+

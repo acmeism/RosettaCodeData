@@ -1,0 +1,45 @@
+' ============================================
+' https://rosettacode.org/wiki/Matrix_digital_rain
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' Ported from QBasic example
+' ============================================
+
+DEF FN d$(p$, s$, x$, y$)
+    COLOR p$, s$
+
+    IF BETWEEN(y$, 1, 23) THEN
+        LOCATE y$, x$
+        PRINT CHR(33 + MOD(x$ * y$, 200));
+    END IF
+    RETURN 0
+END DEF
+
+[inits]
+    DIM t$
+    FOR i$ = 1 TO 80
+        t$(i$) = -RND(50)
+    NEXT i$
+
+    LET y$ = 0
+    LET dummy$ = 0
+
+[main]
+    CLS
+    WHILE INKEY <> KEY_ESC#
+        FOR i$ = 1 TO 80
+            IF t$(i$) > 28 THEN t$(i$) = 0
+
+            t$(i$) = t$(i$) + 1
+            y$ = t$(i$)
+
+            dummy$ = FN d$(0,  0, i$, y$ - 6)
+            dummy$ = FN d$(2,  0, i$, y$ - 5)
+            dummy$ = FN d$(2,  0, i$, y$ - 4)
+            dummy$ = FN d$(10, 0, i$, y$ - 3)
+            dummy$ = FN d$(10, 0, i$, y$ - 2)
+            dummy$ = FN d$(11, 0, i$, y$ - 1)
+            dummy$ = FN d$(0,  2, i$, y$)
+        NEXT i$
+        SLEEP 11
+    WEND
+END

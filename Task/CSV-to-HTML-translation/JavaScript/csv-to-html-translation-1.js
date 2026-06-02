@@ -16,3 +16,4 @@ var lines = csv.replace(/&/g, '&amp;')
 console.log('<table>\n\t<thead>\n'      + lines[0] +
             '\n\t</thead>\n\t<tbody>\n' + lines.slice(1).join('\n') +
             '\t</tbody>\n</table>');
+

@@ -6,3 +6,4 @@ Out = ["Itemized, please.", "Itemize, please.", "Iterated, please.", "Iterate, p
 
 ?- brace_expansion("{,{,gotta have{ ,\\, again\\, }}more }cowbell!", Out).
 Out = ["cowbell!", "more cowbell!", "gotta have more cowbell!", "gotta have, again, more cowbell!"].
+

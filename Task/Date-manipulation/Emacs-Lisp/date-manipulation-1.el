@@ -38,3 +38,4 @@
     (setq calendar-list-future-time (add-hours 24-hour-calendar-list number-of-hours-in-future))
     (setq coded-future-time (encode-time calendar-list-future-time))
     (format-time-string "%B %e %Y %R %p %Z" coded-future-time)))
+

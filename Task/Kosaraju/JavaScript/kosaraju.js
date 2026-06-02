@@ -57,3 +57,4 @@ g[7].push(4, 6, 7);
 
 const output = kosaraju(g);
 console.log(output);
+

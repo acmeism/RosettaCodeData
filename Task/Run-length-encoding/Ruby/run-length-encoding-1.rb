@@ -12,3 +12,4 @@ def run_decode(char_counts)
     .map{|char, count| char * count}
     .join
 end
+

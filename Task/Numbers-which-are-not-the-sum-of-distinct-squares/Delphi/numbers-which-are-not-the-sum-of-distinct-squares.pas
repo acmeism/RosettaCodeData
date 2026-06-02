@@ -86,3 +86,6 @@ Memo.Lines.Add('Numbers which are not the sum of distinct squares');
 Memo.Lines.Add('Count = '+IntToStr(Cnt));
 Memo.Lines.Add(S);
 end;
+
+
+

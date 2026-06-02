@@ -42,3 +42,6 @@ while true do
 	Memo.Lines.Add(GetPattern);
 	end;
 end;
+
+
+

@@ -54,3 +54,4 @@ main([Instruction | Rest], Prog, Acc) ->
 main(Prog) ->
   Compiled = string:to_upper(Prog),
   main(Compiled, Prog, 0).
+

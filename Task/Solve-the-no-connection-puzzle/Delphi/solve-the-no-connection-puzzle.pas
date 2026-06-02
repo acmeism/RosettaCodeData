@@ -249,3 +249,6 @@ Memo.Lines.Add(S);
 {Show puzzle with values inserted}
 ShowPuzzle(Memo);
 end;
+
+
+

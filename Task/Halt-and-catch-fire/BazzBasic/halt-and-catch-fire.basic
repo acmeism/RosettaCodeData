@@ -1,0 +1,11 @@
+' ============================================
+' https://rosettacode.org/wiki/Halt_and_catch_fire
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+
+' double declaration for same constant
+LET FOO# = 1
+LET FOO# = 2
+
+' Output:
+' Error at line 8: Cannot redefine constant 'FOO#'

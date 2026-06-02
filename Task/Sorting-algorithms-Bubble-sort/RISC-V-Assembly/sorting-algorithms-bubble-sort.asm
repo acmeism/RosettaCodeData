@@ -56,39 +56,39 @@ main:
     call writeString           # display message
 
     la s0,tabNumber            # number array address
-	li s1,0
-	li s2,NBTABNUMBER
+   li s1,0
+   li s2,NBTABNUMBER
 2:                             # item loop
     sh2add t3,s1,s0            # compute item address
-	lw a0,(t3)
-	call displayResultD
-	add s1,s1,1
-	blt s1,s2,2b	
+   lw a0,(t3)
+   call displayResultD
+   add s1,s1,1
+   blt s1,s2,2b
     la a0,szCariageReturn
     call writeString
-	mv a0,s0                   # number array address
-	li a1,0                    # first item
-	addi a2,s2,-1              # last item
-	call bubbleSort             # sort
-	mv a0,s0                   # number array address
-	li a1,0                    # first item
-	addi a2,s2,-1              # last item
-	call isSorted
-	
-	la a0,szLibSort
-	call writeString
+   mv a0,s0                   # number array address
+   li a1,0                    # first item
+   addi a2,s2,-1              # last item
+   call bubbleSort             # sort
+   mv a0,s0                   # number array address
+   li a1,0                    # first item
+   addi a2,s2,-1              # last item
+   call isSorted
 
-	li s1,0
+   la a0,szLibSort
+   call writeString
+
+   li s1,0
 3:                             # item loop
     sh2add t3,s1,s0            # compute item address
-	lw a0,(t3)
-	call displayResultD
-	add s1,s1,1
-	blt s1,s2,3b
+   lw a0,(t3)
+   call displayResultD
+   add s1,s1,1
+   blt s1,s2,3b
     la a0,szCariageReturn
     call writeString
-	la a0,szMessEnd
-	call writeString
+   la a0,szMessEnd
+   call writeString
     call getchar
 100:                           # final loop
     j 100b
@@ -110,7 +110,7 @@ displayResultD:
     lw      ra, 0(sp)
     addi    sp, sp, 4
     ret
-	
+
 /**********************************************/
 /*         sort control                */
 /**********************************************/
@@ -121,27 +121,27 @@ displayResultD:
 isSorted:
     addi    sp, sp, -4         # reserve stack
     sw      ra, 0(sp)
-	mv t0,a1
-	sh2add t1,t0,a0
-	lw t2,(t1)                 # load first element
+   mv t0,a1
+   sh2add t1,t0,a0
+   lw t2,(t1)                 # load first element
 1:
     addi t0,t0,1
     ble t0,a2,2f               # end indice ?
-	la a0,szMessSortOk
-	call writeString
+   la a0,szMessSortOk
+   call writeString
     li a0,1                    # yes -> area is sorted
-    j 100f	
+    j 100f
 2:
-	sh2add t1,t0,a0
-	lw t3,(t1)                 # load next element	
-	bge t3,t2,3f               # >=  ?
-	la a0,szMessSortNok
-	call writeString
+   sh2add t1,t0,a0
+   lw t3,(t1)                 # load next element
+   bge t3,t2,3f               # >=  ?
+   la a0,szMessSortNok
+   call writeString
     li a0,0                    # no -> area is not sorted
-    j 100f	
+    j 100f
 3:
     mv t2,t3
-	j 1b
+   j 1b
 100:
     lw      ra, 0(sp)
     addi    sp, sp, 4
@@ -156,17 +156,17 @@ isSorted:
 bubbleSort:
     addi    sp, sp, -12        # reserve stack
     sw      ra, 0(sp)          # save registers
-	sw      s0, 4(sp)
-	sw      s1, 8(sp)
-	addi t1,a1,1
+   sw      s0, 4(sp)
+   sw      s1, 8(sp)
+   addi t1,a1,1
 1:                            # start loop 1
-    mv t0,a1	              # start index
-	li t3,0                   # top table sorted
-	addi t4,a2,-1
+    mv t0,a1                 # start index
+   li t3,0                   # top table sorted
+   addi t4,a2,-1
 2:                            # start loop 2
     addi t5,t0,1
     sh2add t6,t0,a0
-    lw s0,(t6)	
+    lw s0,(t6)
     sh2add s1,t5,a0
     lw t2,(s1)
     bge t2,s0,3f
@@ -176,14 +176,14 @@ bubbleSort:
 3:
     addi t0,t0,1
     ble t0,t4,2b              # end ? no -> loop 2
-    beqz t3,100f 	          # table sorted ? -> end
-	addi a2,a2,-1             # decrement i
-	bge a2,t1,1b              # end ? no -> loop 1
-		
+    beqz t3,100f            # table sorted ? -> end
+   addi a2,a2,-1             # decrement i
+   bge a2,t1,1b              # end ? no -> loop 1
+
 100:
     lw      ra, 0(sp)
     lw      s0, 4(sp)
-	lw      s1, 8(sp)
+   lw      s1, 8(sp)
     addi    sp, sp, 12
     ret
 
@@ -192,3 +192,4 @@ bubbleSort:
 /***********************************/
 /* for this file see risc-v task include a file */
 .include "../../includeFunctions.s"
+

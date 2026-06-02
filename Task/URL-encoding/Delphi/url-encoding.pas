@@ -22,3 +22,6 @@ EncodeAndShowURL(Memo,'http://foo bar/');
 EncodeAndShowURL(Memo,'https://rosettacode.org/wiki/URL_encoding');
 EncodeAndShowURL(Memo,'https://en.wikipedia.org/wiki/Pikes_Peak_granite');
 end;
+
+
+

@@ -27,3 +27,4 @@ begin
     Writeln(reversedLine);
   end;
 end.
+

@@ -1,7 +1,6 @@
--- 25 Apr 2026
+-- 23 May 2026
 Main:
 include Setting
-Memo.cache=0
 
 say 'PRIME DECOMPOSITION'
 say version
@@ -9,14 +8,15 @@ arg digs
 -- Above 30 digits factorizations may become slow
 if digs='' then
    digs=30
-say 'Endless run max' digs 'digits'
+digs/=1
+say '30 numbers max' digs 'digits'
 say
 numeric digits 2*digs+10
 say 'Seqnum Elapsed' Left('Number',digs) 'Prime factors'
 n=0
--- Run forever
-do forever
--- Generate random number with 1 to given digits
+-- Run 30 numbers
+do 30
+-- Generate random number between 1 to given digits
    arg1=''
    do Random(1,digs)
       arg1=arg1||Random(9)
@@ -35,5 +35,5 @@ do forever
 end
 exit
 
--- FactorS; Stem2struct; Elaps
+-- FactorS Stem2struct Elaps
 include Math

@@ -48,3 +48,4 @@ padj m =
 perm :: Num a => [[a]] -> a
 perm [] = 1
 perm m  = (mul m (padj m)) !! 0 !! 0
+

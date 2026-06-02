@@ -1,5 +1,6 @@
 import std.stdio, std.process;
 
 void main() {
-    auto home = getenv("HOME");
+    auto home = environment.get("HOME");
+    writeln(home);
 }

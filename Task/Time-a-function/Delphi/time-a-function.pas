@@ -56,3 +56,4 @@ begin
 if FResolution=rsSeconds then Caption:=FloatToStrF(TotCount/1000000,ffFixed,18,3)+' Sec.'
 else Caption:=FloatToStrF(TotCount/1000,ffFixed,18,3)+' ms.'
 end;
+

@@ -190,3 +190,4 @@ func resetMachine
     timer.stop()
     lblStatus.setText("State: q0")
     lblTape.setText(updateTapeView())
+

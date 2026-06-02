@@ -41,3 +41,5 @@ procedure DoHornerPoly(Memo: TMemo);
 begin
 ShowHornerPoly(Memo,[-19, 7, -4, 6],3)
 end;
+
+

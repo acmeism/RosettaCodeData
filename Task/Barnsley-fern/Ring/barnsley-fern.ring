@@ -111,3 +111,4 @@ Func DrawFern
 		
 		label1 { setpicture(p1) show() }
 return
+

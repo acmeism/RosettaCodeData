@@ -136,3 +136,4 @@ int main(int argc,char** argv)
 	printf("\n\nGames Played : %llu\nGames Won : %llu\nChances : %lf %% \n\n",trials,count,(100.0*count)/trials);
 	return 0;
 }
+

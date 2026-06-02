@@ -33,3 +33,4 @@ ctx.beginPath()
 drawTree(300, 500, -90, totalDepth)
 ctx.closePath()
 ctx.stroke()
+

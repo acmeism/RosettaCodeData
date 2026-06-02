@@ -34,3 +34,4 @@ fn main() {
 
     sierpinski(order);
 }
+

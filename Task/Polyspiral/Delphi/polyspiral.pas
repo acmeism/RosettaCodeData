@@ -36,3 +36,5 @@ while true do
 	ClearImage(Image,clBlack);
 	end;
 end;
+
+

@@ -91,3 +91,5 @@ L1:=MakeLine2D(0,0,1,1);
 L2:=MakeLine2D(1,2,4,5);
 TestIntersect(Memo,L1,L2);
 end;
+
+

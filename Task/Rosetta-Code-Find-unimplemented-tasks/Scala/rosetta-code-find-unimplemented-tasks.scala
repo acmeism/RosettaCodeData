@@ -23,3 +23,4 @@ List("Programming Tasks", "Scala")
     case Left(s) => Set.empty[Task]
   }
   .foldRight(Set.empty[Task])((acc: Set[Task], ele: Set[Task]) => acc -- ele)
+

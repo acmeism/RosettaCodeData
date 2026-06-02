@@ -87,3 +87,4 @@ splitList = map words
 removeLeadCommonWord a = unwords $ if f a commonWords then tail a else a
                         where f l1 = elem (map toLower (head l1))
                               commonWords = ["the","a","an","of"]
+

@@ -9,3 +9,4 @@ function floydtriangle(rows)
 end
 
 floydtriangle(5); println(); floydtriangle(14)
+

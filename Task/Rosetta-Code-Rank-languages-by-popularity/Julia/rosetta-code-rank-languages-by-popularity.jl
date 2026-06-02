@@ -35,3 +35,4 @@ end
 
 println("Top 20 Programming Languages on Rosetta Code by Number of Examples, As of: ", now())
 println(rosetta_code_language_example_counts()[begin:begin+19, :])
+

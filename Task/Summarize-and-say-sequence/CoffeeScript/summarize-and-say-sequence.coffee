@@ -40,3 +40,4 @@ for i in [1..1000000]
       max_i = i
 
 console.log max_i, max_seq
+

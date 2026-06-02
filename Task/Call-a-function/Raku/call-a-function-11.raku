@@ -87,3 +87,4 @@ $ref.(@args);      #  37  as object invocation, explicit postfix
 1.h(@args);        #  43  as method via dispatcher
 1."$h-sym"(@args); #  44  as method via dispatcher, symbolic
 f(|@args);         #  45  equivalent to f(1,2,3)
+

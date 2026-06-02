@@ -25,3 +25,4 @@ tests[] as [$bits, $n]
   "    Input b: \($bits)",
   ( ($bits | [explode[] | . - 48]) as $b
     | "     Result: \($b | setRightBits($e; $n) | join(""))\n" )
+

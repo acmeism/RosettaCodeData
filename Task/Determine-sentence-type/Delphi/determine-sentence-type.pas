@@ -32,3 +32,4 @@ procedure TestSentenceTypes(Memo: TMemo);
 begin
 AnalyzeSentenceType(Memo, TestStrings);
 end;
+

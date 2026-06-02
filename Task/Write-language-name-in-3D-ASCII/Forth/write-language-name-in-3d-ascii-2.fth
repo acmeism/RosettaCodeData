@@ -99,3 +99,4 @@ variable bannerstr  5 allot                      \ memory for the character stri
         2DROP ;                                  \ drop str & len
 
 \ test the solution in the Forth console
+

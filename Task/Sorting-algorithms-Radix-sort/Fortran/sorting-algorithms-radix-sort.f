@@ -1,25 +1,25 @@
       SUBROUTINE VARRADIX(A , Siz)
 
 !
-!	No Copyright is exerted due to considerable prior art in the Public Domain.
+!  No Copyright is exerted due to considerable prior art in the Public Domain.
 !       This Fortran version by Peter Kelly ~ peter.kelly@acm.org
 !
-!	Permission is hereby granted, free of charge, to any person obtaining
-!	a copy of this software and associated documentation files (the
-!	"Software"), to deal in the Software without restriction, including
-!	without limitation the rights to use, copy, modify, merge, publish,
-!	distribute, sublicense, and/or sell copies of the Software, and to
-!	permit persons to whom the Software is furnished to do so, subject to
-!	the following conditions:
-!	The above copyright notice and this permission notice shall be
-!	included in all copies or substantial portions of the Software.
-!	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-!	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-!	MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-!	IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-!	CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-!	TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-!	SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+!  Permission is hereby granted, free of charge, to any person obtaining
+!  a copy of this software and associated documentation files (the
+!  "Software"), to deal in the Software without restriction, including
+!  without limitation the rights to use, copy, modify, merge, publish,
+!  distribute, sublicense, and/or sell copies of the Software, and to
+!  permit persons to whom the Software is furnished to do so, subject to
+!  the following conditions:
+!  The above copyright notice and this permission notice shall be
+!  included in all copies or substantial portions of the Software.
+!  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+!  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+!  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+!  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+!  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+!  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+!  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 !
 !
 !     LSD sort with a configurable RADIX, Using a RADIX of 256 performs well, hence I have defaulted it in. It is snarly fast.
@@ -108,25 +108,25 @@
       MODULE LEASTSIG
       IMPLICIT NONE
 !
-!	No Copyright is exerted due to considerable prior art in the Public Domain.
+!  No Copyright is exerted due to considerable prior art in the Public Domain.
 !       This Fortran version by Peter Kelly ~ peter.kelly@acm.org
 !
-!	Permission is hereby granted, free of charge, to any person obtaining
-!	a copy of this software and associated documentation files (the
-!	"Software"), to deal in the Software without restriction, including
-!	without limitation the rights to use, copy, modify, merge, publish,
-!	distribute, sublicense, and/or sell copies of the Software, and to
-!	permit persons to whom the Software is furnished to do so, subject to
-!	the following conditions:
-!	The above copyright notice and this permission notice shall be
-!	included in all copies or substantial portions of the Software.
-!	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-!	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-!	MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-!	IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-!	CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-!	TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-!	SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+!  Permission is hereby granted, free of charge, to any person obtaining
+!  a copy of this software and associated documentation files (the
+!  "Software"), to deal in the Software without restriction, including
+!  without limitation the rights to use, copy, modify, merge, publish,
+!  distribute, sublicense, and/or sell copies of the Software, and to
+!  permit persons to whom the Software is furnished to do so, subject to
+!  the following conditions:
+!  The above copyright notice and this permission notice shall be
+!  included in all copies or substantial portions of the Software.
+!  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+!  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+!  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+!  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+!  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+!  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+!  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 !
 !     Implementation of a classic Radix Sort LSD style :)
 !     Works well, Integers only but it goes faster than a comparison sort
@@ -193,25 +193,25 @@
 !
       SUBROUTINE FASTLSDRAD(Dataset , Scratch , Dsize)
 !
-!	No Copyright is exerted due to considerable prior art in the Public Domain.
+!  No Copyright is exerted due to considerable prior art in the Public Domain.
 !       This Fortran version by Peter Kelly ~ peter.kelly@acm.org
 !
-!	Permission is hereby granted, free of charge, to any person obtaining
-!	a copy of this software and associated documentation files (the
-!	"Software"), to deal in the Software without restriction, including
-!	without limitation the rights to use, copy, modify, merge, publish,
-!	distribute, sublicense, and/or sell copies of the Software, and to
-!	permit persons to whom the Software is furnished to do so, subject to
-!	the following conditions:
-!	The above copyright notice and this permission notice shall be
-!	included in all copies or substantial portions of the Software.
-!	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-!	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-!	MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-!	IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-!	CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-!	TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-!	SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+!  Permission is hereby granted, free of charge, to any person obtaining
+!  a copy of this software and associated documentation files (the
+!  "Software"), to deal in the Software without restriction, including
+!  without limitation the rights to use, copy, modify, merge, publish,
+!  distribute, sublicense, and/or sell copies of the Software, and to
+!  permit persons to whom the Software is furnished to do so, subject to
+!  the following conditions:
+!  The above copyright notice and this permission notice shall be
+!  included in all copies or substantial portions of the Software.
+!  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+!  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+!  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+!  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+!  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+!  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+!  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 !
 !     This LSD sort is optimized to a base 16,Radix 256 sort which is about as fast as LSD gets. As well as a fast
 !     algorithm, it has great cache coherency so performs exceptionally on large data sets,

@@ -136,3 +136,4 @@ fn main() -> io::Result<()> {
     save_pgm(&accum, "hough.pgm");
     Ok(())
 }
+

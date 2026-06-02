@@ -35,3 +35,4 @@ test_cases | tests([0,1,2]),
 
 # A - B
 "|A - B| = \(A(10) | minus( B(10) ) | RealSetLength)"
+

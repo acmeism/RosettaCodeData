@@ -5,9 +5,9 @@
 list( To_be_sorted ) -> sort( To_be_sorted, [], true ).
 
 task() ->
-	List = "asdqwe123",
-	Sorted = list( List ),
-	io:fwrite( "List ~p is sorted ~p~n", [List, Sorted] ).
+   List = "asdqwe123",
+   Sorted = list( List ),
+   io:fwrite( "List ~p is sorted ~p~n", [List, Sorted] ).
 
 
 sort( [], Acc, true ) -> lists:reverse( Acc );

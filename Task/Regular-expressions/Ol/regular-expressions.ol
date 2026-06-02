@@ -7,3 +7,4 @@
 (print (s/aa(bb|cc)dd/HAHAHA/ "aabbddx")) ; => HAHAHAx
 (print (s/aa(bb|cc)dd/HAHAHA/ "aaccddx")) ; => HAHAHAx
 (print (s/aa(bb|cc)dd/HAHAHA/ "aabcddx")) ; => false
+

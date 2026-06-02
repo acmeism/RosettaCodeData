@@ -48,3 +48,4 @@ class LevenshteinAlignment {
 const result = LevenshteinAlignment.alignment("rosettacode", "raisethysword");
 console.log(result[0]);
 console.log(result[1]);
+

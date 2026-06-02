@@ -44,3 +44,4 @@ fn main() {
         fix_tags(&LANGUAGES.split_whitespace().collect::<Vec<_>>(), &buf)
     );
 }
+

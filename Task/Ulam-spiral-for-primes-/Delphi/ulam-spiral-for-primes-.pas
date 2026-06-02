@@ -154,3 +154,6 @@ begin
 MakeSqrSpiralMatrix(Mat,9);
 DrawMatrixPrimes(Image,Mat);
 end;
+
+
+

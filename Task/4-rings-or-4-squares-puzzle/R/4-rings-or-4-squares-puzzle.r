@@ -57,3 +57,4 @@ registerS3method("print_perms", "data.frame", print_perms)
 print_perms(7, 7, repeats.allowed = FALSE, table.out = TRUE)
 print_perms(7, 7, v = 3:9, repeats.allowed = FALSE, table.out = TRUE)
 print_perms(10, 7, v = 0:9, repeats.allowed = TRUE, table.out = FALSE)
+

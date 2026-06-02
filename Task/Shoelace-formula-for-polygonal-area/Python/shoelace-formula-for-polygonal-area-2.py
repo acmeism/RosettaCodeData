@@ -19,3 +19,4 @@ Area=np.abs(np.sum(x[i-1]*y[i]-x[i]*y[i-1])*0.5) # one line of code for the shoe
 # or
 # x=x-x[0];y=y-y[0]
 # before applying the Shoelace formula.
+

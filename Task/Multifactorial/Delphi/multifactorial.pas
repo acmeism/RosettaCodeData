@@ -28,3 +28,4 @@ for Deg:=1 to 5 do
 	end;
 Memo.Lines.Add(S);
 end;
+

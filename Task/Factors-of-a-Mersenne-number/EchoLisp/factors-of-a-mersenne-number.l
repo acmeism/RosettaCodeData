@@ -20,3 +20,4 @@
 (lib 'bigint)
 (prime? (1- (expt 2 4423))) ;; 2^4423 -1 is a Mersenne prime
     → #t
+

@@ -105,3 +105,5 @@ Cnt:=GetEstheticRange(Memo,100000000,130000000,0,High(Integer),10);
 Memo.Lines.Add('Count: '+IntToStr(Cnt));
 Memo.Lines.Add('');
 end;
+
+

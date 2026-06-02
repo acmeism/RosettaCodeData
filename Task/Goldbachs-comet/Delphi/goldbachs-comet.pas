@@ -29,3 +29,6 @@ while true do
 	end;
 Memo.Lines.Add(S);
 end;
+
+
+

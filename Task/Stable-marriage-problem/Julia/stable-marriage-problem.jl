@@ -123,3 +123,4 @@ answer[2][fia1] = "bob"
 answer[2][fia2] = "abe"
 stabl = isstable(answer[1], answer[2], malepreferences, femalepreferences)
 tableprint("Original Data With Bob and Abe Switched", answer[1], stabl)
+

@@ -66,3 +66,4 @@ plug.setPin(2, Status.ON);
 console.log(plug.getPinByName('receivedData'));
 plug.setPinByName('signalGround', Status.ON);
 plug.displayPinStatus();
+

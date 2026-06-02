@@ -98,3 +98,6 @@ for I:=0 to High(DigCnt) do
 	Memo.Lines.Add(Format('%d digits: %d',[I,DigCnt[I]]));
 	end
 end;
+
+
+

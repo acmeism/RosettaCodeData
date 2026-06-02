@@ -42,3 +42,4 @@ pub unsafe extern "C" fn Query(data: *mut c_char, length: *mut size_t) -> c_int 
         1
     }
 }
+

@@ -17,3 +17,4 @@ drawTree(D, X1, Y1, Angle, Depth) :-
 	De is Depth - 1,
         drawTree(D, X2, Y2, A1, De),
         drawTree(D, X2, Y2, A2, De).
+

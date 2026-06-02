@@ -183,3 +183,4 @@ end subroutine resize
   end function GroupedDigits
 
  end program  FuscNumbers
+

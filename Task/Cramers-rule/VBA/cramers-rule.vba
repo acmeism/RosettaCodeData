@@ -16,3 +16,4 @@ Sub CramersRule()
         Debug.Print i & ": " & DetChangeM / DetOrigM
     Next i
 End Sub
+

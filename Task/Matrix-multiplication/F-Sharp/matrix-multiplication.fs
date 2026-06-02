@@ -9,3 +9,4 @@ let MatrixMultiply (matrix1 : _[,] , matrix2 : _[,]) =
                 acc <- acc + matrix1.[x,z] * matrix2.[z,y]
             ret.[x,y] <- acc
     ret
+

@@ -9,7 +9,7 @@ int main () {
 
   auto almost_fib = [] (auto f) { return
                        [=] (auto n) { return
-                         n < 2? 1: f (n - 1) + f (n - 2) ;};};
+                         n <= 2? 1: f (n - 1) + f (n - 2) ;};};
   auto almost_fac = [] (auto f) { return
                        [=] (auto n) { return
                          n <= 1? n: n * f (n - 1); };};

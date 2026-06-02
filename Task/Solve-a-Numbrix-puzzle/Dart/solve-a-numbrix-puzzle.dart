@@ -90,3 +90,4 @@ main() {
     if (solve(startRow, startCol, 1, 0)) printResult(each.index + 1);
   }
 }
+

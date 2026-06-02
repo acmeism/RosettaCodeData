@@ -21,3 +21,4 @@ say "Accumulator value is now" x    -- displays current value
 ::method string
   expose sum
   return sum
+

@@ -16,3 +16,4 @@ for (let index = 2; index <= limit / 2; index++) {
         divisorCount[number]++;
     }
 }
+

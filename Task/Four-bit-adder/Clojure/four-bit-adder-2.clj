@@ -49,3 +49,4 @@ is a bit vector having one more bit (carry) than args."
 (four-bit-adder false true true false  true false true true)
 ;; [true false false false true]
 )
+

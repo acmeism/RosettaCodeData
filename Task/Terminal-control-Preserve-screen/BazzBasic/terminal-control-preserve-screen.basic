@@ -1,0 +1,90 @@
+' ============================================
+' https://rosettacode.org/wiki/Terminal_control/Preserve_screen
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+' BazzBasic has no built-in screen save/restore command, but it can be
+' done manually: GETCONSOLE(row, col, type) reads any cell's character
+' (ASCII), foreground colour, and background colour. We ask PowerShell
+' for the exact console dimensions via [Console]::WindowHeight/Width,
+' save the entire grid into three arrays, show a temporary screen,
+' then redraw every cell to restore the original.
+
+' ---- INIT ----
+
+[inits]
+    DIM screen_chars$   ' saved character at each cell
+    DIM screen_fg$      ' saved foreground colour at each cell
+    DIM screen_bg$      ' saved background colour at each cell
+    LET rows$, cols$
+    LET r$, c$, idx$
+    LET ascii$
+    LET wkv$            ' WAITKEY return value
+
+' ---- MAIN ----
+
+[main]
+    ' [Console]::WindowHeight/Width are direct .NET Console API properties.
+    ' They always reflect the actual BazzBasic terminal window, unlike
+    ' "mode con" whose output format is locale-dependent and can contain
+    ' control sequences that confuse text parsing.
+    rows$ = INT(TRIM(SHELL("powershell -NoProfile -Command \"[Console]::WindowHeight\"")))
+    cols$ = INT(TRIM(SHELL("powershell -NoProfile -Command \"[Console]::WindowWidth\"")))
+    IF rows$ < 5  THEN rows$ = 25
+    IF cols$ < 20 THEN cols$ = 80
+
+    ' ── Step 1: save the current screen ──────────────────────────────────
+    GOSUB [sub:save_screen]
+
+    ' ── Step 2: show temporary content ───────────────────────────────────
+    CLS
+    COLOR 14, 1
+    LOCATE 4, 5
+    PRINT "BazzBasic  -  Terminal control / Preserve screen"
+    LOCATE 6, 5
+    COLOR 11, 1
+    PRINT "Terminal size: " + rows$ + " rows x " + cols$ + " columns."
+    LOCATE 8, 5
+    COLOR 10, 0
+    PRINT "Every cell (char + fg + bg) was saved with GETCONSOLE()."
+    LOCATE 10, 5
+    COLOR 15, 0
+    PRINT "Press any key to restore the original screen..."
+    LET wkv$ = WAITKEY()
+
+    ' ── Step 3: restore the original screen ──────────────────────────────
+    GOSUB [sub:restore_screen]
+    LET wkv$ = WAITKEY()
+END
+
+' ---- SUBROUTINES ----
+
+[sub:save_screen]
+    ' Read every cell of the visible terminal into three arrays.
+    ' idx$ = r$ * 1000 + c$ is a unique numeric key for each cell
+    ' (safe as long as columns < 1000, which is always the case).
+    ' ASCII codes below 32 are stored as space to avoid control characters.
+    FOR r$ = 1 TO rows$
+        FOR c$ = 1 TO cols$
+            idx$   = r$ * 1000 + c$
+            ascii$ = GETCONSOLE(r$, c$, 0)
+            IF ascii$ < 32 THEN ascii$ = 32
+            screen_chars$(idx$) = CHR(ascii$)
+            screen_fg$(idx$)    = GETCONSOLE(r$, c$, 1)
+            screen_bg$(idx$)    = GETCONSOLE(r$, c$, 2)
+        NEXT
+    NEXT
+RETURN
+
+[sub:restore_screen]
+    ' Redraw every cell with its saved character and colours.
+    FOR r$ = 1 TO rows$
+        FOR c$ = 1 TO cols$
+            idx$ = r$ * 1000 + c$
+            LOCATE r$, c$
+            COLOR screen_fg$(idx$), screen_bg$(idx$)
+            PRINT screen_chars$(idx$);
+        NEXT
+    NEXT
+    COLOR 7, 0
+RETURN
+

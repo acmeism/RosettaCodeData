@@ -44,3 +44,4 @@ let convexHull (poly : Point list) =
     outHull.[0 .. k - 2]
 
 affiche (convexHull (List.sortBy (fun (x : Point) -> x.X, x.Y) poly))
+

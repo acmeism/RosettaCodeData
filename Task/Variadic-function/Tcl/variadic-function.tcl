@@ -13,3 +13,4 @@ Rosetta    Code    Is    Awesome!
 
 print_all "Rosetta Code Is Awesome!" OK
 Rosetta Code Is Awesome!    OK
+

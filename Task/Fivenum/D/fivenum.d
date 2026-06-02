@@ -5,7 +5,7 @@ import std.stdio;
 
 double median(double[] x) {
     enforce(x.length >= 0, "Array slice cannot be empty");
-    int m = x.length / 2;
+    int m = cast(int) x.length / 2;
     if (x.length % 2 == 1) {
         return x[m];
     }
@@ -25,7 +25,7 @@ double[] fivenum(double[] x) {
     result[2] = median(x);
     result[4] = x[$-1];
 
-    int m = x.length / 2;
+    int m = cast(int) x.length / 2;
     int lower = (x.length % 2 == 1) ? m : m - 1;
     result[1] = median(x[0..lower+1]);
     result[3] = median(x[lower+1..$]);

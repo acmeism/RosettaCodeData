@@ -1,20 +1,20 @@
-import std.stdio, std.algorithm, std.range, std.array, std.functional;
+import std.stdio, std.algorithm, std.range;
 
-alias repeat0 = curry!(repeat, 0);
-
-// Currenty std.range.transposed doesn't work.
-auto columns(R)(R m) pure /*nothrow*/ @safe /*@nogc*/ {
-    return m
-           .map!walkLength
-           .reduce!max
-           .iota
-           .map!(i => m.filter!(s => s.length > i).walkLength.repeat0);
-}
-
-auto beadSort(in uint[] data) pure /*nothrow @nogc*/ {
-    return data.map!repeat0.columns.columns.map!walkLength;
+auto beadSort(int[] l) pure /*nothrow @nogc*/ {
+   auto columns(R)(R m) pure /*nothrow*/ @safe /*@nogc*/ {
+       int[][] r;
+       foreach (i; 0 .. reduce!max(map!walkLength(m))) {
+           r.length += 1;
+           foreach (sub; m)
+               if (sub.length > i)
+                   r[$-1] ~= 0;
+       }
+       return r;
+   }
+   auto m = map!"new int[a]"(l);
+   return map!walkLength(columns(columns(m)));
 }
 
 void main() {
-    [5, 3, 1, 7, 4, 1, 1].beadSort.writeln;
+   writeln(beadSort([5, 3, 1, 7, 4, 1, 1]));
 }

@@ -25,3 +25,6 @@ if IsGiugaNumber(I) then
 	if Cnt>=4 then break;
 	end;
 end;
+
+
+

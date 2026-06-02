@@ -7,3 +7,4 @@ def tokenize(string, sep, esc)
 end
 
 p tokenize('one^|uno||three^^^^|four^^^|^cuatro|', '|', '^')
+

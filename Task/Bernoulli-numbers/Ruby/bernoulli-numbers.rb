@@ -10,3 +10,4 @@ end
 b_nums = bernoulli.take(61)
 width  = b_nums.map{|b| b.numerator.to_s.size}.max
 b_nums.each_with_index {|b,i| puts "B(%2i) = %*i/%i" % [i, width, b.numerator, b.denominator] unless b.zero? }
+

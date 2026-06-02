@@ -52,3 +52,4 @@
        #:continue (= (t-get i restant) (t-get (1- i) restant))
       (set! restant (- restant (poids i)))
       (name i))))
+

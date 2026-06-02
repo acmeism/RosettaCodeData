@@ -5,3 +5,4 @@ def s2: "shorter😀";
 | sort_by(length)
 | reverse[]
 | "\"\(.)\" has length (codepoints) \(length) and utf8 byte length \(utf8bytelength)."
+

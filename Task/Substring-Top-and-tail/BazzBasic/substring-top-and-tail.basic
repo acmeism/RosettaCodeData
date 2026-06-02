@@ -1,0 +1,19 @@
+' ============================================
+' https://rosettacode.org/wiki/Substring/Top_and_tail
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+[inits]
+    LET s$ = "BazzBasic"
+
+[main]
+    PRINT "Original:                 "; s$
+    PRINT "First character removed:  "; RIGHT(s$, LEN(s$) - 1)
+    PRINT "Last character removed:   "; LEFT(s$, LEN(s$) - 1)
+    PRINT "First and last removed:   "; MID(s$, 2, LEN(s$) - 2)
+END
+
+' Output:
+' Original:                 BazzBasic
+' First character removed:  azzBasic
+' Last character removed:   BazzBasi
+' First and last removed:   azzBasi

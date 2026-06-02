@@ -65,3 +65,4 @@ listAsString myList =
     List.map String.fromInt myList
         |> List.map (\el -> " " ++ el)
         |> List.foldl (++) " "
+

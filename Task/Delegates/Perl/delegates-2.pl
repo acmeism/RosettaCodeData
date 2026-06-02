@@ -52,3 +52,4 @@ $delegator->operation eq 'default implementation' or die;
 # With delegate that implements "thing"
 $delegator->delegate(  Delegate->new );
 $delegator->operation eq 'delegate implementation' or die;
+

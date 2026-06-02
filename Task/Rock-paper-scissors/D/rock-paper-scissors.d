@@ -44,8 +44,8 @@ void main() /*@safe*/ {
         immutable c = genMove(r, p, s);
         writeln("Player: ", h.get, " Computer: ", c);
 
-             if (beats(h, c)) writeln("Player wins\n");
-        else if (beats(c, h)) writeln("Player loses\n");
+             if (beats(h.get, c)) writeln("Player wins\n");
+        else if (beats(c, h.get)) writeln("Player loses\n");
         else                  writeln("Draw\n");
 
         final switch (h.get) {

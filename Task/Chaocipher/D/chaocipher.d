@@ -20,10 +20,10 @@ string exec(string text, Mode mode, bool showSteps = false) {
         if (showSteps) writeln(left, ' ', right);
         int index;
         if (mode == Mode.ENCRYPT) {
-            index = right.indexOf(text[i]);
+            index = cast(int) right.indexOf(text[i]);
             eText[i] = left[index];
         } else {
-            index = left.indexOf(text[i]);
+            index = cast(int) left.indexOf(text[i]);
             eText[i] = right[index];
         }
         if (i == text.length - 1) break;

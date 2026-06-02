@@ -28,3 +28,4 @@ def primes:
      | ($previous|next_prime) as $next
      | $next, (($previous + [$next]) | next) ;
   2, 3, ([2,3] | next);
+

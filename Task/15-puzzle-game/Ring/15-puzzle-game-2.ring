@@ -450,3 +450,4 @@ class GraphicsAppBase
 
 	func CloseEvent
 		exit 			# Exit from the Events Loop
+

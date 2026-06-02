@@ -28,3 +28,5 @@
 	 (init-streams sentence)
 	 (while (and (write-char (flip)) (write-char (flop))))
 	 output-stream )
+
+

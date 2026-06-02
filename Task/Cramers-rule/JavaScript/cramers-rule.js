@@ -88,3 +88,4 @@ function detr(m) {
 function clone(m) {
 	return m.map(function(a){return a.slice();});
 }
+

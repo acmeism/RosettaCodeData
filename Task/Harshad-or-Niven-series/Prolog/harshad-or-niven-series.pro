@@ -39,3 +39,4 @@ sum_of_digit(N, S) :-
 	number_chars(N, LC),
 	maplist(\X^Y^number_chars(Y, [X]), LC, LN),
 	sum_list(LN, S).
+

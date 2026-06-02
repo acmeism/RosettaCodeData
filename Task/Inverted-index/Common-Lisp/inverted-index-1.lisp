@@ -32,3 +32,4 @@
   (remove-duplicates (loop for token in (tokenize query)
                            append (gethash token index))
                      :test #'equal))
+

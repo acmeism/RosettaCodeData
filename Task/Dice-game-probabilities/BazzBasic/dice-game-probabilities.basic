@@ -1,0 +1,133 @@
+' ============================================
+' Rosetta Code: https://rosettacode.org/wiki/Dice_game_probabilities
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+' Player 1: 9 dice, 4 faces (each die rolls 1-4)
+' Player 2: 6 dice, 6 faces (each die rolls 1-6)
+'
+' Finds the exact probability that each player rolls the higher total.
+' Method: build a sum-frequency table for each player by convolving
+' one die at a time, then compare all (sum1, sum2) pairs.
+
+LET P1_DICE#  = 9
+LET P1_FACES# = 4
+LET P2_DICE#  = 6
+LET P2_FACES# = 6
+
+[inits]
+    DIM p1$     ' sum-to-ways table for Player 1
+    DIM p2$     ' sum-to-ways table for Player 2
+    DIM newp$   ' scratch table for each convolution step
+    DIM empty$  ' always-empty array; used as no-op source in JOIN
+
+    LET die$     = 0
+    LET face$    = 0
+    LET s$       = 0
+    LET s1$      = 0
+    LET s2$      = 0
+    LET p1total$ = 0
+    LET p2total$ = 0
+    LET total$   = 0
+    LET p1wins$  = 0
+    LET p2wins$  = 0
+    LET ties$    = 0
+
+' --- Build sum-frequency table for Player 1 (9 dice, 4 faces) ---
+' Base case: one way to reach sum 0 (no dice rolled yet).
+' Each pass adds one die by spreading existing sums across face values 1-4.
+[build:p1]
+    p1$(0) = 1
+    FOR die$ = 1 TO P1_DICE#
+        DELARRAY newp$
+        DIM newp$
+        FOR s$ = die$ TO die$ * P1_FACES#           ' pre-init reachable range to 0
+            newp$(s$) = 0
+        NEXT
+        FOR s$ = 0 TO (die$ - 1) * P1_FACES#
+            IF HASKEY(p1$(s$)) THEN
+                FOR face$ = 1 TO P1_FACES#
+                    newp$(s$ + face$) = newp$(s$ + face$) + p1$(s$)
+                NEXT
+            END IF
+        NEXT
+        DELARRAY p1$
+        DIM p1$
+        JOIN p1$, empty$, newp$                      ' p1$ = copy of newp$
+    NEXT
+
+' --- Build sum-frequency table for Player 2 (6 dice, 6 faces) ---
+[build:p2]
+    p2$(0) = 1
+    FOR die$ = 1 TO P2_DICE#
+        DELARRAY newp$
+        DIM newp$
+        FOR s$ = die$ TO die$ * P2_FACES#
+            newp$(s$) = 0
+        NEXT
+        FOR s$ = 0 TO (die$ - 1) * P2_FACES#
+            IF HASKEY(p2$(s$)) THEN
+                FOR face$ = 1 TO P2_FACES#
+                    newp$(s$ + face$) = newp$(s$ + face$) + p2$(s$)
+                NEXT
+            END IF
+        NEXT
+        DELARRAY p2$
+        DIM p2$
+        JOIN p2$, empty$, newp$
+    NEXT
+
+' --- Total outcomes = each player's outcome count multiplied together ---
+[count]
+    FOR s$ = P1_DICE# TO P1_DICE# * P1_FACES#
+        IF HASKEY(p1$(s$)) THEN
+            p1total$ = p1total$ + p1$(s$)
+        END IF
+    NEXT
+    FOR s$ = P2_DICE# TO P2_DICE# * P2_FACES#
+        IF HASKEY(p2$(s$)) THEN
+            p2total$ = p2total$ + p2$(s$)
+        END IF
+    NEXT
+    total$ = p1total$ * p2total$                     ' 4^9 * 6^6 = 12,230,590,464
+
+' --- Compare every (sum1, sum2) pair; accumulate weighted win/tie counts ---
+[compare]
+    FOR s1$ = P1_DICE# TO P1_DICE# * P1_FACES#
+        IF HASKEY(p1$(s1$)) THEN
+            FOR s2$ = P2_DICE# TO P2_DICE# * P2_FACES#
+                IF HASKEY(p2$(s2$)) THEN
+                    IF s1$ > s2$ THEN
+                        p1wins$ = p1wins$ + p1$(s1$) * p2$(s2$)
+                    END IF
+                    IF s1$ < s2$ THEN
+                        p2wins$ = p2wins$ + p1$(s1$) * p2$(s2$)
+                    END IF
+                    IF s1$ = s2$ THEN
+                        ties$ = ties$ + p1$(s1$) * p2$(s2$)
+                    END IF
+                END IF
+            NEXT
+        END IF
+    NEXT
+
+' --- Results ---
+[output]
+    PRINT "Dice game probabilities"
+    PRINT "Player 1: "; P1_DICE#; " dice, "; P1_FACES#; " faces  (sums "; P1_DICE#; " to "; P1_DICE# * P1_FACES#; ")"
+    PRINT "Player 2: "; P2_DICE#; " dice, "; P2_FACES#; " faces  (sums "; P2_DICE#; " to "; P2_DICE# * P2_FACES#; ")"
+    PRINT ""
+    PRINT "P1 wins: "; p1wins$ / total$
+    PRINT "P2 wins: "; p2wins$ / total$
+    PRINT "Tie:     "; ties$   / total$
+
+END
+
+' Expected output:
+' Dice game probabilities
+' Player 1: 9 dice, 4 faces  (sums 9 to 36)
+' Player 2: 6 dice, 6 faces  (sums 6 to 36)
+'
+' P1 wins: 0.5737865...
+' P2 wins: 0.3939530...
+' Ttie:     0.0322604...
+

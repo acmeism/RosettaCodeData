@@ -1,0 +1,48 @@
+' =============================================
+' https://rosettacode.org/wiki/Draw_a_rotating_cube
+' https://ekbass.github.io/BazzBasic/
+' =============================================
+
+' Ported from GWBasic version
+
+[inits]
+	LET x$, y$, r$, t$ = 0
+	LET SCREEN_W# = 640
+	LET SCREEN_H# = 480
+
+	LET CX#     = SCREEN_W# / 2
+	LET CY_TOP# = 270
+	LET CY_BOT# = 210
+
+	SCREEN 0, SCREEN_W#, SCREEN_H#, "Rotating cube"
+
+[main]
+	WHILE INKEY <> KEY_ESC#
+
+		x$ = COS(t$)*60
+		y$ = SIN(t$)*54
+		r$ = SIN(t$+t$)*3
+		t$ = t$ + 0.05
+
+		SCREENLOCK ON
+			' clear screen
+			LINE (0, 0)-(SCREEN_W#, SCREEN_H#), 0, BF
+			' top face
+			LINE (( x$+CX#),( y$+CY_TOP#-r$))-((-y$+CX#),( x$+CY_TOP#-r$)), 11
+			LINE ((-y$+CX#),( x$+CY_TOP#-r$))-((-x$+CX#),(-y$+CY_TOP#-r$)), 11
+			LINE ((-x$+CX#),(-y$+CY_TOP#-r$))-(( y$+CX#),(-x$+CY_TOP#-r$)), 11
+			LINE (( y$+CX#),(-x$+CY_TOP#-r$))-(( x$+CX#),( y$+CY_TOP#-r$)), 11
+			' bottom face
+			LINE (( x$+CX#),( y$+CY_BOT#+r$))-((-y$+CX#),( x$+CY_BOT#+r$)), 11
+			LINE ((-y$+CX#),( x$+CY_BOT#+r$))-((-x$+CX#),(-y$+CY_BOT#+r$)), 11
+			LINE ((-x$+CX#),(-y$+CY_BOT#+r$))-(( y$+CX#),(-x$+CY_BOT#+r$)), 11
+			LINE (( y$+CX#),(-x$+CY_BOT#+r$))-(( x$+CX#),( y$+CY_BOT#+r$)), 11
+			' vertical edges
+			LINE (( x$+CX#),( y$+CY_TOP#-r$))-(( x$+CX#),( y$+CY_BOT#+r$)), 11
+			LINE ((-y$+CX#),( x$+CY_TOP#-r$))-((-y$+CX#),( x$+CY_BOT#+r$)), 11
+			LINE ((-x$+CX#),(-y$+CY_TOP#-r$))-((-x$+CX#),(-y$+CY_BOT#+r$)), 11
+			LINE (( y$+CX#),(-x$+CY_TOP#-r$))-(( y$+CX#),(-x$+CY_BOT#+r$)), 11
+		SCREENLOCK OFF
+		SLEEP 25 '  40fps
+	WEND
+END

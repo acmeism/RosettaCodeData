@@ -24,3 +24,4 @@ let a = (0, 1, 1, 0)
 let b = (0, 1, 1, 0)
 
 print("\(a) + \(b) = \(fourBitAdder(a, b))")
+

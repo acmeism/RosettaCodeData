@@ -67,3 +67,4 @@ union all
 select greatest_subsequential_sum('0,0,0', ',') from dual
 union all
 select greatest_subsequential_sum('1,-1,+1', ',') from dual;
+

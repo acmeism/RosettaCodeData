@@ -59,3 +59,4 @@ foreach ([triTrue,triMaybe,triFalse] as $a) {
                triString($a), triString($b), triString(triEquiv($a, $b)));
     }
 }
+

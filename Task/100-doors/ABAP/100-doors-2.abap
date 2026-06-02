@@ -7,3 +7,4 @@ cl_demo_output=>display( REDUCE stringtab( INIT list TYPE stringtab
                                               list  = COND #( WHEN pass = 100
                                                                 THEN COND #( WHEN aux MOD 2 <> 0 THEN VALUE #( BASE list ( CONV #( door ) ) )
                                                                               ELSE list ) ELSE list ) ) ).
+

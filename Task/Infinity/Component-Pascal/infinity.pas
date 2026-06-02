@@ -8,3 +8,4 @@ BEGIN
 	x := 1 / 0;
 	StdLog.String("x:> ");StdLog.Real(x);StdLog.Ln
 END Do;
+

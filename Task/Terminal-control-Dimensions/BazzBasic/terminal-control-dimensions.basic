@@ -1,0 +1,19 @@
+' ============================================
+' https://rosettacode.org/wiki/Terminal_control/Dimensions
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+' Terminal dimensions are read once at startup via the .NET Console API.
+' Resize the window after launch and the variables will not update.
+
+[inits]
+    LET rows$ = INT(TRIM(SHELL("powershell -NoProfile -Command \"[Console]::WindowHeight\"")))
+    LET cols$ = INT(TRIM(SHELL("powershell -NoProfile -Command \"[Console]::WindowWidth\"")))
+
+[main]
+    PRINT "Rows: "; rows$
+    PRINT "Cols: "; cols$
+END
+
+' Output:
+' Rows: 30
+' Cols: 120

@@ -1,5 +1,3 @@
-#![feature(iterator_step_by)]
-
 extern crate primal;
 
 fn is_prime(n: u64) -> bool {

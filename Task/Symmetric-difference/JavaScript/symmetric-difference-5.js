@@ -10,3 +10,4 @@ const symmetricDifference = (...args) => {
  // TEST -------------------------------------------------------------------
 console.log(symmetricDifference(["Jim", "Mary", "John", "Jim", "Bob"],["John", "Serena", "Bob", "Mary", "Serena"]));
 console.log(symmetricDifference([1, 2, 5], [2, 3, 5], [3, 4, 5]));
+

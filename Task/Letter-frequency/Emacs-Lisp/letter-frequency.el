@@ -13,3 +13,4 @@
     (insert (format "\n%s%s - %7d" current-letter (upcase current-letter) count))  ; write how many times that letter appears
     (setq alphabet (substring alphabet 1 nil)))    ; remove first letter from alphabet
 (insert "\n")))
+

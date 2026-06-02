@@ -12,10 +12,13 @@ while (true) {
 }
 
 System.print("All guesses should have exactly 4 distinct digits excluding zero.")
-System.print("Keep guessing until you guess the chosen number (maximum %(MAX_GUESSES) valid guesses).\n")
+System.print("Keep guessing until you guess the chosen number (maximum %(MAX_GUESSES) valid guesses).")
+System.print("Enter 'q' to quit at any time.\n")
 var guesses = 0
+Input.quit = "q"
 while (true) {
     var guess = Input.text("Enter your guess : ")
+    if (guess == Input.quit) return
     if (guess == num) {
         System.print("You've won with %(guesses+1) valid guesses!")
         return

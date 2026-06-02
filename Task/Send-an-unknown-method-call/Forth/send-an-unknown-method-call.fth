@@ -8,3 +8,4 @@ var x  \ instantiate a class var object named x
 42 x  s" !:"  evaluate
 
 x p: 42     \ send the print message ( p: ) to x to verify the contents
+

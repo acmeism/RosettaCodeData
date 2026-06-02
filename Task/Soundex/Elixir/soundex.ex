@@ -1,7 +1,7 @@
 defmodule Soundex do
   def soundex([]), do: []
   def soundex(str) do
-    [head|tail] = String.upcase(str) |> to_char_list
+    [head|tail] = String.upcase(str) |> to_charlist
     [head | isoundex(tail, [], todigit(head))]
   end
 
@@ -26,7 +26,7 @@ defmodule Soundex do
     end
   end
 
-  @digits  '01230120022455012623010202'
+  @digits  to_charlist("01230120022455012623010202")
   defp todigit(chr) do
     if chr in ?A..?Z, do: Enum.at(@digits, chr - ?A),
                     else: ?0            # Treat non alpha characters as a vowel

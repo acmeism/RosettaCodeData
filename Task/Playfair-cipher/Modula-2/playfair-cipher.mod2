@@ -1,0 +1,239 @@
+MODULE Playfair;
+(* Playfair cipher *)
+
+FROM Strings IMPORT
+  Concat, Length;
+FROM STextIO IMPORT
+  WriteString, WriteLn;
+
+CONST
+  MaxLength = 256;
+  MaxResultLength = 3 * MaxLength;
+  (* including chars separating duplicate letters and spaces separating digrams *)
+
+TYPE
+  TPlayfairOption = (NoQ, IEqualsJ);
+
+  TPlayfair = RECORD
+    PfO: TPlayfairOption; (* Set this before calling FillTable *)
+    Table: ARRAY [0 .. 4], [0 .. 4] OF CHAR;
+  END;
+
+  TPosition = RECORD
+    Row, Col: CARDINAL;
+  END;
+
+PROCEDURE FillTable(Keyword: ARRAY OF CHAR; VAR OUT Pl: TPlayfair);
+VAR
+  Used: ARRAY ['A' .. 'Z'] OF BOOLEAN;
+  I, J, K: CARDINAL;
+  Alphabet: ARRAY [0 .. 53] OF CHAR; (* Assume that Keyword has at most 26 chars. *)
+  C: CHAR;
+BEGIN
+  FOR C := 'A' TO 'Z' DO
+    Used[C] := FALSE
+  END;
+  IF Pl.PfO = NoQ THEN
+    Used['Q'] := TRUE
+  ELSE
+    Used['J'] := TRUE
+  END;
+  Concat(Keyword, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", Alphabet);
+  I := 0;
+  J := 0;
+  K := 0;
+  C := CAP(Alphabet[K]);
+  WHILE C <> CHR(0) DO
+    IF (C >= 'A') AND (C <= 'Z') THEN
+      IF NOT(Used[C]) THEN
+        Pl.Table[I, J] := C;
+        Used[C] := TRUE;
+        J := J + 1;
+        IF J = 5 THEN
+          I := I + 1;
+          IF I = 5 THEN
+            RETURN; (* Filled *)
+          END;
+          J := 0;
+        END;
+      END;
+    END;
+    K := K + 1;
+    C := CAP(Alphabet[K]);
+  END;
+END FillTable;
+
+PROCEDURE GetCleanText(PlainText: ARRAY OF CHAR; Opt: TPlayfairOption; VAR OUT Result: ARRAY OF CHAR);
+VAR
+  I, J: CARDINAL;
+  PrevChar, NextChar: CHAR;
+BEGIN
+  PrevChar := CHR(0);
+  I := 0;
+  J := 0; (* Number of chars in Result *)
+  WHILE PlainText[I] <> CHR(0) DO
+    NextChar := CAP(PlainText[I]);
+    IF (NextChar >= 'A') AND (NextChar <= 'Z') AND
+        ((NextChar <> 'Q') OR (Opt <> NoQ)) THEN
+      IF (NextChar = 'J') AND (Opt = IEqualsJ) THEN
+        NextChar := 'I'
+      END;
+      (* Insert X between duplicate letters
+         Assume that X is not duplicated. *)
+      IF NextChar = PrevChar THEN
+        Result[J] := 'X';
+        J := J + 1;
+      END;
+      Result[J] := NextChar;
+      J := J + 1;
+      PrevChar := NextChar;
+    END;
+    I := I + 1;
+  END;
+  (* If necessary, add another letter to complete digram *)
+  IF J MOD 2 = 1 THEN
+    IF Result[J - 1] <> 'X' THEN
+      Result[J] := 'X'
+    ELSE
+      Result[J] := 'Z'
+    END;
+    J := J + 1;
+  END;
+  Result[J] := CHR(0);
+END GetCleanText;
+
+PROCEDURE FindChar(Pl: TPlayfair; C: CHAR): TPosition;
+VAR
+  Pos: TPosition;
+  I, J: CARDINAL;
+BEGIN
+  FOR I := 0 TO 4 DO
+    FOR J := 0 TO 4 DO
+      IF Pl.Table[I, J] = C THEN
+        Pos.Row := I;
+        Pos.Col := J;
+        RETURN Pos
+      END
+    END
+  END;
+  (* Not found *)
+  Pos.Row := 5;
+  Pos.Col := 5;
+  RETURN Pos;
+END FindChar;
+
+PROCEDURE Encode(Pl: TPlayfair; PlainText: ARRAY OF CHAR; VAR OUT Result: ARRAY OF CHAR);
+VAR
+  CleanText: ARRAY[0 .. MaxLength] OF CHAR;
+  Len, I, J: CARDINAL;
+  Pos1, Pos2: TPosition;
+BEGIN
+  GetCleanText(PlainText, Pl.PfO, CleanText);
+  Len := Length(CleanText);
+  J := 0;
+  FOR I := 0 TO Len - 1 BY 2 DO
+    Pos1 := FindChar(Pl, CleanText[I]);
+    Pos2 := FindChar(Pl, CleanText[I + 1]);
+    IF Pos1.Row = Pos2.Row THEN
+      Result[J]     := Pl.Table[Pos1.Row, Pos1.Col MOD 5 + 1];
+      Result[J + 1] := Pl.Table[Pos2.Row, Pos2.Col MOD 5 + 1]
+    ELSIF Pos1.Col = Pos2.Col THEN
+      Result[J]     := Pl.Table[Pos1.Row MOD 5 + 1, Pos1.Col];
+      Result[J + 1] := Pl.Table[Pos2.Row MOD 5 + 1, Pos2.Col]
+    ELSE
+      Result[J]     := Pl.Table[Pos1.Row, Pos2.Col];
+      Result[J + 1] := Pl.Table[Pos2.Row, Pos1.Col]
+    END;
+    J := J + 2;
+    Result[J] := ' ';
+    J := J + 1;
+  END;
+  Result[J] := CHR(0);
+END Encode;
+
+PROCEDURE Decode(Pl: TPlayfair; CipherText: ARRAY OF CHAR; VAR OUT Result: ARRAY OF CHAR);
+VAR
+  Len, I: CARDINAL;
+  Pos1, Pos2: TPosition;
+BEGIN
+  Len := Length(CipherText);
+  FOR I := 0 TO Len - 1 BY 3 DO
+    (* CipherText will include spaces, so we need to skip them *)
+    Pos1 := FindChar(Pl, CipherText[I]);
+    Pos2 := FindChar(Pl, CipherText[I + 1]);
+    IF Pos1.Row = Pos2.Row THEN
+      IF Pos1.Col > 0 THEN
+        Result[I]     := Pl.Table[Pos1.Row, Pos1.Col - 1]
+      ELSE
+        Result[I]     := Pl.Table[Pos1.Row, 4]
+      END;
+      IF Pos2.Col > 0 THEN
+        Result[I + 1] := Pl.Table[Pos2.Row, Pos2.Col - 1]
+      ELSE
+        Result[I + 1] := Pl.Table[Pos2.Row, 4]
+      END
+    ELSIF Pos1.Col = Pos2.Col THEN
+      IF Pos1.Row > 0 THEN
+        Result[I] := Pl.Table[Pos1.Row - 1, Pos1.Col]
+      ELSE
+        Result[I] := Pl.Table[4, Pos1.Col]
+      END;
+      IF Pos2.Row > 0 THEN
+        Result[I + 1] := Pl.Table[Pos2.Row - 1, Pos2.Col]
+      ELSE
+        Result[I + 1] := Pl.Table[4, Pos2.Col]
+      END
+    ELSE
+      Result[I]     := Pl.Table[Pos1.Row, Pos2.Col];
+      Result[I + 1] := Pl.Table[Pos2.Row, Pos1.Col];
+    END;
+    Result[I + 2] := ' ';
+  END;
+  Result[Len] := CHR(0);
+END Decode;
+
+PROCEDURE Demo(Keyword: ARRAY OF CHAR; Opt: TPlayfairOption; PlainText: ARRAY OF CHAR);
+VAR
+  EncodedText: ARRAY [0 .. MaxResultLength] OF CHAR;
+  DecodedText: ARRAY [0 .. MaxResultLength] OF CHAR;
+  Pl: TPlayfair;
+  I, J: CARDINAL;
+BEGIN
+  WriteString("Playfair keyword: ");
+  WriteString(Keyword);
+  WriteLn;
+  Pl.PfO := Opt;
+  IF Pl.PfO = NoQ THEN
+    WriteString("Ignored")
+  ELSE
+    WriteString("Regarded")
+  END;
+  WriteString(" Q when filling the table.");
+  WriteLn;
+  WriteString("The table is: ");
+  WriteLn; WriteLn;
+  FillTable(Keyword, Pl);
+  FOR I := 0 TO 4 DO
+    FOR J := 0 TO 4 DO
+      WriteString(Pl.Table[I, J]);
+      WriteString(" ")
+    END;
+    WriteLn;
+  END;
+  WriteLn;
+  WriteString("Plain text is  : ");
+  WriteString(PlainText);
+  WriteLn;
+  Encode(Pl, PlainText, EncodedText);
+  WriteString("Encoded text is: ");
+  WriteString(EncodedText);
+  WriteLn;
+  Decode(Pl, EncodedText, DecodedText);
+  WriteString("Decoded text is: ");
+  WriteString(DecodedText);
+  WriteLn; WriteLn;
+END Demo;
+
+BEGIN
+  Demo("Playfair example", IEqualsJ, "Hide the gold in...the TREESTUMP!!!!")
+END Playfair.

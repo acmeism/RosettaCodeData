@@ -20,3 +20,4 @@ routine hanoi(n%, from$, to$, via$)
     call hanoi(n% - 1, via$, to$, from$)
   end if
 end routine
+

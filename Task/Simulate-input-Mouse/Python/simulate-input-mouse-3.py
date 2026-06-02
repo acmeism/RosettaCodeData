@@ -17,3 +17,6 @@ pyautogui.click(200, 250, button='right')  # Mouse right button click, x=200, y=
 
 pyautogui.scroll(10)   # scroll up 10 "clicks"
 pyautogui.scroll(10, x=100, y=100)  # move mouse cursor to 100, 200, then scroll up 10 "clicks"
+
+
+

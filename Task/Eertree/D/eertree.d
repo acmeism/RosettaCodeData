@@ -25,7 +25,7 @@ Node[] eertree(string s) {
     foreach (i, c; s) {
         for (n=suffix; ; n=tree[n].suffix) {
             k = tree[n].length;
-            int b = i-k-1;
+            int b = cast(int) (i - k - 1);
             if (b>=0 && s[b]==c) {
                 break;
             }
@@ -34,7 +34,7 @@ Node[] eertree(string s) {
             suffix = tree[n].edges[c];
             continue;
         }
-        suffix = tree.length;
+        suffix = cast(int) tree.length;
         tree ~= Node(k+2);
         tree[n].edges[c] = suffix;
         if (tree[suffix].length == 1) {
@@ -43,7 +43,7 @@ Node[] eertree(string s) {
         }
         while (true) {
             n = tree[n].suffix;
-            int b = i-tree[n].length-1;
+            int b = cast(int) (i - tree[n].length - 1);
             if (b>=0 && s[b]==c) {
                 break;
             }
@@ -56,10 +56,10 @@ Node[] eertree(string s) {
 auto subPalindromes(Node[] tree) {
     auto s = appender!(string[]);
     void children(int n, string p) {
-        foreach (c, n; tree[n].edges) {
+        foreach (c, m; tree[n].edges) {
             p = c ~ p ~ c;
             s ~= p;
-            children(n, p);
+            children(m, p);
         }
     }
     children(0, "");

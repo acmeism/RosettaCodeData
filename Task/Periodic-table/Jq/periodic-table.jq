@@ -26,3 +26,4 @@ def lpad($len): tostring | ($len - length) as $l | (" " * $l)[:$l] + .;
 (1, 2, 29, 42, 57, 58, 59, 71, 72, 89, 90, 103, 113) as $n
 | periodicTable($n) as [$r, $c]
 | "Atomic number \($n|lpad(3)) -> \($r) \($c)"
+

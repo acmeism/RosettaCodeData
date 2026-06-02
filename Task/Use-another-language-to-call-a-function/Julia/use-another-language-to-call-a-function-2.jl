@@ -15,3 +15,4 @@ function Query(buffer::Ptr{UInt8}, length::Ptr{Csize_t})::Cint
 end
 
 Base.@export Query
+

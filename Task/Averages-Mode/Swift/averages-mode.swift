@@ -25,3 +25,4 @@ extension Collection where Element: Hashable {
 
 let emptyArray: [Int] = []
 emptyArray.mode() // returns nil
+

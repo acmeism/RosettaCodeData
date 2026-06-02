@@ -25,3 +25,4 @@ func _process(_delta: float) -> bool:
 
    a.free()
    return true # Exit
+

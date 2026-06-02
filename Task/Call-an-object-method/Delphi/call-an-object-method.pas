@@ -58,3 +58,6 @@ while Stack.Pop(I) do
 {release stack memory and delete object}
 Stack.Free;
 end;
+
+
+

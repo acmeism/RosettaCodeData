@@ -138,3 +138,4 @@ to validate."
             "Reading back string got:~%“~a”~%…expected:~%“~a”" read-back string)
     (format *trace-output* "~&String read back matches:~%“~a”" read-back))
   (finish-output *trace-output*))
+

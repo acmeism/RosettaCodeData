@@ -111,3 +111,4 @@ fn main() {
     // Hold each resource for 2 seconds per worker
     metered(Duration::from_secs(2));
 }
+

@@ -10,3 +10,4 @@ where
 fn main() {
     println!("{}", harmonic_sum(1, 100, |i| 1.0 / i));
 }
+

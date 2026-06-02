@@ -52,3 +52,4 @@ void printResult(List<List<double>> dist, List<List<int>> next) {
     }
   }
 }
+

@@ -82,3 +82,5 @@ procedure ShowEarthQuakes(Memo: TMemo);
 begin
 AnalyzeEarthQuakes('EarthQuakes.txt',Memo);
 end;
+
+

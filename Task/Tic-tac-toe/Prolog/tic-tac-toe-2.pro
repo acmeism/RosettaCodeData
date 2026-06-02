@@ -24,3 +24,4 @@ minimax(Player, Deep, MaxDeep, B, V) :-
 
 
 lie(TTT, V-_, V-TTT).
+

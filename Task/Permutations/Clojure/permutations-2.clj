@@ -33,3 +33,4 @@
     (map #(map v %) (lex-permutations (range (count v))))))
 
 (println (permutations [1 2 3]))
+

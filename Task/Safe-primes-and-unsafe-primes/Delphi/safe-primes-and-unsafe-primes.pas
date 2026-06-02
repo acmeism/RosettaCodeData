@@ -61,3 +61,5 @@ Memo.Lines.Add('Unsafe Primes Under 10,000,000: ');
 S:=GetSafeUnsafePrimes(high(integer),10000000,False,False);
 Memo.Lines.Add(S);
 end;
+
+

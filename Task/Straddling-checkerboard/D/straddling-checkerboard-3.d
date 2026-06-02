@@ -2,7 +2,7 @@ import std.stdio, std.string, std.algorithm, std.regex, std.array, std.range, st
 
 immutable string[const string] val2key, key2val;
 
-static this() pure /*nothrow @safe*/ {
+shared static this() pure /*nothrow @safe*/ {
     immutable aa = ["A":"30", "B":"31", "C":"32", "D":"33", "E":"5", "F":"34", "G":"35",
         "H":"0", "I":"36", "J":"37", "K":"38", "L":"2", "M":"4", ".":"78", "N":"39",
         "/":"79", "O":"1", "0":"790", "P":"70", "1":"791", "Q":"71", "2":"792",

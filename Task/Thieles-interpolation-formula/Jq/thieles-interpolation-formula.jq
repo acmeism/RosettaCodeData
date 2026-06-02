@@ -40,3 +40,4 @@ init(0.05)
 | ({r: [], x: .tsin, y: .xval} | 6 * thiele(0.5; 0).result),
   ({r: [], x: .tcos, y: .xval} | 3 * thiele(0.5; 0).result),
   ({r: [], x: .ttan, y: .xval} | 4 * thiele(1.0; 0).result)
+

@@ -106,3 +106,4 @@ var getSubpalindromes = function(s) {
 }
 
 console.log(getSubpalindromes('eertree'));
+

@@ -27,3 +27,4 @@
     (when gc
       (free-gcontext gc))
     (close-display display)))
+

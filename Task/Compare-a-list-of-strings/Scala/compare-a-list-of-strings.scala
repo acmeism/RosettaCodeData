@@ -9,3 +9,4 @@ def asc_strings(seq:List[String]):Boolean = seq match {
     case s::Nil => true
     case el1 :: el2 :: tail => el1.compareTo(el2) < 0
 }
+

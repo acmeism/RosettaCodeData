@@ -67,3 +67,4 @@ for (let i = 0; i < ias.length; i++) {
     console.log(`[${kol}]`);
     console.log(`Possible Kolakoski sequence? ${possibleKolakoski(kol)}\n`);
 }
+

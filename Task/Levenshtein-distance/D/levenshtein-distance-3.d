@@ -1,6 +1,6 @@
 import std.stdio, std.array, std.algorithm, std.functional;
 
-uint lDist(T)(in const(T)[] s, in const(T)[] t) nothrow {
+ulong lDist(in string s, in string t) nothrow {
     alias mlDist = memoize!lDist;
     if (s.empty || t.empty) return max(t.length, s.length);
     if (s[0] == t[0]) return mlDist(s[1 .. $], t[1 .. $]);

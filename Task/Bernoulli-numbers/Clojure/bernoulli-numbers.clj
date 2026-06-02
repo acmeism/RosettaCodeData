@@ -22,3 +22,4 @@ ns test-project-intellij.core
 (doseq [q (flatten [0 1 (range 2 62 2)])
         :let [ans (a-t q)]]
   (println q ":" (format-ans ans)))
+

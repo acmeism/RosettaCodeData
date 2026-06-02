@@ -11,4 +11,4 @@ defmodule LCS do
 end
 
 IO.puts LCS.lcs("thisisatest", "testing123testing")
-IO.puts LCS.lcs('1234','1224533324')
+IO.puts LCS.lcs("1234","1224533324")

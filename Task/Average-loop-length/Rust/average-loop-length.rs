@@ -72,3 +72,5 @@ fn empirical(n: u32, trials: u32, rng: &mut ThreadRng) -> f64 {
                        .fold(0f64, |a, v| a + v);
     sum / trials as f64
 }
+
+

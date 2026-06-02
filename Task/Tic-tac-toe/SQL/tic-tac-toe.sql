@@ -83,3 +83,4 @@ insert into msg values('');
 select * from ui;
 .print "Use this to play:"
 .print "->update board set p = 'X' where rowid = ?; select * from ui; select * from msg;"'
+

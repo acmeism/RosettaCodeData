@@ -106,3 +106,4 @@ signal_connect(endit, win, :destroy)
 show(win)
 wait(condition)
 exit()
+

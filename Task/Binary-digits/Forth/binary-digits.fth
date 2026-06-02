@@ -16,3 +16,4 @@ decimal 679 binary . cr
 binary  11111111111  00000110000  and . cr
 
 decimal
+

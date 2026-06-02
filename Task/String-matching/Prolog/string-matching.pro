@@ -40,3 +40,4 @@ ends_with(FIRSTz,SECONDz)
 :-
 lists:append(_,SECONDz,FIRSTz)
 .
+

@@ -26,3 +26,4 @@ def isColorful:
 # Emit a stream of colorfuls in range(a;b)
 def colorfuls(a;b):
   range(a;b) | select(isColorful);
+

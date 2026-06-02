@@ -1,0 +1,14 @@
+' ============================================
+' https://rosettacode.org/wiki/Function_definition
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+
+DEF FN Multiply$(a$, b$)
+    RETURN a$ * b$
+END DEF
+
+[main]
+    PRINT FN Multiply$(2, 3)
+
+' Output:
+' 6

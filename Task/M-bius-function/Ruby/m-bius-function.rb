@@ -7,3 +7,4 @@ def μ(n)
 end
 
 (["  "] + (1..199).map{|n|"%2s" % μ(n)}).each_slice(20){|line| puts line.join(" ") }
+

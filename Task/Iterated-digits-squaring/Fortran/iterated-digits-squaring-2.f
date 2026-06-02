@@ -76,3 +76,4 @@ end function is89
 
 
 end program IteratingDigitSquaring_Fast
+

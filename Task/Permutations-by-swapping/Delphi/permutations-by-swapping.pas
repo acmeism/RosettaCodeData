@@ -209,3 +209,6 @@ repeat Memo.Lines.Add(GetPermutationStr(PM))
 until PM.Next;
 finally PM.Free; end;
 end;
+
+
+

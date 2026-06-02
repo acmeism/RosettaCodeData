@@ -5,3 +5,4 @@ for n = 1 to limit
     but n % 7 = 0 see "" + n + " = " + "Baxx" + nl
     else see "" + n + " = " + n + nl ok
 next
+

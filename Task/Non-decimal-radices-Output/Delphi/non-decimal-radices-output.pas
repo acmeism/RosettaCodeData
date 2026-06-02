@@ -6,3 +6,4 @@ Memo.Lines.Add('Decimal     Hexadecimal');
 Memo.Lines.Add('-----------------------');
 Memo.Lines.Add(IntToStr(I)+' - '+IntToHex(I,8));
 end;
+

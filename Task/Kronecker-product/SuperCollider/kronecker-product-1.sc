@@ -36,3 +36,4 @@ f = { |a, b|
 
 // or shorter:
 (a *.2 b).collect(_.reduce('+++')).reduce('++')
+

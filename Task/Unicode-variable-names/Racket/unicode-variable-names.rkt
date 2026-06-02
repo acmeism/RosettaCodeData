@@ -10,3 +10,4 @@
 (define Δ 1)
 (set! Δ (add1 Δ))
 (printf "Δ = ~s\n" Δ) ; prints "Δ = 2"
+

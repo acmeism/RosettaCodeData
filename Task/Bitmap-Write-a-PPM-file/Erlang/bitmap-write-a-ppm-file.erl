@@ -43,3 +43,4 @@ ppm_pixels(Bitmap) ->
 %%%%%%%%%%%% Internals %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 encode_decimal(Number) ->
     integer_to_list(Number).
+

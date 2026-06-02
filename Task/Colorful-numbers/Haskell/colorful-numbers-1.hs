@@ -19,3 +19,4 @@ distinct [a] = True
 distinct (x:xs) = distinct xs && (x `notElem` xs)
 
 -- Note, for s2, I started at 98762543 as it is the largest number that doesn't 'obviously' violate the colourful condition. Everything else either has 2*3 = 6; 2*4 = 8; 1 or 0 or a repeat digit. This was a rather random optimisation.
+

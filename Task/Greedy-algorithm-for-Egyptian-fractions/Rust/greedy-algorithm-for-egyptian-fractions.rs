@@ -136,3 +136,4 @@ fn main() {
     run_max_searches(100);
     run_max_searches(1000);
 }
+

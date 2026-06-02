@@ -78,3 +78,4 @@ for($hi=0; $hi < $h; $hi++) {
 header('Content-Type: image/jpeg');
 imagepng($im);
 imagedestroy($im);
+

@@ -98,3 +98,4 @@ pure function is_valid_square(str, base) result(ok)
 end function is_valid_square
 
 end program perfect_squares
+

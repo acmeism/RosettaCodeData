@@ -32,3 +32,4 @@ if __name__ == "__main__":
     print "Christian holidays, related to Easter, for years from 2010 to 2020 CE:"
     for year in range(2010, 2021):
         print_holidays(get_holiday_values(year))
+

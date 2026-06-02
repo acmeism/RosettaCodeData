@@ -9,30 +9,30 @@ var I, J: Integer;
 var P,T: Pointer;
 begin
 repeat
-	begin
-	I := L;
-	J := R;
-	P := SortList[(L + R) shr 1];
-	repeat
-		begin
-		while SCompare(SortList[I], P) < 0 do Inc(I);
-		while SCompare(SortList[J], P) > 0 do Dec(J);
-		if I <= J then
-			begin
-			{Exchange itesm}
-			T:=SortList[I];
-			SortList[I]:=SortList[J];
-			SortList[J]:=T;
-			if P = SortList[I] then P := SortList[J]
-			else if P = SortList[J] then P := SortList[I];
-			Inc(I);
-			Dec(J);
-			end;
-		end
-	until I > J;
-	if L < J then QuickSort(SortList, L, J, SCompare);
-	L := I;
-	end
+   begin
+   I := L;
+   J := R;
+   P := SortList[(L + R) shr 1];
+   repeat
+      begin
+      while SCompare(SortList[I], P) < 0 do Inc(I);
+      while SCompare(SortList[J], P) > 0 do Dec(J);
+      if I <= J then
+         begin
+         {Exchange itesm}
+         T:=SortList[I];
+         SortList[I]:=SortList[J];
+         SortList[J]:=T;
+         if P = SortList[I] then P := SortList[J]
+         else if P = SortList[J] then P := SortList[I];
+         Inc(I);
+         Dec(J);
+         end;
+      end
+   until I > J;
+   if L < J then QuickSort(SortList, L, J, SCompare);
+   L := I;
+   end
 until I >= R;
 end;
 
@@ -45,10 +45,10 @@ var S: string;
 begin
 S:='[';
 for I:=0 to High(PA) do
-	begin
-	if I>0 then S:=S+' ';
-	S:=S+string(PA[I]^);
-	end;
+   begin
+   if I>0 then S:=S+' ';
+   S:=S+string(PA[I]^);
+   end;
 S:=S+']';
 Memo.Lines.Add(S);
 end;
@@ -61,10 +61,10 @@ var S: string;
 begin
 S:='[';
 for I:=0 to High(PA) do
-	begin
-	if I>0 then S:=S+' ';
-	S:=S+IntToStr(Integer(PA[I]));
-	end;
+   begin
+   if I>0 then S:=S+' ';
+   S:=S+IntToStr(Integer(PA[I]));
+   end;
 S:=S+']';
 Memo.Lines.Add(S);
 end;
@@ -138,3 +138,6 @@ QuickSort(PA,0,High(PA),StringLenCompare);
 Memo.Lines.Add('After Sorting');
 DisplayStrings(Memo,PA);
 end;
+
+
+

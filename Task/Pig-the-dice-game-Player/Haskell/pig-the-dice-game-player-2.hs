@@ -18,3 +18,4 @@ import Data.List (sort, group)
 
 -- compile with
 -- ghc FILENAME.hs -O2 -threaded -with-rtsopts="-N4" -o dice
+

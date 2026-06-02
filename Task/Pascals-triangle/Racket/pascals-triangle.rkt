@@ -8,3 +8,5 @@
    (for/fold ([triangle '((1))])
              ([row (in-range 1 n)])
      (cons (next-row (first triangle)) triangle))))
+
+

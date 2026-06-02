@@ -27,3 +27,4 @@ If StringRight($string1, StringLen($string2)) = $string2 Then
 Else
 	ConsoleWrite("1st string does'nt ends with 2nd string." & @CRLF)
 EndIf
+

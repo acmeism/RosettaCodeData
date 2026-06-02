@@ -43,3 +43,4 @@ do {
         $iters++;
         print("Generation $iters, score $best: $parent[0]\n");
 } while($best);
+

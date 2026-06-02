@@ -4,7 +4,7 @@ import std.stdio, std.algorithm, std.conv;
 ulong choose(int n, int k) nothrow
 in {
     assert(n >= 0 && k >= 0, "choose: no negative input.");
-} body {
+} do {
     static ulong[][] cache;
 
     if (n < k)
@@ -15,7 +15,7 @@ in {
         cache ~= [1UL]; // = choose(m, 0);
     auto kmax  = min(k, n - k);
     while(kmax >= cache[n].length) {
-        immutable h = cache[n].length;
+        immutable h = cast(int) cache[n].length;
         cache[n] ~= choose(n - 1, h - 1) + choose(n - 1, h);
     }
 
@@ -25,7 +25,7 @@ in {
 int largestV(in int p, in int q, in long r) nothrow
 in {
     assert(p > 0 && q >= 0 && r >= 0, "largestV: no negative input.");
-} body {
+} do {
     auto v = p - 1;
     while (choose(v, q) > r)
         v--;
@@ -69,7 +69,7 @@ struct Comb {
     }
 
     static auto On(T)(in T[] arr, in int m) {
-        auto comb = Comb(arr.length, m);
+        auto comb = Comb(cast(int) arr.length, m);
 
         return new class {
             @property size_t length() const /*nothrow*/ {
@@ -91,7 +91,6 @@ struct Comb {
         };
     }
 }
-
 
 version(combinations4_main)
     void main() {

@@ -208,3 +208,4 @@ func Close
 
    win.close()
    app.quit()
+

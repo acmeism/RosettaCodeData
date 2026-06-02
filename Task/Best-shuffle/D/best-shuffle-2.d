@@ -1,10 +1,7 @@
 import std.stdio, std.algorithm, std.range;
-
-extern(C) pure nothrow void* alloca(in size_t size);
+import core.stdc.stdlib : alloca;
 
 void bestShuffle(in char[] txt, ref char[] result) pure nothrow {
-    // Assume alloca to be pure.
-    //extern(C) pure nothrow void* alloca(in size_t size);
     enum size_t NCHAR = size_t(char.max + 1);
     enum size_t MAX_VLA_SIZE = 1024;
     immutable size_t len = txt.length;

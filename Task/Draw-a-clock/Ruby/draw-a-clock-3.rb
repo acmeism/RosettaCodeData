@@ -43,3 +43,4 @@ def settings
   size 200, 220
   smooth 8
 end
+

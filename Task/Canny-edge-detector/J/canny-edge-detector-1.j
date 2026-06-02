@@ -86,3 +86,4 @@ NB. given the edge points, find the edges
   step5 =: connect
 
 canny =: step5 @ step4 @ step3 @ step2 @ step1
+

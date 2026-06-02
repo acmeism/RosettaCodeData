@@ -74,3 +74,4 @@ feature
 			Result := sum
 		end
 end
+

@@ -29,3 +29,4 @@ fn main() {
 
     println!("roots of f(x) = x^3 - 3x^2 + 2x are: {:?}", roots);
 }
+

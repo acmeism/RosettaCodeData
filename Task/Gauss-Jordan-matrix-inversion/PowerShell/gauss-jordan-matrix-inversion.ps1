@@ -49,3 +49,4 @@ show $b
 $invb = gauss-jordan-inv $b
 "inv(b) ="
 show $invb
+

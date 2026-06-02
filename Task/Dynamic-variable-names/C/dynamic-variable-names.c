@@ -61,13 +61,16 @@ static void *map(MAP **t, size_t z, char const *s, size_t n, void *(*dup)(void c
 		if((p->n == n) && (memcmp(p->s, s, n) == 0)) {
 			return p;
 		}
+		if((p->n == 0) && !dup) break;
 		if((p->n == 0) && dup) {
 			if(f->u == f->w) {
 				*t = map_alloc(2 * f->m, z);
-				for(size_t i = 0; f->u < f->w; i++) {
+				for(size_t i = 0; i < f->m; i++) {
 					MAPPED *q = (MAPPED *)&f->a[i*z];
 					if(q->n > 0) {
-						(void)map(t, z, q->s, q->n, nodup);
+						MAPPED *b = map(t, z, q->s, q->n, nodup);
+						if(!b) return NULL;
+						memcpy(b+1, q+1, z-sizeof(*b));
 					}
 				}
 				free(f);
@@ -133,3 +136,4 @@ int main(int argc, char **argv) {
 	}
 	return 0;
 }
+

@@ -88,3 +88,4 @@
 ;; The dummy player plays randomly
 (define Dummy
   (new (interactive-player o%) [name "Dummy"] [look-ahead 0]))
+

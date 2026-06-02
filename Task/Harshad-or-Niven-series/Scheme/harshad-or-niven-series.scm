@@ -22,3 +22,4 @@
 ;; Get the sum of the digits of a number.
 (define (sum-of-digits n)
     (apply + (map string->number (map string (string->list (number->string n))))))
+

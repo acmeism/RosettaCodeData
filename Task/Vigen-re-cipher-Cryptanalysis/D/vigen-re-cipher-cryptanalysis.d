@@ -1,5 +1,5 @@
 import std.stdio, std.algorithm, std.typecons, std.string,
-       std.array, std.numeric, std.ascii;
+       std.array, std.numeric, std.ascii, std.regex;
 
 string[2] vigenereDecrypt(in double[] targetFreqs, in string input) {
     enum nAlpha = std.ascii.uppercase.length;
@@ -83,13 +83,13 @@ string[2] vigenereDecrypt(in double[] targetFreqs, in string input) {
                 }
             }
 
-            key ~= m + 'A';
+            key ~= cast(char)(m + 'A');
         }
 
         return key;
     }
 
-    immutable cleaned = input.toUpper.removechars("^A-Z");
+    immutable cleaned = input.toUpper.replaceAll(regex(r"[^A-Z]"), "");
 
     //immutable sortedTargets = targetFreqs.sorted;
     immutable sortedTargets = targetFreqs.dup.sort().release.idup;

@@ -10,7 +10,7 @@ struct BalancedTernary {
     static immutable string dig2str = "-0+";
 
     immutable static Dig[dchar] str2dig; // = ['+': Dig.P, ...];
-    nothrow static this() {
+    nothrow shared static this() {
         str2dig = ['+': Dig.P, '-':  Dig.N, '0': Dig.Z];
     }
 
@@ -72,7 +72,7 @@ struct BalancedTernary {
     }
 
     static const(Dig)[] neg_(in Dig[] digs) pure nothrow {
-        return digs.map!(a => -a).array;
+        return digs.map!(a => cast(Dig)(-a)).array;
     }
 
     BalancedTernary opUnary(string op:"-")() const pure nothrow {

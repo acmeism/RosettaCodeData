@@ -76,3 +76,4 @@ print_output<-function(Data,W)
 }
 
 print_output(Full_Data, 400)
+

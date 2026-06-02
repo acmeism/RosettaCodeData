@@ -14,7 +14,7 @@ struct Playfair {
     string[string] enc, dec;
 
     this(in string key, in string from_ = "J", in string to_ = null)
-    pure /*nothrow @safe*/ {
+    /*nothrow @safe*/ {
         this.from = from_;
         if (to_.empty)
             this.to = (from_ == "J") ? "I" : "";
@@ -45,18 +45,18 @@ struct Playfair {
         dec = enc.byKeyValue.map!(t => tuple(t.value, t.key)).assocArray;
     }
 
-    private string _canonicalize(in string s) const pure @safe {
-        return s.toUpper.removechars("^A-Z").replace(from, to);
+    private string _canonicalize(in string s) const @safe {
+        return s.toUpper.replaceAll(regex("[^A-Z]"), "").replace(from, to);
     }
 
-    string encode(in string s) const /*pure @safe*/ {
+    string encode(in string s) const /*@safe*/ {
         return _canonicalize(s)
                .matchAll(r"(.)(?:(?!\1)(.))?")
                .map!(m => enc[m[0].leftJustify(2, 'X')])
                .join(' ');
     }
 
-    string decode(in string s) const pure @safe {
+    string decode(in string s) const @safe {
         return _canonicalize(s).chunks(2).map!(p => dec[p.text]).join(' ');
     }
 }

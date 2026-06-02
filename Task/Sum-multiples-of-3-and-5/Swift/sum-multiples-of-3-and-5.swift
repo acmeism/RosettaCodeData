@@ -15,3 +15,4 @@ func sum(x:Int)->Int{
 
 var sumofmult:Int=sum(x:n)
 print(sumofmult)
+

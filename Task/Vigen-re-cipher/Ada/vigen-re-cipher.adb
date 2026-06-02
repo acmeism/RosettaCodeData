@@ -53,3 +53,4 @@ BEGIN
    Put_Line ("Encrypted: " & To_String (Crypt));
    Put_Line ("Decrypted: " & To_String (Crypt + (-Key)));
 END Main;
+

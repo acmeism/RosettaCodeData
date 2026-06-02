@@ -1,4 +1,4 @@
-import std.stdio, std.datetime;
+import std.stdio, std.datetime.stopwatch;
 
 int identity(int x) {
     return x;
@@ -15,7 +15,7 @@ double timeIt(int function(int) func, int arg) {
     sw.start();
     func(arg);
     sw.stop();
-    return sw.peek().usecs / 1_000_000.0;
+    return sw.peek().total!"usecs" / 1_000_000.0;
 }
 
 void main() {

@@ -45,3 +45,4 @@ feature {NONE}
 		end
 
 end
+

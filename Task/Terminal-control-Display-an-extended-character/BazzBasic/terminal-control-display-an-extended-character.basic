@@ -1,0 +1,7 @@
+' ============================================
+' https://rosettacode.org/wiki/Terminal_control/Display_an_extended_character
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+
+PRINT CHR(163)
+END

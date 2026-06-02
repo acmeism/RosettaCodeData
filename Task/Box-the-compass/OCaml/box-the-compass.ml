@@ -29,3 +29,4 @@ let print_direction input =
   test input;;
 
 List.iter (print_direction) test_cases;;
+

@@ -1,6 +1,11 @@
 using Combinatorics
 
-const tfile = download("http://wiki.puzzlers.org/pub/wordlists/unixdict.txt")
+tfile = "unixdict.txt"
+try
+    stat(tfile)
+catch
+    global tfile = download("http://wiki.puzzlers.org/pub/wordlists/unixdict.txt")
+end
 const wordlist = Dict(w => 1 for w in split(read(tfile, String), r"\s+"))
 
 function wordwheel(wheel, central)

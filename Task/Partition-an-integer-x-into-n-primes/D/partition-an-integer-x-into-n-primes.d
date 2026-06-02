@@ -87,7 +87,7 @@ void partition(int x, int m) {
     enforce(n>=m, "Not enough primes");
 
     int[] combo = new int[m];
-    if (!findCombo(0, x, m, n, combo)) {
+    if (!findCombo(0, x, m, cast(int)n, combo)) {
         auto word = (m > 1) ? "primes" : "prime";
         writefln("Partitioned %5d with %2d %s: (not possible)", x, m, word);
     }

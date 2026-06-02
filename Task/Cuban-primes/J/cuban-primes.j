@@ -58,3 +58,4 @@ assert (comatose 1000 1238 12  989832) -: [;._2 ] 0 :0
 
    cubanPrime f.              NB. cubanPrime with fixed adverbs
 [: (#~ 1&p:) (-&(^&3)~ >:)
+

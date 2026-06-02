@@ -34,3 +34,4 @@ fn main() {
         print!("Uniform? {}\n", chi2_uniform(&ds, 0.05));
     }
 }
+

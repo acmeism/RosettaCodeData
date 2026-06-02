@@ -1,3 +1,3 @@
 println(time {
-	for(i <- 1 to 10000000) {}
+   for(i <- 1 to 10000000) {}
 })

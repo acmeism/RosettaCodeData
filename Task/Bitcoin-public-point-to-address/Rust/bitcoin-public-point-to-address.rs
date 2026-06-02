@@ -63,3 +63,4 @@ fn point_to_address(x: &str, y: &str) -> String {
 fn main() {
     println!("{}", point_to_address(X, Y));
 }
+

@@ -1,7 +1,7 @@
 import std.stdio, std.bigint;
 
 BigInt countChanges(in int amount, in int[] coins) pure /*nothrow*/ {
-    immutable n = coins.length;
+    immutable int n = cast(int)coins.length;
     int cycle;
     foreach (immutable c; coins)
         if (c <= amount && c >= cycle)

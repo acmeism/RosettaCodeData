@@ -620,7 +620,7 @@ ALIGN  \ Align to next slot boundary
   ;
 
 \ Shoot a crooked arrow
-: shoot-arrow ( -- )
+: shoot-arrow ( -- ; may set player state to WON or LOST )
     prompt-arrow-path
     show-arrow-path
     fly-arrow \ may set player state to WON or LOST
@@ -731,3 +731,4 @@ ALIGN  \ Align to next slot boundary
     UNTIL
     DROP \ Forget the QUIT-GAME indicator
   ;
+

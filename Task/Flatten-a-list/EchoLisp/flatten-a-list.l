@@ -24,3 +24,4 @@
 ;; The 'reverse' of flatten is group
 (group '( 4 5 5 5 6 6 7 8 7 7 7 9))
     → ((4) (5 5 5) (6 6) (7) (8) (7 7 7) (9))
+

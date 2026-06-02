@@ -41,3 +41,4 @@ doall =: run"0
 inputs =: 4 8 16 25 89 365 2586 25865 369854
 
 doall inputs
+

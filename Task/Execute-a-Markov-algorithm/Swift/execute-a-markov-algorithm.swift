@@ -42,3 +42,4 @@ let tests: [(ruleset: String, input: String)] = [
 for (index, test) in tests.enumerate() {
     print("\(index + 1):", markov(test.ruleset, input: test.input))
 }
+

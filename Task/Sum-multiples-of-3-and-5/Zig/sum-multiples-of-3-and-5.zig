@@ -34,3 +34,4 @@ pub fn main() !void {
     try stdout.print("The sum of the multiples of 3 and 5 below 1000 is {}\n", .{s});
     try stdout.print("The sum of the multiples of 3 and 5 below 1e20 is {}\n", .{sum3or5(99_999_999_999_999_999_999)});
 }
+

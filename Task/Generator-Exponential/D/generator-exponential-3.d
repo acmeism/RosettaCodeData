@@ -14,7 +14,7 @@ struct Filtered(R1, R2) if (is(ElementType!R1 == ElementType!R2)) {
         popFront;
     }
 
-    static immutable empty = false;
+    @property empty = false;
 
     void popFront() {
         while (true) {

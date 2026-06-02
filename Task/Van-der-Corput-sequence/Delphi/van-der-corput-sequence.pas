@@ -37,3 +37,7 @@ for Base:=2 to 8 do
 	end;
 Memo.Lines.Add(S);
 end;
+
+
+
+

@@ -78,3 +78,4 @@ foreach($steps as $name=>$pair)
 
 	echo $name." => ".implode(',', $ser) . "\n";
 }
+

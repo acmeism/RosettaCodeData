@@ -21,3 +21,4 @@ printrows("Thirty Jacobsthal numbers:", collect(take(30, Jacobsthal)))
 printrows("Thirty Jacobsthal-Lucas numbers:", collect(take(30, JLucas)))
 printrows("Twenty oblong Jacobsthal numbers:", collect(take(20, Joblong)))
 printrows("Fifteen Jacabsthal prime numbers:", collect(take(15, Jprimes)), 40, 1, false)
+

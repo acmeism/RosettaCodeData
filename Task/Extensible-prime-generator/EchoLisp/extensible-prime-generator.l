@@ -33,3 +33,4 @@
 
 ; is prime (1 + 116!) ?
 (prime? (1+ (factorial 116)))  → #t
+

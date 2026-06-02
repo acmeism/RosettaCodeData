@@ -8,3 +8,4 @@ function move(n, src, via, dst)
 end
 
 move(4, 1, 2, 3)
+

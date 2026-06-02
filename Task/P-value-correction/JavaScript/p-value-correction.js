@@ -329,3 +329,4 @@ for (let type = 0; type < types.length; ++type) {
     PValueCorrection.doubleSay(q);
     console.log(`\ntype ${type} = '${types[type]}' has a cumulative error of ${error}`);
 }
+

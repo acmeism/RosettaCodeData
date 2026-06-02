@@ -64,3 +64,4 @@ integer_fizzbuzz(Num, FizzBuzz) :-
 eq_t(=, true).
 eq_t(<, false).
 eq_t(>, false).
+

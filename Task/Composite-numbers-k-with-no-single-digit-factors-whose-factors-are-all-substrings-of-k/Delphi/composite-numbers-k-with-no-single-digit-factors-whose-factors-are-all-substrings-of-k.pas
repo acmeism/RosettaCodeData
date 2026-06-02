@@ -56,3 +56,4 @@ while I<High(integer) do
 	end;
 finally Sieve.Free; end;
 end;
+

@@ -9,3 +9,5 @@ N:=(N xor $FFFFFFFF)+1;
 Memo.Lines.Add('');
 Memo.Lines.Add(Format('N=%10d $%0.8x',[N,N]));
 end;
+
+

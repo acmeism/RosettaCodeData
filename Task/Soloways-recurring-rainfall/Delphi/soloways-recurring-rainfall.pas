@@ -154,3 +154,4 @@ while true do
 	Memo.Lines.Add('New Average: '+FloatToStrF(Average,ffFixed,18,2));
 	end;
 end;
+

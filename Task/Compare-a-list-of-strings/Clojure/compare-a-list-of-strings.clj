@@ -3,3 +3,4 @@
 
 ;; Checks strings list is in ascending order (returns true if list is empty)
 (every?	(fn [[a nexta]] (<= (compare a nexta) 0)) (map vector strings (rest strings))))
+

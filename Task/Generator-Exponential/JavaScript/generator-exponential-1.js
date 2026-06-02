@@ -34,3 +34,4 @@ var filtered = FilteredGenerator(squares, cubes);
 
 for( var x = 0; x < 20; x++ ) filtered.next()
 for( var x = 20; x < 30; x++ ) console.logfiltered.next());
+

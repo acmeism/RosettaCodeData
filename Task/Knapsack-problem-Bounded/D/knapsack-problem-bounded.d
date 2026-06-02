@@ -44,7 +44,7 @@ Tuple!(int, const(int)[]) chooseItem(in int iWeight, in int idx) nothrow @safe {
 
 void main() {
     // const (v, lst) = chooseItem(400, items.length - 1);
-    const v_lst = chooseItem(400, items.length - 1);
+    const v_lst = chooseItem(400, cast(int) items.length - 1);
 
     int w;
     foreach (immutable i, const cnt; v_lst[1])

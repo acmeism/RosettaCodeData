@@ -27,4 +27,4 @@ local nextPermutation = permute(list) --\  more idiomatic would be:
 while not inOrder(list) do             --\
   list = nextPermutation()             --/   for p in permute(list) do
 end                                   --/       stuffWith(p)
-print(unpack(list))                  --/     end
+print(table.unpack(list))            --/     end

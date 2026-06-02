@@ -53,3 +53,4 @@ feature {NONE} -- Initialization
 		end
 
 end
+

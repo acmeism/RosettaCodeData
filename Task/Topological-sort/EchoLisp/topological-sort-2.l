@@ -29,3 +29,4 @@
 		(for ((u g))
 		(unless (zero? (mark? u))
 		(error " ♻️ t-sort:cyclic" (map vertex-label (graph-cycle g))))))
+

@@ -63,3 +63,5 @@ Memo.Lines.Add('The longest sequence of ascending primes');
 FindLongestSequence(False);
 finally Sieve.Free; end;
 end;
+
+

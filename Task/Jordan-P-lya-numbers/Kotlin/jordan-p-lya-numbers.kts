@@ -59,3 +59,4 @@ object JordanPolyaNumbers {
 fun main(args: Array<String>) {
     JordanPolyaNumbers.main(arrayOf<String>())
 }
+

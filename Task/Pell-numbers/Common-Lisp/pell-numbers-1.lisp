@@ -35,3 +35,4 @@
 	  (when (primep b2)
 			(push b2 result)
 			(push i indices) )))
+

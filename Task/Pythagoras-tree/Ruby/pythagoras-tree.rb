@@ -43,3 +43,4 @@ end
 def settings
   size(800, 400)
 end
+

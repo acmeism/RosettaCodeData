@@ -1,0 +1,16 @@
+' ============================================
+' Sleep
+' https://rosettacode.org/wiki/Sleep
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+
+[main]
+    ' INPUT can auto-declare variables used with
+    INPUT "How many seconds do I sleep? ", a$
+    PRINT "Starting to sleep..."
+
+    ' BazzBasic SLEEP's in milliseconds
+    ' So conversion to seconds =* 1000
+    SLEEP a$ * 1000
+    PRINT "Back..."
+END

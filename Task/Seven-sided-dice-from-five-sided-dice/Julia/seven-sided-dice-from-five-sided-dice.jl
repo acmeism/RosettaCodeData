@@ -20,3 +20,4 @@ for roll in rolls
     roll_counts[roll] = get(roll_counts, roll, 0) + 1
 end
 foreach(println, sort(roll_counts))
+

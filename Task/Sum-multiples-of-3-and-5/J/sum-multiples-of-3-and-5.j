@@ -15,3 +15,4 @@ sumdiv =: dyad define
 )
 
 echo 'For 10^20 - 1, the sum is ', ": +/ (".(20#'9'),'x') sumdiv 3 5 _15
+

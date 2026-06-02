@@ -35,3 +35,4 @@
     (rgb-to-gray
       (ImageIO/read (new File "test.jpg")))
     "test-gray-cloj.png"))
+

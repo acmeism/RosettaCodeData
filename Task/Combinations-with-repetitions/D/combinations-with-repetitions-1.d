@@ -8,7 +8,7 @@ const struct CombRep {
     in {
         assert(0 < numType && numType + numChoice <= 64,
                "Valid only for nt + nc <= 64 (ulong bit size)");
-    } body {
+    } do {
         nt = numType;
         nc = numChoice;
         if (nc == 0)
@@ -35,7 +35,7 @@ const struct CombRep {
     }
 
     uint length() @property const pure nothrow @safe {
-        return combVal.length;
+        return cast(uint) combVal.length;
     }
 
     uint[] opIndex(in uint idx) const pure nothrow @safe {
@@ -71,7 +71,7 @@ auto combRep(R)(R types, in uint numChoice) /*pure*/ nothrow @safe
 if (hasLength!R && isRandomAccessRange!R) {
     ElementType!R[][] result;
 
-    foreach (const s; CombRep(types.length, numChoice)) {
+    foreach (const s; CombRep(cast(uint) types.length, numChoice)) {
         ElementType!R[] r;
         foreach (immutable i; s)
             r ~= types[i];

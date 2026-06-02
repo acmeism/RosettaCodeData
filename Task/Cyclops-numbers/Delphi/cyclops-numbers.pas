@@ -171,3 +171,5 @@ GetPrimeCyclops(Memo);
 GetBlindPrimeCyclops(Memo);
 GetPalindromicPrimeCyclops(Memo);
 end;
+
+

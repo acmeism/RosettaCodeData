@@ -122,3 +122,4 @@ for i=1 to ubound(hands)
    wscript.stdout.writeblanklines(1)
    'exit for
 next
+

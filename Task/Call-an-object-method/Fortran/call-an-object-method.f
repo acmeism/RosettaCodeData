@@ -12,3 +12,4 @@ type(my_type) :: mytype_object
  call mytype_object%method1() ! call method1 defined as subroutine
 !instance?
  mytype_object%method2() ! call method2 defined as function
+

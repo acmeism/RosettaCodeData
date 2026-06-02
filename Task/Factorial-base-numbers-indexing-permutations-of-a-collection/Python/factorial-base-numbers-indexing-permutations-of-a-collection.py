@@ -207,3 +207,4 @@ with open("output.html", "w", encoding="utf-8") as f:
     print_write(f,str_format(apply_perm(shoe[:],myperm)))
 
     f.write("</pre>\n")
+

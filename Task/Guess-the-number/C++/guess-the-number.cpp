@@ -19,3 +19,4 @@ int main()
     std::cout << "You've guessed my number!";
     return 0;
 }
+

@@ -130,3 +130,4 @@ Both GUESS and ANSWER are lists of numbers."
                (t
                 (goto-char (point-max))
                 (insert (propertize (format "\nThe guess entered was %S\nYou must enter a number with 4 non-repeating digits or Q to quit." player-guess-string) 'face 'error))))))))))
+

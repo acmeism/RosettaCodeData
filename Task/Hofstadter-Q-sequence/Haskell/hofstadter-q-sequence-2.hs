@@ -11,3 +11,5 @@ getIntArg = fmap (read . head) getArgs
 main = do
         args <- getIntArg
         print (douglasHofstadter args)
+
+

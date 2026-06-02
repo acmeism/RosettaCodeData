@@ -10,3 +10,4 @@ fib(5) -> 5;
 
 fib(N) when is_integer(N) -> fib(N - 6, 5, 8).
 fib(N, A, B) -> if N < 1 -> B; true -> fib(N-1, B, A+B) end.
+

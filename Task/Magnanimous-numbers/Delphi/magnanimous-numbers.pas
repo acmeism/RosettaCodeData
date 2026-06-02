@@ -68,3 +68,4 @@ MagnanimousRange(Memo,241,250);
 Memo.Lines.Add('Magnanimous Numbers 391 through 400');
 MagnanimousRange(Memo,391,400);
 end;
+

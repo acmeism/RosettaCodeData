@@ -42,3 +42,4 @@ cls
 for %%i in (%*) do echo !word[%%i]!
 endlocal
 goto:eof
+

@@ -52,3 +52,4 @@ examine([DIFFERENT0|_INPUTz0_],COMPARE0,INDEX0,INDEX0)
 prolog:char_code(DIFFERENT0,DIFFERENT_CODE) ,
 system:format('character "~s" (hex ~16r) different than "~s" at 1-based index ~10r .~n',[[DIFFERENT0],DIFFERENT_CODE,[COMPARE0],INDEX0])
 .
+

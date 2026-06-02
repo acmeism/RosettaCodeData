@@ -21,3 +21,4 @@ FUNCTION IsNatural ( CONST num: VARIANT ): BOOLEAN;
 	IsNatural := ( num > 0 );
 
     END;
+

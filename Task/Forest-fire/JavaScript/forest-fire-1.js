@@ -65,3 +65,4 @@ setInterval(() => {
     forest = update(forest);
     printForest(forest)
 }, 20);
+

@@ -21,3 +21,4 @@ while True:
         current_average = current_average + (1.0/current_count)*next - (1.0/current_count)*current_average
 
         print("New average: ", current_average)
+

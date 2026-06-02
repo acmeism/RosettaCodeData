@@ -21,3 +21,4 @@
       (print (row-major-aref image i) p))))
 
 (export 'grayscale-image-to-pgm-file)
+

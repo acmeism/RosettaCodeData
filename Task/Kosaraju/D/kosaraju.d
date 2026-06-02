@@ -38,7 +38,7 @@ int[] kosaraju(int[][] g) {
 
     // 2. For each vertex u of the graph do visit(u)
     foreach (u, _; g) {
-        visit(u);
+        visit(cast(int)u);
     }
     int[] c;  // used for component assignment
     c.length = size;

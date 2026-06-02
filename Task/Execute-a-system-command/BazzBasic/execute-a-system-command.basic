@@ -1,0 +1,6 @@
+' ============================================
+' https://rosettacode.org/wiki/Execute_a_system_command
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+
+PRINT SHELL("dir")

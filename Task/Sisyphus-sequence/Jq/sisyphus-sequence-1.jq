@@ -24,3 +24,4 @@ def primeSieve:
   | (($n|sqrt) / 2) as $s
   | [null, null, range(2; $n)]
   | reduce (2, 1 + (2 * range(1; $s))) as $i (.; erase($i)) ;
+

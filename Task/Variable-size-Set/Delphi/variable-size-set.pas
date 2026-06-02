@@ -21,3 +21,4 @@ var NM: TNumRange;
 
 type TUpperCase = 'A'..'Z';
 var UP: TUpperCase;
+

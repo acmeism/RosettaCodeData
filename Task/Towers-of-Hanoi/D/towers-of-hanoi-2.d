@@ -9,7 +9,7 @@ void main(in string[] args) {
     // Show the start configuration of the pegs.
     '|'.putchar;
     foreach_reverse (immutable i; 1 .. n + 1)
-        printf(" %d", i);
+        printf(" %lu", i);
     "\n|\n|".puts;
 
     foreach (immutable size_t x; 1 .. (1 << n)) {

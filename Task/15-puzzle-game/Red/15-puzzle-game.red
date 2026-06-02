@@ -62,3 +62,4 @@ while [ flip < 40 ] [ if changeTiles lay/pane/(random 16)  [ flip:  flip  + 1 ] 
 
 ;; show the window...
 view  lay
+

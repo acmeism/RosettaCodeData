@@ -20,3 +20,4 @@ begin
 ShowJewelsStones(Memo,'aAAbbbb', 'aA');
 ShowJewelsStones(Memo,'ZZ','z');
 end;
+

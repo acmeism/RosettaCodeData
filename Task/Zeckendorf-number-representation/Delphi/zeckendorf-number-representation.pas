@@ -31,3 +31,5 @@ for I:=0 to 20 do
 	Memo.Lines.Add(IntToStr(I)+': '+GetZeckNumber(I));
 	end;
 end;
+
+

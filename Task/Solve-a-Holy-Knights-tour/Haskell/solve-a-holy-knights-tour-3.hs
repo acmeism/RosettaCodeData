@@ -127,3 +127,4 @@ main =
        case solveKnightTour $ toBoard board of
          Nothing -> putStrLn "No solution.\n"
          Just solution -> putStrLn $ showBoard solution ++ "\n")
+

@@ -1,3 +1,4 @@
 isBal("[[[]]]") // true
 
 isBal("[]][[]") // false
+

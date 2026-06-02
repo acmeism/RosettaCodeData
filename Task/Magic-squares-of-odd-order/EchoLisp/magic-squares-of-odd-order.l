@@ -29,3 +29,4 @@
     )
     (writeln 'order n 'magic-number  (/ ( * n n2+1) 2))
     (array-print ms))
+

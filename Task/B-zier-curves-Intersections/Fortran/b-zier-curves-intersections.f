@@ -284,3 +284,4 @@ contains
     end subroutine maybe_add_intersection
 
 end program bezier_intersections
+

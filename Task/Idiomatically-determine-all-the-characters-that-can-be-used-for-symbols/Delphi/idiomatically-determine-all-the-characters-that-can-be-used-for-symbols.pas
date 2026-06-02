@@ -29,3 +29,5 @@ Memo.Lines.Add('Remaining Characters Allowed');
 Memo.Lines.Add('Allowed:      '+Good);
 Memo.Lines.Add('Not Allowed:  '+Bad);
 end;
+
+

@@ -60,3 +60,4 @@ magic <- function(value_n_1) {
   buildSentence <- function(x_s) paste0(toupper(substr(x_s, 1L, 1L)), substring(x_s, 2L), '.')
   buildSentence(paste(text, collapse = ', '))
 }
+

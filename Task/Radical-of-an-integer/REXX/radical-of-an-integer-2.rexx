@@ -1,4 +1,4 @@
--- 15 Nov 2025
+-- 23 May 2026
 include Setting
 
 say 'RADICAL OF AN INTEGER'
@@ -30,7 +30,7 @@ do i=1 to n
    u=Ufac.0; Radi.u=Radi.u+1
    if i//m=0 then do
       ti=(i%m)*10
-      say Format(ti,3)'%' Format(Time('e'),4,3) 'seconds'
+      say Format(ti,3)'%'
    end
 end
 say
@@ -39,14 +39,12 @@ do i=0 to 10
    if Radi.i>0 then
       say Right(i,2)':' Right(Radi.i,6)
 end
+call Timer 'R'
 say
 say 'Getting Primes up to' n'...'
-call Time('r')
 pr=Primes(n)
-say 'Took' Format(Time('e'),,3) 'seconds'
 say
 say 'Getting powers of Primes up to' r'...'
-call Time('r')
 pw=0
 do i=1
    p1=prim.i
@@ -60,7 +58,7 @@ do i=1
       pw=pw+1
    end
 end
-say 'Took' Format(Time('e'),,3) 'seconds'
+call Timer 'R'
 say
 say 'Primes' Format(pr,6)
 say 'Powers' Format(pw,6)
@@ -68,9 +66,5 @@ say '        -----'
 say 'Total ' Format(pr+pw,6)
 exit
 
--- Isqrt (integer square root)
-include Basic
--- Radical (calculate radical)
-include Ntheory
--- Primes (get primes)
-include Sequence
+-- Radical Isqrt Primes Timer
+include Math

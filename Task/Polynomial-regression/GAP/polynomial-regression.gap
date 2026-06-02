@@ -1,7 +1,7 @@
 PolynomialRegression := function(x, y, n)
-	local a;
-	a := List([0 .. n], i -> List(x, s -> s^i));
-	return TransposedMat((a * TransposedMat(a))^-1 * a * TransposedMat([y]))[1];
+   local a;
+   a := List([0 .. n], i -> List(x, s -> s^i));
+   return TransposedMat((a * TransposedMat(a))^-1 * a * TransposedMat([y]))[1];
 end;
 
 x := [0,  1,  2,  3,  4,  5,  6,   7,   8,   9,   10];

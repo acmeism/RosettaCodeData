@@ -67,3 +67,4 @@ ProxySpace.push;
 ~z = ~x + ~y; // make it the sum of two silent sounds
 ~x = { PinkNoise.ar(0.1) }; // … which now are noise,
 ~y = { SinOsc.ar(440, 0, 0.1) }; // and a sine tone
+

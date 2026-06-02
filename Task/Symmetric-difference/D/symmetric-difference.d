@@ -3,12 +3,12 @@ import std.stdio, std.algorithm, std.array;
 struct Set(T) {
     immutable T[] items;
 
-    Set opSub(in Set other) const pure nothrow {
-        return items.filter!(x => !other.items.canFind(x)).array.Set;
-    }
-
-    Set opAdd(in Set other) const pure nothrow {
-        return Set(this.items ~ (other - this).items);
+    Set opBinary(string op)(in Set other) const pure nothrow {
+        static if (op == "-") {
+            return items.filter!(x => !other.items.canFind(x)).array.Set;
+        } else static if (op == "+") {
+            return Set(this.items ~ (other - this).items);
+        }
     }
 }
 

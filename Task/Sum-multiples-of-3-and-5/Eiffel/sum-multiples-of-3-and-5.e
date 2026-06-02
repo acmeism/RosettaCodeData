@@ -24,3 +24,4 @@ feature {NONE}
 		end
 
 end
+

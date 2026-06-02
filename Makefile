@@ -4,19 +4,15 @@ M := .cache/makes
 $(shell [ -d '$M' ] || git clone -q $R '$M')
 
 include $M/init.mk
-include $M/perl.mk
+include $M/ys.mk
 include $M/clean.mk
 include $M/shell.mk
 
-ROSETTACODE := $(PERL-BIN)/rosettacode
+MAKES-CLEAN := Meta/ rosettacode.log rosettacode-errors.log
 
-SHELL-DEPS += $(ROSETTACODE)
+override PATH := $(ROOT)/bin:$(PATH)
+export PATH
 
-MAKES-CLEAN := Meta/ rosettacode.log
 
-build: $(ROSETTACODE)
-	time rosettacode
-
-$(ROSETTACODE): $(PERL)
-	cpanm -n RosettaCode
-	touch $@
+build: $(YS)
+	time bin/rcd-sync

@@ -35,3 +35,5 @@ ShowMemory(Memo,'Request To Send:    ',[rpRequestToSend]);
 ShowMemory(Memo,'Clear To Send:      ',[rpClearToSend]);
 ShowMemory(Memo,'Ring Indicator:     ',[rpRingIndicator]);
 end;
+
+

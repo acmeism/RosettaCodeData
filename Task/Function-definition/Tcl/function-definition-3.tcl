@@ -11,3 +11,4 @@ proc multiply { a b args } {
 }
 
 puts stdout [multiply  3 4 7 9 -2 -5 ]
+

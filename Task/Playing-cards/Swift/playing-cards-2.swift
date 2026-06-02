@@ -180,3 +180,5 @@ else {
 kh != Card(pip: Pip.King, suit: Suit.Clubs)
 kh.isFaceCard
 fc.isFaceCard
+
+

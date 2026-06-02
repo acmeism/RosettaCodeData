@@ -35,3 +35,5 @@ while(True):
 # report top 15 languages
 for i, (language, size) in enumerate(sorted(languages.items(), key=operator.itemgetter(1), reverse=True)[:15]):
     print("{:4d} {:4d} - {}".format(i+1, size, re.sub('Category:','',language))) # strip Category: from language
+
+

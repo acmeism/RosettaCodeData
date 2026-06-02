@@ -18,3 +18,4 @@ for n = 1 to 12
          if x = 2 see year + "-" + strn + "-" + string(i) + nl ok
      next
 next
+

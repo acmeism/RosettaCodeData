@@ -6,3 +6,10 @@ let canvas = document.createElement('canvas')
 document.body.appendChild(canvas)
 let m = maze(X,Y)
 display(canvas,m)
+</syntaxHighlight>
+
+{{out}}
+=== rendered 10x20 maze ===
+[[File:TSMaze.png]]
+
+

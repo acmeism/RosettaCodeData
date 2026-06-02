@@ -255,3 +255,4 @@
                MOVE UPPER-BND TO LOWER-BND
                COMPUTE UPPER-BND = UPPER-BND * 10
            END-PERFORM.
+

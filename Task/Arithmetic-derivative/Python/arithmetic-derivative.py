@@ -17,3 +17,4 @@ for n in range(-99, 101):
 print()
 for m in range(1, 21):
     print('(D for 10**{}) divided by 7 is {}'.format(m, D(10 ** m) // 7))
+

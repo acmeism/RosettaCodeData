@@ -89,3 +89,7 @@ ShowVLQ(Memo, Num5);
 ShowVLQ(Memo, Num6);
 ShowVLQ(Memo, Num7);
 end;
+
+
+
+

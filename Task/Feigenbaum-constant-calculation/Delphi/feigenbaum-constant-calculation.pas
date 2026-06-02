@@ -31,3 +31,4 @@ for I:=2 to IMax do
 	D1:=D; A2:=A1; A1:=A;
 	end;
 end;
+

@@ -54,3 +54,5 @@ Number:= 0;
 DigitCount:= 1;
 DigitsPowerSum(Memo, Number, DigitCount, 9-1, 0);
 end;
+
+

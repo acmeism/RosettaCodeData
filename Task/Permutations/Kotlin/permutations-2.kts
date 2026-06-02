@@ -16,3 +16,4 @@ fun main(args: Array<String>) {
             |${it.joinToString(separator = "\n")}""".trimMargin())
     }
 }
+

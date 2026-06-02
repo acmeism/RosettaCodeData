@@ -14,10 +14,10 @@ Array.prototype.bubblesort = function() {
 }
 var my_arr = ["G", "F", "C", "A", "B", "E", "D"];
 my_arr.bubblesort();
-	output='';
+   output='';
         for (var i = 0; i < my_arr.length; i++) {
-		output+=my_arr[i];	
-		if (i < my_arr.length-1) output+=',';
+      output+=my_arr[i];
+      if (i < my_arr.length-1) output+=',';
         }
 document.write(output);
 </script>

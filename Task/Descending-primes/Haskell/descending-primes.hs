@@ -16,3 +16,4 @@ getInt = foldl (\acc x -> acc * 10 + x) 0
 
 descendingInts = sort [getInt xs | xs <- subsequences([9,8..1]), 0 < length xs, isDescending xs]
 main = print [n | n <- descendingInts, isPrime n]
+

@@ -26,3 +26,5 @@ FindTriples(Memo,13,90,0);
 FindTriples(Memo,13,60,1);
 FindTriples(Memo,13,120,-1);
 end;
+
+

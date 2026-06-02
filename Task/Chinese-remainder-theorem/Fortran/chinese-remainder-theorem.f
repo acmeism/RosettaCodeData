@@ -53,3 +53,4 @@
       PRINT *, crt(3, [2, 3, 2], [3, 6, 7]) ! no solution
 
       END
+

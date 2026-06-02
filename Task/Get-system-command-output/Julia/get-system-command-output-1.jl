@@ -1,1 +1,1 @@
-ls = readstring(`ls`)
+ls = read(`ls`, String)

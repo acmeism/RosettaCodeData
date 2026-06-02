@@ -13,14 +13,14 @@ begin
    z := 0;
    for i := min to max do
       for j := 0 to (count[i - min] - 1) do begin
-	 arr[z] := i;
-	 z := z + 1
+    arr[z] := i;
+    z := z + 1
       end
 end;
 
 var
-   ages	: Array[0..99] of Integer;
-   i	: Integer;
+   ages  : Array[0..99] of Integer;
+   i  : Integer;
 
 begin
    { testing }

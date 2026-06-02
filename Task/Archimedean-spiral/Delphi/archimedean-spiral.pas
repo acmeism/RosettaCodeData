@@ -21,3 +21,4 @@ while Theta<(40*Pi) do
 	Theta:=Theta+Step;
 	end;
 end;
+

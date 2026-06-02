@@ -44,3 +44,4 @@ TESTS = {
 for input, out in TESTS.items():
     found = perta(input)
     print('TEST:{:3d} -> '.format(input) + str(found) + (f' ; ERROR: expected {out}' if found != out else ''))
+

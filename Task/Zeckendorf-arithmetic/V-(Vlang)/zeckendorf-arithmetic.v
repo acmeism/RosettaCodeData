@@ -1,8 +1,6 @@
 import strings
-const (
-    dig  = ["00", "01", "10"]
-    dig1 = ["", "1", "10"]
-)
+const dig  = ["00", "01", "10"]
+const dig1 = ["", "1", "10"]
 
 struct Zeckendorf {
 mut:

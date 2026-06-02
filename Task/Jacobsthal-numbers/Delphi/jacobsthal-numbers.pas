@@ -89,3 +89,6 @@ Memo.Lines.Add(S);
 Memo.Lines.Add('');
 GetJacobsthalPrimes(Memo);
 end;
+
+
+

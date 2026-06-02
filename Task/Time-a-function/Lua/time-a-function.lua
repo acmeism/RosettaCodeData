@@ -12,3 +12,4 @@ function sleep(n)
 end
 
 print( bench(sleep, 2) )
+

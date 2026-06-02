@@ -16,3 +16,4 @@ seq←n                   ⍝ Init the sequence
     seq,←n              ⍝ Append that to the sequence
 :EndWhile
 ∇
+

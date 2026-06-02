@@ -21,3 +21,4 @@ func pricefraction n
      if n < 0.91 return 0.94 ok
      if n < 0.96 return 0.98 ok
      return 1
+

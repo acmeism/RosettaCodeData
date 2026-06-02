@@ -131,3 +131,4 @@ export function deal_ms_fc_board(gamenumber: string): string {
 
     return columns.map(render_column).join("");
 }
+

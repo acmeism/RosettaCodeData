@@ -38,3 +38,4 @@ function do_task3(      a, b, f_ab){
     f_ab = 333.75 * b^6 + a^2 * (11*a^2*b^2 - b^6 - 121*b^4 - 2) + 5.5*b^8 + a/(2*b)
     printf("\nTask 3\nf(%6.12f, %6.12f) = %10.24f", a, b, f_ab)
 }
+

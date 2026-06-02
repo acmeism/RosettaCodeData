@@ -32,3 +32,4 @@ for I:=1 to 100000000 do
  if TestNumber(I)=89 then Inc(Cnt);
 Memo.Lines.Add(IntToStr(Cnt));
 end;
+

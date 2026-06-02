@@ -16,3 +16,4 @@ sub test (Str $l, Str $r) {
   # say the results. If there is one more Container layer around them this doesn't work, this is why we need the arguments here.
   say "$w1 $w2 $w3 $w4"
 })(|@a); # supply the array as argumetns
+

@@ -142,3 +142,4 @@ fn main() {
     println!("\nEngagement stability check {}",
              if check_engagement(&engaged, &men_preferences, &women_preferences) { "PASSED" } else { "FAILED" });
 }
+

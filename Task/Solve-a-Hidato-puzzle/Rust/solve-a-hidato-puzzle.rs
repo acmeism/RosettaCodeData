@@ -191,3 +191,4 @@ fn main() {
     println!("\nSolution:");
     p.print_board();
 }
+

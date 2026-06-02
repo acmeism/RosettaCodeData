@@ -1,4 +1,4 @@
-function F (n, x, y)
+local function F (n, x, y)
     if n == 0 then
         return x + y
     elseif y == 0 then
@@ -17,7 +17,8 @@ local testCases = {
     {3, 1, 1}
 }
 
+local unpackTable = unpack or table.unpack
 for _, v in pairs(testCases) do
     io.write("F(" .. table.concat(v, ",") .. ") = ")
-    print(F(unpack(v)))
+    print(F(unpackTable(v)))
 end

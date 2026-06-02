@@ -121,3 +121,5 @@ T:=Triplets[4999];
 Memo.Lines.Add(Format('200,000th sphenic =   %n',[Sphenic[199999]+0.0]));
 Memo.Lines.Add(Format('The 5,000th triplet = %d %d %d', [T.A,T.B,T.C]));
 end;
+
+

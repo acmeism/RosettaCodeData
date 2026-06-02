@@ -20,3 +20,4 @@ main = do
   print sb
   print $ chol sb
   print $ tr $ chol sb
+

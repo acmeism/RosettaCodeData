@@ -53,3 +53,4 @@
                 [41660815127637347468140745042827704103445750172002, 100000000000000000000000000000000000000000000000577]]
         :let [r (tonelli n p)]]
   (println (format "n: %5d p: %d \n\troots: %5d %5d" (biginteger n) (biginteger p) (biginteger r) (biginteger (- p r)))))
+

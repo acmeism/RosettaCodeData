@@ -72,3 +72,4 @@ integrater~stop          -- terminate the updater thread
   return rxcalcsin(rxcalcpi() * t)
 
 ::requires rxmath library
+

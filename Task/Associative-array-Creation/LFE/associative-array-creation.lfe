@@ -3,3 +3,4 @@
        (my-dict (: dict store 'key-2 '"value 2" my-dict)))
   (: io format '"size: ~p~n" (list (: dict size my-dict)))
   (: io format '"some data: ~p~n" (list (: dict fetch 'key-1 my-dict))))
+

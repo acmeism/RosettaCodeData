@@ -22,3 +22,4 @@ end
 
 println(orderedpartitions([2, 0, 2]))
 println(orderedpartitions([1, 1, 1]))
+

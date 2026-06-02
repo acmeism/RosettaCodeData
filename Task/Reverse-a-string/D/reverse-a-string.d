@@ -1,3 +1,5 @@
+import std.algorithm;
+
 void main() {
 	import std.range, std.conv;
 

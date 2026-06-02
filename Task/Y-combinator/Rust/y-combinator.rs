@@ -51,3 +51,4 @@ fn main() {
     println!("fac({}) = {}", n, fac(n));
     println!("fib({}) = {}", n, fib(n));
 }
+

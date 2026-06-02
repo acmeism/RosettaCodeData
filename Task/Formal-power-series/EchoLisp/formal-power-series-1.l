@@ -45,3 +45,5 @@
 (define sin-x (stream-cons 0 (stream-rest (s-int cos-x))))
 ;; cos = 1 - ∫ sin
 (define cos-x (stream-cons 1 (stream-rest (s-k-add 1  (s-neg (s-int sin-x))))))
+
+

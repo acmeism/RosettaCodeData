@@ -95,3 +95,4 @@ double brents_fun(std::function<double (double)> f, double lower, double upper, 
 	std::cout<< "The solution does not converge or iterations are not sufficient" << std::endl;
 
 } // end brents_fun
+

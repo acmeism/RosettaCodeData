@@ -24,3 +24,4 @@ begin
   Iterate(Once, 3);
   readln;
 end.
+

@@ -22,3 +22,5 @@ begin
 FloydsTriangle(Memo,5);
 FloydsTriangle(Memo,14);
 end;
+
+

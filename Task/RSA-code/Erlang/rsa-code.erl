@@ -101,3 +101,4 @@ test() ->
     {PublicKey,PrivateKey} = key_gen({N,D},E),
     PlainText =:= decrypt(PrivateKey,
 			  encrypt(PublicKey,PlainText)).
+

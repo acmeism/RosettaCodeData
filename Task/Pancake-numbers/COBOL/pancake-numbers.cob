@@ -33,3 +33,4 @@
                ADD GAP TO SUMA
            END-PERFORM
            COMPUTE P = N + ADJ.
+

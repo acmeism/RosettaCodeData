@@ -17,3 +17,4 @@ findfriendlies(List,Acc) ->
           findfriendlies(BL,Acc++[{A,B}]);
         true -> false
     end.
+

@@ -136,3 +136,4 @@ r <- a * (b + (-c))  # a * (b - c)
 cat("a * (b - c): ", as.integer(r), ", ", as.character(r), "\n", sep = "")
 
 stopifnot(as.integer(r) == as.integer(a) * (as.integer(b) - as.integer(c)))
+

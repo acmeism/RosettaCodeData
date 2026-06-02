@@ -13,3 +13,4 @@ josephus(N, K, M, Survivors) :-
             Survivor is (Survivor0 + K) mod N
         ), Survivors)
     ).
+

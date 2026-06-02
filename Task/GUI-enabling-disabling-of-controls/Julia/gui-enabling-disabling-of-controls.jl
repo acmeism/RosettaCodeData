@@ -45,3 +45,5 @@ function invalid_command(path, W)
 end
 
 tk_configure(value, {:validate=>"focusout", :validatecommand=>validate_command, :invalidcommand=>invalid_command })
+
+

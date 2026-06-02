@@ -94,3 +94,4 @@ playFrom: aMinNumber to: aMaxNumber
 		min: aMinNumber;
 		max: aMaxNumber;
 		play! !
+

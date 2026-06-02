@@ -7,3 +7,4 @@ f.(10);
 // (1..n) returns an array of floats when n is a float
 
 f.(20.0);
+

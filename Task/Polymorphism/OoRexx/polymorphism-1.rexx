@@ -27,3 +27,4 @@ c~print
 ::method print
   expose radius
   say "A circle of radius" radius "centered at location ("||self~x","self~y")"
+

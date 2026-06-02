@@ -51,3 +51,4 @@ for my $airport (find_nearest_airports($lat, $lon, $csv)) {
     printf "%7.1f\t    %03d\t%-7s\t%-15s\t%s\n", map { $airport->{$_} } <Distance Bearing ICAO Country Name>;
     last unless --$wanted
 }
+

@@ -132,3 +132,4 @@ of words."
                           ('right 'right-align-lines)
                           ("right" 'right-align-lines))))
     (funcall align-function data)))
+

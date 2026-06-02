@@ -36,3 +36,4 @@ fcn:{[xpx;ypx]
 \l bmp.q
 fn:`:demo.bmp;
 writebmp[w;h;fcn;fn];
+

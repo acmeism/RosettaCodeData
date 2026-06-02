@@ -27,3 +27,4 @@ sub best_shuffle {
 	
 	print "$original_word, $best_word, $best_score\n";
 }
+

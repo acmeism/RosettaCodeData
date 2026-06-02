@@ -31,3 +31,4 @@ main(PlainText, Key) ->
   io:format("Cyphertext ---> ~s~n", [CypherText]),
 
   PlainText = lists:map(fun(Char) -> rot(Char, Decode) end, CypherText).
+

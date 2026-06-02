@@ -11,3 +11,4 @@ length_of_strings <- function(list_of_strings){
 list_of_strings = c("abcd","123456789","abcdef","1234567")
 
 length_of_strings(list_of_strings)
+

@@ -11,3 +11,4 @@ BEGIN
 	StdLog.String("From Main");StdLog.Ln
 END Main;
 END MainProcedure.
+

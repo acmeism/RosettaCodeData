@@ -1,4 +1,4 @@
-import std.stdio, std.math;
+import std.stdio, std.math, std.conv;
 
 struct PerlinNoise {
     private static double fade(in double t) pure nothrow @safe @nogc {
@@ -22,8 +22,8 @@ struct PerlinNoise {
 
     static immutable ubyte[512] p;
 
-    static this() pure nothrow @safe @nogc {
-        static immutable permutation = cast(ubyte[256])x"97 A0 89 5B 5A
+    shared static this() pure nothrow @safe @nogc {
+        static immutable permutation = cast(ubyte[256])std.conv.hexString!"97 A0 89 5B 5A
             0F 83 0D C9 5F 60 35 C2 E9 07 E1 8C 24 67 1E 45 8E 08 63 25
             F0 15 0A 17 BE 06 94 F7 78 EA 4B 00 1A C5 3E 5E FC DB CB 75
             23 0B 20 39 B1 21 58 ED 95 38 57 AE 14 7D 88 AB A8 44 AF 4A
@@ -37,6 +37,7 @@ struct PerlinNoise {
             B3 A2 F1 51 33 91 EB F9 0E EF 6B 31 C0 D6 1F B5 C7 6A 9D B8
             54 CC B0 73 79 32 2D 7F 04 96 FE 8A EC CD 5D DE 72 43 1D 18
             48 F3 8D 80 C3 4E 42 D7 3D 9C B4";
+
 
         // Two copies of permutation.
         p[0 .. permutation.length] = permutation[];

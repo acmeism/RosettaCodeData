@@ -16,3 +16,4 @@ while count < 24:
       inc count
       echo &"{p:4}: {compress($n, 15)}"
   inc p, 2
+

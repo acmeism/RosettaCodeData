@@ -134,3 +134,4 @@ begin
   New_Line;
   Put_Line ("Elapsed time to calculate: " & Duration'Image (To_Duration (Elapsed_Time)) & " seconds");
 end Cuban_Primes;
+

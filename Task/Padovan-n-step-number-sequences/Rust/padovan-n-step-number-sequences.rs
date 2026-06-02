@@ -16,3 +16,4 @@ fn main() {
         (1..=15).for_each(|x| print!("{},", padovan(n, x)))
     });
 }
+

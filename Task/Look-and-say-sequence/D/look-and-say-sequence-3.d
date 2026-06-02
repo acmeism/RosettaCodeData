@@ -11,7 +11,7 @@ void showLookAndSay(bool showArrays)(in uint n) nothrow {
         immutable len = cast(size_t)(100 + 1.05 *
                                      exp(0.269 * m + 0.2686)) + 1;
         auto a = len.uninitializedArray!(Digit[]);
-        printf("Allocated %d bytes.\n", a.length * Digit.sizeof);
+        printf("Allocated %lu bytes.\n", a.length * Digit.sizeof);
         return a.ptr;
     }
 
@@ -27,7 +27,7 @@ void showLookAndSay(bool showArrays)(in uint n) nothrow {
 
     foreach (immutable i; 0 .. n - 1) {
         static if (showArrays)
-            printf("%2u: %s\n", i + 1, a1);
+            printf("%2u: %s\n", i + 1, cast(char*)a1);
         else
             printf("%2u: n. digits: %u\n", i + 1, len1);
         auto p1 = a1,
@@ -83,7 +83,7 @@ void showLookAndSay(bool showArrays)(in uint n) nothrow {
     }
 
     static if (showArrays)
-        printf("%2u: %s\n", n, a1);
+        printf("%2u: %s\n", n, cast(char*)a1);
     else
         printf("%2u: n. digits: %u\n", n, len1);
 }

@@ -10,3 +10,4 @@ begin
   for var month:=1 to 12 do
     Println(LastSunday(month,2024).ToString('yyyy-MM-dd'));
 end.
+

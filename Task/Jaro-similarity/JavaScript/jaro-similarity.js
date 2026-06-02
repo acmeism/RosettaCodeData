@@ -42,3 +42,4 @@ function jaro(s, t) {
 console.log(jaro("MARTHA", "MARHTA"));        // 0.9611111111111111
 console.log(jaro("DIXON", "DICKSONX"));       // 0.8133333333333333
 console.log(jaro("JELLYFISH", "SMELLYFISH")); // 0.8962962962962963
+

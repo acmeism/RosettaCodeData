@@ -48,3 +48,5 @@ DrawCircle(Image,99,Point(200,200));
 DrawCircle(Image,98,Point(200,200));
 Image.Invalidate;
 end;
+
+

@@ -66,7 +66,7 @@ string infixToPostfix(string infix) {
 int indexOf(T)(const T[] a, const T v) {
     foreach(i,e; a) {
         if (e == v) {
-            return i;
+            return cast(int)i;
         }
     }
     return -1;

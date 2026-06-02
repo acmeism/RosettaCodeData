@@ -168,3 +168,4 @@ mult_(B, Q, A, R, Resultat, Ajout) :-
 	(  Q1 = [48] -> Resultat = A % a multiplication
 	;  ( A1 = [45 | _], Ajout = [43]) -> Resultat = Q, R = A  % a division
 	;  mult_(B, Q1, A1, R, Resultat, Ajout)) .
+

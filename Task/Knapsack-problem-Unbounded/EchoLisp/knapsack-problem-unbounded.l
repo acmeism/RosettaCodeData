@@ -68,3 +68,4 @@ total-value     54500
 
 (length (hash-keys H)) ;; # entries in cache
     → 218
+

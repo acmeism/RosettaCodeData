@@ -11,3 +11,4 @@ echo "She was a soul stripper. She took my heart!".multiReplace(
 # And another way using module "sequtils".
 import sequtils
 echo "She was a soul stripper. She took my heart!".filterIt(it notin "aei").join()
+

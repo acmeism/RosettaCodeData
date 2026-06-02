@@ -37,3 +37,4 @@ The following calls:
 1) {make_table {operation +} 5 15}
 2) {make_table {operation *} 12 12}
 3) {make_table {operation pow} 6 10}
+

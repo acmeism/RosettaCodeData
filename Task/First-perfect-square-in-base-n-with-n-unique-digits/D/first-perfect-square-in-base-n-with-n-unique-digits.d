@@ -6,7 +6,7 @@ import std.string;
 
 string toBaseN(const long num, const int base)
 in (base > 1, "base cannot be less than 2")
-body {
+do {
     immutable ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     enforce(base < ALPHABET.length, "base cannot be represented");
 
@@ -29,7 +29,7 @@ int countUnique(string buf) {
     foreach (c; buf) {
         m[c] = true;
     }
-    return m.keys.length;
+    return cast(int) m.keys.length;
 }
 
 void find(int base) {

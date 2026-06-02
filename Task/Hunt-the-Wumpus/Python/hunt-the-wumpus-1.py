@@ -273,3 +273,4 @@ if __name__ == '__main__':
 
 	WG = WumpusGame()
 	WG.gameloop()
+

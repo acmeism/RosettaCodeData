@@ -15,3 +15,4 @@ DEFINITION Queue;
 	PROCEDURE New (capacity: LONGINT): Instance;
 
 END Queue.
+

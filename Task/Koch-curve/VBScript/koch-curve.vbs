@@ -102,3 +102,4 @@ for i=0 to 3
   x.rt 2
 next
 set x=nothing  'show image in browser
+

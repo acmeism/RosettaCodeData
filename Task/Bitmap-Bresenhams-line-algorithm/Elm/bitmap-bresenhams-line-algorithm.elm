@@ -51,3 +51,4 @@ bresenhamLineLoop statics error p positions =
       error_ = error + dErrX + dErrY
     in
       bresenhamLineLoop statics error_ (Position x y) positions_
+

@@ -14,3 +14,4 @@ pub fn count_jewels(stones: String, jewels: String) -> Int {
   |> string.to_graphemes
   |> list.count(set.contains(jewels, _))
 }
+

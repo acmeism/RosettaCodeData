@@ -23,3 +23,4 @@ End Function
   arr(-1) = "orange"
 
   Debug.Print LengthOfArray(arr) ' prints 2 as result
+

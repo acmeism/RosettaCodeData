@@ -4,7 +4,7 @@ void rpmToInfix(in string str) @safe {
     static struct Exp { int p; string e; }
     immutable P = (in Exp pair, in int prec) pure =>
         pair.p < prec ? format("( %s )", pair.e) : pair.e;
-    immutable F = (in string[] s...) pure nothrow => s.join(' ');
+    immutable F = (in string[] s...) pure => s.join(' ');
 
     writefln("=================\n%s", str);
     Exp[] stack;

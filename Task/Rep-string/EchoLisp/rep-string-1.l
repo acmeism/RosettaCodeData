@@ -15,3 +15,4 @@
          #:break (equal? trunc  (list-rotate trunc lam)) => (list->string (take cyclic lam))
          'no-rep )
    'too-short-no-rep))
+

@@ -1,0 +1,24 @@
+' ============================================
+' https://rosettacode.org/wiki/Real_constants_and_functions
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+
+' built-in constants
+PRINT EULER#         ' 2.718281828459045
+PRINT PI#            ' 3.14159265358979
+PRINT HPI#           ' 1.5707963267948966 (PI# / 2)
+PRINT QPI#           ' 0.7853981633974475 (PI# / 4)
+PRINT TAU#           ' 6.28318530717958  (PI# * 2)
+
+' functions
+PRINT SQR(5)         ' 2.23606797749979
+PRINT LOG(EULER#)    ' 1            — LOG is natural log (base e)
+PRINT EXP(1)         ' 2.718...     — inverse of LOG
+PRINT ABS(-1.5)      ' 1.5
+PRINT INT(3.7)       ' 3            — truncate toward zero
+PRINT CINT(3.7)      ' 4            — round
+PRINT CINT(3.3)      ' 3
+PRINT CEIL(3.3)      ' 4
+PRINT FLOOR(1.95)    ' 1
+PRINT POW(3, 3)      ' 27
+END

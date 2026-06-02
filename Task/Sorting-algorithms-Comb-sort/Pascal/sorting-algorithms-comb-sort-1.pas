@@ -26,7 +26,7 @@ procedure combSort(var a: TIntArray);
       for i := 1 to length(a) - gap do
         if a[i] > a[i+gap] then
         begin
-	  temp := a[i];
+     temp := a[i];
           a[i] := a[i+gap];
           a[i+gap] := temp;
           swapped := true;

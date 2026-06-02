@@ -75,3 +75,4 @@ ringBells n = do
 
 bellRinger :: IO ThreadId
 bellRinger = doWithScheduler (onInterval (30*60)) ringBells
+

@@ -31,3 +31,4 @@ fn floyds_triangle(n: u32) {
         println!("{}", arranged_row.join(""))
     }
 }
+

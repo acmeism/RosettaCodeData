@@ -1,0 +1,16 @@
+' ============================================
+' https://rosettacode.org/wiki/Increment_a_numerical_string
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+
+[inits]
+    LET num$ = "123"
+
+[main]
+    num$ = STR(VAL(num$) + 1)
+
+[output]
+    PRINT num$
+
+' Output:
+' 124

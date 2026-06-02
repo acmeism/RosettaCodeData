@@ -39,3 +39,4 @@ uncoded letter."
 	(setq uncoded-letter (substring alphabet code-position (+ 1 code-position)))) ; AND pass the uncoded letter
       (setq uncoded-text (concat uncoded-text uncoded-letter)))				      ; IN ANY CASE, add new letter to UNCODED-TEXT
     uncoded-text))
+

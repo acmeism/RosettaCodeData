@@ -87,3 +87,4 @@ Memo.Lines.Add('In-Order:    '+InOrder(Tree[0]));
 Memo.Lines.Add('Post-Order:  '+PostOrder(Tree[0]));
 Memo.Lines.Add('Level-Order: '+LevelOrder(Tree[0]));
 end;
+

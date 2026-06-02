@@ -120,3 +120,4 @@ match c with
   let b = snd seg in
 
   Printf.printf "(%f, %f) (%f, %f) Dist %f\n" a.x a.y b.x b.y (dist c)
+

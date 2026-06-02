@@ -261,3 +261,4 @@ dim fn:fn=CreateObject("Scripting.FileSystemObject").GetSpecialFolder(2)& "\mand
 Set X = (New ImgClass)(fn,580,480,1,8,0,pp)
 domandel -2.,1.,-1.2,1.2
 Set X = Nothing
+

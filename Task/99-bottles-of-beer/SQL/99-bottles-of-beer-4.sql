@@ -31,3 +31,4 @@ coalesce(lead(n) OVER (ORDER BY n DESC),0) || ' bottle' ||
 CASE WHEN coalesce(lead(n) OVER (ORDER BY n DESC),0) <>1 THEN 's' ELSE '' END || ' of beer on the wall' AS song
 FROM t
 ORDER BY n DESC;
+

@@ -88,3 +88,4 @@ feature{NONE}
 		end
 
 end
+

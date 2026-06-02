@@ -1,5 +1,3 @@
-exp_digsum <- function(n) ifelse(n>9, (n%%10)^(n%%10)+exp_digsum(n%/%10), n^n)
+expdigsum <- function(n) ifelse(n > 9, (n%%10)^(n%%10) + expdigsum(n%/%10), n^n)
 
-for(i in 1:5000){
-  if(exp_digsum(i)==i) print(i)
-}
+cat(Filter(function(x) expdigsum(x) == x, 1:5000))

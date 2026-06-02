@@ -1,0 +1,17 @@
+' ============================================
+' https://rosettacode.org/wiki/Terminal_control/Positional_read
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+
+[inits]
+    LET c$
+
+[main]
+    CLS
+    LOCATE 6, 3
+    PRINT "Hello"
+
+    ' GETCONSOLE() returns ASCII value of char
+    ' so we use CHR() to convert it as character
+    c$ = CHR(GETCONSOLE(6, 3, 0))
+END

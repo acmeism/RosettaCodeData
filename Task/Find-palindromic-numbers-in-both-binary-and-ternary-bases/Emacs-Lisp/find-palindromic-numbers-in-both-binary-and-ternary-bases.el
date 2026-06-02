@@ -50,3 +50,4 @@ also a palindrome in base 2."
           (setq count (1+ count))
           (setq base-10-string (base-3-to-base-10 base-3-string))
           (insert (format "\n%12s  %23s  %37s" base-10-string base-3-string base-2-string)))))))
+

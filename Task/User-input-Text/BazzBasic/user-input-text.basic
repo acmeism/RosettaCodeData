@@ -1,0 +1,22 @@
+' ============================================
+' https://rosettacode.org/wiki/User_input/Text
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+[inits]
+    LET text$
+    LET number$
+
+[main]
+    INPUT "Enter a string: ", text$
+
+    ' Since task do not require checkig the integer, we go easy here.
+    INPUT "Enter the integer 75000: ", number$
+    PRINT "String : " + text$
+    PRINT "Integer: " + STR(VAL(number$))
+END
+
+' Output:
+' Enter a string: Hello
+' Enter the integer 75000: 75000
+' String : Hello
+' Integer: 75000

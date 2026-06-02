@@ -13,12 +13,12 @@ my UInt $t-batch = 2**7;
 say "elements: $elems, runs: $runs, cpu-cores: {Kernel.cpu-cores}, large/medium/small/tiny-batch: $l-batch/$m-batch/$s-batch/$t-batch";
 
 my %results = timethese $runs, {
-	single-thread         => { quicksort(@unsorted) },
-	parallel-naive        => { quicksort-parallel-naive(@unsorted) },
-	parallel-tiny-batch   => { quicksort-parallel(@unsorted, $t-batch) },
-	parallel-small-batch  => { quicksort-parallel(@unsorted, $s-batch) },
-	parallel-medium-batch => { quicksort-parallel(@unsorted, $m-batch) },
-	parallel-large-batch  => { quicksort-parallel(@unsorted, $l-batch) },
+   single-thread         => { quicksort(@unsorted) },
+   parallel-naive        => { quicksort-parallel-naive(@unsorted) },
+   parallel-tiny-batch   => { quicksort-parallel(@unsorted, $t-batch) },
+   parallel-small-batch  => { quicksort-parallel(@unsorted, $s-batch) },
+   parallel-medium-batch => { quicksort-parallel(@unsorted, $m-batch) },
+   parallel-large-batch  => { quicksort-parallel(@unsorted, $l-batch) },
 }, :statistics;
 
 my @metrics = <mean median sd>;
@@ -26,5 +26,5 @@ my $msg-row = "%.4f\t" x @metrics.elems ~ '%s';
 
 for %results.sort( *.value<median> ) {
     once say @metrics.join("\t"); # header
-	     say sprintf($msg-row, .value{@metrics}, .key)
+        say sprintf($msg-row, .value{@metrics}, .key)
 }

@@ -21,3 +21,4 @@ fn show_temp(temperature: Float, unit: String) -> Nil {
   |> string.append(" °" <> unit)
   |> io.println
 }
+

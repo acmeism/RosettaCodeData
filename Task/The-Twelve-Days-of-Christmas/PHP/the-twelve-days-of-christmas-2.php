@@ -31,3 +31,4 @@ function twelve_days( $gifts ) {
 }
 
 twelve_days( array_reverse( $gifts, true ) );
+

@@ -58,3 +58,4 @@ main = do
   let ctable = genColorTable nsites
   voro <- computeP $ colorize ctable (voronoi nsites 512) :: IO (Array U DIM2 (Word8, Word8, Word8))
   writeImageToBMP "out.bmp" voro
+

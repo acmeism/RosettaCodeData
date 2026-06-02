@@ -60,3 +60,4 @@ main = do
     (_) -> do
       name <- getProgName
       printf "Something went wrong - please use ./%s <dir> <bytes>\n" name
+

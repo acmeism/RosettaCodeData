@@ -5,3 +5,4 @@ friendly(Limit) ->
         X == properdivs:sumdivs(proplists:get_value(X,List))
         andalso X =/= proplists:get_value(X,List)],
     io:format("L: ~w~n", [Final]).
+

@@ -22,3 +22,5 @@ for I:=1 to 100 do
 	end;
 Memo.Text:=S;
 end;
+
+

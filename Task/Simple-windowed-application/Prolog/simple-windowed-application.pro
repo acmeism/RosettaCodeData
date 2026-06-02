@@ -39,3 +39,4 @@ simple_windowed :-
 	assert(click(0)),
 	make_dialog(D, 'Simple windowed application'),
 	send(D, open).
+

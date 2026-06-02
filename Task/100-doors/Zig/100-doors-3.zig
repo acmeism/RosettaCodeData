@@ -1,5 +1,8 @@
-pub fn main() !void {
-    const stdout = @import("std").io.getStdOut().writer();
+const std = @import("std");
+
+pub fn main(init: std.process.Init) !void {
+    var stdout_writer = std.Io.File.stdout().writer(init.io, &.{});
+    const stdout = &stdout_writer.interface;
 
     var square: u8 = 1;
     var increment: u8 = 3;

@@ -124,3 +124,4 @@ if (returnvalue .lt. 0) returnvalue = returnvalue + n
 end function imod
 
 end program MinPosMul
+

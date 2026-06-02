@@ -1,3 +1,3 @@
 Time millisecondsToRun: [
-	Transcript show: 2000 factorial
+   Transcript show: 2000 factorial
 ].

@@ -32,3 +32,4 @@ wscript.echo filtered
 encoded=encrypt(filtered,key)
 wscript.echo encoded
 wscript.echo decrypt(encoded,key)
+

@@ -42,3 +42,4 @@ n.times do |i|
   threads << Thread.new { foo i, s }
 end
 threads.each(&:join)
+

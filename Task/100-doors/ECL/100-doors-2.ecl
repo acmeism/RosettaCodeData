@@ -28,3 +28,4 @@ loopBody(DATASET(Doors) ds, UNSIGNED4 c) :=
 g1 := LOOP(ClosedDoors,100,loopBody(ROWS(LEFT),COUNTER));
 
 OUTPUT(g1);
+

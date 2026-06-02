@@ -150,3 +150,4 @@ if __name__ == '__main__':
         puzzle.print_starting_board()
         puzzle.solve()
         puzzle.print_solution()
+

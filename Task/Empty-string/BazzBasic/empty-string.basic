@@ -1,0 +1,26 @@
+' ============================================
+' https://rosettacode.org/wiki/Empty_string
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+
+[inits]
+    LET s$
+    LET f$ = "Not empty"
+
+[main]
+
+    PRINT "Empty string: "; s$
+
+    IF s$ = "" THEN
+        PRINT "s$ is empty."
+    ENDIF
+
+    IF f$ <> "" THEN
+        PRINT "f$ is not empty."
+    ENDIF
+END
+
+' Output:
+' Empty string:
+' s$ is empty.
+' f$ is not empty.

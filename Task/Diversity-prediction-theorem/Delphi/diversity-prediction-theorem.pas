@@ -24,3 +24,4 @@ begin
 DoDiversityPrediction(Memo,49,[48,47,51]);
 DoDiversityPrediction(Memo,49,[48,47,51,42]);
 end;
+

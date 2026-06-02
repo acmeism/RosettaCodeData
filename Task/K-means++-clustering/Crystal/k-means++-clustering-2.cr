@@ -66,3 +66,4 @@ def plot(cluster_means,points,points_cluster,fname="kmeans_output.svg")
     io.puts(%(</svg>))
   end
 end
+

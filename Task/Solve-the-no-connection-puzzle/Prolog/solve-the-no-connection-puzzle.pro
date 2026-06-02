@@ -52,3 +52,4 @@ set_constraint(H, [H1 | T1], V, [VH | VT]) :-
 set_constraint(H, [H1 | T1], V, [_VH | VT]) :-
 	\+connected(H, H1),
 	set_constraint(H, T1, V, VT).
+

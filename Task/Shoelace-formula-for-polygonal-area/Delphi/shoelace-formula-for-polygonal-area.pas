@@ -50,3 +50,5 @@ ShowPolygon(Polygon,Memo);
 Area:=GetPolygonArea(Polygon);
 Memo.Lines.Add('Area: '+FloatToStrF(Area,ffFixed,18,2));
 end;
+
+

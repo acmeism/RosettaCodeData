@@ -36,3 +36,4 @@ CUSIPs = %w[
 CUSIPs.each do |cusip|
   puts "#{cusip}: #{check_cusip(cusip)}"
 end
+

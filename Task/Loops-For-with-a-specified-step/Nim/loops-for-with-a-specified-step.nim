@@ -15,3 +15,4 @@ echo "" # spacer
 
 for n in countdown(16, 0, 4):    # 16 to 0 step -4
   echo n
+

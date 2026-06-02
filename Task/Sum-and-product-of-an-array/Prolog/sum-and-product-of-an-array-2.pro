@@ -20,3 +20,4 @@ sumproduct(Lst, Sum, Prod):-
 ?- sumproduct([1,2,3,4],Sum,Prod).
 Sum = 10,
 Prod = 24 .
+

@@ -28,3 +28,4 @@ int main() {
 	setRightAdjacent(test, 2);
 	setRightAdjacent(test, 3);
 }
+

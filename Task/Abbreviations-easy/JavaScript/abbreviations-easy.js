@@ -19,3 +19,4 @@ console.log(input.length==0?null:input.trim().split(/\s+/)
         )
             .map(_=>typeof _=="undefined"?"*error*":_).join(' ')
       )
+

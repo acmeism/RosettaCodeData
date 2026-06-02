@@ -47,3 +47,5 @@ Func nPermutation(k, n)
           ok
      next
 return
+
+

@@ -10,3 +10,4 @@ for Y:=0 to Image.Height-1 do
 	Image.Canvas.Pixels[X,Y]:=RGB(0,X xor Y,0);
 	end;
 end;
+

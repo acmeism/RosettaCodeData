@@ -26,3 +26,5 @@ Memo.Lines.Add(FloatToStrF(D,ffNumber,18,4));
 Memo.Lines.Add(FloatToStrF(D,ffCurrency,18,4));
 Memo.Lines.Add(Format('%10.4f',[D]));
 end;
+
+

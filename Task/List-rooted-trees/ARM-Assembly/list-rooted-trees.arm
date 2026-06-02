@@ -1,0 +1,238 @@
+/* ARM assembly Raspberry PI  */
+/*  program rootedtree.s  Translation of C */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.include "../constantes.inc"
+.equ NBELEMENTS,      100              @ list size
+
+/*******************************************/
+/*   Macros                              */
+/*******************************************/
+//.include "../../ficmacros32.inc"            @ for developer debugging
+
+/*******************************************/
+/* Initialized data */
+/*******************************************/
+.data
+szMessDebutPgm:          .asciz "Program 32 bits start. \n"
+szMessFinOK:             .asciz "Program normal end. \n"
+szCarriageReturn:        .asciz "\n"
+/* datas error display */
+szMessErreur:            .asciz "Error detected.\n"
+/* datas message display */
+szMessResult:            .asciz "Number of trees :"
+szParenOuv:              .asciz "("
+szParenFer:              .asciz ")"
+
+.align 2
+offset:         .int 0,1           @ 2 integers
+                .fill 100,4,0       @ 30 integers
+
+/*******************************************/
+/* UnInitialized data */
+/*******************************************/
+.bss
+.align 2
+sConvArea:    .skip 24
+lList1:       .skip 4 * NBELEMENTS    @ list memory
+ilen:         .skip 4
+/*******************************************/
+/*  code section   */
+/*******************************************/
+.text
+.global main
+main:
+    ldr r0,iAdrszMessDebutPgm
+    bl affichageMess
+    ldr r0,iAdrlList1
+
+    mov r0,#0                  @ list init
+    bl append
+    mov r4,#5                  @ bags number
+    mov r0,r4
+    bl mktrees                 @ build tree
+
+    ldr r0,iAdrszMessResult
+    bl affichageMess
+    ldr r1,iAdroffset
+    ldr r2,[r1,r4,lsl #2]
+    add r3,r4,#1
+    ldr r3,[r1,r3,lsl #2]
+    sub r0,r3,r2
+    ldr r1,iAdrsConvArea
+    bl conversion10
+    ldr r0,iAdrsConvArea
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+
+    mov r0,r4
+    bl displayTree
+
+    ldr r0,iAdrszMessFinOK
+    bl affichageMess
+    b 100f
+
+100:                            @ standard end of the program
+    mov r7, #EXIT               @ request to exit program
+    svc 0                       @ perform system call
+iAdrszMessDebutPgm:        .int szMessDebutPgm
+iAdrszMessFinOK:           .int szMessFinOK
+iAdrszMessErreur:          .int szMessErreur
+iAdrszCarriageReturn:      .int szCarriageReturn
+iAdrsConvArea:             .int sConvArea
+iAdrlList1:                .int lList1
+iAdrszMessResult:          .int szMessResult
+
+
+/******************************************************************/
+/*     append at end of list                          */
+/******************************************************************/
+/* r0 contains value (t) */
+append:
+    push {r1-r3,lr}                @ save  registers
+    mov r1,#1
+    orr r1,r1,r0,lsl #1
+    ldr r0,iAdrlList1              @ load list address
+    ldr r2,iAdriLen                @ load counter address
+    ldr r3,[r2]                    @ load counter
+    str r1,[r0,r3,lsl # 2]         @ store at end of list
+    add r3,r3,#1                   @ increment list counter
+    str r3,[r2]
+    pop {r1-r3,pc}
+/******************************************************************/
+/*     create bags tree                          */
+/******************************************************************/
+/* r0 bags number */
+mktrees:
+    push {r1-r6,lr}              @ save  registers
+    ldr r6,iAdroffset
+    add r2,r0,#1
+    ldr r3,[r6,r2,lsl #2]        @ load value n+1
+    cmp r3,#0
+    bne 100f
+    mov r5,r0
+    cmp r0,#0
+    ble 2f
+    sub r0,r5,#1
+    bl mktrees
+2:
+    mov r0,r5
+    mov r1,#0
+    sub r2,r5,#1
+    ldr r3,[r6,r2,lsl #2]
+    mov r4,r2
+    bl assemble
+
+    ldr r1,iAdriLen
+    ldr r3,[r1]
+    ldr r1,iAdroffset
+    add r2,r5,#1             @ n+1
+    str r3,[r1,r2,lsl #2]
+100:
+    pop {r1-r6,pc}
+iAdroffset:     .int offset
+iAdriLen:       .int ilen
+/******************************************************************/
+/*     assemble tree                          */
+/******************************************************************/
+/* r0 contains bags number */
+/* r1 contains list tree */
+/* r2 contains  length of subtree   */
+/* r3 contains offset of subtree */
+/* r4 contains remaining length */
+assemble:
+    push {r0-r8,lr}         @ save  registers
+    cmp r4,#0
+    bne 1f
+    mov r0,r1               @ remaining length is null
+    bl append
+    b 100f
+1:
+    ldr r6,iAdroffset
+    cmp r2,r4
+    ble 2f
+    mov r2,r4
+    ldr r3,[r6,r2,lsl #2]      @ pos
+    b 3f
+2:
+    add r7,r2,#1
+    ldr r7,[r6,r7,lsl #2]
+    cmp r3,r7
+    blt 3f
+    subs r2,r2,#1
+    beq 100f                    @ end
+    ldr r3,[r6,r2,lsl #2]
+3:
+    mov r8,r1
+    mov r6,r4
+    lsl r7,r2,#1
+    lsl r5,r1,r7
+    ldr r7,iAdrlList1
+    ldr r7,[r7,r3,lsl #2]
+    orr r1,r5,r7
+    sub r4,r4,r2
+    bl assemble
+    mov r1,r8
+    add r3,r3,#1
+    mov r4,r6
+    bl assemble
+100:
+    pop {r0-r8,pc}
+/******************************************************************/
+/*     display tree                          */
+/******************************************************************/
+/* r0 contains bag number */
+displayTree:
+    push {r1-r7,lr}                @ save  registers
+    ldr r1,iAdroffset
+    ldr r7,[r1,r0,lsl #2]
+    add r3,r0,#1
+    ldr r4,[r1,r3,lsl #2]
+    ldr r5,iAdrlList1
+    mov r6,r0
+1:                                 @ display solution loop
+    cmp r7,r4
+    bge 100f
+    ldr r0,[r5,r7,lsl #2]
+    lsl r1,r6,#1
+    bl displayOne                  @ display one solution
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    add r7,r7,#1
+    b 1b
+100:
+    pop {r1-r7,pc}
+/******************************************************************/
+/*     display One solution                         */
+/******************************************************************/
+/* r0 contains one solution */
+/* r1  length   */
+displayOne:
+    push {r1-r7,lr}                       @ save  registers
+    mov r4,r0
+1:
+    and r3,r4,#1
+    cmp r3,#1
+    ldreq r0,iAdrszParenOuv
+    ldrne r0,iAdrszParenFer
+    bl affichageMess
+    lsr r4,r4,#1
+    subs r1,r1,#1
+    bgt 1b
+100:
+    pop {r1-r7,pc}
+iAdrszParenOuv:      .int szParenOuv
+iAdrszParenFer:      .int szParenFer
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

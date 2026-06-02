@@ -58,3 +58,4 @@ $dll.last.pre-insert(42);
 
 say $dll.list;     # 0 1 2 40 41 42
 say $dll.reverse;  # 42 41 40 2 1 0
+

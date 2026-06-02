@@ -9,3 +9,4 @@ sapply(getNodeSet(doc, "//price"), xmlValue)
 
 # Get an array of all the "name" elements
 sapply(getNodeSet(doc, "//name"), xmlValue)
+

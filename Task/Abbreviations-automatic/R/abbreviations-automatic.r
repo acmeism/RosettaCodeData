@@ -19,3 +19,4 @@ for (l in lines) {
     cat(paste(abbrev(l),l),"\n")
   }
 }
+

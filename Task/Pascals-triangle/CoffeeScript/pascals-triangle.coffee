@@ -26,3 +26,4 @@ pad = (cnt, n) ->
   ws(left) + s + ws(right)
 
 pascal(7)
+

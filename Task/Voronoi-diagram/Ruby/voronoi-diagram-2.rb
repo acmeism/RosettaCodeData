@@ -40,3 +40,5 @@ def draw_voronoi_centers
     ellipse(center.x, center.y, 4, 4)
   end
 end
+
+

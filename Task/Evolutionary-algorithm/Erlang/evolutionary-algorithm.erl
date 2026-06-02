@@ -58,3 +58,4 @@ random_string(Length) -> random_string(Length,[]).
 random_string(0,Acc) -> Acc;
 random_string(N,Acc) when N > 0 ->
     random_string(N-1,[random_character()|Acc]).
+

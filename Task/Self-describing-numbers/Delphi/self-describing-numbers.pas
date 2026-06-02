@@ -48,3 +48,5 @@ for I:=0 to 100000000-1 do
    Memo.Lines.Add(IntToStr(I));
    end;
 end;
+
+

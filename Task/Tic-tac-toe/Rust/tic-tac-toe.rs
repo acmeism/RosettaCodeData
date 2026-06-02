@@ -117,3 +117,4 @@ fn draw_board(board: Board) {
         println!("{} {} {}", row[0], row[1], row[2]);
     }
 }
+

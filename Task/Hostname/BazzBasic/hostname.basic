@@ -1,0 +1,15 @@
+' ============================================
+' https://rosettacode.org/wiki/Hostname
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+[inits]
+    LET resp$
+
+[main]
+    resp$ = SHELL("HOSTNAME")
+
+[output]
+    PRINT resp$
+
+' Output:
+' EK-Lenovo

@@ -12,3 +12,4 @@ end
 
 local url = "http://tycho.usno.navy.mil/cgi-bin/timer.pl"
 print(scrapeTime(url, "UTC"))
+

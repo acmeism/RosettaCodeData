@@ -1,7 +1,7 @@
 import std.stdio, std.algorithm, std.range, std.functional;
 
 auto transpose(T)(in T[][] m) pure nothrow {
-    return m[0].length.iota.map!(curry!(transversal, m));
+    return m[0].length.iota.map!(partial!(transversal, m));
 }
 
 void main() {

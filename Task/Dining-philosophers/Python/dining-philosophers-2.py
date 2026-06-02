@@ -187,3 +187,4 @@ def dining_philosophers(philosopher_names=(('Aristotle', 'Kant',
 
 if __name__ == '__main__':
     dining_philosophers()
+

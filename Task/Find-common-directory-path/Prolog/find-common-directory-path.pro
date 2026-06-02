@@ -46,3 +46,4 @@ ends_with(TARGET,END)
 :-
 prolog:atom_concat(_,END,TARGET)
 .
+

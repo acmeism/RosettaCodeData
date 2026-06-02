@@ -89,3 +89,4 @@ parseinfix2rpn <- function(s) {
 teststring <- "3 + 4 * 2 / ( 1 - 5 ) ^ 2 ^ 3"
 rpn_result <- parseinfix2rpn(teststring)
 cat("\nResult:", teststring, "becomes", paste(rpn_result, collapse = " "), "\n")
+

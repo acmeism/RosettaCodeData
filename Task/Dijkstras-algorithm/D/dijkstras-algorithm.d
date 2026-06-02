@@ -42,7 +42,7 @@ pure dijkstraComputePaths(Vertex source, Vertex target, AdjacencyMap adjacencyMa
     return tuple(minDistance, previous);
 }
 
-pure dijkstraGetShortestPathTo(Vertex v, Vertex[Vertex] previous){
+pure dijkstraGetShortestPathTo(Vertex v, const Vertex[Vertex] previous){
     Vertex[] path = [v];
 
     while (v in previous) {

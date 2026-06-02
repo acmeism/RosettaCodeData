@@ -26,3 +26,4 @@ puts "size() is 0 is false" if !(map.size() == 0)
 
 #puts 'TRUE is true' if TRUE   # ==> TRUE does not exist
 #puts 'FALSE is false' if !FALSE   # ==> FALSE does not exist
+

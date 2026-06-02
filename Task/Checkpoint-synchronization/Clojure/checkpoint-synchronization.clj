@@ -68,3 +68,4 @@
                   (fn [& args] (println (apply str "worker" id ":" (string/join " " args)))))]
     (worker ckpt 10 (monitor 1))
     (worker ckpt 10 (monitor 2))))
+

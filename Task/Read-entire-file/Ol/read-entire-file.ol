@@ -5,3 +5,4 @@
 (call-with-input-file "filename"
    (lambda (port)
       (read-string #f port)))
+

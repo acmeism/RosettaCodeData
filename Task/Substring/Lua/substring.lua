@@ -22,3 +22,4 @@ if pos then print (str:sub(pos,pos+m)) end -- ijklmnopqrstuvwx
 
 pos = str:find "ijk"
 if pos then print (str:sub(pos,pos+m)) end d-- ijklmnopqrstuvwx
+

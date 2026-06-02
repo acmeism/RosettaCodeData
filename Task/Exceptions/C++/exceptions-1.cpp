@@ -13,3 +13,4 @@ catch (const std::string &s) {
 catch (const int &e) {
     std::cerr << "ERROR:\t" << err_to_string(e) << "\n";
 }
+

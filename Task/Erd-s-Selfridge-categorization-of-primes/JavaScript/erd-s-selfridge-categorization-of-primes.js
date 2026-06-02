@@ -100,3 +100,4 @@ const first1M = es.getPrimesByCategory(1000000);
 for (const [category, primes] of first1M) {
     console.log(`Category ${category.toString().padStart(2)}: first = ${primes[0].toString().padStart(7)}  last = ${primes[primes.length - 1].toString().padStart(8)}  count = ${primes.length}`);
 }
+

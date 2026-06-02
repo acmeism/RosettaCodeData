@@ -29,3 +29,4 @@ main = do
       primorialTens = map (id &&& (length . show . getNthPrimorial . (10^))) powersOfTen
       calculate = mapM_ (\(a,b) -> putStrLn $ "Primorial(10^"++show a++") has "++show b++" digits")
   calculate primorialTens
+

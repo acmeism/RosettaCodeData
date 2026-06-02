@@ -10,3 +10,4 @@ isodd(length(parsed)) && push!(parsed, "")  # if ends without pnctuation
 for i in 1:2:length(parsed)-1
     println(rpad(parsed[i] * parsed[i + 1], 52),  " ==> ", haspunctotype(parsed[i + 1]))
 end
+

@@ -22,7 +22,7 @@ struct Hamming {
     ushort[NK] e; // Exponents of each factor.
 
     public static __gshared immutable double[factors.length] inc =
-        factors[].map!log.array;
+        (cast(double[])factors[]).map!log.array;
 
     bool opEquals(in ref Hamming y) const pure nothrow @nogc {
         //return this.e == y.e; // Too much slow.
@@ -71,7 +71,7 @@ nothrow @nogc static this() {
 ref Hamming getHam(in size_t n) nothrow @nogc
 in {
     assert(n <= MAX_HAM);
-} body {
+} do {
     // Most of the time v can be just incremented, but eventually
     // floating point precision will bite us, so better recalculate.
     __gshared static size_t[NK] idx;

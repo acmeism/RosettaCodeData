@@ -26,3 +26,4 @@
     (setq matches (seq-take matches number-requested))
     (dolist (match matches)
       (insert (format "\n%s %s" (car match) (cdr match))))))
+

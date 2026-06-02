@@ -121,3 +121,4 @@ end;
 
 //Delphi-6 does not have 64-bit unsigned integers.
 //Later version have 64-bit unsigned integers.
+

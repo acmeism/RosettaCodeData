@@ -1,0 +1,28 @@
+' ============================================
+' https://rosettacode.org/wiki/Palindrome_detection
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+
+[main]
+    ' INPUT initializes variables automatically, no need to LET
+    LINE INPUT "Enter a word: ", word$
+
+[check]
+    IF LCASE(word$) = LCASE(INVERT(word$)) THEN
+        PRINT word$ + " is a palindrome."
+    ELSE
+        PRINT word$ + " is not a palindrome."
+    END IF
+END
+
+' Output1:
+' Enter a word: racecar
+' racecar is a palindrome.
+
+' Output2:
+' Enter a word: BazzBasic
+' BazzBasic is not a palindrome.
+
+' Output3:
+' Enter a word: BazzBasic cisaBzzaB
+' BazzBasic cisaBzzaB is a palindrome.

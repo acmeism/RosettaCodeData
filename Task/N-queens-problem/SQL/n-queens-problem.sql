@@ -27,3 +27,4 @@ WITH RECURSIVE
    ORDER BY n_queens DESC -- remove this when using Postgres (they don't support ORDER BY in CTEs)
   )
 SELECT board,n_queens FROM solutions WHERE n_queens = 8;
+

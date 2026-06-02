@@ -31,3 +31,4 @@ feature
 	test: ARRAY [INTEGER]
 
 end
+

@@ -39,3 +39,4 @@ do
 		printf "%d-%02d-%02d\n" $year 4 $day
 	fi
 done
+

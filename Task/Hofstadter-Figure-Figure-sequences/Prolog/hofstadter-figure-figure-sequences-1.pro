@@ -23,3 +23,4 @@ ffs(N, S), ffs(N1,S1) ==>
 hofstadter(N) ==>  ffr(1,1), ffs(1,2).
 % loop
 hofstadter(N), ffr(N1, _R), ffs(N1, _S) ==> N1 < N, N2 is N1 +1 |  ffr(N2,_), ffs(N2,_).
+

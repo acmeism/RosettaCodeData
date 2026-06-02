@@ -1,0 +1,9 @@
+' ============================================
+' https://rosettacode.org/wiki/Zero_to_the_zero_power
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+
+PRINT POW(0, 0)
+
+' Output:
+' 1

@@ -214,3 +214,4 @@ for number in [1000, 10000, 100000, 1000000]:
   var st = initSuffixTree(text)
   discard st.getlongestrepeatedsubstring(&"first {number} d.p. of π")
   echo &"  → Temps: {(getMonoTime() - start).inMicroseconds} µs"
+

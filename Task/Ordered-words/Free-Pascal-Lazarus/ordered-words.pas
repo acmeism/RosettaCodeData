@@ -52,3 +52,4 @@ Begin
   WordList.Free;
   OrderedWords.Free;
 End.
+

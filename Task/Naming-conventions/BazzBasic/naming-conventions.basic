@@ -1,0 +1,69 @@
+' ============================================
+' https://rosettacode.org/wiki/Naming_conventions
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+' BazzBasic is a young language with no historical evolution
+' to document. It has a small, deliberate mix of MANDATORY
+' rules (enforced by the interpreter) and DISCRETIONARY
+' community style.
+' ============================================
+
+' --- MANDATORY (enforced by the interpreter) ----------------
+'
+' Variables : must end with $        score$, myName$, x$
+' Constants : must end with #        PI#, MAX_SPEED#
+' Functions : name ends with $, called with the FN prefix
+'             DEF FN MyFunc$()  ...  LET v$ = FN MyFunc$()
+' Labels    : must be wrapped in [...]
+'             [main], [inits], [sub:draw]
+' First use : every variable/constant must be introduced with
+'             LET on its first appearance:
+'               LET counter$ = 0
+'               counter$ = counter$ + 1     ' no LET after first use
+'
+' Case is NOT significant for identifiers or keywords.
+' PRINT, print, and Print are the same token. Only the
+' contents of string literals preserve case.
+
+' --- DISCRETIONARY (community style) ------------------------
+'
+' Variables : camelCase      playerScore$, isReady$
+' Constants : UPPER_SNAKE    SCREEN_W#, MAX_HEALTH#
+' Functions : PascalCase     ComputeArea$, DrawHud$
+' Labels    : [gameLoop] for jump targets,
+'             [sub:name]  for subroutines
+
+' --- LIBRARIES ----------------------------------------------
+' A .bas file compiled as a .bb library auto-prefixes every
+' function name with the library name in upper case. This is
+' mandatory and prevents collisions between libraries.
+'
+'   bazzbasic.exe -lib MathLib.bas    ->    MathLib.bb
+'   PRINT FN MATHLIB_Add$(2, 3)
+
+' --- CLASSES ------------------------------------------------
+' BazzBasic has no classes, subclasses, or instance names.
+' State lives in scalars, arrays, or JSON-shaped arrays.
+
+' ============================================
+' Small runnable demo
+' ============================================
+
+DEF FN Square$(n$)
+    RETURN n$ * n$
+END DEF
+
+[inits]
+    LET MAX_VALUE# = 100
+    LET myNumber$  = 7
+
+[main]
+    PRINT "MAX_VALUE# = "; MAX_VALUE#
+    PRINT "myNumber$  = "; myNumber$
+    PRINT "Square(myNumber$) = "; FN Square$(myNumber$)
+END
+
+' Output:
+' MAX_VALUE# = 100
+' myNumber$  = 7
+' Square(myNumber$) = 49

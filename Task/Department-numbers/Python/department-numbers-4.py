@@ -12,3 +12,4 @@ for p in range(2, 7, 2):
             continue
         print("Police: ", p, " Sanitation:", s, " Fire: ", f)
         print("Police: ", p, " Sanitation:", f, " Fire: ", s)
+

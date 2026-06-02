@@ -51,3 +51,4 @@ scene.bind( 'click', change )
 while True:
   rate(100)
   S.rotate( angle=rot, axis=(0,1,0) )
+

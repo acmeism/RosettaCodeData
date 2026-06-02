@@ -228,3 +228,6 @@ Memo.Lines.Add(LastGapFulPalinEndSet(1000,10,7));
 Memo.Lines.Add(LastGapFulPalinEndSet(1000,10,8));
 Memo.Lines.Add(LastGapFulPalinEndSet(1000,10,9));
 end;
+
+
+

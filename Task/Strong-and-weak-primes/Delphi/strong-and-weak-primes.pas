@@ -94,3 +94,4 @@ ShowPrimeTypeData(ptWeak,37);
 ShowPrimeTypeData(ptBalanced,28);
 finally Sieve.Free; end;
 end;
+

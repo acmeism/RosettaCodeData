@@ -105,3 +105,5 @@ for N:=1 to 199 do
 	end;
 Memo.Text:=S;
 end;
+
+

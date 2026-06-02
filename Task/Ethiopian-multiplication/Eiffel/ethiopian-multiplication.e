@@ -56,3 +56,4 @@ feature {NONE}
         end
 
 end
+

@@ -360,3 +360,4 @@
                    TO WS-RDB-STRING(WS-I:1)
            END-PERFORM
            .
+

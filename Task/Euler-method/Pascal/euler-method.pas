@@ -47,3 +47,4 @@ BEGIN
     FOR i := 1 to 3 DO
         Euler(NewtonCooling,T0,dt[i],time);
 END.
+

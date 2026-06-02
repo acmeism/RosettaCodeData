@@ -206,3 +206,4 @@ finished(_P, _TTT, 0) .
 % minmax must knows when the computer plays
 % (o for ordinateur in French)
 computer(o).
+

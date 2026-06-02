@@ -5,3 +5,4 @@
    trylock(x))   # non-blocking lock, succeeds only if there are no other thread already in the critical region
 
    unlock(x)     # unlock mutex x
+

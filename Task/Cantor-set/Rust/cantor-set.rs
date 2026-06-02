@@ -62,3 +62,4 @@ fn main() {
     println!("Cantor set:");
     println!("{}", cs);
 }
+

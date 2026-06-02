@@ -61,3 +61,5 @@ for I:=2 to Max do
 if S<>'' then Memo.Lines.Add(S);
 Memo.Lines.Add('Descending Primes Found: '+IntToStr(Cnt));
 end;
+
+

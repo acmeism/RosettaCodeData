@@ -1,10 +1,10 @@
-import std.stdio, std.algorithm, std.bigint, std.functional, std.range;
+import std.stdio, std.algorithm, std.bigint, std.functional, std.range, std.typetuple;
 
 auto product(R)(R r) { return reduce!q{a * b}(1.BigInt, r); }
 
 const cats1 = sequence!((a, n) => iota(n+2, 2*n+1).product / iota(1, n+1).product)(1);
 
-BigInt cats2a(in uint n) {
+BigInt cats2a(in ulong n) {
     alias mcats2a = memoize!cats2a;
     if (n == 0) return 1.BigInt;
     return n.iota.map!(i => mcats2a(i) * mcats2a(n - 1 - i)).sum;

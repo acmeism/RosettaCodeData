@@ -57,3 +57,4 @@ writeString:                   # INFO: writeString
     lw      s0, 4(sp)
     addi    sp, sp, 8
     ret
+

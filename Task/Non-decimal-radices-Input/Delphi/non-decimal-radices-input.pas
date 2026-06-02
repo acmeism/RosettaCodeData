@@ -22,3 +22,4 @@ for Base:=2 to 20 do
 	Memo.Lines.Add(Format('String "100" in base %2D is %3D in Base 10',[Base,I]));
 	end;
 end;
+

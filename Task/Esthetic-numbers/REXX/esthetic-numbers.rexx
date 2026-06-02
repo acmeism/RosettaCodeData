@@ -1,4 +1,4 @@
--- 15 Nov 2025
+-- 23 May 2026
 include Setting
 numeric digits 21
 
@@ -6,6 +6,7 @@ say 'ESTHETIC NUMBERS'
 say version
 say
 call Task1
+call Timer 'R'
 call Task2 1000,9999
 call Task2 1.0e8,1.3e8
 call Timer 'R'
@@ -85,28 +86,28 @@ Generate:
 -- Generate all Esthetic numbers
 -- needed for the stretch task and beyond
 -- Iterative solution
-procedure expose Esth. Work1. Work2.
+procedure expose Esth. Wrk1. Wrk2.
 say 'Generate up to' Digits() 'digits...'
 do i=1 to 9
-   work1.i=i; Esth.i=i
+   Wrk1.i=i; Esth.i=i
 end
-work1.0=9; n=9
+Wrk1.0=9; n=9
 do Digits()-1
    w=0
-   do i=1 to work1.0
-      a=work1.i; b=Right(a,1)
+   do i=1 to Wrk1.0
+      a=Wrk1.i; b=Right(a,1)
       if b > 0 then do
-         w+=1; work2.w=a||(b-1)
+         w+=1; Wrk2.w=a||(b-1)
       end
       if b < 9 then do
-         w+=1; work2.w=a||(b+1)
+         w+=1; Wrk2.w=a||(b+1)
       end
    end i
-   work2.0=w
+   Wrk2.0=w
    do i=1 to w
-      work1.i=work2.i; n+=1; Esth.n=work2.i
+      Wrk1.i=Wrk2.i; n+=1; Esth.n=Wrk2.i
    end i
-   work1.0=w
+   Wrk1.0=w
 end
 Esth.0=n
 say n 'found'
@@ -156,7 +157,5 @@ say n 'found'
 say
 return
 
--- D2n (convert decimal to base n)
-include Base
--- Timer
-include Timer
+-- D2n Timer
+include Math

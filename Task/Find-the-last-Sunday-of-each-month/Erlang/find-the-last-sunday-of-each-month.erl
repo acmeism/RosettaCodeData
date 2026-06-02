@@ -11,3 +11,4 @@ lastday(Year, Month, WeekDay) ->
     Ldm = calendar:last_day_of_the_month(Year, Month),
     Diff = calendar:day_of_the_week(Year, Month, Ldm) rem WeekDay,
     {Year, Month, Ldm - Diff}.
+

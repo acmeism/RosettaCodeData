@@ -28,3 +28,4 @@ user=> (-> @aqueue rest (conj 5) pprint)
 ; with:
 user=> (-> @aqueue pop (conj 5) pprint)
 <-(2 3 4 5)-<
+

@@ -20,3 +20,5 @@ ShowCompares(Memo,'Case', 'CASE');
 ShowCompares(Memo,'91', '1234');
 ShowCompares(Memo,'boy', 'cowboy');
 end;
+
+

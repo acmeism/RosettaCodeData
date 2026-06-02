@@ -9,3 +9,5 @@
   def t(m) do # transpose
     List.zip(m) |> Enum.map(&Tuple.to_list(&1))
   end
+
+

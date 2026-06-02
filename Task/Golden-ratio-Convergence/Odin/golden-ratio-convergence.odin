@@ -24,3 +24,4 @@ iterate :: proc() {
 	fmt.printf("Result: %.8f after %d iterations", phi1, count)
 	fmt.printf("\nThe error is approximately %.10f\n", (phi1 - (0.5 * (1.0 + math.sqrt_f64(5.0)))))
 }
+

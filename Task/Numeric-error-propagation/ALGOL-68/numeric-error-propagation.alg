@@ -78,3 +78,4 @@ UNCERTAIN e  = ( ( ( x1 / x2 ) / 2 ) + ( y1 - y2 ) * 2 ) + ( x1 / 2 ) + ( 2 / y1
              + ( 2.0 - d ) - 3 - 4.0
              ;
 print( ( "test    : ", fixed( v OF e, 0, 2 ), " +/- ", fixed( uncertainty OF e, 0, 2 ), newline ) )
+

@@ -24,3 +24,4 @@ int2str(255, 16)
 
 ## example: convert "1a" in base 16 to integer (26):
 str2int("1a", 16)
+

@@ -6,8 +6,8 @@ demo: function [s b] [print ["^/==" s "==^/"] print [mold/only b "^/^/Output:"] 
 
 demo "Creating a custom control structure if-both" [
 if-both: function [cond1 cond2 both-body first-body second-body none-body] [
-	c1: do cond1
-	c2: do cond2
+   c1: do cond1
+   c2: do cond2
     case [
         all [c1 c2] [do both-body]
         c1 [do first-body]
@@ -21,15 +21,15 @@ demo "Testing it" [
 random/seed now
 
 test: does [
-	if-both [(random 100) > 50] [(random 100) < 50] [
-		print "both"
-	][
-		print "first"
-	][
-		print "second"
-	][
-		print "none"
-	]
+   if-both [(random 100) > 50] [(random 100) < 50] [
+      print "both"
+   ][
+      print "first"
+   ][
+      print "second"
+   ][
+      print "none"
+   ]
 ]
 
 loop 10 [test]

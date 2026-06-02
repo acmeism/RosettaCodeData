@@ -78,3 +78,4 @@ fn permanent (matrix: &mut Vec<Vec<f64>>) -> f64 {
         }
     }
 }
+

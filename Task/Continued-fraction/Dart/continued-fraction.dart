@@ -18,3 +18,4 @@ double calc(Function f, int n) {
   }
   return f(0)[0] + temp;
 }
+

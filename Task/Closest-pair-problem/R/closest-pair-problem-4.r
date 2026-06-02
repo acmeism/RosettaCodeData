@@ -34,3 +34,4 @@ The closest pair is:
 
    user  system elapsed
    0.17    0.00    0.19
+

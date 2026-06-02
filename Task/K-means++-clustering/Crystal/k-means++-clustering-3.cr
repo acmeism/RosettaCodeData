@@ -31,3 +31,4 @@ points += gaussian_cluster(num_points: 5000,stdev: 0.5, center: [0.0,0.0,0.0,2.0
 points += gaussian_cluster(num_points: 5000,stdev: 0.5, center: [0.0,0.0,0.0,0.0,2.0],rng: rng)
 cluster_center,point_cluster = kmeans(5, points, convergence_threshold:0.99999)
 puts(cluster_center.map(&.map(&.round(2))).join("\n"))
+

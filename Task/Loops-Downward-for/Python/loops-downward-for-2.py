@@ -1,1 +1,1 @@
-[i for i in xrange(10, -1, -1)]
+[i for i in range(10, -1, -1)]

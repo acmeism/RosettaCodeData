@@ -13,3 +13,4 @@ sum_of_multiples_of_3_and_5(N, K, C, S) :-
 	;   C5 = C3),
 	K1 is K+1,
 	sum_of_multiples_of_3_and_5(N, K1, C5, S).
+

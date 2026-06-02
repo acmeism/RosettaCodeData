@@ -1,4 +1,4 @@
-import std.stdio, std.algorithm, std.array, std.traits;
+import std.stdio, std.algorithm, std.array, std.traits, std.range;
 
 enum AreSortableArrayItems(T) = isMutable!T &&
                                 __traits(compiles, T.init < T.init) &&

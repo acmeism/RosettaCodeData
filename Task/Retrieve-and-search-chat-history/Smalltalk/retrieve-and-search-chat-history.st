@@ -48,3 +48,4 @@ description
 !ChatHistorySearchCommandLineHandler class methodsFor: 'accessing' stamp: 'EduardoPadoan 1/27/2019 14:50'!
 commandName
 	^ 'searchHistory'! !
+

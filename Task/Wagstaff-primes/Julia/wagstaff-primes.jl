@@ -39,3 +39,5 @@ function println_wagstaff(pair; max_digit_display::Integer=20)
 end
 
 foreach(println_wagstaff, findn_wagstaff_pairs(24))
+
+

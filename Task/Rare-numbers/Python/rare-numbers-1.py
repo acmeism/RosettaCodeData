@@ -7,11 +7,11 @@ from datetime import datetime
 
 def main():
 	start = datetime.now()
-	for i in xrange(1, 10 ** 11):
+	for i in range(1, 10 ** 11):
 		if rare(i):
-			print "found a rare:", i
+			print("found a rare:", i)
 	end = datetime.now()
-	print "time elapsed:", end - start
+	print("time elapsed:", end - start)
 
 def is_square(n):
 	s = floor(sqrt(n + 0.5))
@@ -33,3 +33,4 @@ def rare(n):
 
 if __name__ == '__main__':
 	main()
+

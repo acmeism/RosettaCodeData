@@ -327,3 +327,4 @@ fn main() {
     println!("Advanced version:");
     (1..=15).for_each(|x| print_results(advanced(x)));
 }
+

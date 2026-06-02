@@ -18,7 +18,7 @@ void main() {
                  ["", "q", "z"],
                  ["zap", "zip", "Zot"]];
 
-    alias show = curry!(writefln, "%-(%s\n%)\n");
+    alias show = partial!(writefln, "%-(%s\n%)\n");
     show(data);
     show(sortTable(data));
     show(sortTable(data, null, 2));

@@ -82,3 +82,4 @@ tests <- list(
 for (args in tests) {
   do.call(verhoeffchecksum, args)
 }
+

@@ -1,0 +1,165 @@
+' ============================================
+' https://rosettacode.org/wiki/ASCII_art_diagram_converter
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+' Parses an RFC-style ASCII bit diagram (separator rows of '+--+...' and
+' content rows of '|field|field|...') and uses the resulting field map to
+' decode a real header buffer.
+'
+' BazzBasic has no macros or compile-time codegen, so the task's bonus
+' (define the struct statically from the string at compile time) is not
+' applicable -- this is a runtime parser. The field map is returned as
+' JSON and rebuilt into an array in the caller (functions can't return
+' arrays directly).
+'
+' Field width math: in a content row, each bit takes 3 chars, so the
+' distance between two adjacent '|' marks gives bit width = (p2 - p1)/3.
+
+DEF FN HexToBits$(hex$)
+    LET out$ = ""
+    LET i$ = 0
+    LET j$ = 0
+    LET c$ = ""
+    LET n$ = 0
+    FOR i$ = 1 TO LEN(hex$)
+        c$ = UCASE(MID(hex$, i$, 1))
+        n$ = INSTR("0123456789ABCDEF", c$) - 1
+        FOR j$ = 3 TO 0 STEP -1
+            IF (INT(n$ / POW(2, j$)) % 2) = 1 THEN
+                out$ += "1"
+            ELSE
+                out$ += "0"
+            END IF
+        NEXT
+    NEXT
+    RETURN out$
+END DEF
+
+DEF FN BitsToInt$(bits$)
+    LET result$ = 0
+    LET i$ = 0
+    FOR i$ = 1 TO LEN(bits$)
+        result$ = result$ * 2 + VAL(MID(bits$, i$, 1))
+    NEXT
+    RETURN result$
+END DEF
+
+DEF FN ParseDiagram$(diagram$)
+    DIM lines$, parsed$
+    LET nLines$ = SPLIT(lines$, diagram$, "\n")
+    LET fieldIdx$ = 0
+    LET maxBit$ = 0
+    LET i$ = 0
+    LET j$ = 0
+    LET prevPipe$ = 0
+    LET line$ = ""
+    LET fieldText$ = ""
+    LET width$ = 0
+
+    FOR i$ = 0 TO nLines$ - 1
+        line$ = TRIM(lines$(i$))
+        IF LEN(line$) > 0 THEN
+            IF LEFT(line$, 1) = "|" THEN
+                prevPipe$ = 1
+                j$ = 2
+                WHILE j$ <= LEN(line$)
+                    IF MID(line$, j$, 1) = "|" THEN
+                        fieldText$ = TRIM(MID(line$, prevPipe$ + 1, j$ - prevPipe$ - 1))
+                        width$ = CINT((j$ - prevPipe$) / 3)
+                        parsed$(fieldIdx$, "name")  = fieldText$
+                        parsed$(fieldIdx$, "start") = maxBit$
+                        parsed$(fieldIdx$, "width") = width$
+                        fieldIdx$ += 1
+                        maxBit$  += width$
+                        prevPipe$ = j$
+                    END IF
+                    j$ += 1
+                WEND
+            END IF
+        END IF
+    NEXT
+
+    RETURN ASJSON(parsed$)
+END DEF
+
+[inits]
+    LET diagram$ = "+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+\n"
+    diagram$ += "|                      ID                       |\n"
+    diagram$ += "+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+\n"
+    diagram$ += "|QR|   Opcode  |AA|TC|RD|RA|   Z    |   RCODE   |\n"
+    diagram$ += "+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+\n"
+    diagram$ += "|                    QDCOUNT                    |\n"
+    diagram$ += "+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+\n"
+    diagram$ += "|                    ANCOUNT                    |\n"
+    diagram$ += "+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+\n"
+    diagram$ += "|                    NSCOUNT                    |\n"
+    diagram$ += "+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+\n"
+    diagram$ += "|                    ARCOUNT                    |\n"
+    diagram$ += "+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+"
+
+    ' Sample DNS header (hex):
+    '   ID=0x04D2 (1234), flags=0x8180 (response + RD + RA),
+    '   QDCOUNT=1, ANCOUNT=2, NSCOUNT=0, ARCOUNT=0
+    LET hexHeader$ = "04D281800001000200000000"
+
+    DIM fields$
+    LET defsJSON$ = ""
+    LET nFields$ = 0
+    LET headerBits$ = ""
+    LET fBits$ = ""
+    LET fVal$ = 0
+
+[main]
+    defsJSON$ = FN ParseDiagram$(diagram$)
+    nFields$ = ASARRAY(fields$, defsJSON$)
+    headerBits$ = FN HexToBits$(hexHeader$)
+
+    PRINT "Parsed "; nFields$; " fields:"
+    PRINT ""
+    FOR i$ = 0 TO ROWCOUNT(fields$()) - 1
+        PRINT "  "; fields$(i$, "name"); ": start="; fields$(i$, "start"); ", width="; fields$(i$, "width")
+    NEXT
+
+    PRINT ""
+    PRINT "Decoding header "; hexHeader$; ":"
+    PRINT ""
+    FOR i$ = 0 TO ROWCOUNT(fields$()) - 1
+        fBits$ = MID(headerBits$, fields$(i$, "start") + 1, fields$(i$, "width"))
+        fVal$  = FN BitsToInt$(fBits$)
+        PRINT "  "; fields$(i$, "name"); " = "; fVal$
+    NEXT
+END
+
+' Expected output:
+' Parsed 13 fields:
+'
+'   ID: start=0, width=16
+'   QR: start=16, width=1
+'   Opcode: start=17, width=4
+'   AA: start=21, width=1
+'   TC: start=22, width=1
+'   RD: start=23, width=1
+'   RA: start=24, width=1
+'   Z: start=25, width=3
+'   RCODE: start=28, width=4
+'   QDCOUNT: start=32, width=16
+'   ANCOUNT: start=48, width=16
+'   NSCOUNT: start=64, width=16
+'   ARCOUNT: start=80, width=16
+'
+' Decoding header 04D281800001000200000000:
+'
+'   ID = 1234
+'   QR = 1
+'   Opcode = 0
+'   AA = 0
+'   TC = 0
+'   RD = 1
+'   RA = 1
+'   Z = 0
+'   RCODE = 0
+'   QDCOUNT = 1
+'   ANCOUNT = 2
+'   NSCOUNT = 0
+'   ARCOUNT = 0
+

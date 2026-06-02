@@ -1,4 +1,6 @@
-on diff_bearing({b1, b2})
+on diff_bearing(b)
+	set b1 to item 1 of b
+	set b2 to item 2 of b
 	set r to (b2 - b1) mod 360
 	if r > 180 then
 		r - 360

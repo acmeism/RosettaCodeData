@@ -223,3 +223,4 @@ object UniversalTuringMachine extends App {
     createFiveState2SymBusyBeaverMachine()
   }
 }
+

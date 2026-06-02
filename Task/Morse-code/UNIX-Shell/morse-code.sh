@@ -47,3 +47,4 @@ alpha2morse() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
    alpha2morse "${@}"
 fi
+

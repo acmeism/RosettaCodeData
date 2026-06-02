@@ -32,3 +32,5 @@ Memo.Lines.Add(StripExtended(TestStr));
 Memo.Lines.Add('String stripped of both control and extended chars: ');
 Memo.Lines.Add(StripControls(StripExtended(TestStr)));
 end;
+
+

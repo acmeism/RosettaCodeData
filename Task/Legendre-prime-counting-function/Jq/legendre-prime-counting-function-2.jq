@@ -15,7 +15,7 @@ def legendre:
         | ({$x, a, $memo} | phi) as {phi: $phi2, memo: $memo}
         | ($phi1 - $phi2) as $phi
         | {$phi, $memo}
-	| .memo[$ix] = $phi
+   | .memo[$ix] = $phi
         end
       end;
 

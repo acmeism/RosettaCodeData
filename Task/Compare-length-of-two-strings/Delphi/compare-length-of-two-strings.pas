@@ -40,3 +40,4 @@ Memo.Lines.Add('Twelve word test: ');
 Memo.Lines.Add('');
 ShowStringLengths(SA2,Memo);
 end;
+

@@ -1,0 +1,21 @@
+' ============================================
+' https://rosettacode.org/wiki/Find_limit_of_recursion
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+
+DEF FN limit$(c$)
+    PRINT c$
+    RETURN FN limit$(c$ + 1)
+END DEF
+
+PRINT FN limit$(0)
+
+' Output
+' 0
+' 1
+' ...
+' ...
+' ...
+' 513
+' 514
+' Stack overflow.

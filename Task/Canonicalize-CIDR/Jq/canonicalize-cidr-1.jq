@@ -26,3 +26,4 @@ def to_i(base):
       # state: [power, ans]
       ([1,0]; (.[0] * base) as $b | [$b, .[1] + (.[0] * $c)])
   | .[1];
+

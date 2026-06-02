@@ -43,3 +43,4 @@ extension Complex : Equatable {}
 public func == (left:Complex, right:Complex) -> Bool {
     return left.real == right.real && left.imaginary == right.imaginary
 }
+

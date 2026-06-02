@@ -49,3 +49,4 @@ begin
     (c >= MAX_TRIES) or (LowerCase(s) = 'quit');
 
 end.
+

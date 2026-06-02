@@ -41,3 +41,4 @@ def primes:
 def primes($x):
   label $out
   | primes | if . > $x then break $out else . end;
+

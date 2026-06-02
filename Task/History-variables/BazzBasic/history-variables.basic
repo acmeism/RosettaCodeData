@@ -1,0 +1,39 @@
+' ============================================
+' https://rosettacode.org/wiki/History_variables
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+
+[inits]
+    DIM history$
+    LET h_count$ = 0
+
+[main]
+    ' Assign three values using the history implementation
+    LET new_val$ = "first"  : GOSUB [push_history]
+    LET new_val$ = "second" : GOSUB [push_history]
+    LET new_val$ = "third"  : GOSUB [push_history]
+
+[output]
+    PRINT "Full history:"
+    FOR i$ = 0 TO h_count$ - 1
+        PRINT "  ["; i$; "] "; history$(i$)
+    NEXT
+
+    PRINT "Recall [0]: "; history$(0)
+    PRINT "Recall [1]: "; history$(1)
+    PRINT "Recall [2]: "; history$(2)
+END
+
+[push_history]
+    history$(h_count$) = new_val$
+    h_count$ = h_count$ + 1
+RETURN
+
+' Output:
+' Full history:
+'   [0] first
+'   [1] second
+'   [2] third
+' Recall [0]: first
+' Recall [1]: second
+' Recall [2]: third

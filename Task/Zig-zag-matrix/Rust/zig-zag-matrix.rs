@@ -57,3 +57,4 @@ fn zigzag(n: usize) -> Vec<Vec<usize>> {
 fn main() {
     println!("{:?}", zigzag(5));
 }
+

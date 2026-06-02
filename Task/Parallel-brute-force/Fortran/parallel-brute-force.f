@@ -188,3 +188,4 @@ contains
    end function char_to_int32
 
 end program brute_sha256
+

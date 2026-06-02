@@ -837,3 +837,4 @@ def path_as_0_moves(path):
         p_row = c_row
         p_col = c_col
     return strpath
+

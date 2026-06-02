@@ -46,3 +46,5 @@ type TMyObject = class(TObject)
  published
   property Item4: integer read FItem4 write FItem4;
  end;
+
+

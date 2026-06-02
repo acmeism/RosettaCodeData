@@ -42,3 +42,4 @@ public class AbundantOddNumbers {
         return sum;
     }
 }
+

@@ -26,3 +26,4 @@ return (
  ,""
  ,json:parse($local:json, map{"format":"xquery"})
 )
+

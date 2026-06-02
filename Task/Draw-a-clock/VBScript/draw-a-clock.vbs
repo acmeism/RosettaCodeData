@@ -68,3 +68,4 @@ while 1
     'wait one second
     wscript.sleep(1000)
 wend
+

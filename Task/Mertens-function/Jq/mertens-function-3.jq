@@ -20,3 +20,4 @@ def task3:
 (99|task1),
 "",
 (1000 | (task2, task3))
+

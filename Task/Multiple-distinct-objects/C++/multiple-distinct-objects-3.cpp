@@ -20,3 +20,4 @@ for (int i = 0; i < n; ++i)
 std::vector<TPtr_t> bvec2;
 for (int i = 0; i < n; ++i)
   bvec2.push_back(TPtr_t(new T(*p));
+

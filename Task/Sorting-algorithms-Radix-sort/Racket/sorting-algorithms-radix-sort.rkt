@@ -7,7 +7,7 @@
       (define x/R (quotient x R))
       (enqueue! (vector-ref queues (modulo x/R r)) x)
       (unless (zero? x/R) (set! all-zero? #f)))
-    (if all-zero? l	
+    (if all-zero? l
          (loop (let q-loop ([i 0])
                 (define q (vector-ref queues i))
                 (let dq-loop ()

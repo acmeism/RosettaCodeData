@@ -40,3 +40,5 @@ for B:=2 to 23 do
 	Memo.Lines.Add(Format('%5d -> base: %3D = %15S',[N,B,RS]));
 	end;
 end;
+
+

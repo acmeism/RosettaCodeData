@@ -176,3 +176,4 @@ program    rosetta_class
    end subroutine test_types
 
 end program rosetta_class
+

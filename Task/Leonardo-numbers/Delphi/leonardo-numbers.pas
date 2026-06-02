@@ -36,3 +36,5 @@ for I:=0 to High(IA) do
 	end;
 Memo.Lines.Add(S);
 end;
+
+

@@ -47,3 +47,5 @@ s_join(o, a) {
 "".base.join := Func("s_join")
 
 MsgBox % "Array => " ",".join(array2) "`n"  "Result => " ",".join(even2(array2))
+
+

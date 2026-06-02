@@ -6,5 +6,5 @@ void main() {
     .iota
     .filter!q{ !(a & (a >> 1)) }
     .take(21)
-    .binaryReverseArgs!writefln("%(%b\n%)");
+    .reverseArgs!writefln("%(%b\n%)");
 }

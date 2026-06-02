@@ -1,5 +1,3 @@
-// version 1.0.5-2
-
 enum class PlayfairOption {
     NO_Q,
     I_EQUALS_J
@@ -15,7 +13,7 @@ class Playfair(keyword: String, val pfo: PlayfairOption) {
             used[16] = true  // Q used
         else
             used[9]  = true  // J used
-        val alphabet = keyword.toUpperCase() + "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        val alphabet = keyword.uppercase() + "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         var i = 0
         var j = 0
         var c: Char
@@ -23,7 +21,7 @@ class Playfair(keyword: String, val pfo: PlayfairOption) {
         for (k in 0 until alphabet.length) {
             c = alphabet[k]
             if (c !in 'A'..'Z') continue
-            d = c.toInt() - 65
+            d = c.code - 65
             if (!used[d]) {
                 table[i][j] = c
                 used[d] = true
@@ -36,7 +34,7 @@ class Playfair(keyword: String, val pfo: PlayfairOption) {
     }
 
     private fun getCleanText(plainText: String): String {
-        val plainText2 = plainText.toUpperCase()  // ensure everything is upper case
+        val plainText2 = plainText.uppercase()  // ensure everything is upper case
         // get rid of any non-letters and insert X between duplicate letters
         var cleanText = ""
         var prevChar = '\u0000'  // safe to assume null character won't be present in plainText
@@ -118,7 +116,7 @@ fun main(args: Array<String>) {
     var ignoreQ: String
     do {
          print("Ignore Q when buiding table  y/n : ")
-         ignoreQ = readLine()!!.toLowerCase()
+         ignoreQ = readLine()!!.lowercase()
     }
     while (ignoreQ != "y" && ignoreQ != "n")
     val pfo = if (ignoreQ == "y") PlayfairOption.NO_Q else PlayfairOption.I_EQUALS_J

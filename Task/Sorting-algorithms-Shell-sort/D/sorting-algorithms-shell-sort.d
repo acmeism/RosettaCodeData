@@ -1,7 +1,7 @@
 import std.stdio: writeln;
 
 void shellSort(T)(T[] seq) pure nothrow {
-    int inc = seq.length / 2;
+    int inc = cast(int) seq.length / 2;
     while (inc) {
         foreach (ref i, el; seq) {
             while (i >= inc && seq[i - inc] > el) {

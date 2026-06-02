@@ -58,3 +58,4 @@ for I:=1 to Limit do
 	if Assigned(Prog) and ((I mod 100000)=0) then Prog(MulDiv(100,I,Limit));
 	end;
 end;
+

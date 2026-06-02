@@ -16,3 +16,4 @@ begin
 for I:=1 to 5 do
  Memo.Lines.Add(IntToStr(MiddleSquareRandom));
 end;
+

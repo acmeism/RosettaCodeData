@@ -94,3 +94,4 @@ pq.add(new Task(2, "Tax return"));
 while (!pq.isEmpty()) {
     console.log(pq.remove().toString());
 }
+

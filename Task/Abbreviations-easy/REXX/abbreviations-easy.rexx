@@ -39,3 +39,4 @@ syntaxhighlight>
 user words:  riG   rePEAT copies  put mo   rest    types   fup.    6       poweRin
 full words:  RIGHT REPEAT *error* PUT MOVE RESTORE *error* *error* *error* POWERINPUT
 </pre>
+

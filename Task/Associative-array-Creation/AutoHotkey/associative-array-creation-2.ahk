@@ -1,6 +1,3 @@
-arrayX1 = first
-arrayX2 = second
-arrayX3 = foo
-arrayX4 = bar
-Loop, 4
-  Msgbox % arrayX%A_Index%
+associative_array := {key1: "value 1", "Key with spaces and non-alphanumeric characters !*+": 23}
+MsgBox % associative_array.key1
+    . "`n" associative_array["Key with spaces and non-alphanumeric characters !*+"]

@@ -86,3 +86,4 @@ set d=createobject("Scripting.dictionary")
 do_abbrev
 'display
 test
+

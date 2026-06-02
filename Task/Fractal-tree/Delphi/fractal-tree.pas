@@ -19,3 +19,4 @@ ClearImage(Image,clBlack);
 DrawTree(Image, 250, 350, -90, 11);
 Image.Invalidate;
 end;
+

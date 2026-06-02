@@ -16,3 +16,4 @@ To achieve case insensitive comparisons, we should use Upper() or Lower() functi
    if Upper(s1) = Upper(s2)
       see "The strings are equal"
    ok
+

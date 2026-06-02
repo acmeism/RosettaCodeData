@@ -84,3 +84,7 @@ for N:=2 to high(integer) do
 	end;
 Memo.Lines.Add(S);
 end;
+
+
+
+

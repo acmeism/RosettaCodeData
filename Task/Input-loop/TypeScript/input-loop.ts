@@ -23,3 +23,4 @@ function stdinLineByLine() {
 
 const stdin = stdinLineByLine();
 stdin.on('line', console.log);
+

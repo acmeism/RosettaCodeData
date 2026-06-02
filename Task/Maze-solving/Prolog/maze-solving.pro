@@ -145,3 +145,4 @@ next(2, _Lig, _Col, L, C, L, C1) :-
 	C > 0,
 	C1 is C - 1,
 	\+cell(L, C1).
+

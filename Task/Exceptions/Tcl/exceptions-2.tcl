@@ -24,3 +24,4 @@ if {[info exists contents] } {
 } else {
     puts stderr "no contents read"
 }
+

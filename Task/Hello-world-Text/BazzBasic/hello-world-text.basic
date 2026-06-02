@@ -1,0 +1,10 @@
+' ============================================
+' https://rosettacode.org/wiki/Hello_world/Text
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+
+PRINT "Hello World"
+END
+
+' Output:
+' Hello World

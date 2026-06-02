@@ -305,3 +305,4 @@ Memo.Lines.Add('Showing the 10,000th prime.');
 Memo.Lines.Add('10,000th Prime = '+IntToStr(Sieve.Primes[10000-1]));
 finally Sieve.Free; end;
 end;
+

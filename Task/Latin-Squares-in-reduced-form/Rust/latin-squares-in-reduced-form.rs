@@ -1,5 +1,3 @@
-use std::io;
-
 type Matrix = Vec<Vec<usize>>;
 
 fn dlist(n: usize, start: usize) -> Matrix {
@@ -67,7 +65,7 @@ fn reduced_latin_squares(n: usize, echo: bool) -> u64 {
 
     // Initialize the Latin square with indices
     let mut rlatin: Matrix = (0..n)
-        .map(|i| (0..n).map(|j| j + 1).collect::<Vec<usize>>())
+        .map(|_i| (0..n).map(|j| j + 1).collect::<Vec<usize>>())
         .collect();
 
     // First row is 1 to n

@@ -68,3 +68,4 @@ procedure CamelSnakeTest(Memo: TMemo);
 begin
 ConvertCamelSnake(TestStrings,Memo);
 end;
+

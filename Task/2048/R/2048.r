@@ -160,3 +160,4 @@ run_2048 <- function(nrow, ncol, p = 0.9) {
         cat("YOU LOOSE \n")
     }
 }
+

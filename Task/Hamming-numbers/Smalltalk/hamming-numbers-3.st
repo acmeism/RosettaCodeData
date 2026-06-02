@@ -14,3 +14,4 @@ hammingStream get. "and the 1691th value is => 2125764000".
 hammingStream ++ (999999 - 1691). "now skip more to position at 999,999".
 hammingStream get. "and the 1,000,000th value is =>  519312780448388736089589843750000000000000000000000000000000000000000000000000000000".
 tape size. "See how many we have buffered =>  24904"
+

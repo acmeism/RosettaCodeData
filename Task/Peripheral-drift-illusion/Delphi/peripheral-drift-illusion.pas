@@ -97,3 +97,6 @@ procedure ShowPeripheralDrift(Image: TImage);
 begin
 DrawPeripheralDrift(Image);
 end;
+
+
+

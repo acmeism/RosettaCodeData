@@ -13,3 +13,4 @@ testvalues = [[100000000000000.01,           100000000000000.011],
 for (x, y) in testvalues:
     maybenot = "is" if isclose(x, y) else "is NOT"
     print(x, maybenot, "approximately equal to ", y)
+

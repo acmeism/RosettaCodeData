@@ -30,4 +30,4 @@ local testCases = {
   {1, 100000},
   {1, 1000000}
 }
-for _, example in pairs(testCases) do run(unpack(example)) end
+for _, example in pairs(testCases) do run(table.unpack(example)) end

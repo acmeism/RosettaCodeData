@@ -20,3 +20,4 @@ class Main {
 			trace(v[i]);
 	}
 }
+

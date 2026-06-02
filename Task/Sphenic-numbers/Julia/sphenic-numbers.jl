@@ -66,3 +66,5 @@ println("The 200,000th sphenic number is: ", shenums[200_000])
 # 6. What is the 5,000th sphenic triplet?
 print("The 5,000h sphenic triplet is: ")
 printlntriple(shetrip[5_000])
+
+

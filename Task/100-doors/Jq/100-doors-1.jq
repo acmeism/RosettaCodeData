@@ -11,3 +11,4 @@ def doors(n):
       ( $doors; reduce range($run; n+1; $run ) as $door
                   ( .; .[$door] = (.[$door] | not) ) )
   | print ;
+

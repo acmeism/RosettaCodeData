@@ -10,7 +10,7 @@ import std.math: log; // ^^
 enum NK = 3;
 
 __gshared immutable int[NK] primes = [2, 3, 5];
-__gshared immutable double[NK] lnPrimes = primes[].map!log.array;
+__gshared immutable double[NK] lnPrimes = [2.0, 3.0, 5.0].map!log.array;
 
 /// K-smooth numbers (stored as their exponents of each factor).
 
@@ -38,7 +38,7 @@ struct Hamming {
 Hamming getHam(in size_t n) nothrow @nogc
 in {
     assert(n && n != size_t.max);
-} body {
+} do {
     static struct Candidate {
         typeof(Hamming.ln) ln;
         typeof(Hamming.e) e;

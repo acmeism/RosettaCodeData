@@ -7,3 +7,4 @@ if n mod 2<>0 then n-=1;(* n:=n-1 *)
   until (n * n) mod 1000000 = 269696;
 $'The smallest positive integer is {n} whose square ends in {k}'.println;
 $'{n}² = {n*n}'.println;
+

@@ -24,3 +24,4 @@ BEGIN
     WriteLn ( gcd_recursive ( 231, 7 ) ) ;
 
 END.
+

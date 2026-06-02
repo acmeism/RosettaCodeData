@@ -19,3 +19,4 @@ paths <- c(
   '/home/user1/tmp/coven/members')
 
 get_common_dir(paths)           # "/home/user1/tmp"
+

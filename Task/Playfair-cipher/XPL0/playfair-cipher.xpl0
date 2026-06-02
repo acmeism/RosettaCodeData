@@ -1,0 +1,255 @@
+\ Playfair cipher
+string 0; \ Use zero-terminated string convention
+code ChOut=8, CrLf=9, Text=12;
+define MaxLength = 256, MaxResultLength = 3 * MaxLength;
+\ including chars separating duplicate letters and spaces separating digrams
+define OptNoQ = 0, OptIEqualsJ = 1;
+
+  function Concat(S1, S2, S3);
+  \ Concatenate strings: S3:= S1 + S2
+  character S1, S2, S3;
+  integer I, J;
+  begin
+  I:= 0;
+  while S1(I) do
+    begin
+    S3(I):= S1(I);
+    I:= I + 1;
+    end;
+  J:= 0;
+  while S2(J) do
+    begin
+    S3(I + J):= S2(J);
+    J:= J + 1;
+    end;
+  S3(J + I) := $00;
+  return S3;
+  end;
+
+  function integer ToUpper(C);
+  integer C;
+  begin
+    if (C >= ^a) & (C <= ^z) then return C - ^a + ^A
+    else return C;
+  end;
+
+  function integer Length(S);
+  character S;
+  integer I;
+  begin
+  I:= 0;
+  while S(I) do I:= I + 1;
+  return I;
+  end;
+
+  procedure FillTable(PfO, Keyword, Table);
+  integer PfO;
+  character Keyword;
+  integer Table;
+  integer Used(26), I, J, K, C;
+  character Alphabet(53); \ Assume that Keyword has at most 26 chars.
+  begin
+  for I:= 0 to 25 do Used(I):= false;
+  if PfO = OptNoQ then Used(^Q - ^A):= true
+  else Used(^J - ^A):= true;
+  Concat(Keyword, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", Alphabet);
+  I:= 0;
+  J:= 0;
+  K:= 0;
+  C:= ToUpper(Alphabet(K));
+  while C # $00 do
+    begin
+    if C >= ^A & C <= ^Z then
+      begin
+      if ~Used(C - ^A) then
+        begin
+        Table(I, J):= C;
+        Used(C - ^A):= true;
+        J:= J + 1;
+        if J = 5 then
+          begin
+          I:= I + 1;
+          if I = 5 then return; \ filled
+          J:= 0;
+          end;
+        end;
+      end;
+    K:= K + 1;
+    C:= ToUpper(Alphabet(K));
+    end;
+  end;
+
+  procedure GetCleanText(PlainText, Opt, Result);
+  character PlainText;
+  integer Opt;
+  character Result;
+  integer PrevChar, NextChar;
+  integer I, J;
+  begin
+  PrevChar:= $00;
+  I:= 0;
+  J:= 0; \ Number of chars in Result
+  while PlainText(I) # $00 do
+    begin
+    NextChar:= ToUpper(PlainText(I));
+    if NextChar >= ^A & NextChar <= ^Z &
+        (NextChar # ^Q ! Opt # OptNoQ) then
+      begin
+      if NextChar = ^J & Opt = OptIEqualsJ then NextChar:= ^I;
+      \ Insert X between duplicate letters
+      \ Assume that X is not duplicated.
+      if NextChar = PrevChar then
+        begin
+        Result(J):= ^X;
+        J:= J + 1;
+        end;
+      Result(J):= NextChar;
+      J:= J + 1;
+      PrevChar:= NextChar;
+      end;
+    I:= I + 1;
+    end;
+  \ If necessary, add another letter to complete digram
+  if Rem(J / 2) = 1 then
+    begin
+    if Result(J - 1) # ^X then Result(J):= ^X
+    else Result(J):= ^Z;
+    J:= J + 1;
+    end;
+  Result(J):= $00;
+  end;
+
+  procedure FindChar(Table, C, Row, Col);
+  integer Table, C, Row, Col;
+  integer I, J;
+  begin
+  for I:= 0 to 4 do
+    for J:= 0 to 4 do
+      if Table(I, J) = C then
+        begin
+        Row(0):= I;
+        Col(0):= J;
+        return
+        end;
+  \ Not found
+  Row:= 5;
+  Col:= 5;
+  end;
+
+  procedure Encode(Table, PfO, PlainText, Result);
+  integer Table, PfO;
+  character PlainText, Result;
+  character CleanText(MaxLength);
+  integer Len, I, J, Row1, Col1, Row2, Col2;
+  begin
+  GetCleanText(PlainText, PfO, CleanText);
+  Len:= Length(CleanText);
+  J:= 0;
+  I:= 0;
+  while I < Len do
+    begin
+    FindChar(Table, CleanText(I), addr Row1, addr Col1);
+    FindChar(Table, CleanText(I + 1), addr Row2, addr Col2);
+    if Row1 = Row2 then
+      begin
+      Result(J)    := Table(Row1, Rem(Col1 / 5) + 1);
+      Result(J + 1):= Table(Row2, Rem(Col2 / 5) + 1);
+      end
+    else if Col1 = Col2 then
+      begin
+      Result(J)    := Table(Rem(Row1 / 5) + 1, Col1);
+      Result(J + 1):= Table(Rem(Row2 / 5) + 1, Col2);
+      end
+    else
+      begin
+      Result(J)    := Table(Row1, Col2);
+      Result(J + 1):= Table(Row2, Col1);
+      end;
+    J := J + 2;
+    if I < Len then
+      begin
+      Result(J):= ^ ;
+      J:= J + 1;
+      end;
+    I:= I + 2
+    end;
+  Result(J):= $00;
+  end;
+
+  procedure Decode(Table, CipherText, Result);
+  integer Table;
+  character CipherText, Result;
+  integer Len, I, Row1, Col1, Row2, Col2;
+  begin
+  Len:= Length(CipherText);
+  I:= 0;
+  while I < Len do
+    begin
+    \ CipherText will include spaces, so we need to skip them
+    FindChar(Table, CipherText(I), addr Row1, addr Col1);
+    FindChar(Table, CipherText(I + 1), addr Row2, addr Col2);
+    if Row1 = Row2 then
+      begin
+      Result(I)    := Table(Row1, if Col1 > 0 then Col1 - 1 else 4);
+      Result(I + 1):= Table(Row2, if Col2 > 0 then Col2 - 1 else 4);
+      end
+    else if Col1 = Col2 then
+      begin
+      Result(I)    := Table(if Row1 > 0 then Row1 - 1 else 4, Col1);
+      Result(I + 1):= Table(if Row2 > 0 then Row2 - 1 else 4, Col2);
+      end
+    else
+      begin
+      Result(I)    := Table(Row1, Col2);
+      Result(I + 1):= Table(Row2, Col1);
+      end;
+    if I < Len then Result(I + 2):= ^ ;
+    I:= I + 3
+    end;
+  Result(Len):= $00;
+  end;
+
+  procedure Demo(Keyword, Opt, PlainText);
+  character Keyword;
+  integer Opt;
+  character PlainText;
+  character EncodedText(MaxResultLength), DecodedText(MaxResultLength);
+  integer Table(5, 5), PfO, I, J;
+  begin
+  Text(0, "Playfair keyword: ");
+  Text(0, Keyword);
+  CrLf(0);
+  PfO:= Opt;
+  if PfO = OptNoQ then Text(0, "Ignored")
+  else Text(0, "Regarded");
+  Text(0, " Q when filling the table.");
+  CrLf(0);
+  Text(0, "The table is: ");
+  CrLf(0); CrLf(0);
+  FillTable(PfO, Keyword, Table);
+  for I:= 0 to 4 do
+    begin
+    for J:= 0 to 4 do
+      begin
+      ChOut(0, Table(I, J));
+      Text(0, " ");
+      end;
+    CrLf(0);
+    end;
+  CrLf(0);
+  Text(0, "Plain text is  : ");
+  Text(0, PlainText);
+  CrLf(0);
+  Encode(Table, PfO, PlainText, EncodedText);
+  Text(0, "Encoded text is: ");
+  Text(0, EncodedText);
+  CrLf(0);
+  Decode(Table, EncodedText, DecodedText);
+  Text(0, "Decoded text is: ");
+  Text(0, DecodedText);
+  CrLf(0); CrLf(0);
+  end;
+
+begin
+Demo("Playfair example", OptIEqualsJ, "Hide the gold in...the TREESTUMP!!!!")
+end

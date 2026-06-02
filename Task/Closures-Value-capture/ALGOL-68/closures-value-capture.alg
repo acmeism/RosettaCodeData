@@ -9,3 +9,4 @@ OD;
 FOR i FROM 1 TO 8 DO print(squares[i](i MOD 2 = 0)) OD;
 print(new line);
 FOR i FROM 1 TO 10 DO print(squares[i](FALSE)) OD
+

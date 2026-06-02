@@ -135,3 +135,4 @@ Memo.Lines.Add('Best Value: '+IntToStr(BestValue));
 Memo.Lines.Add('Best Weight: '+IntToStr(BestWeight));
 finally BI.Free; end;
 end;
+

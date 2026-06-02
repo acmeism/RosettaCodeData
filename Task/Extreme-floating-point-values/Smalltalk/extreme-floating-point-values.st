@@ -36,3 +36,4 @@ Number trapImaginary:[ -4 sqrt ] -> (0+2.0i)  (works in Smalltalk/X)
 
 -1 log10 -> DomainError exception
 [ -1 log10 ] on:DomainError do:[:ex | ex proceed] -> nan
+

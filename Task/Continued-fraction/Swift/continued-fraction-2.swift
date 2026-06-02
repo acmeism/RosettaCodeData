@@ -25,3 +25,4 @@ func pi(n: Int) -> [Int] {
 print (calculate(n: 200, operation: sqrt));
 print (calculate(n: 200, operation: napier));
 print (calculate(n: 200, operation: pi));
+

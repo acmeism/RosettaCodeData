@@ -35,3 +35,4 @@ say d~bar
   -- mixin init methods are not automatically invoked, so we must
   -- explicitly invoke this
   self~init:.dynamicvar
+

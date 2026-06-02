@@ -212,3 +212,4 @@ my_draw(P) :->
 
 
 :- pce_end_class(cell).
+

@@ -1,13 +1,9 @@
 type Mode = int
-const(
-    encrypt = Mode(0)
-    decrypt = Mode(1)
-)
+const encrypt = Mode(0)
+const decrypt = Mode(1)
 
-const(
-    l_alphabet = "HXUCZVAMDSLKPEFJRIGTWOBNYQ"
-    r_alphabet = "PTLNBQDEOYSFAVZKGJRIHWXUMC"
-)
+const l_alphabet = "HXUCZVAMDSLKPEFJRIGTWOBNYQ"
+const r_alphabet = "PTLNBQDEOYSFAVZKGJRIHWXUMC"
 
 fn chao(text string, mode Mode, show_steps bool) string {
     len := text.len

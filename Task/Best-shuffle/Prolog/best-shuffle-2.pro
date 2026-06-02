@@ -82,3 +82,4 @@ score([_|Xs0],[_|Ys0],SCORE)
 ! ,
 score(Xs0,Ys0,SCORE)
 .
+

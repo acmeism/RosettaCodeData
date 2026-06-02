@@ -32,3 +32,4 @@ puts "n-ary"
 puts "result: [cartesianNaryProduct {{1776 1789} {7 12} {4 14 23} {0 1}}]"
 puts "result: [cartesianNaryProduct {{1 2 3} {30} {500 100}}]"
 puts "result: [cartesianNaryProduct {{1 2 3} {} {500 100}}]"
+

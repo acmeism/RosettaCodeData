@@ -6,3 +6,4 @@ main() {
   var fruits = ['apple', 'orange'];
   print(arrLength(fruits));
 }
+

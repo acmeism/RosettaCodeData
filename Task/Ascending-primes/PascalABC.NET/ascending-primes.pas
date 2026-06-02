@@ -8,3 +8,4 @@ begin
 end;
 
 AscendingSeq(0).Order.Where(n -> n.IsPrime).Print;
+

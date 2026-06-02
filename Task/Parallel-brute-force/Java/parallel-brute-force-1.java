@@ -91,3 +91,5 @@ class Forcer implements Runnable {
         System.out.println(String.format("Hash %s has the following match : %s", crackMeString, match));
     }
 }
+
+

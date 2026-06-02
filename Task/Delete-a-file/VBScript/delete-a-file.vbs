@@ -19,3 +19,4 @@ set fil = oFSO.GetFile( "\input.txt" )
 fil.Delete
 set fld = oFSO.GetFolder( "\docs" )
 fld.Delete
+

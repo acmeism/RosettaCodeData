@@ -88,3 +88,4 @@ s: "3 * ( 4 - 5 )"                            t: "3 4 5 - *"                    
 s: "( 3 - 4 ) * 5"                            t: "3 4 - 5 *"                    u: shunting s  check s t u
 s: "4 * 2 + 1 - 5"                            t: "4 2 * 1 + 5 -"                u: shunting s  check s t u
 s: "4 * 2 / ( 1 - 5 ) ^^ 2"                   t: "4 2 * 1 5 - 2 ^^ /"           u: shunting s  check s t u
+

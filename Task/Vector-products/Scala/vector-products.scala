@@ -10,10 +10,10 @@ object VectorTest {
     val a=Vector3D(3,4,5)
     val b=Vector3D(4,3,5)
     val c=Vector3D(-5,-12,-13)
-				
+
     println("      a . b : " + (a dot b))
     println("      a x b : " + (a cross b))
     println("a . (b x c) : " + (a scalarTriple(b, c)))
-    println("a x (b x c) : " + (a vectorTriple(b, c)))		
+    println("a x (b x c) : " + (a vectorTriple(b, c)))
   }
 }

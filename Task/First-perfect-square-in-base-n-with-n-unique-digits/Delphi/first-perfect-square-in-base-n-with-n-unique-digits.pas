@@ -88,3 +88,5 @@ for I:=2 to 16 do
 	Memo.Lines.Add(Format('Base=%2d   %14s^2 = %16s',[I,S1,S2]));
 	end;
 end;
+
+

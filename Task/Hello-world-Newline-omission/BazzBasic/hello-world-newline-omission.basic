@@ -1,0 +1,12 @@
+' ============================================
+' https://rosettacode.org/wiki/Hello_world/Newline_omission
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+' A trailing ';' on PRINT suppresses the newline.
+
+PRINT "Goodbye, World!";
+END
+
+' Output:
+' Goodbye, World!_
+' (cursor stays on the same line; no newline emitted)

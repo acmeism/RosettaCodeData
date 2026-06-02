@@ -63,3 +63,4 @@
 	LOOP ;
 	
  : langton.ant run.ant draw.grid ;                                 \ launches the ant, outputs the result
+

@@ -28,7 +28,7 @@ final class Config {
             else if (line[0] == '#')
                 entries ~= Entry(EntryType.comment, line);
             else {
-                line = line.removechars("^a-zA-Z0-9\x20;");
+                line = line.replaceAll(regex(r"[^a-zA-Z0-9\x20]"), "");
                 auto m = match(line, r);
                 if (!m.empty && m.front[2].length) {
                     EntryType t = EntryType.enabled;
@@ -43,19 +43,19 @@ final class Config {
     void enableOption(in string name) pure {
         immutable i = getOptionIndex(name);
         if (!i.isNull)
-            entries[i].type = EntryType.enabled;
+            entries[i.get].type = EntryType.enabled;
     }
 
     void disableOption(in string name) pure {
         immutable i = getOptionIndex(name);
         if (!i.isNull)
-            entries[i].type = EntryType.disabled;
+            entries[i.get].type = EntryType.disabled;
     }
 
     void setOption(in string name, in string value) pure {
         immutable i = getOptionIndex(name);
         if (!i.isNull)
-            entries[i].value = value;
+            entries[i.get].value = value;
     }
 
     void addOption(in string name, in string val,
@@ -66,7 +66,7 @@ final class Config {
     void removeOption(in string name) pure {
         immutable i = getOptionIndex(name);
         if (!i.isNull)
-            entries[i].type = EntryType.ignore;
+            entries[i.get].type = EntryType.ignore;
     }
 
     Nullable!size_t getOptionIndex(in string name) const pure {

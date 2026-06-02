@@ -46,3 +46,4 @@ for I:=0 to High(CUSIPArray) do
 	Memo.Lines.Add(CUSIPArray[I].ID+'	'+CUSIPArray[I].Company+':	'+S);
 	end;
 end;
+

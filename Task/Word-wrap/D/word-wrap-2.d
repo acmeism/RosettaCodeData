@@ -5,11 +5,11 @@ string wrap(in string text, in int lineWidth) {
     if (words.empty) return null;
     string wrapped = words.front;
     words.popFront();
-    int spaceLeft = lineWidth - wrapped.length;
+    int spaceLeft = lineWidth - cast(int)wrapped.length;
     foreach (word; words)
         if (word.length + 1 > spaceLeft) {
             wrapped ~= "\n" ~ word;
-            spaceLeft = lineWidth - word.length;
+            spaceLeft = lineWidth - cast(int)word.length;
         } else {
             wrapped ~= " " ~ word;
             spaceLeft -= 1 + word.length;

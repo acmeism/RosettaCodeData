@@ -88,3 +88,4 @@ set dboverlaid [string range $db 0 4442].[string range $db 4444 end]
 puts ""
 puts "Validating the overlaid deBruijn sequence:"
 validate $dboverlaid
+

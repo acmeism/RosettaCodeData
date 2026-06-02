@@ -35,3 +35,4 @@ main = do
         putStrLn ""
         putStrLn "A sample of combinations from 100 to 1000:"
         mapM_  showComb [(n, n `div` 3) | n <- [100,200..1000] ]
+

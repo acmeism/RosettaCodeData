@@ -1,3 +1,8 @@
+function trival(x::Tuple{T, T, T}) where T <: Integer
+    x2, x3, x5 = x
+    return big"2" ^ x2 * big"3" ^ x3 * big"5" ^ x5
+end
+
 function nthhamming(n :: UInt64) # :: Tuple{UInt32, UInt32, UInt32}
     # take care of trivial cases too small for band size estimation to work...
     n < 1 && throw("nthhamming:  argument must be greater than zero!!!")

@@ -62,3 +62,5 @@ for I:=Stop+1 to Largest do
  if IsColorful(I) then Inc(Cnt);
 Memo.Lines.Add('Total All Colorful = '+IntToStr(Cnt));
 end;
+
+

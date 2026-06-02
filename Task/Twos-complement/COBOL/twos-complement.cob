@@ -29,3 +29,4 @@
                DISPLAY b(i) " -> " neg-b
            END-PERFORM
            STOP RUN.
+

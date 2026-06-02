@@ -71,3 +71,4 @@ local huffcode = function (data)
 end
 
 return huffcode "this is an example for huffman encoding"
+

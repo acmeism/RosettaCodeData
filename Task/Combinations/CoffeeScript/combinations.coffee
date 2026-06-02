@@ -23,3 +23,4 @@ for i in [0..N]
   console.log "------ #{N} #{i}"
   for combo in combinations N, i
     console.log combo
+

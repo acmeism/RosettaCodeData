@@ -67,3 +67,4 @@ Index 98 CurPrice 659 Sum 18503 MvgAvg 616.77
 Index 99 CurPrice 673 Sum 18594 MvgAvg 619.80
 Index 100 CurPrice 679 Sum 18694 MvgAvg 623.13
 ###-------------------------------------------------------------
+

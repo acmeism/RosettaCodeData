@@ -15,3 +15,4 @@ create lalpha    27 chars allot    \ create a string in memory for 26 letters an
 
 \ method 2: load with a string literal
 : Loadit    s" abcdefghijklmnopqrstuvwxyz" lalpha PLACE ;
+

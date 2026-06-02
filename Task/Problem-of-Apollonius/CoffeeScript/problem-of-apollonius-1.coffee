@@ -49,3 +49,4 @@ console.log c3 = new Circle(4, 0, 1)
 
 console.log apollonius(c1, c2, c3)
 console.log apollonius(c1, c2, c3, -1, -1, -1)
+

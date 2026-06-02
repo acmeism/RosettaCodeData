@@ -36,3 +36,4 @@ fn main() {
     }
     println!("{}", std::str::from_utf8(&bytes_result).unwrap());
 }
+

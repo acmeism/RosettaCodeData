@@ -123,3 +123,4 @@ hex  ok
   ok
      buffer1 writestr James Alexander
  ok
+

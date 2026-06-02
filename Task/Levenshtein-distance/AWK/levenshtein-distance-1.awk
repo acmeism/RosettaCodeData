@@ -42,3 +42,4 @@ function levenshteinDistance(s1, s2,
     if (distC < minDist) minDist = distC;
     return minDist + 1; # Include change for the first character.
 }
+

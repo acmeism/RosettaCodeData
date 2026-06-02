@@ -2,7 +2,7 @@ def _pr(t, x, y, z):
     txt = '\n'.join(''.join(t[(n,m)] for n in range(3+x+z)).rstrip()
                     for m in reversed(range(3+y+z)))
     return txt
-		
+
 def cuboid(x,y,z):
     t = {(n,m):' ' for n in range(3+x+z) for m in range(3+y+z)}
     xrow = ['+'] + ['%i' % (i % 10) for i in range(x)] + ['+']
@@ -16,7 +16,7 @@ def cuboid(x,y,z):
     if _debug: print(_pr(t, x, y, z))
     for k,ch in enumerate(zdepth):
         t[(k,1+y+k)] = t[(1+x+k,1+y+k)] = t[(1+x+k,k)] = ch
-	
+
     return _pr(t, x, y, z)
 
 

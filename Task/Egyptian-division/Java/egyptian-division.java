@@ -49,3 +49,4 @@ public class EgyptianDivision {
         System.out.println(String.format("%d, remainder %d", answer, dividend - accumulator));
     }
 }
+

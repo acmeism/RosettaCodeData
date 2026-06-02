@@ -19,3 +19,4 @@ switch = numGames - stick;
 writeln("Over ", numGames, " games:\n - switching wins ",
         100.0*switch / numGames, "% of the time and\n - sticking  wins ",
         100.0*stick  / numGames, "% of the time");
+

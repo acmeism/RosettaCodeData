@@ -72,3 +72,4 @@ Image.Canvas.Pen.Color:=clRed;
 Image.Canvas.Pen.Width:=1;
 SierpinskiArrowheadCurve(Image,8, Size);
 end;
+

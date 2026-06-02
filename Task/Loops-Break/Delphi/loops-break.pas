@@ -13,3 +13,4 @@ begin
     if num=10 then break;
   end;
 end.
+

@@ -16,3 +16,5 @@ checkHickerson n  = show $ (n, hickerson n, isAlmostInteger $ hickerson n)
 
 main :: IO ()
 main = mapM_ putStrLn $ map checkHickerson [1..18]
+
+

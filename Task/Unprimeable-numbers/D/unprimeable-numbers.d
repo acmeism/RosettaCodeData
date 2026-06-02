@@ -21,7 +21,7 @@ bool[] sieve(int limit) {
     return p;
 }
 
-string replace(CHAR)(CHAR[] str, int position, CHAR value) {
+string replace(CHAR)(CHAR[] str, ulong position, CHAR value) {
     str[position] = value;
     return str.idup;
 }

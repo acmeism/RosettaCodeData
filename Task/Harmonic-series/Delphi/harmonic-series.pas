@@ -37,3 +37,5 @@ for I:=1 to 10 do
         Memo.Lines.Add(Format('Position of the first harmonic number >  %2D: %4D',[I,Inx]))
 	end;
 end;
+
+

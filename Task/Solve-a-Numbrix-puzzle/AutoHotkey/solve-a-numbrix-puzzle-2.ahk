@@ -25,3 +25,4 @@ for i, line in Grid
 ;--------------------------------
 MsgBox, 262144, ,% SolveNumbrix(Grid, Locked, Max, row, col)
 return
+

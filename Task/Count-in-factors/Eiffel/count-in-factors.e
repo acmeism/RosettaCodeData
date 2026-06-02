@@ -62,3 +62,4 @@ feature
 			is_divisor: across Result as r all p \\ r.item = 0 end
 		end
 end
+

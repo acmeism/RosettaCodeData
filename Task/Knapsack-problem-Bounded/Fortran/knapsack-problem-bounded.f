@@ -182,3 +182,4 @@ program main
     write(*,'(A22  I5  I6  I6)') 'Totals:', total_count, total_weight, total_value
 
 end program main
+

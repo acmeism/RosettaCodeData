@@ -66,3 +66,4 @@ def readout($node):
 def Dijkstra($startname; $endname):
   Dijkstra($startname)
   | readout($endname) ;
+

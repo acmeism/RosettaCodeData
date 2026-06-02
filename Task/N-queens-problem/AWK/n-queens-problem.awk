@@ -69,3 +69,5 @@ function result(vec, dim,    row, col, sep, lne) {
         print lne
     }
 }
+
+

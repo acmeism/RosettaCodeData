@@ -47,3 +47,4 @@
 		(set! sets (combinations deal 3))
 		#:break (= (count-sets sets) cmax) => (show-deal deal)
 		))
+

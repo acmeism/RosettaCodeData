@@ -85,3 +85,4 @@ let op = print_operation_new()
 discard op.g_signal_connect("begin_print", G_CALLBACK(begin_print), nil)
 discard op.g_signal_connect("draw_page", G_CALLBACK(draw_page), nil)
 discard op.print_operation_run(PRINT_OPERATION_ACTION_PRINT_DIALOG, nil, nil)
+

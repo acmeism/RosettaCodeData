@@ -97,3 +97,4 @@ fn main() {
     run_game(9, 4);
     run_game(12, 6);
 }
+

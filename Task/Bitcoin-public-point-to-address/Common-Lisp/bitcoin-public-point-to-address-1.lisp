@@ -99,3 +99,4 @@
              (sovcat octets (subseq (digest '(sha256 sha256) octets) 0 4))))
     (let ((point (sovcat '(4) (integer-to-octets x) (integer-to-octets y))))
       (base58enc (checksum (sovcat '(0) (digest '(ripemd-160 sha256) point)))))))
+

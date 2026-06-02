@@ -76,3 +76,4 @@ int main(void) {
 	for (ulong i = 1; i <= *fac; ++i)
 		printf("* %llu\n", fac[i]);
 }
+

@@ -86,3 +86,4 @@ func _process(_delta: float) -> bool:
     randomize()
     play()
     return true
+

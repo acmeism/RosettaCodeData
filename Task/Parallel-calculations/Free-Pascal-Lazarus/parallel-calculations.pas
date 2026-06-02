@@ -80,3 +80,4 @@ begin
   for Factor in PrimeFactors[MinFactorIndex] do
     Write(' ', Factor);
 end.
+

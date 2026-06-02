@@ -37,3 +37,5 @@ for I:=1 to 10000 do
 	if IsKaprekar(I) then Memo.Lines.Add(IntToStr(I));
 	end;
 end;
+
+

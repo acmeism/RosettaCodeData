@@ -17,3 +17,4 @@ pub fn move(n: u32, from: u32, via: u32, to: u32) void {
 pub fn main() !void {
     move(4, 1, 2, 3);
 }
+

@@ -19,3 +19,4 @@ program remove_dups
     write(*,advance='no',fmt='(a,i0,a)') 'Unique list has ',k,' elements: '
     write(*,*) res(1:k)
 end program remove_dups
+

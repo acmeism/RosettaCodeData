@@ -1,17 +1,18 @@
 library(stringi)
 
-unixdict <- read.table("http://wiki.puzzlers.org/pub/wordlists/unixdict.txt", col.names="forwards")
+unixdict <- read.table("unixdict.txt", col.names = "forwards")
 unixdict$backwards <- stri_reverse(unixdict$forwards)
 
 #Remove all actual palindromes, as we do not want those
-unixdict <- subset(unixdict, forwards!=backwards)
+unixdict <- subset(unixdict, forwards != backwards)
 
-for(i in seq_along(unixdict$forwards)){
-  unixdict$issemordnilap[i] <- with(unixdict, forwards[i] %in% backwards)
-}
+unixdict$semordnilap <- with(unixdict, sapply(forwards, function(x) x %in% backwards))
 
-semordnilaps <- subset(unixdict, (issemordnilap==TRUE)&(forwards>backwards), select=-issemordnilap)
-length(semordnilaps$forwards)
+semordnilaps <- subset(unixdict,
+                       semordnilap & forwards > backwards,
+                       select = -semordnilap)
 
-random <- sample(seq_along(semordnilaps$forwards), 5, replace=FALSE)
-print(semordnilaps[random,], row.names=FALSE)
+nsemordnilaps <- nrow(semordnilaps)
+cat("There are", nsemordnilaps, "semordnilaps in unixdict.txt.\n")
+randrows <- sample(nsemordnilaps, 5, replace = FALSE)
+print(semordnilaps[randrows, ], row.names = FALSE)

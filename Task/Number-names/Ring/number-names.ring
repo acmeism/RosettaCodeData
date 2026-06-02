@@ -73,3 +73,4 @@ return rtn
 func splitString str,chr
 	for i in str if strcmp(i,chr)=0 i=nl ok next
 	return str2list(str)
+

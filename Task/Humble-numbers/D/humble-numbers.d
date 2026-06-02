@@ -19,7 +19,7 @@ void main() {
     while (count < limit) {
         if (isHumble(num)) {
             auto str = num.to!string;
-            auto len = str.length;
+            auto len = cast(int) str.length;
             humble[len]++;
             if (count < 50) write(num, ' ');
             count++;

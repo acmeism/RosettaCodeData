@@ -20,3 +20,4 @@ let combos = (
 $combos | filter { |it|
   ($it.police + $it.sanitation + $it.fire) == 12 and ($it.police mod 2) == 0
 } | sort-by police sanitation fire
+

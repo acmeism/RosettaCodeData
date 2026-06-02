@@ -367,3 +367,4 @@ if (Info.Count mod DisMod)=0 then Memo.Lines.Add('Count='+IntToStr(Info.Count));
 Memo.Lines.Add(NS+'='+IntToStr(Info.Count));
 finally OI.Free; end;
 end;
+

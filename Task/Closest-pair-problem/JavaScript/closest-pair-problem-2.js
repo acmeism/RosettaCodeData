@@ -135,3 +135,4 @@ Px = mergeSort(points2, sortX);
 Py = mergeSort(points2, sortY);
 
 console.log(JSON.stringify(closestPair(Px, Py))); // {"distance":65.06919393998976,"pair":[{"x":37134,"y":1963},{"x":37181,"y":2008}]}
+

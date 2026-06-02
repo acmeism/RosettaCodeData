@@ -22,3 +22,4 @@ main = do
         Left e -> error $ "strange error re-parsing json: " ++ (show e)
         Right v | v /= testdoc -> error "documents not equal!"
         Right v | otherwise    -> print v
+

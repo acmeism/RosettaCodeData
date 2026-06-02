@@ -14,3 +14,4 @@
     (print (apply #'concatenate 'string (mapcar #'reverse lst)))
     (print (apply #'concatenate 'string (reverse lst))) )
   nil )
+

@@ -70,3 +70,4 @@ public final class JacobsthalNumbers {
 	private static final BigInteger THREE = BigInteger.valueOf(3);
 	private static final int CERTAINTY = 20;
 }
+

@@ -4,3 +4,4 @@ for j=1:B(1)
         C(i,j)=A(j,i);
     end      %The transposed A-matrix should be C
 end
+

@@ -15,3 +15,4 @@ let primes n =
         h :: sieve_primes (strike_nth (h-1) h t) in
   sieve_primes (range 2 n)
 (* val primes : int -> int list *)
+

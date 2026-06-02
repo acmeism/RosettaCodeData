@@ -18,3 +18,5 @@ for p in [ local_file, local_dir, root_file, root_dir ] then do ( p ) ->
             console.log "#{ p } does not exist."
         else then fs.stat p, ( error, stat ) ->
             console.log "#{ p } exists and is a #{ if stat.isFile() then 'file' else then 'directory' }."
+
+

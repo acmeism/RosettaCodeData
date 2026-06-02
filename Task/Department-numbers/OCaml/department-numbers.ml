@@ -62,3 +62,4 @@ let _ =
     let result = department_numbers s f p in
     print_endline "S F P";
     print_sfp_list result;
+

@@ -15,3 +15,4 @@
   b="ball";
   if strcmpi(a,b), disp('The first and second string are the same disregarding letter case'); end;
   if lower(a)==lower(b), disp('The first and second string are the same disregarding letter case'); end;
+

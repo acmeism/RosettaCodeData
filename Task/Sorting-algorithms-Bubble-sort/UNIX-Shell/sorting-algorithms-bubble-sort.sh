@@ -14,10 +14,10 @@ $ function bubble_sort() {
         do
             if ${ft[$(( a[j+1] < a[j] ))]}
             then
-    	        t=${a[j+1]}
-    	        a[j+1]=${a[j]}
-    	        a[j]=$t
-    	    fi
+              t=${a[j+1]}
+              a[j+1]=${a[j]}
+              a[j]=$t
+          fi
             t=$(( ++j ))
         done
         t=$(( --i ))

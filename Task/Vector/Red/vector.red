@@ -1,16 +1,16 @@
 Red [
-	Source:     https://github.com/vazub/rosetta-red
-	Tabs:       4
+   Source:     https://github.com/vazub/rosetta-red
+   Tabs:       4
 ]
 
 comment {
-	Vector type is one of base datatypes in Red, with all arithmetic already implemented.
-	
-	Caveats to keep in mind:
-	- Arithmetic on a single vector will modify the vector in place, so we use copy to avoid that
-	- Division result on integer vectors will get truncated, use floats for decimal precision
+   Vector type is one of base datatypes in Red, with all arithmetic already implemented.
+
+   Caveats to keep in mind:
+   - Arithmetic on a single vector will modify the vector in place, so we use copy to avoid that
+   - Division result on integer vectors will get truncated, use floats for decimal precision
 }
-	
+
 v1: make vector! [5.0 7.0]
 v2: make vector! [2.0 3.0]
 

@@ -15,3 +15,4 @@ wscript.echo "--", pack.cardsRemaining, "cards remaining"
 if pack.cardsRemaining <> 0 then
 	pack.showdeck
 end if
+

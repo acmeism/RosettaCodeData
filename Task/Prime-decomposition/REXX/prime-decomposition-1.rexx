@@ -1,8 +1,7 @@
--- 25 Apr 2026
+-- 15 May 2026
 
 Main:
 include Setting
-Memo.cache=0
 
 say 'PRIME DECOMPOSITION'
 say version
@@ -69,5 +68,5 @@ do until p>100
 end
 return
 
--- Nextprime; FactorS; Timer
+-- Nextprime FactorS Timer
 include Math

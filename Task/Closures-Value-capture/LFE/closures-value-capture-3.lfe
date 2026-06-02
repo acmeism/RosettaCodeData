@@ -6,3 +6,4 @@
 16.0
 > (funcall (lists:nth 8 funcs))
 64.0
+

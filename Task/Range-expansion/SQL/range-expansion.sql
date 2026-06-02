@@ -113,3 +113,4 @@ select '-- Test RosettaCode' as output from dual
 union all
 select lpad('-6,-3--1,3-5,7-11,14,15,17-20', 65) || ' ==> ' || range_expansion('-6,-3--1,3-5,7-11,14,15,17-20') as output from dual
 ;
+

@@ -53,3 +53,4 @@ shared void run() {
                                         then yearsWithNoFiveWeekendMonths.withTrailing(year)
                                         else yearsWithNoFiveWeekendMonths);
 }
+

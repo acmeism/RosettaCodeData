@@ -156,3 +156,5 @@ Options.ColorArray:=CA;
 
 DrawHillbertCurve(Image.Canvas,Image.Width,Image.Height,Options);
 end;
+
+

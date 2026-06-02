@@ -1,7 +1,7 @@
 #include "polifitgsl.h"
 
 bool polynomialfit(int obs, int degree,
-		   double *dx, double *dy, double *store) /* n, p */
+         double *dx, double *dy, double *store) /* n, p */
 {
   gsl_multifit_linear_workspace *ws;
   gsl_matrix *cov, *X;
@@ -37,5 +37,5 @@ bool polynomialfit(int obs, int degree,
   gsl_vector_free(y);
   gsl_vector_free(c);
   return true; /* we do not "analyse" the result (cov matrix mainly)
-		  to know if the fit is "good" */
+        to know if the fit is "good" */
 }

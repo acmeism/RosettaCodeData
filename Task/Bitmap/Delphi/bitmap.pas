@@ -41,3 +41,4 @@ Image.Canvas.TextOut(5,5,IntToHex(C,8));
 {Tell Delphi to update the Window}
 Image.Repaint;
 end;
+

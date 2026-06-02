@@ -268,3 +268,6 @@ procedure TTicTacToeDlg.GameGridDrawCell(Sender: TObject; ACol,
 begin
 if WinLineInx>=0 then DrawWinLine(WinLineInx);
 end;
+
+
+

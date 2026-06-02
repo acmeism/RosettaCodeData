@@ -27,3 +27,4 @@ local factorial5 = reduce(mult,5,4,3,2,1)
 print("Σ(1..9)   : ",arithmetic_sum(table.unpack(nums)))
 print("5!        : ",factorial5)
 print("cat {1..9}: ",reduce(cat,table.unpack(nums)))
+

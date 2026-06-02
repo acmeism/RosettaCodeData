@@ -23,3 +23,4 @@ for I:=1 to 5 do
 	Memo.Lines.Add(IntToStr(I)+' + '+IntToStr(J)+' = '+IntToStr(K));
 	end;
 end;
+

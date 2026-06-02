@@ -38,3 +38,7 @@ ShowSudanFunction(Memo, 2, 1, 1);
 ShowSudanFunction(Memo, 2, 2, 1);
 ShowSudanFunction(Memo, 3, 1, 1);
 end;
+
+
+
+

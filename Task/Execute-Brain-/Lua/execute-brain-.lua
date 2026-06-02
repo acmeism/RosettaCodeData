@@ -20,3 +20,4 @@ for char in source:gmatch"[<>+.,%[%]%-]" do
 end
 
 load( table.concat(prog, " ") )()
+

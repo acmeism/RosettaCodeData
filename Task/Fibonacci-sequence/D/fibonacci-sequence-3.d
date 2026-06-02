@@ -14,7 +14,7 @@ in {
     BigInt F = 1;
     BigInt L = 1;
     int sign = -1;
-    immutable uint n2 = cast(uint)n.log2.floor;
+    immutable uint n2 = cast(uint)(cast(double)n).log2.floor;
     auto mask = 2.BigInt ^^ (n2 - 1);
     foreach (immutable i; 1 .. n2) {
         auto temp = F ^^ 2;

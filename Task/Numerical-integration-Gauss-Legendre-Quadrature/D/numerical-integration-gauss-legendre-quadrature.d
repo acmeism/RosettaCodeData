@@ -5,7 +5,7 @@ immutable struct GaussLegendreQuadrature(size_t N, FP=double,
     immutable static double[N] lroots, weight;
     alias FP[N + 1][N + 1] CoefMat;
 
-    pure nothrow @safe @nogc static this() {
+    pure nothrow @safe @nogc shared static this() {
         static FP legendreEval(in ref FP[N + 1][N + 1] lcoef,
                                in int n, in FP x) pure nothrow {
             FP s = lcoef[n][n];

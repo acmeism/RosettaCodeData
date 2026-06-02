@@ -3,7 +3,7 @@ import std.stdio, std.string, std.math, std.array;
 struct boxTheCompass {
     immutable static string[32] points;
 
-    pure nothrow static this() {
+    pure nothrow shared static this() {
         immutable cardinal = ["north", "east", "south", "west"];
         immutable desc = ["1", "1 by 2", "1-C", "C by 1", "C",
                           "C by 2", "2-C", "2 by 1"];

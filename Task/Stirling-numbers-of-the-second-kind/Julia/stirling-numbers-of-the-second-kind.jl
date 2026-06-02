@@ -35,3 +35,4 @@ end
 
 printstirling2table(12)
 println("\nThe maximum for stirling2(100, _) is: ", maximum(k-> stirlings2(BigInt(100), BigInt(k)), 1:100))
+

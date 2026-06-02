@@ -13,3 +13,4 @@
    (for/or [(block blocks)]
       #:continue (not (string-match block (string-first word)))
       (spell (string-rest word) (list-delete blocks block))))))
+

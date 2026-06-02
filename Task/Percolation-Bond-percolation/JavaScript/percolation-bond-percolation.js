@@ -125,3 +125,4 @@ for (let p = 1; p <= 9; p++) {
   const percolationProportion = percolationCount / 10000;
   console.log(`p = ${probability.toFixed(1)}:  ${percolationProportion.toFixed(4)}`);
 }
+

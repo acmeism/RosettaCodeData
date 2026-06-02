@@ -92,3 +92,4 @@ class KochSnowflake
     @production = @grammar.generate gen
   end
 end
+

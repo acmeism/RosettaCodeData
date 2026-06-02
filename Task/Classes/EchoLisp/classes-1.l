@@ -9,3 +9,4 @@
 (define-method tostring (Writer) (lambda (w)( format "🎩 %a" w.name)))
 (define-method mailto (Person Writer)
 	(lambda (p w) (printf " From %a (age %d). Dear writer of %a ..." p p.age  w.books )))
+

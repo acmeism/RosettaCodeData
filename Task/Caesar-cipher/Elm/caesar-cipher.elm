@@ -86,3 +86,4 @@ view model =
     , button [ class "butstyle", onClick IncKey ] [ text "+1" ]
     ]
     ]
+

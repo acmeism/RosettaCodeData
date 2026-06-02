@@ -37,3 +37,5 @@ ReplaceNthChar('a','A',TestStr,1);
 ReplaceNthChar('b','E',TestStr,1);
 Memo.Lines.Add('After: '+TestStr);
 end;
+
+

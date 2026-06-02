@@ -1,0 +1,270 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program rootedtree64.s  Translation of C */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ NBELEMENTS,      100              // list size
+
+/*******************************************/
+/*   Macros                              */
+/*******************************************/
+//.include "../../ficmacros64.inc"            // for developer debugging
+
+/*******************************************/
+/* Initialized data */
+/*******************************************/
+.data
+szMessDebutPgm:          .asciz "Program 64 bits start. \n"
+szMessFinOK:             .asciz "Program normal end. \n"
+szCarriageReturn:        .asciz "\n"
+/* datas error display */
+szMessErreur:            .asciz "Error detected.\n"
+/* datas message display */
+szMessResult:            .asciz "Number of trees :"
+szParenOuv:              .asciz "("
+szParenFer:              .asciz ")"
+
+.align 2
+offset:         .quad 0,1           // 2 integers
+                .fill 30,8,0       // 30 integers
+
+/*******************************************/
+/* UnInitialized data */
+/*******************************************/
+.bss
+sConvArea:    .skip 24
+lList1:       .skip 8 * NBELEMENTS    // list memory
+ilen:         .skip 8
+/*******************************************/
+/*  code section   */
+/*******************************************/
+.text
+.global main
+main:
+    ldr x0,qAdrszMessDebutPgm
+    bl affichageMess
+    ldr x0,qAdrlList1
+
+    mov x0,#0                  // list init
+    bl append
+    mov x4,#5                  // bags number
+    mov x0,x4
+    bl mktrees                 // build tree
+
+    ldr x0,qAdrszMessResult
+    bl affichageMess
+    ldr x1,qAdroffset
+    ldr x2,[x1,x4,lsl #3]
+    add x3,x4,#1
+    ldr x3,[x1,x3,lsl #3]
+    sub x0,x3,x2
+    ldr x1,qAdrsConvArea
+    bl conversion10
+    ldr x0,qAdrsConvArea
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+    mov x0,x4
+    bl displayTree
+
+    ldr x0,qAdrszMessFinOK
+    bl affichageMess
+    b 100f
+
+100:                            // standard end of the program
+    mov x8,EXIT
+    svc 0                       // perform system call
+qAdrszMessDebutPgm:        .quad szMessDebutPgm
+qAdrszMessFinOK:           .quad szMessFinOK
+qAdrszMessErreur:          .quad szMessErreur
+qAdrszCarriageReturn:      .quad szCarriageReturn
+qAdrsConvArea:             .quad sConvArea
+qAdrlList1:                .quad lList1
+qAdrszMessResult:          .quad szMessResult
+
+/******************************************************************/
+/*     append at end of list                          */
+/******************************************************************/
+/* x0 contains value (t) */
+append:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    mov x1,#1
+    lsl x0,x0,1
+    orr x1,x1,x0
+    ldr x0,qAdrlList1              // load list address
+    ldr x2,qAdriLen                // load counter address
+    ldr x3,[x2]                    // load counter
+    str x1,[x0,x3,lsl # 3]         // store at end of list
+    add x3,x3,#1                   // increment list counter
+    str x3,[x2]
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+/******************************************************************/
+/*     create bags tree                          */
+/******************************************************************/
+/* x0 bags number */
+mktrees:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    ldr x6,qAdroffset
+    add x2,x0,#1
+    ldr x3,[x6,x2,lsl #3]        // load value n+1
+    cmp x3,#0
+    bne 100f
+    mov x5,x0
+    cmp x0,#0
+    beq 2f
+    sub x0,x5,#1
+    bl mktrees
+2:
+    mov x0,x5
+    mov x1,#0
+    sub x2,x5,#1
+    ldr x3,[x6,x2,lsl #3]
+    mov x4,x2
+    bl assemble
+
+    ldr x1,qAdriLen
+    ldr x3,[x1]
+    ldr x1,qAdroffset
+    add x2,x5,#1             // n+1
+    str x3,[x1,x2,lsl #3]
+100:
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+qAdroffset:     .quad offset
+qAdriLen:       .quad ilen
+/******************************************************************/
+/*     assemble tree                          */
+/******************************************************************/
+/* x0 contains bags number */
+/* x1 contains list tree */
+/* x2 contains  length of subtree   */
+/* x3 contains offset of subtree */
+/* x4 contains remaining length */
+assemble:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    stp x8,x9,[sp,-16]!
+    cmp x4,#0
+    bne 1f
+    mov x0,x1               // remaining length is null
+    bl append
+    b 100f
+1:
+    ldr x6,qAdroffset
+    cmp x2,x4
+    ble 2f
+    mov x2,x4
+    ldr x3,[x6,x2,lsl #3]      // pos
+    b 3f
+2:
+    add x7,x2,#1
+    ldr x7,[x6,x7,lsl #3]
+    cmp x3,x7
+    blt 3f
+    subs x2,x2,#1
+    beq 100f                    // end
+    ldr x3,[x6,x2,lsl #3]
+3:
+    mov x8,x1
+    mov x6,x4
+    lsl x7,x2,#1
+    lsl x5,x1,x7
+    ldr x7,qAdrlList1
+    ldr x7,[x7,x3,lsl #3]
+    orr x1,x5,x7
+    sub x4,x4,x2
+    bl assemble
+    mov x1,x8
+    add x3,x3,#1
+    mov x4,x6
+    bl assemble
+100:
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+/******************************************************************/
+/*     display tree                          */
+/******************************************************************/
+/* x0 contains bag number */
+displayTree:
+    stp x1,lr,[sp,-16]!       // TODO: a completer
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    ldr x1,qAdroffset
+    ldr x7,[x1,x0,lsl #3]
+    add x3,x0,#1
+    ldr x4,[x1,x3,lsl #3]
+    ldr x5,qAdrlList1
+    mov x6,x0
+1:                                 // display solution loop
+    cmp x7,x4
+    bge 100f
+    ldr x0,[x5,x7,lsl #3]
+    lsl x1,x6,#1
+    bl displayOne                  // display one solution
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    add x7,x7,#1
+    b 1b
+100:
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+/******************************************************************/
+/*     display One solution                         */
+/******************************************************************/
+/* x0 contains one solution */
+/* x1  length   */
+displayOne:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    mov x4,x0
+1:
+    and x3,x4,#1
+    cmp x3,#1
+    bne 2f
+    ldr x0,qAdrszParenOuv
+    b 3f
+2:
+    ldr x0,qAdrszParenFer
+3:
+    bl affichageMess
+    lsr x4,x4,#1
+    subs x1,x1,#1
+    bgt 1b
+
+100:
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+qAdrszParenOuv:      .quad szParenOuv
+qAdrszParenFer:      .quad szParenFer
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

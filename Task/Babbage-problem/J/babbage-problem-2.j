@@ -28,3 +28,4 @@ NB. The following easily relates word for word to the sentence we've written :
 NB. Like all mathematical notations, in J you see patterns that suggest simplification :
    {. I. 269696 = 1000000 | *: i.100000
 25264
+

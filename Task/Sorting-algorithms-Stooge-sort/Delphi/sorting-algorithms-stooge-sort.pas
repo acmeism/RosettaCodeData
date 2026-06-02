@@ -44,3 +44,5 @@ Memo.Lines.Add('Raw Data:    '+GetArrayStr(TestData));
 DoStoogeSort(TestData);
 Memo.Lines.Add('Sorted Data: '+GetArrayStr(TestData));
 end;
+
+

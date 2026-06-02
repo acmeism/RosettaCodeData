@@ -5,7 +5,11 @@ sub div-count (\x) {
     }
 }
 
-my $limit = 15;
+constant @divcount = lazy (1..Inf).hyper.map(&div-count);
+
+my $limit = 35;
 
 put "First $limit terms of OEIS:A005179";
-put (1..$limit).map: -> $n { first { $n == .&div-count }, 1..Inf };
+put ((1..$limit).map: -> $n {
+    $n.is-prime ?? (2 ** ($n - 1)) !! 1 + @divcount.first: * == $n, :k
+}).batch(5)>>.fmt("%10d").join: "\n";

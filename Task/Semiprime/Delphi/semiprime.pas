@@ -46,3 +46,4 @@ for I:=0 to 100-1 do
 Memo.Lines.Add(S);
 Memo.Lines.Add('Count='+IntToStr(Cnt));
 end;
+

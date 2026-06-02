@@ -63,7 +63,7 @@ class Zeckendorf {
 
     this(string x = "0") {
         int q = 1;
-        int i = x.length - 1;
+        int i = cast(int) x.length - 1;
         dLen = i / 2;
         while (i >= 0) {
             dVal += (x[i] - '0') * q;

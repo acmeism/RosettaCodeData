@@ -78,3 +78,7 @@ DrawRuler(Memo);
 S:=WrapLines(TestStr,20);
 Memo.Lines.Add(S);
 end;
+
+
+
+

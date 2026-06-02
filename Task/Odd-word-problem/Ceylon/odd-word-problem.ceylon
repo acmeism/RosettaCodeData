@@ -31,3 +31,4 @@ Character[] conditionalAddChar(Character char, Character[] chars, Boolean isEven
 
 Boolean isPunctuation(Character char)
     => ",.:;".contains(char);
+

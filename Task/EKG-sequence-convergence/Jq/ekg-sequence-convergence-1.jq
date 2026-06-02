@@ -5,3 +5,4 @@ def gcd(a;b):
   [a,b] | _gcd ;
 
 def lpad($len): tostring | ($len - length) as $l | (" " * $l)[:$l] + .;
+

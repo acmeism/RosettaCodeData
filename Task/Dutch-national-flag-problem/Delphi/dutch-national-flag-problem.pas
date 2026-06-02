@@ -48,3 +48,4 @@ procedure ShowDutchFlag(Memo: TMemo);
 begin
 DoDutchFlag(Memo,TestOrder);
 end;
+

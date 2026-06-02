@@ -37,3 +37,4 @@ def sufficient:
   {base: 10, factorions: ([factorions(10; 1500000)] | join(" "))},  # limit per the task description
   {base: 11, factorions: ([factorions(11; 50000)] | join(" "))},    # a limit known to be sufficient per (*)
   {base: 12, factorions: ([factorions(12; 50000)] | join(" "))}     # a limit known to be sufficient per (*)
+

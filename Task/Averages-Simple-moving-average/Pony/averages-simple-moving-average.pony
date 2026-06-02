@@ -35,3 +35,4 @@ actor Main
     for v in data.values() do
       env.out.print("Bar: " + bar(v).string())
     end
+

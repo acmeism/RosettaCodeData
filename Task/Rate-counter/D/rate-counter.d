@@ -18,3 +18,4 @@ void main()
   writeln("f2: ", r[2]);
 	
 }
+

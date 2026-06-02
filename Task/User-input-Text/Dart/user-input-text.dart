@@ -24,3 +24,4 @@ main() {
 
 	stdout.writeln('input: $string_input\nnumber: $number_input');
 }
+

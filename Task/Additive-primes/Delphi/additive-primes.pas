@@ -60,3 +60,5 @@ for N:=1 to 500-1 do
 Memo.Lines.Add(S);
 Memo.Lines.Add('Count = '+IntToStr(Cnt));
 end;
+
+

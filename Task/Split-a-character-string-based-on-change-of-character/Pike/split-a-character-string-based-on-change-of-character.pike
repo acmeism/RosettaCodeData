@@ -6,3 +6,4 @@ foreach(input/1, string char) {
     write(char);
     last_char = char;
 }
+

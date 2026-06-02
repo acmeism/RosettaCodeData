@@ -1,0 +1,7 @@
+' ============================================
+' https://rosettacode.org/wiki/Program_termination
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+
+' In BazzBasic `END` stops execution where ever
+IF 1 = 1 THEN END

@@ -15,3 +15,4 @@
 (println (take 20 (keep-indexed                                 ; take the first 20
                           #(if (primorial-prime? %2) (inc %1))  ; filters out non-primorials, passing on the index + 1 (since sequence begins with 1 (not 0)
                           (reductions *' primes))))             ; computes the lazy sequence of product of 1 prime, 2 primes, 3 primes, etc.
+

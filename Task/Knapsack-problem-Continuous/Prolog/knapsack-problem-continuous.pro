@@ -63,3 +63,4 @@ print_results(S, A1, A2, A3, [(Name, W, V)|T], [N|TN], W1, V1) :-
        W2 is W1 + X,
        V2 is V1 + Vtemp ),
    print_results(S, A1, A2, A3, T, TN, W2, V2).
+

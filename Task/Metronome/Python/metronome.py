@@ -7,11 +7,9 @@ def main(bpm = 72, bpb = 4):
     while True:
         counter += 1
         if counter % bpb:
-            print 'tick'
+            print("tick")
         else:
-            print 'TICK'
+            print("TICK")
         time.sleep(sleep)
-
-
 
 main()

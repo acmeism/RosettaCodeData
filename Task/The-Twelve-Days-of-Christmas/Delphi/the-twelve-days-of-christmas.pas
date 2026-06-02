@@ -36,3 +36,5 @@ var I: integer;
 begin
 for I:=0 to 12-1 do DoOneDay(Memo,I);
 end;
+
+

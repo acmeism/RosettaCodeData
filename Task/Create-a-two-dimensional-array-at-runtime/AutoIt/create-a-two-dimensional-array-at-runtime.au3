@@ -10,3 +10,4 @@ $a2D[ UBound($a2D) -1 ][ UBound($a2D, 2) -1 ] = 'test string'
 
 ; == output this value to MsgBox
 MsgBox(0, 'Output', 'row[' & UBound($a2D) -1 & '], col[' & UBound($a2D, 2) -1 & ']' & @CRLF & '= ' & $a2D[ UBound($a2D) -1 ][ UBound($a2D, 2) -1 ] )
+

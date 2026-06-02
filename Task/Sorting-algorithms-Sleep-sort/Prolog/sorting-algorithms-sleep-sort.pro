@@ -6,3 +6,4 @@ sleep_sort(L) :-
 
 initsort(V, Id) :-
 	thread_create_in_pool(rosetta, (sleep(V), writeln(V)), Id, []).
+

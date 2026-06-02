@@ -1,37 +1,30 @@
-#include <algorithm>
-#include <iostream>
-#include <vector>
-#include <string>
+#include <print>
+#include <ranges>
+#include <flat_map>
+#include <string_view>
 
-class pair  {
-public:
-    pair( int s, std::string z )            { p = std::make_pair( s, z ); }
-    bool operator < ( const pair& o ) const { return i() < o.i(); }
-    int i() const                           { return p.first; }
-    std::string s() const                   { return p.second; }
-private:
-    std::pair<int, std::string> p;
-};
-void gFizzBuzz( int c, std::vector<pair>& v ) {
-    bool output;
-    for( int x = 1; x <= c; x++ ) {
-        output = false;
-        for( std::vector<pair>::iterator i = v.begin(); i != v.end(); i++ ) {
-            if( !( x % ( *i ).i() ) ) {
-                std::cout << ( *i ).s();
-                output = true;
+constexpr void gFizzBuzz(int max, const std::flat_map<int, std::string_view>& map) noexcept {
+    for (const auto num : std::views::iota(1, max + 1)) {
+        bool print_number = true;
+        for (const auto [i, word] : map) {
+            if (num % i == 0) {
+                std::print("{}", word);
+                print_number = false;
             }
         }
-        if( !output ) std::cout << x;
-        std::cout << "\n";
+
+        if (print_number) {
+            std::print("{}", num);
+        }
+        std::println();
     }
 }
-int main( int argc, char* argv[] ) {
-    std::vector<pair> v;
-    v.push_back( pair( 7, "Baxx" ) );
-    v.push_back( pair( 3, "Fizz" ) );
-    v.push_back( pair( 5, "Buzz" ) );
-    std::sort( v.begin(), v.end() );
-    gFizzBuzz( 20, v );
-    return 0;
+
+int main() {
+    std::flat_map<int, std::string_view> values {
+        { 7, "Baxx" },
+        { 3, "Fizz" },
+        { 5, "Buzz" }
+    };
+    gFizzBuzz(20, values);
 }

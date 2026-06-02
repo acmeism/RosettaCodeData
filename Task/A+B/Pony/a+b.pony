@@ -22,3 +22,4 @@ actor Main
             end
         end
         _env.out.print(sum.string())
+

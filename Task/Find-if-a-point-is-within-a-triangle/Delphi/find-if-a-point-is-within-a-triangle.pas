@@ -137,3 +137,4 @@ DrawPoint(Image.Canvas,P.X,P.Y, PointInTriangle2D(MakeVector2D(P.X,P.Y),Tri));
 P:=Point(150,200);
 DrawPoint(Image.Canvas,P.X,P.Y, PointInTriangle2D(MakeVector2D(P.X,P.Y),Tri));
 end;
+

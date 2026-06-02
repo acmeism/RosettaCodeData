@@ -160,3 +160,4 @@ for (const tableau of [tableauOne, tableauTwo]) {
         printLayout(patterns[0]);
     }
 }
+

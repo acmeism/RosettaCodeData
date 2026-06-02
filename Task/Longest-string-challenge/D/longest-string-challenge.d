@@ -4,16 +4,17 @@ import std.stdio, std.array;
 int longer(string a, string b) {
     while (!a.empty && !b.empty)
         a.popFront(), b.popFront();
-    return a.length;
+    return cast(int) a.length;
 }
 
 void main() {
     string longest, lines;
-    foreach (string line; stdin.lines())
+    foreach (string line; stdin.lines()) {
+        if (line == "\n") break;
         if (longer(line, longest))
             lines = longest = line;
         else if (!longer(longest, line))
             lines ~= line;
-
+    }
     writeln(lines);
 }

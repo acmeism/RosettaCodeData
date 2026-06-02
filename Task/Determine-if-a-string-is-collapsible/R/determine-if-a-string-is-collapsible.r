@@ -39,3 +39,4 @@ test_strings <- c(
 for(test in test_strings){
   collapse_string(test)
 }
+

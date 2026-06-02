@@ -1,33 +1,32 @@
-import random, re
-chars = ["(",")","/","+","-","*"]
+from random import randrange
+from re import search
+
+chars = ["(", ")", "/", "+", "-", "*"]
 while True:
     charsandints, ints = [], []
-    for x in range(4):
-        ints.append(str(random.randrange(1,10)))
+    for _ in range(4):
+        ints.append(str(randrange(1, 10)))
     charsandints = chars + ints
-    print "Numbers are:", ints
-    guess = raw_input("Enter your guess:")
+    print("Numbers are:", ints)
+    guess = input("Enter your guess:")
     if guess.lower() == "q":
         break
     elif guess.lower() == "|":
-        pass
+        continue
     else:
         flag = True
         for a in guess:
             if a not in charsandints or guess.count(a) > charsandints.count(a):
                 flag = False
-        if re.search("\d\d", guess):
-            print "You cannot combine digits."
-            break
+                break
+        if search("\\d\\d", guess):
+            print("You cannot combine digits.")
         if flag:
-            print "Your result is: ", eval(guess)
-            if eval(guess) == 24:
-                print "You won"
-                break
-            else:
-                print "You lost"
-                break
+            result = eval(guess)
+            print("Your result is: ", result)
+            print("You won!" if result == 24 else "You lost.")
         else:
-            print "You cannot use anthing other than", charsandints
-            break
-print "Thanks for playing"
+            print("You cannot use anything other than", charsandints)
+    break
+
+print("Thanks for playing!")

@@ -32,7 +32,7 @@ def check(answer, digits):
     allowed = set('() +-*/\t'+''.join(digits))
     ok = all(ch in allowed for ch in answer) and \
          all(digits.count(dig) == answer.count(dig) for dig in set(digits)) \
-         and not re.search('\d\d', answer)
+         and not re.search(r'\d\d', answer)
     if ok:
         try:
             ast.parse(answer)

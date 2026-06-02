@@ -97,3 +97,6 @@ ValidateID(Memo,'AU0000XVGZA3');
 ValidateID(Memo,'AU0000VXGZA3');
 ValidateID(Memo,'FR0000988040');
 end;
+
+
+

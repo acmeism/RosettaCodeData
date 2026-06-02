@@ -23,3 +23,7 @@ var I: LongInt;
 begin
 Memo.Lines.Add(FloatToStrF(Sum(I, 1, 100, @Term), ffFixed,18,15));
 end;
+
+
+
+

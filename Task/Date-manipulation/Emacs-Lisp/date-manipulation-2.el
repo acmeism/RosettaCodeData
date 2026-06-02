@@ -39,3 +39,4 @@
     (setq time-stamp-as-integer (adjust-if-pm fixed-calendar-string))
     (setq future-time-as-integer (add-seconds time-stamp-as-integer number-of-seconds-in-future))
     (format-time-string "%B %e %Y %R %p %Z" future-time-as-integer)))
+

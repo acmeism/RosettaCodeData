@@ -303,3 +303,5 @@ Points[4].X:=400; Points[4].Y:=100;
 DrawCurve(Image, Points);
 Image.Invalidate;
 end;
+
+

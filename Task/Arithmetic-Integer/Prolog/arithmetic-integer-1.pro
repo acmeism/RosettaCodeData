@@ -7,3 +7,4 @@ arithmetic_integer :-
     read(M),
     read(N),
     maplist( print_expression_and_result(M, N), [+,-,*,//,rem,^] ).
+

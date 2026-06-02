@@ -146,3 +146,4 @@ main =
             [ text (outputArrayInt zeroFree) ]
         , p [] [ text ("Found " ++ String.fromInt nrFoundPrimes ++ " primes") ]
         ]
+

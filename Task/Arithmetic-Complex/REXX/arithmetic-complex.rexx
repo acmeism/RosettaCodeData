@@ -1,4 +1,4 @@
--- 25 Apr 2026
+-- 23 May 2026
 include Setting
 
 say 'COMPLEX ARITHMETIC'
@@ -23,12 +23,12 @@ say '-t  =' Rec2FormC(NegC(t))
 say '1/t =' Rec2FormC(InvC(t))
 say
 say 'SUM AND PRODUCT OF A LIST'
-say 't+u+v+w =' Rec2FormC(AddCL(t';'u';'v';'w))
-say 't*u*v*w =' Rec2FormC(MulCL(t';'u';'v';'w))
+say 't+u+v+w =' Rec2FormC(SumCL(t';'u';'v';'w))
+say 't*u*v*w =' Rec2FormC(ProdCL(t';'u';'v';'w))
 say
 say 'FORMULA'
 say 't^2-2tu+3v-4tw^4+5 =' ,
-Rec2FormC(AddCL(SquareC(t)';'MulCL(-2';'t';'u)';'MulC(3,v)';'MulCL(-4';'t';'PowC(w,4))';'5))
+Rec2FormC(SumCL(SquareC(t)';'ProdCL(-2';'t';'u)';'AddC(3,v)';'ProdCL(-4';'t';'PowC(w,4))';'5))
 say
 say 'BONUS'
 say 'Argument(t)  =' ArgC(t)+0
@@ -48,3 +48,5 @@ say 'i^i       =' Rec2FormC(Normal(PowerC(i,i)))
 exit
 
 include Math
+</pre>
+

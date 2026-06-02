@@ -12,3 +12,4 @@ let gamma z =
 
 seq { for i in 1 .. 20 do yield ((double)i/10.0) } |> Seq.iter ( fun v -> System.Console.WriteLine("{0} : {1}", v, gamma v ) )
 seq { for i in 1 .. 10 do yield ((double)i*10.0) } |> Seq.iter ( fun v -> System.Console.WriteLine("{0} : {1}", v, gamma v ) )
+

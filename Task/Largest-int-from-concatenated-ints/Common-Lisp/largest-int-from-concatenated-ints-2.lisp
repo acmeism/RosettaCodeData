@@ -22,3 +22,4 @@
   :do (format t "~{~A~}~%"
               (sort (mapcar #'write-to-string input)
                     #'largest-msd-with-less-digits)))
+

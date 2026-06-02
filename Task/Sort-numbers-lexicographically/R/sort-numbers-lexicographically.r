@@ -1,6 +1,3 @@
-lex_sort <- function(n){
-  str <- sort(as.character(1:n))
-  return(as.numeric(str))
-}
+lex_sort <- function(n) as.numeric(sort(as.character(1:n)))
 
 lex_sort(13)

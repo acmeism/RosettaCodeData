@@ -5,3 +5,4 @@ set thePerson to the text returned of (display dialog "What is the person's name
 set theGender to the text returned of (display dialog "He or she? Please capitalize." default answer "")
 
 display dialog thePerson & " went for a walk in the park. " & theGender & " found a " & theNoun & ".  " & thePerson & " decided to take it home."
+

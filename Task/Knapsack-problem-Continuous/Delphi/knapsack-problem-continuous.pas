@@ -90,3 +90,7 @@ Memo.Lines.Add('--------------------------');
 Memo.Lines.Add(Format('Totals   %8.2f %8.2f',[Weight,Cost]));
 finally SL.Free; end;
 end;
+
+
+
+

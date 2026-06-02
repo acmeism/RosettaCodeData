@@ -56,3 +56,4 @@ fn main() {
 fn main() {
     println!("Not supported on this platform");
 }
+

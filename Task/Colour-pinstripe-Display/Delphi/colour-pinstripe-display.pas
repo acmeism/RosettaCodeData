@@ -28,3 +28,5 @@ for I:=0 to 4-1 do
 	DrawColorStripes(Image,Colors,I+1,SHeight*I,SHeight*(I+1));
 	end;
 end;
+
+

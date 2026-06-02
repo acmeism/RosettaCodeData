@@ -14,3 +14,4 @@ let cubic_bezier (p1:vector) (p2:vector) (p3:vector) (p4:vector) segments =
             let x = a * p1.[0] + b * p2.[0] + c * p3.[0] + d * p4.[0]
             let y = a * p1.[1] + b * p2.[1] + c * p3.[1] + d * p4.[1]
             vector [x; y])
+

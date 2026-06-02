@@ -1,21 +1,21 @@
--- 25 Apr 2026
+-- 16 May 2026
 include Setting
 numeric digits 200
-memo.cache=0
 
 say 'HOME PRIMES'
 say version
 say
 do i = 1 to 48
    call Home i
+   call Timer 'r'
 end
 call Home 65
+call Timer 'r'
 exit
 
 Home:
-procedure expose Glob. Fact. Memo. Work.
+procedure expose Fact. Memo. Work.
 arg xx
-call Timer('x')
 if xx = 1 then
    call Charout ,'HP1 = 1'
 else do
@@ -39,8 +39,7 @@ else do
    call Charout ,yy
 end
 say
-call Timer
 return
 
--- FactorS; Timer
+-- FactorS Timer
 include Math

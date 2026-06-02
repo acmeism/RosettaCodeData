@@ -43,3 +43,4 @@ fn main() {
         println!("{} SEDOL: {:?}", &input, sedol(&input).unwrap());
     }
 }
+

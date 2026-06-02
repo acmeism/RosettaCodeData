@@ -77,3 +77,5 @@ ShowConFraction(Memo,3142857, 1000000);
 ShowConFraction(Memo,31428571, 10000000);
 ShowConFraction(Memo,314285714, 100000000);
 end;
+
+

@@ -93,3 +93,4 @@ START-OF-SELECTION.
                                                       ELSE 'NOT OK' ) }| ).
   ENDDO.
   cl_demo_output=>display( ).
+

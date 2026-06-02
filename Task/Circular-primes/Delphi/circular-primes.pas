@@ -52,3 +52,5 @@ for I:=0 to High(I) do
 Memo.Lines.Add(S);
 Memo.Lines.Add('Count = '+IntToStr(Cnt));
 end;
+
+

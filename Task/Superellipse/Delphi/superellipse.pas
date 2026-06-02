@@ -45,3 +45,5 @@ for X:=0 to High(Points) do
 Image.Canvas.LineTo(W2+High(Points),trunc(H2-Points[High(Points)]));
 Image.Repaint;
 end;
+
+

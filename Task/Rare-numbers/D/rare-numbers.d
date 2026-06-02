@@ -15,7 +15,7 @@ enum maxDigits = 16;
 ulong toUlong(byte[] digits, bool reverse) {
     ulong sum = 0;
     if (reverse) {
-        for (int i = digits.length - 1; i >= 0; --i) {
+        for (int i = cast(int) digits.length - 1; i >= 0; --i) {
             sum = sum * 10 + digits[i];
         }
     } else {
@@ -45,7 +45,7 @@ byte[] seq(byte from, byte to, byte step) {
 string commatize(ulong n) {
     auto s = n.to!string;
     auto le = s.length;
-    for (int i = le - 3; i >= 1; i -= 3) {
+    for (int i = cast(int)le - 3; i >= 1; i -= 3) {
         s = s[0..i] ~ "," ~ s[i..$];
     }
     return s;

@@ -31,3 +31,5 @@ If CreateObject("Scripting.FileSystemObject").FileExists("d:\test.txt") Then
 Else
     Wscript.Echo "File Does Not Exist")
 End If
+
+

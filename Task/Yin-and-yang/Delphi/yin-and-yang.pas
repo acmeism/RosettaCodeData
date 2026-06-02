@@ -53,3 +53,6 @@ DrawYinYang(Image.Canvas,Point(75,75),50);
 DrawYinYang(Image.Canvas,Point(200,200),100);
 Image.Invalidate;
 end;
+
+
+

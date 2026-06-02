@@ -15,3 +15,4 @@ xs1 = new_child(xroot, "element")
 add_text(xs1, "some text here")
 
 println(xdoc)
+

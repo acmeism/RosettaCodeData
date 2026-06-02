@@ -81,3 +81,4 @@ Found 1 of 5 mines.
 What do you do? ("o x y" to reveal a field; "m x y" to toggle a mine; close)
 close
 ERROR: You closed the game.
+

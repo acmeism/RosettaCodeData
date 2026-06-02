@@ -32,3 +32,4 @@
 (json-import
     #<< {"_instanceof":"Struct","struct":"Person","id":18,"fields":["simon","🎩"]} >>#)
 	→   # (simon 🎩)
+

@@ -204,3 +204,4 @@ init_cell_state() ->
 
 atom_to_integer(Atom) ->
     list_to_integer(atom_to_list(Atom)).
+

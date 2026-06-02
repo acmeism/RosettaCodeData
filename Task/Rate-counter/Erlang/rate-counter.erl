@@ -30,3 +30,4 @@ fun_during_seconds_receive_loop( Ref, Pid, N ) ->
 	{stop, Ref} -> N;
         {one_time, Pid} -> fun_during_seconds_receive_loop( Ref, Pid, N + 1 )
 	end.
+

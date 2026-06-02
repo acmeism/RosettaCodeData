@@ -7,20 +7,28 @@ use Sort::Naturally;
 
 #| This script checks for unimplemented tasks in a given programming language on Rosetta Code.
 sub MAIN( Str :$lang = 'Raku' ) {
-	my (@total, @implemented);
+	my (@total, @implemented, @unimplemented);
 
-	@total.append: .&get-cat for 'Programming_Tasks', 'Draft_Programming_Tasks';
-	@implemented = get-cat $lang;
-
-	my @unimplemented = (@total (-) @implemented).keys.sort: *.&naturally;
+	@total.append: .&get-tasks for 'Programming_Tasks', 'Draft_Programming_Tasks';
 	
-	say "Unimplemented tasks in $lang:";
-	.say for @unimplemented;
-	say "{+@unimplemented} unimplemented tasks";
+	@implemented = get-tasks $lang;
+
+	@unimplemented = (@total (-) @implemented).keys;
+	
+	pretty-print($lang, @total.elems, @unimplemented);
 }
 
+sub pretty-print($lang, $total, @unimplemented) {
+	my $msg = "For $lang {@unimplemented.elems} out of $total tasks are not yet implemented:";
+	say $msg;
+	say "-" x $msg.chars;
+	for @tasks.sort({ .&naturally }).kv -> $index, $task {
+		my $display = $task.substr(0, $task.chars min 60);
+		say "$index\t" ~ $display ~ ( $task.chars > 60 ?? "..." !! "" );
+	}
+}
 
-sub get-cat($category) {
+sub get-tasks($category) {
 	
 	my $site = 'https://rosettacode.org/w';
 	my $client = HTTP::UserAgent.new(
@@ -38,7 +46,9 @@ sub get-cat($category) {
 
 sub mediawiki-query($client, $site, $type, *%query) {
 
-	my $url = "$site/api.php?" ~ uri-query-string(:action<query>, :format<json>, :formatversion<2>, |%query);
+	my $url = "$site/api.php?" ~ uri-query-string(:action<query>,
+												  :format<json>,
+												  :formatversion<2>, |%query);
     my $continue = '';
 
     gather loop {

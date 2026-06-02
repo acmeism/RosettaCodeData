@@ -5,3 +5,4 @@ for line in io.lines"input.txt" do
 	end
 	print( table.concat(this, " ") )
 end
+

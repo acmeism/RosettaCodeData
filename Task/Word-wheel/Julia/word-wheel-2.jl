@@ -1,4 +1,10 @@
-const tfile = download("http://wiki.puzzlers.org/pub/wordlists/unixdict.txt")
+tfile = "unixdict.txt"
+try
+    stat(tfile)
+catch
+    global tfile = download("http://wiki.puzzlers.org/pub/wordlists/unixdict.txt")
+end
+
 const wordarraylist = [[string(c) for c in w] for w in split(read(tfile, String), r"\s+")]
 
 function wordwheel2(wheel, central)

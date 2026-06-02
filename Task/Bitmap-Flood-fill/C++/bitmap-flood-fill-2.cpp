@@ -41,3 +41,4 @@ void FloodFillAlgorithm::flood(Point startPoint, Mat* tgtMat) {
 bool FloodFillAlgorithm::insideImage(Point p) {
     return (p.x >= 0) && (p.x < image->size().width) && (p.y >= 0) && (p.y < image->size().height);
 }
+

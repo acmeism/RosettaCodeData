@@ -112,3 +112,4 @@ txt = txt(ind:ind) // txt(:ind-1) // txt (ind+1:)
 end subroutine moveToFront
 
 end program FrontMove
+

@@ -1,4 +1,5 @@
-primes = [2, 3, 5, 7, 11, 13, 17, 19, 23]
+smallprimes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
+primes = smallprimes.copy()
 
 def isPrime(n):
     if n < 2:
@@ -11,7 +12,7 @@ def isPrime(n):
             return False
         if i * i > n:
             return True
-    print "Oops,", n, " is too large"
+    print(f"Oops, {n} is too large")
 
 def init():
     s = 24
@@ -46,36 +47,30 @@ def nsmooth(n, size):
             break
         next.append(prime)
 
-    indicies = [0] * len(next)
-    for m in xrange(1, size):
+    indices = [0] * len(next)
+    for m in range(1, size):
         ns[m] = min(next)
-        for i in xrange(0, len(indicies)):
+        for i in range(len(indices)):
             if ns[m] == next[i]:
-                indicies[i] += 1
-                next[i] = primes[i] * ns[indicies[i]]
+                indices[i] += 1
+                next[i] = primes[i] * ns[indices[i]]
 
     return ns
+
+def printnsmooth(p, start, end):
+    print(f"The {p}-smooth numbers from index {start} to {end} are:")
+    print(nsmooth(p, end)[start-1:])
+    print()
 
 def main():
     init()
 
-    for p in primes:
-        if p >= 30:
-            break
-        print "The first", p, "-smooth numbers are:"
-        print nsmooth(p, 25)
-        print
-
-    for p in primes[1:]:
-        if p >= 30:
-            break
-        print "The 3000 to 3202", p, "-smooth numbers are:"
-        print nsmooth(p, 3002)[2999:]
-        print
+    printnsmooth(2, 1, 25)
+    for start, end in [[1, 25], [3000, 3002]]:
+        for p in smallprimes[1:]:
+            printnsmooth(p, start, end)
 
     for p in [503, 509, 521]:
-        print "The 30000 to 3019", p, "-smooth numbers are:"
-        print nsmooth(p, 30019)[29999:]
-        print
+        printnsmooth(p, 30000, 30019)
 
 main()

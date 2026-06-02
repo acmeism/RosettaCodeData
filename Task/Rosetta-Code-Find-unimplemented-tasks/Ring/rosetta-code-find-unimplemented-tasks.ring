@@ -49,3 +49,4 @@ func searchtitle(sn)
            see "" + num + ". " + rosname + nl
         ok
         return sn
+

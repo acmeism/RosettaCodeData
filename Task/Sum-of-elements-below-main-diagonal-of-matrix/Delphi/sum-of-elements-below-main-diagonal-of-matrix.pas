@@ -26,3 +26,5 @@ begin
 Sum:=BottomTriangleSum(TestMatrix);
 Memo.Lines.Add(IntToStr(Trunc(Sum)));
 end;
+
+

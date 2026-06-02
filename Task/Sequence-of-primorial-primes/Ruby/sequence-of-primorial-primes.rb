@@ -15,3 +15,4 @@ until urutan > 20
   end
   i += 1
 end
+

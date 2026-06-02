@@ -17,31 +17,31 @@ static void swap(unsigned *a, unsigned *b) {
 /* sort unsigned ints */
 static void rad_sort_u(unsigned *from, unsigned *to, unsigned bit)
 {
-	if (!bit || to < from + 1) return;
+   if (!bit || to < from + 1) return;
 
-	unsigned *ll = from, *rr = to - 1;
-	for (;;) {
-		/* find left most with bit, and right most without bit, swap */
-		while (ll < rr && !(*ll & bit)) ll++;
-		while (ll < rr &&  (*rr & bit)) rr--;
-		if (ll >= rr) break;
-		swap(ll, rr);
-	}
+   unsigned *ll = from, *rr = to - 1;
+   for (;;) {
+      /* find left most with bit, and right most without bit, swap */
+      while (ll < rr && !(*ll & bit)) ll++;
+      while (ll < rr &&  (*rr & bit)) rr--;
+      if (ll >= rr) break;
+      swap(ll, rr);
+   }
 
-	if (!(bit & *ll) && ll < to) ll++;
-	bit >>= 1;
+   if (!(bit & *ll) && ll < to) ll++;
+   bit >>= 1;
 
-	rad_sort_u(from, ll, bit);
-	rad_sort_u(ll, to, bit);
+   rad_sort_u(from, ll, bit);
+   rad_sort_u(ll, to, bit);
 }
 
 /* sort signed ints: flip highest bit, sort as unsigned, flip back */
 static void radix_sort(int *a, const size_t len)
 {
-	size_t i;
-	unsigned *x = (unsigned*) a;
+   size_t i;
+   unsigned *x = (unsigned*) a;
 
-	for (i = 0; i < len; i++)
+   for (i = 0; i < len; i++)
             x[i] ^= INT_MIN;
 
         rad_sort_u(x, x + len, INT_MIN);

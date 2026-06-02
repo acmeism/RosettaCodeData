@@ -90,3 +90,4 @@ if __name__ == "__main__":
         print(f"Input: {example}")
         print(f"Result: {rpn_to_infix(example, VERBOSE=True)}")
         print()
+

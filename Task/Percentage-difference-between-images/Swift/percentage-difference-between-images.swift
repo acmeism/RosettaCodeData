@@ -52,3 +52,4 @@ let image1 = UIImage(named: "Lenna50")
 let image2 = UIImage(named: "Lenna100")
 
 compareImages(image1: image1, image2: image2)
+

@@ -20,3 +20,4 @@ def vars: [.. | strings | select(test("^[A-Z]"))] | unique;
 
 def underscore:
   ., (length * "_");
+

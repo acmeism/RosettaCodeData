@@ -14,3 +14,4 @@ def csv2jsonHelper:
   .[0] as $headers
   | reduce (.[1:][] | select(length > 0) ) as $row
       ([]; . + [ $row|objectify($headers) ]);
+

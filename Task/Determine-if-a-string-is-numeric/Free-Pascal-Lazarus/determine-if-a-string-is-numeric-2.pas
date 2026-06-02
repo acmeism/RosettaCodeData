@@ -33,3 +33,4 @@ begin
   end;
 end.
 { Val converts the value represented in the string 'StrValue' to a numerical value or an enumerated value, and stores this value in the variable 'Value', which can be of type Longint, Real and Byte or any enumerated type. If the conversion isn't successful, then the parameter 'Code' contains the index of the character in 'StrValue' which prevented the conversion. }
+

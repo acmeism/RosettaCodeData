@@ -18,3 +18,4 @@
  "Convert a list of digits into an integer"
   (when lst
     (parse-integer (format nil "~{~d~}" lst)) ))
+

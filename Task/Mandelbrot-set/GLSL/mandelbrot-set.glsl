@@ -47,3 +47,4 @@ mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Apply gamma correction
     fragColor.rgb = pow(fragColor.rgb, vec3(0.5));
 }
+

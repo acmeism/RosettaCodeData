@@ -92,17 +92,17 @@ int placeMessage(Grid grid, string msg) {
             int pos = i * gapSize + uniform(0, gapSize, rnd);
             grid.cells[pos / nCols][pos % nCols] = msg[i];
         }
-        return msg.length;
+        return cast(int) msg.length;
     }
     return 0;
 }
 
 int tryPlaceWord(Grid grid, string word) {
-    int randDir = uniform(0, dirs.length, rnd);
+    int randDir = cast(int) uniform(0, dirs.length, rnd);
     int randPos = uniform(0, gridSize, rnd);
 
     for (int dir=0; dir<dirs.length; dir++) {
-        dir = (dir + randDir) % dirs.length;
+        dir = (dir + randDir) % cast(int) dirs.length;
 
         for (int pos=0; pos<gridSize; pos++) {
             pos = (pos + randPos) % gridSize;
@@ -121,7 +121,7 @@ int tryLocation(Grid grid, string word, int dir, int pos) {
 
     int r = pos / nCols;
     int c = pos % nCols;
-    int len = word.length;
+    int len = cast(int) word.length;
 
     //  check bounds
     if ((dirs[dir][0] == 1 && (len + c) > nCols)
@@ -169,7 +169,7 @@ void printResult(Grid grid) {
         writeln("No grid to display");
         return;
     }
-    int size = grid.solutions.length;
+    int size = cast(int) grid.solutions.length;
 
     writeln("Attempts: ", grid.numAttempts);
     writeln("Number of words: ", size);

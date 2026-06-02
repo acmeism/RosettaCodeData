@@ -30,3 +30,4 @@ def count_long_primes:
 
 (500,1000, 2000, 4000, 8000, 16000, 32000, 64000
 | "Number of long primes ≤ \(.): \(count_long_primes)" )
+

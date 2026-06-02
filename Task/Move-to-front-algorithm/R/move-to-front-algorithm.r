@@ -26,3 +26,4 @@ for (i in seq_along(testset)) {
 
 # Test if decoded strings equal original
 all(sapply(seq_along(testset), function(i) identical(testset[i], decoded[i])))
+

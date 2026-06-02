@@ -143,3 +143,5 @@ for I:= 0 to N-1 do PolarRandom(Points[I]);    {random set of points}
  for I:= 0 to K-1 do PolarRandom(Cent[I]);    {random set of cluster centroids}
 KMeans(Image);
 end;
+
+

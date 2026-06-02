@@ -78,3 +78,4 @@ int main(){
 	cout<<myptri.get_coeff(n/2, n/4)<<endl<<endl;
 	return 0;
 }
+

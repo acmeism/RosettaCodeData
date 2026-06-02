@@ -96,3 +96,4 @@ test(V, Incr, Decr, Input) :-
 	->  send(Decr, active, @off)
 	;   V > 9
 	->  send(Incr, active, @off)).
+

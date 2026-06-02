@@ -25,3 +25,4 @@
   20  21  22  23  24
 (determinant M) → 0
 (permanent M) → 6778800
+

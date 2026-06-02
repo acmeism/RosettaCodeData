@@ -11,11 +11,11 @@ def unstraddle(s):
     for c in s:
         if c in [T[2][0], T[3][0]]:
             i = [T[2][0], T[3][0]].index(c)
-            n = T[2 + i][T[0].index(s.next())]
-            yield s.next() if n == "/" else n
+            n = T[2 + i][T[0].index(next(s))]
+            yield next(s) if n == "/" else n
         else:
             yield T[1][T[0].index(c)]
 
 O = "One night-it was on the twentieth of March, 1888-I was returning"
-print "Encoded:", straddle(O)
-print "Decoded:", "".join(unstraddle(straddle(O)))
+print("Encoded:", straddle(O))
+print("Decoded:", "".join(unstraddle(straddle(O))))

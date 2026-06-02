@@ -15,3 +15,4 @@ for i in range(1, 101):
         action_index += 2
 
     actions[action_index](i)
+

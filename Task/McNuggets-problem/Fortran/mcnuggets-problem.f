@@ -62,3 +62,4 @@ program mcnugget
   print *, 'Maximum non-McNuggets number is ', max_val
 
 end program mcnugget
+

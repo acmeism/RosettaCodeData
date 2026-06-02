@@ -2,23 +2,23 @@
     (apply + (map * (vector->list A) (vector->list B))))
 
 (define (cross-product A B)
-	(define len (vector-length A))
-	(define xp (make-vector (vector-length A) #f))
-	(let loop ((n 0))
-		(vector-set! xp n (-
-			(* (vector-ref A (modulo (+ n 1) len))
-				(vector-ref B (modulo (+ n 2) len)))
-			(* (vector-ref A (modulo (+ n 2) len))
-				(vector-ref B (modulo (+ n 1) len)))))
-		(if (eqv? len (+ n 1))
-			xp
-			(loop (+ n 1)))))
+   (define len (vector-length A))
+   (define xp (make-vector (vector-length A) #f))
+   (let loop ((n 0))
+      (vector-set! xp n (-
+         (* (vector-ref A (modulo (+ n 1) len))
+            (vector-ref B (modulo (+ n 2) len)))
+         (* (vector-ref A (modulo (+ n 2) len))
+            (vector-ref B (modulo (+ n 1) len)))))
+      (if (eqv? len (+ n 1))
+         xp
+         (loop (+ n 1)))))
 
 (define (scalar-triple-product A B C)
-	(dot-product A (cross-product B C)))
+   (dot-product A (cross-product B C)))
 
 (define (vector-triple-product A B C)
-	(cross-product A (cross-product B C)))
+   (cross-product A (cross-product B C)))
 
 
 (define A #( 3 4 5))

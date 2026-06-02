@@ -73,3 +73,4 @@ on circle relative to the circle center."
       (plot-triangle svg 200 200 200 angle (+ angle portion-of-circle) color)
       (setq angle (+ angle portion-of-circle)))
     (insert-image (svg-image svg))))
+

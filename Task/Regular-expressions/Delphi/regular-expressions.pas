@@ -30,3 +30,4 @@ begin
   end;
   readln;
 end.
+

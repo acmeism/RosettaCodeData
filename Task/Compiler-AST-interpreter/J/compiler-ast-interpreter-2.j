@@ -48,3 +48,4 @@ print("Total primes found: ", count, "\n");
 97 is prime
 101 is prime
 Total primes found: 26
+

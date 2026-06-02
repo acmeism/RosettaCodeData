@@ -31,3 +31,4 @@ for N:=1 to 70 do
 	end;
 Memo.Lines.Add(S);
 end;
+

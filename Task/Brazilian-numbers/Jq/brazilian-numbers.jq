@@ -35,3 +35,4 @@ def task($n):
    limit($n; brazilian_numbers(7; infinite; 2) | select(is_prime)) ;
 
 task(20)
+

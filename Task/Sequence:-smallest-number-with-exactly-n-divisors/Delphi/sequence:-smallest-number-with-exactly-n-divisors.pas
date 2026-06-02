@@ -38,3 +38,6 @@ for N:=1 to 15 do
 	Memo.Lines.Add(IntToStr(N)+' - '+IntToStr(N2));
 	end;
 end;
+
+
+

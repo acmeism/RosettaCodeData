@@ -1,5 +1,5 @@
 def time(f: => Unit)={
-	val s = System.currentTimeMillis
-	f
-	System.currentTimeMillis - s
+   val s = System.currentTimeMillis
+   f
+   System.currentTimeMillis - s
 }

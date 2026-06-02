@@ -18,3 +18,4 @@ public void PowerSetofColors()
         result.Select(subset =>
             string.Join(",", subset.Select(clr => clr.ToString()).ToArray())).ToArray()));
 }
+

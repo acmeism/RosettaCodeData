@@ -1,0 +1,149 @@
+' ============================================
+' https://rosettacode.org/wiki/UPC
+' BazzBasic: https://github.com/EkBass/BazzBasic
+' ============================================
+' Decodes UPC-A bar codes from ASCII representations
+' (spaces and # characters).
+'
+' Each digit is encoded in 7 characters.
+' Left-hand side: space = 0, # = 1.
+' Right-hand side: logically inverted (# = 0, space = 1).
+' Checksum: sum of (digits x [3,1,3,1,...]) must be divisible by 10.
+' Upside-down entries are detected by reversing the input and retrying.
+
+' ---- FUNCTIONS ----
+
+DEF FN LookupDigit$(seg$)
+    ' Returns digit 0-9 for a 7-char left-side segment, or -1 if unrecognised.
+    IF seg$ = "   ## #" THEN RETURN 0
+    IF seg$ = "  ##  #" THEN RETURN 1
+    IF seg$ = "  #  ##" THEN RETURN 2
+    IF seg$ = " #### #" THEN RETURN 3
+    IF seg$ = " #   ##" THEN RETURN 4
+    IF seg$ = " ##   #" THEN RETURN 5
+    IF seg$ = " # ####" THEN RETURN 6
+    IF seg$ = " ### ##" THEN RETURN 7
+    IF seg$ = " ## ###" THEN RETURN 8
+    IF seg$ = "   # ##" THEN RETURN 9
+    RETURN -1
+END DEF
+
+DEF FN InvertSeg$(seg$)
+    ' Right-hand digits are logically negated: swap # and space.
+    LET result$ = ""
+    FOR k$ = 1 TO 7
+        LET ch$ = MID(seg$, k$, 1)
+        IF ch$ = "#" THEN
+            result$ = result$ + " "
+        ELSE
+            result$ = result$ + "#"
+        END IF
+    NEXT
+    RETURN result$
+END DEF
+
+' ---- INIT ----
+
+[inits]
+    DIM barcodes$
+    DIM digits$      ' decoded 12 digits for current barcode
+    LET bc$          ' barcode currently being decoded
+    LET i$, j$, st$
+    LET seg$, d$
+    LET valid$, csum$
+    LET reversed$    ' 0 = normal orientation, 1 = upside-down
+    LET done$        ' set to 1 once a conclusive result is printed
+    LET wkv$         ' WAITKEY return value
+
+    barcodes$(0) = "         # #   # ##  #  ## #   ## ### ## ### ## #### # # # ## ##  #   #  ##  ## ###  # ##  ## ### #  # #       "
+    barcodes$(1) = "        # # #   ##   ## # #### #   # ## #   ## #   ## # # # ###  # ###  ##  ## ###  # #  ### ###  # # #         "
+    barcodes$(2) = "         # #    # # #  ###  #   #    # #  #   #    # # # # ## #   ## #   ## #   ##   # # #### ### ## # #         "
+    barcodes$(3) = "       # # ##  ## ##  ##   #  #   #  # ###  # ##  ## # # #   ## ##  #  ### ## ## #   # #### ## #   # #        "
+    barcodes$(4) = "         # # ### ## #   ## ## ###  ##  # ##   #   # ## # # ### #  ## ##  #    # ### #  ## ##  #      # #          "
+    barcodes$(5) = "          # #  #   # ##  ##  #   #   #  # ##  ##  #   # # # # #### #  ##  # #### #### # #  ##  # #### # #         "
+    barcodes$(6) = "         # #  #  ##  ##  # #   ## ##   # ### ## ##   # # # #  #   #   #  #  ### # #    ###  # #  #   # #        "
+    barcodes$(7) = "        # # #    # ##  ##   #  # ##  ##  ### #   #  # # # ### ## ## ### ## ### ### ## #  ##  ### ## # #         "
+    barcodes$(8) = "         # # ### ##   ## # # #### #   ## # #### # #### # # #   #  # ###  #    # ###  # #    # ###  # # #       "
+    barcodes$(9) = "        # # # #### ##   # #### # #   ## ## ### #### # # # #  ### # ###  ###  # # ###  #    # #  ### # #         "
+
+' ---- MAIN ----
+
+[main]
+    FOR i$ = 0 TO 9
+        bc$ = TRIM(barcodes$(i$))
+        GOSUB [sub:decode]
+    NEXT
+    LET wkv$ = WAITKEY()
+END
+
+' ---- SUBROUTINES ----
+
+[sub:decode]
+    ' Try normal orientation, then upside-down (reversed).
+    ' Uses a WHILE + done$ flag so there is exactly one RETURN at the end.
+    ' UPC-A structure: "# #" + 42 chars + " # # " + 42 chars + "# #" = 95 chars.
+    done$ = 0
+    reversed$ = 0
+    WHILE reversed$ <= 1 AND done$ = 0
+        IF LEN(bc$) = 95 THEN
+            IF MID(bc$, 1, 3) = "# #" THEN
+                IF MID(bc$, 46, 5) = " # # " THEN
+                    IF MID(bc$, 93, 3) = "# #" THEN
+                        valid$ = 1
+                        FOR j$ = 1 TO 12
+                            IF j$ <= 6 THEN
+                                st$ = j$ * 7 - 3
+                                seg$ = MID(bc$, st$, 7)
+                            ELSE
+                                st$ = j$ * 7 + 2
+                                seg$ = MID(bc$, st$, 7)
+                                seg$ = FN InvertSeg$(seg$)
+                            END IF
+                            d$ = FN LookupDigit$(seg$)
+                            digits$(j$ - 1) = d$
+                            IF d$ = -1 THEN valid$ = 0
+                        NEXT
+                        IF valid$ THEN
+                            csum$ = 0
+                            FOR j$ = 0 TO 11
+                                IF MOD(j$, 2) = 0 THEN
+                                    csum$ = csum$ + digits$(j$) * 3
+                                ELSE
+                                    csum$ = csum$ + digits$(j$)
+                                END IF
+                            NEXT
+                            IF MOD(csum$, 10) = 0 THEN
+                                FOR j$ = 0 TO 11
+                                    PRINT digits$(j$); " ";
+                                NEXT
+                                IF reversed$ = 1 THEN
+                                    PRINT "(upside down)"
+                                ELSE
+                                    PRINT ""
+                                END IF
+                            ELSE
+                                PRINT "invalid checksum"
+                            END IF
+                            done$ = 1
+                        END IF
+                    END IF
+                END IF
+            END IF
+        END IF
+        IF done$ = 0 THEN bc$ = INVERT(bc$)
+        reversed$ = reversed$ + 1
+    WEND
+    IF done$ = 0 THEN PRINT "invalid"
+RETURN
+
+' Output:
+' 9 2 4 7 7 3 2 7 1 0 1 9
+' 4 0 3 9 4 4 4 4 1 0 5 0
+' 8 3 4 9 9 9 6 7 6 7 0 6 (upside down)
+' 9 3 9 8 2 5 1 5 8 8 1 1 (upside down)
+' invalid
+' 3 1 6 3 1 3 7 1 8 7 1 7 (upside down)
+' 2 1 4 5 7 5 8 7 5 6 0 8
+' 8 1 8 7 7 8 8 4 1 8 1 3 (upside down)
+' 7 0 6 4 6 6 7 4 3 0 3 0
+' 6 5 3 4 8 3 5 4 0 4 3 5

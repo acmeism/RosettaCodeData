@@ -18,3 +18,4 @@ collapse('║I never give ''em hell, I just tell the truth, and they think it''s
 collapse('║                                                    --- Harry S Truman  ║', '.')
 collapse('║                                                    --- Harry S Truman  ║', '-')
 collapse('║                                                    --- Harry S Truman  ║', 'r')
+

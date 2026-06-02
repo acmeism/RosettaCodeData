@@ -34,3 +34,4 @@ ksort($divisorsCount);
 
 echo "Numbers with most divisors: ", implode(", ", end($divisorsCount)), ".\n";
 echo "They have ", key($divisorsCount), " divisors.\n";
+

@@ -1,7 +1,8 @@
 import std.algorithm : fold;
 import std.exception : enforce;
 import std.format : formattedWrite;
-import std.numeric : cmp, gcd;
+import std.numeric : gcd;
+import std.math.operations : cmp;
 import std.range : iota;
 import std.stdio;
 import std.traits;
@@ -23,7 +24,7 @@ struct Frac {
 
     this(long n, long d) in {
         enforce(d != 0, "Parameter d may not be zero.");
-    } body {
+    } do {
         auto nn = n;
         auto dd = d;
         if (nn == 0) {
@@ -47,6 +48,7 @@ struct Frac {
         } else if (op == "*") {
             return Frac(num*rhs.num, denom*rhs.denom);
         }
+        assert(0);
     }
 
     auto opUnary(string op : "-")() const {
@@ -83,7 +85,7 @@ auto abs(Frac f) {
 
 auto bernoulli(int n) in {
     enforce(n >= 0, "Parameter n must not be negative.");
-} body {
+} do {
     Frac[] a;
     a.length = n+1;
     a[0] = Frac.ZERO;
@@ -101,7 +103,7 @@ auto bernoulli(int n) in {
 
 auto binomial(int n, int k) in {
     enforce(n>=0 && k>=0 && n>=k);
-} body {
+} do {
     if (n==0 || k==0) return 1;
     auto num = iota(k+1, n+1).fold!"a*b"(1);
     auto den = iota(2, n-k+1).fold!"a*b"(1);

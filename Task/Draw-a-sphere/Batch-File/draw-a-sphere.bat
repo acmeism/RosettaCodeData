@@ -11,7 +11,7 @@ set "sqrt(N)=( M=(N),j=M/(11*1024)+40, j=(M/j+j)>>1, j=(M/j+j)>>1, j=(M/j+j)>>1,
 
 rem -------------- define batch file macros with parameters appended
 rem more info: https://www.dostips.com/forum/viewtopic.php?f=3&t=2518
-setlocal disabledelayedexpansion	% == required for macro ==%
+setlocal disabledelayedexpansion % == required for macro ==%
 (set \n=^^^
 %== this creates escaped line feed for macro ==%
 )

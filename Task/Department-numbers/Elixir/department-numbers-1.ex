@@ -6,3 +6,4 @@ for p <- [2,4,6],
     "#{p} - #{f} - #{s}"
   end
   |> Enum.each(&IO.puts/1)
+

@@ -14,3 +14,4 @@ def ng (sailors)
   }
   return n
 end
+

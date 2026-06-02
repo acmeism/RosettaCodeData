@@ -1,0 +1,383 @@
+#!/usr/bin/env ys-0
+!ys-0
+
+API-URL =: 'https://rosettacode.org/w/api.php'
+CACHE-TTL-MS =: 7 * 24 * 60 * 60 * 1000
+BATCH-SIZE =: 50
+USER-AGENT =:
+  =>:
+    "rcd-sync/0.1 (https://github.com/acmeism/RosettaCodeData)"
+
+LOG-FILE     =: 'rosettacode.log'
+LOG-ERR-FILE =: 'rosettacode-errors.log'
+
+DIRS  =: atom(0)
+FILES =: atom(0)
+
+defn main(*args):
+  when-not fs/e('Conf/task.yaml'):
+    die: "Not a RosettaCodeData directory (Conf/task.yaml missing)"
+
+  each d qw(Meta Lang Task):
+    when fs/d(d):
+      say: "Removing '$d'"
+      fs/rm-r: d
+
+  each f [LOG-FILE LOG-ERR-FILE]:
+    when fs/e(f): fs/rm(f)
+
+  log: 'START RosettaCode Sync'
+
+  langs =: load-langs()
+  tasks =: load-tasks()
+
+  write-meta-langs: langs
+  refresh-discovery-list "Category:Programming_Languages" "Cache/langs.txt":
+    "subcat"
+  refresh-discovery-list "Category:Programming_Tasks" "Cache/tasks.txt":
+    "page"
+
+  sync-langs: langs
+  sync-tasks tasks: langs
+
+  log: 'COMPLETE RosettaCode Sync'
+
+defn- sync-langs(langs):
+  uniq =: distinct(map(:name vals(langs)))
+  todo =: filter(\(needs-fetch?(lang-cache-path(_))) uniq)
+  fetch-titles todo lang-cache-path \("Category:" + _):
+  each name uniq:
+    key =: name:lc
+    info =: langs.$key
+    when info:
+      write-lang: info
+
+defn- sync-tasks(tasks langs):
+  names =: keys(tasks):sort
+  path-fn =:
+    fn(name):
+      task-cache-path(tasks.$name.path)
+  todo =: filter(\(needs-fetch?(path-fn(_))) names)
+  fetch-titles todo path-fn identity:
+  groups =: partition-by(first-letter names)
+  each group groups:
+    process-letter-group group tasks: langs
+
+defn- first-letter(name):
+  uc(subs(name 0 1))
+
+defn- process-letter-group(group tasks langs):
+  letter =: first-letter(first(group))
+  start =: now-ms()
+  reset DIRS: 0
+  reset FILES: 0
+  log: "== '$letter' ($(count(group)) tasks) =="
+  each name group:
+    info =: tasks.$name
+    write-task info: langs
+  elapsed-s =: int((now-ms() - start) / 1000)
+  log: "== '$letter' done: ${elapsed-s}s, $(DIRS.@) dirs, $(FILES.@) files =="
+
+defn- lang-cache-path(name):
+  "Cache/Lang/$(lang-path(name))"
+
+defn- task-cache-path(path):
+  "Cache/Task/$path"
+
+defn- lang-path(name):
+  name.replace(qr("[ /*!]") "-")
+
+defn- needs-fetch?(path):
+  if fs/e(path):
+    fresh-cache?(path).!
+    true
+
+defn- fresh-cache?(path):
+  age =: now-ms() - fs/mtime(path)
+  age <: CACHE-TTL-MS
+
+defn- now-ms():
+  System/currentTimeMillis()
+
+defn- fetch-titles(names path-fn title-fn):
+  batches =: partition-all(BATCH-SIZE names)
+  total =: count(batches)
+  loop i 1, rest batches:
+    when (seq rest):
+      batch =: first(rest)
+      log: "Fetch batch $i/$total ($(count(batch)) titles)"
+      titles =: map(title-fn batch)
+      pages =: fetch-batch(titles)
+      each name batch:
+        title =: title-fn(name)
+        when+ pages.$title:
+          write-cache path-fn(name): _
+      recur i.++: next(rest)
+
+defn- write-cache(path content):
+  fs/mkdir-p: fs/dirname(path)
+  write path: content
+
+defn- fetch-batch(titles):
+  joined =:
+    map(url-encode titles).join("%7C")
+  url =: "$API-URL?action=query&titles=$joined\
+          &prop=revisions&rvprop=content&rvslots=main\
+          &format=json&formatversion=2"
+  loop tries 3:
+    resp =: http/get(url {:throw false})
+    if resp.status == 200:
+      then:
+        body =: resp.body:json/load
+        into-pages: body
+      else:
+        when tries:zero?: !die "API call failed: $(resp.status) $url"
+        log: "Retry ($tries left): $(resp.status)"
+        sleep: 2
+        recur: tries.--
+
+defn- into-pages(body):
+  into {}:
+    map page-entry: body.query.pages
+
+defn- page-entry(p):
+  rev =: first(p.revisions)
+  content =:
+    if rev:
+      rev.slots.main.content
+      ''
+  vector p.title: content
+
+defn- url-encode(s):
+  s.replace(qr(" ") "_")
+   .replace(qr("[+]") "%2B")
+   .replace(qr("[#]") "%23")
+   .replace(qr("'") "%27")
+   .replace(qr("[\"]") "%22")
+   .replace(qr("[?]") "%3F")
+   .replace(qr("&") "%26")
+   .replace(qr("[|]") "%7C")
+   .replace(qr("\\^") "%5E")
+   .replace(qr("`") "%60")
+   .replace(qr("<") "%3C")
+   .replace(qr(">") "%3E")
+   .replace(qr("\\{") "%7B")
+   .replace(qr("\\}") "%7D")
+
+defn- load-langs():
+  raw =: read('Conf/lang.yaml'):yaml/load
+  alias =: read('Conf/alias.yaml'):yaml/load.lang
+  meta =:
+    into {}:
+      map build-lang-info: raw
+  reduce _ meta alias:
+    fn(m [k v]):
+      m.assoc(k m.$v)
+
+defn- build-lang-info([name text]):
+  m =: text =~ /^\.(\S+)\s*$/
+  ext =: m.if(m.1 "txt")
+  info =:
+    +{:name name,
+      :url replace(name " " "_"),
+      :path lang-path(name),
+      :ext ext}
+  vector name:lc: info
+
+defn- load-tasks():
+  raw =: read('Conf/task.yaml'):yaml/load
+  into {}:
+    map build-task-info: keys(raw)
+
+defn- build-task-info(name):
+  step1 =: replace(name qr("[\"']") "")
+  path =:  replace(step1 qr("[,\\s/*!()\\x{7f}-\\x{ffff}]+") "-")
+  info =:
+    +{:name name,
+      :url replace(name " " "_"),
+      :path path}
+  vector name: info
+
+defn- write-meta-langs(langs):
+  fs/mkdir-p: 'Meta'
+  yaml =:
+    yaml/dump(langs).replace(qr("FALSE") "'FALSE'")
+  write 'Meta/Lang.yaml': "---\n$yaml"
+
+defn- refresh-discovery-list(category cache-file cmtype):
+  when needs-fetch?(cache-file):
+    log: "Fetch MediaWiki category '$category'"
+    names =: fetch-category-members(category cmtype)
+    fs/mkdir-p: 'Cache'
+    write cache-file: names.join("\n") + "\n"
+
+defn- fetch-category-members(category cmtype):
+  loop members [], cont nil:
+    base =: "$API-URL?action=query&list=categorymembers\
+             &cmtitle=$(url-encode(category))\
+             &cmlimit=max&cmtype=$cmtype\
+             &format=json&formatversion=2"
+    url =:
+      if cont:
+        then: "$base&cmcontinue=$(url-encode(cont))"
+        else: base
+    body =: http/get(url).body:json/load
+    page-names =:
+      map \(_.title.replace(qr("^Category:") "")):
+        body.query.categorymembers
+    new =: into(members page-names)
+    next-cont =:
+      when body.continue:
+        body.continue.cmcontinue
+    if next-cont:
+      then: recur(new next-cont)
+      else: new
+
+defn- write-lang(info):
+  text =: read(lang-cache-path(info.name))
+  base =: "Lang/$(info.path)"
+  fs/mkdir-p: base
+  write "$base/00-LANG.txt": text
+  meta =: +{:from "http://rosettacode.org/wiki/Category:$(info.url)"}
+  log: "LANG $(info.name)"
+  write "$base/00-META.yaml": "---\n$(yaml/dump(meta))"
+
+defn- write-task(info langs):
+  cache =: task-cache-path(info.path)
+  when fs/e(cache):
+    write-task-body info langs: cache
+
+defn- write-task-body(info langs cache):
+  raw =: read(cache)
+  text =: raw.replace(qr("\r") "").pad-newline()
+  parts =: split-task-sections(text)
+  head =: first(parts)
+  remainder =: rest(parts)
+  bad =:
+    (count(remainder) < 2) || (text !~ qr("<syntaxhighlight"))
+  odd =: (count(remainder) % 2) == 1
+  cond:
+    bad:
+      log-err: "No implementations for '$(info.name)'"
+    odd:
+      log-err: "Bad task page for '$(info.name)'"
+    else:
+      write-task-good(info langs head remainder)
+
+defn- write-task-good(info langs head remainder):
+  meta =: parse-head-section(head)
+  pairs =: partition(2 remainder)
+  progress: "TASK $(info.name) ($(count(pairs)) langs): "
+  each [lang section] pairs:
+    progress: process-lang-section(info lang section langs)
+  progress: "\n"
+  base =: "Task/$(info.path)"
+  fs/mkdir-p: base
+  write "$base/00-TASK.txt": pad-newline(meta.description || '')
+  full-meta =:
+    meta.dissoc(:description)
+        .assoc(:from "http://rosettacode.org/wiki/$(info.url)")
+  when (seq full-meta):
+    write "$base/00-META.yaml": "---\n$(yaml/dump(full-meta))"
+
+defn- pad-newline(s):
+  cond:
+    seq(s).!: s
+    ends?(s "\n"): s
+    else: s + "\n"
+
+SECTION-SEP =: "@@@RCD-HEADER-SEPARATOR@@@"
+
+defn- split-task-sections(text):
+  marked =:
+    text.replace(qr("(?m)^==+ ?\\{\\{header\\|(.+?)\\}\\}.*\\n")
+                 (SECTION-SEP + "$1" + SECTION-SEP))
+  =>: marked.split(qr(SECTION-SEP))
+
+defn- parse-head-section(text):
+  cleaned =: strip-head-templates(text)
+  if seq(cleaned):
+    +{:description cleaned}
+    +{}
+
+HEAD-TEMPLATE-PATTERNS =::
+- '\A<!--[\s\S]*?-->\s*'
+- '\A\[\[File:[^\n]*\n\s*'
+- '\A\{\{alertbox\|[^\n]*\n\s*'
+- '\A\{\{[Cc]larified-review\}\}\s*'
+- '\A\{\{[Cc]larify task\}\}\s*'
+- '\A\{\{[Oo]mit from\|[^\}]*\}\}\s*'
+- '\A\[\[[Ff]ile:[^\]]*\]\]\s*'
+- '\A\{\{[Ww]ikipedia[^\}]*\}\}\s*'
+- '\A\s*\{\{requires\|\w[\w ]*\}\}\s*'
+- '\A\s*\[\[Category: *\w[\w ]*\]\]\s*'
+- '\A\{\{(?:[Dd]raft\s+)?[Tt]ask(?:\|[\s\S]*?)?\}\}\s*'
+
+defn- strip-head-templates(text):
+  reduce _ text HEAD-TEMPLATE-PATTERNS:
+    fn(s pat):
+      s.replace(qr(pat) "")
+
+defn- process-lang-section(info lang-raw section langs):
+  lang =: lang-raw.replace(qr("\\|.*$") "")
+  lang-key =: lang:lc
+  lang-info =: langs.$lang-key
+  if lang-info:
+    then:
+      progs =: extract-code-samples(section)
+      when (seq progs):
+        write-task-programs(info lang-info progs)
+      =>: '.'
+    else:
+      log-err: "Unknown lang '$lang' in task '$(info.name)'"
+      =>: 'E'
+
+defn- extract-code-samples(text):
+  re =: qr("<syntaxhighlight[^>]*>([\\s\\S]*?)(?:</syntaxhighlight>|\\z)")
+  matches =: re-seq(re text)
+  bodies =: map(\(_.1) matches)
+  map clean-program: bodies
+
+defn- clean-program(s):
+  s.replace(qr("\\A\\s*\\n") "")
+   .replace(qr("(?m)\\ +$") "")
+   .pad-newline()
+
+defn- write-task-programs(info lang-info progs):
+  path =: info.path
+  lang-path =: lang-info.path
+  ext =: lang-info.ext
+  file-base =: path.lc()
+  link-source =: "Lang/$lang-path/$path"
+  link-target =: "../../Task/$path/$lang-path"
+  write-symlink link-source: link-target
+  fs/mkdir-p: "Task/$path/$lang-path"
+  swap DIRS inc+:
+  swap FILES \(_ + count(progs)):
+  if (count(progs) == 1):
+    write-file "Task/$path/$lang-path/$file-base.$ext": first(progs)
+    else:
+      each [n prog] map-indexed(vector progs):
+        out =: "Task/$path/$lang-path/$file-base-$(n.++).$ext"
+        write-file out: prog
+
+defn- write-file(path content):
+  fs/mkdir-p: fs/dirname(path)
+  write path: content
+
+defn- write-symlink(source target):
+  fs/mkdir-p: fs/dirname(source)
+  bash-out: "ln -sfn '$target' '$source'"
+
+defn- log(msg):
+  progress: msg + "\n"
+
+defn- progress(s):
+  spit-append LOG-FILE: s
+  err: s
+
+defn- log-err(msg):
+  spit-append LOG-ERR-FILE: msg + "\n"
+
+defn- spit-append(path s):
+  spit(path s :append true)

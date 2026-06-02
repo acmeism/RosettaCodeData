@@ -8,7 +8,9 @@ end
 function triangle(n)
   t = {1}
   for i = 1, n do
-    print(unpack(t))
+    print(table.concat(t, "\t"))
     t = nextrow(t)
   end
 end
+
+triangle(5)

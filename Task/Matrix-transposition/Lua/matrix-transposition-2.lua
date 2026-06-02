@@ -1,3 +1,5 @@
+local unpack = table.unpack or unpack
+
 function map(f, a)
   local b = {}
   for k,v in ipairs(a) do b[k] = f(v) end

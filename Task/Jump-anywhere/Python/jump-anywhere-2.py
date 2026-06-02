@@ -28,4 +28,4 @@ if c < 5:
     pass # Dummy lines are needed for jumps to work
 else:
     print("Goto ended")
-    print("> 5", c)
+    print("== 5", c)

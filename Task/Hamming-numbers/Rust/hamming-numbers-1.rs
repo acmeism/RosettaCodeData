@@ -1,5 +1,5 @@
 extern crate num;
-num::bigint::BigUint;
+use num::bigint::BigUint;
 
 use std::time::Instant;
 

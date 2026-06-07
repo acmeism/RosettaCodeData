@@ -22,7 +22,7 @@ int[2] fPi(in int n) pure nothrow {
     return [n > 0 ? 6 : 3,   (2 * n - 1) ^^ 2];
 }
 
-alias print = curry!(writefln, "%.19f");
+alias print = partial!(writefln, "%.19f");
 
 void main() {
     calc!real(&fSqrt2, 200).print;

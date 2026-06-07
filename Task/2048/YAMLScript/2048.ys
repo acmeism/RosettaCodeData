@@ -1,0 +1,124 @@
+!ys-0
+
+defn main():
+  board =: spawn(spawn(empty-board()))
+  loop b board:
+    print: render(b)
+    cond:
+      won?(b): say('You win!')
+      lost?(b): say('Game over')
+      else:
+        next =: next-board(b)
+        when next: recur(next)
+
+defn- next-board(b):
+  say: 'Move (w/a/s/d, q to quit):'
+  line =: read-line()
+  cond:
+    line.in?(qw(q quit)): quit-game()
+    line.in?(qw(w a s d)): apply-move(b line)
+    else: unknown-cmd(b line)
+
+defn- quit-game():
+  say: 'Bye'
+
+defn- unknown-cmd(b line):
+  say: "Unknown command: $line"
+  =>: b
+
+defn- apply-move(b line):
+  moved =: move(b line)
+  if moved == b:
+    no-change(b)
+    spawn(moved)
+
+defn- no-change(b):
+  say: 'No change, try a different move'
+  =>: b
+
+defn- empty-board():
+  vec: repeat(4 repeat(4 0):V)
+
+defn- empty-cells(board):
+  results =: atom(vector())
+  each r (0 .. 3):
+    each c (0 .. 3):
+      when board.$r.$c:zero?:
+        swap results: conj vector(r c)
+  deref: results
+
+defn- spawn(board):
+  cells =: empty-cells(board)
+  if cells:empty?:
+    then: board
+    else:
+      cell =: rand-nth(cells)
+      val =: (rand() < 0.9).if(2 4)
+      assoc-in: board cell val
+
+defn- slide-left-row(row):
+  packed =: row.remove(zero?)
+  merged =: merge-pairs(packed:vec)
+  pad =: 4 - merged.#
+  merged: .concat(repeat(pad 0)).vec()
+
+defn- merge-pairs(xs):
+  loop xs xs out vector():
+    n =: xs.#
+    cond:
+      n:zero?: out
+      n == 1: out.conj(xs.0)
+      xs.0 == xs.1:
+        recur: xs:rest:rest:vec out.conj(xs.0 * 2)
+      else:
+        recur: xs:rest:vec out.conj(xs.0)
+
+defn- transpose(board):
+  apply: mapv vector board
+
+defn- slide-right-row(row):
+  slide-left-row(row:reverse:vec):reverse:vec
+
+defn- move(board dir):
+  cond:
+    dir == 'a': board.map(slide-left-row):vec
+    dir == 'd': board.map(slide-right-row):vec
+    dir == 'w': transpose(move(transpose(board) 'a'))
+    dir == 's': transpose(move(transpose(board) 'd'))
+
+defn- won?(board):
+  some(\(_ == 2048) board:flatten)
+
+defn- lost?(board):
+  no-space =: empty-cells(board):empty?
+  no-moves =:
+    every?:
+      \(move(board _) == board)
+      qw(w a s d)
+  no-space &&: no-moves
+
+defn- render(board):
+  sep =: ('+' + ('------+' * 4)) + "\n"
+  body =:
+    board:
+      .map(\(row-line(_)))
+      .join('')
+  sep +: body
+
+defn- row-line(row):
+  sep =: ('+' + ('------+' * 4)) + "\n"
+  cells =:
+    row:
+      .map(\(cell-str(_)))
+      .join('|')
+  ('|' + cells + "|\n") +: sep
+
+defn- cell-str(v):
+  if v:zero?:
+    then: '      '
+    else:
+      s =: str(v)
+      pad =: 6 - s.#
+      lp =: quot(pad 2)
+      rp =: pad - lp
+      (' ' * lp) +: s + (' ' * rp)

@@ -1,0 +1,63 @@
+!ys-0
+
+# Find distinct 0 < x0 < x1 < x2 < x3 < 250 with sum of 5th powers
+# equal to a 5th power y^5. Brute search is O(MAX^4) ~ 4e9; instead
+# build a map of all pair-sums i^5+j^5 (i<j), then for each y < MAX
+# walk the pair-sums s < y^5 and check whether (y^5 - s) is itself
+# a pair-sum disjoint from the first. That's ~MAX * 31k = 8M map
+# probes.
+
+MAX =: 250
+
+defn main():
+  pow5 =: map(p5 (0 .. MAX.--)):V
+  sum2 =: pow5:build-sum2
+  say: pow5.find-quad(sum2)
+
+defn- p5(x):
+  x * x * x * x * x
+
+defn- build-sum2(pow5):
+  loop m {} i 1:
+    if i < MAX.--:
+      recur: add-pairs(m pow5 i) i.++
+      else: m
+
+defn- add-pairs(m pow5 i):
+  loop m m j i.++:
+    if j < MAX:
+      recur: m.assoc((pow5.$i + pow5.$j) vector(i j)) j.++
+      else: m
+
+defn- find-quad(pow5 sum2):
+  loop y 5:
+    when y < MAX:
+      r =: try-y(y pow5 sum2)
+      if r:
+        then: r
+        else: recur(y.++)
+
+defn- try-y(y pow5 sum2):
+  target =: pow5.$y
+  loop pairs sum2:seq:
+    when pairs:
+      e =: pairs:first
+      s =: e:key
+      if s >= target:
+        recur: pairs:next
+        else:
+          ij =: val(e)
+          kl =: get(sum2 (target - s))
+          if kl && disjoint?(ij kl):
+            ans: y ij kl
+            recur: pairs:next
+
+defn- disjoint?(ij kl):
+  (ij.0 != kl.0) && (ij.0 != kl.1) &&
+    (ij.1 != kl.0) && (ij.1 != kl.1)
+
+defn- ans(y ij kl):
+  four =: sort(ij + kl)
+  bits =: four.map(\(str(_ '^5')))
+  joined =: bits.join(' + ')
+  =>: "$joined = $y^5"

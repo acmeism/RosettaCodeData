@@ -13,9 +13,9 @@ struct Prime {
                 b[i] = true;
         }
 
-        foreach (immutable uint i, immutable bi; b)
-            if (!b[i])
-                a ~= p0 + i;
+        foreach (immutable i, immutable bi; b)
+            if (!b[cast(uint)i])
+                a ~= p0 + cast(uint)i;
     }
 
     uint opCall(in uint n) pure nothrow @safe {

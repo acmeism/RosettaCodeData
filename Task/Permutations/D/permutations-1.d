@@ -1,4 +1,4 @@
-T[][] permutations(T)(T[] items) pure nothrow {
+T[][] permutations(T)(T[] items) nothrow {
     T[][] result;
 
     void perms(T[] s, T[] prefix=[]) nothrow {

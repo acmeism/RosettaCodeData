@@ -1,3 +1,4 @@
+import std.algorithm;
 import std.range;
 
 struct PowerSet(R)
@@ -40,3 +41,9 @@ struct PowerSet(R)
 }
 
 auto powerSet(R)(R r) { return PowerSet!R(r); }
+
+void main(string[] args)
+{
+	import std.stdio;
+	args[1..$].powerSet.each!writeln;
+}

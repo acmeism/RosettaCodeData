@@ -16,7 +16,7 @@ compress-7bit: function [
         bits: skip bits 8                ;; move to next 8-bit group
     ]
     ;; Pad to multiple of 8 bits so it can be debased to bytes
-    unless zero? (pad-bits: (length? buf) // 8) [
+    unless zero? (pad-bits: (length? buf) %% 8) [
         append/dup buf #"0" 8 - pad-bits
     ]
     debase buf 2                        ;; turn the 7-bit stream (padded) back into binary bytes

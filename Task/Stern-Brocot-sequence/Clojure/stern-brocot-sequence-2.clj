@@ -21,7 +21,7 @@
 
 ; Where numbers 1 to 10 first appear
 (doseq [n (concat (range 1 11) [100])]
-  (println "The first appearnce of" n "is at index" (some (fn [[i k]] (when (= k n) (inc i)))
+  (println "The first appearance of" n "is at index" (some (fn [[i k]] (when (= k n) (inc i)))
                  (map-indexed vector (seq-stern-brocat)))))
 
 ;; Check that gcd between 1st 1000 consecutive elements equals 1

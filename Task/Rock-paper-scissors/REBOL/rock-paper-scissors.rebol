@@ -4,6 +4,8 @@ Rebol [
     url:   https://rosettacode.org/wiki/Rock-paper-scissors
 ]
 
+if function? :wait-for-key [wait-key: :wait-for-key] ;; backward compatibility
+
 rock-paper-scissors: function[
     "Rock-Paper-Scissors game - adaptive AI opponent"
 ][
@@ -12,7 +14,7 @@ rock-paper-scissors: function[
 
     while [
         print "Choose — rock (r), paper (p), or scissors (s)"
-        find choices pl: wait-for-key
+        find choices pl: wait-key
     ][
         ;; AI picks from its weighted pool
         ai: random/only prior

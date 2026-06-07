@@ -16,4 +16,9 @@ fn main() {
     println!("Before removal of duplicates : {:?}", sample_elements);
     remove_duplicate_elements_sorting(&mut sample_elements);
     println!("After removal of duplicates : {:?}", sample_elements);
+
+    let mut sample_elements2 = vec!["ab", "cde", "ab", "xyz", "d", "d", "ab"];
+    println!("Before removal of duplicates : {:?}", sample_elements2);
+    remove_duplicate_elements_hashing(&mut sample_elements2);
+    println!("After removal of duplicates : {:?}", sample_elements2);
 }

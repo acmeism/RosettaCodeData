@@ -1,0 +1,59 @@
+local fn isValid ( nr as CFStringRef ) as Boolean
+
+  CFStringRef  cc = @"AD24AE19AL28AT20AZ28BA20BE16¬
+  BG22BH22BI27BR29BY28CH21CR22CY28CZ24DE22DJ27DK18¬
+  DO28WW20EG29ES24FI18FK18FO18FR27GB22GE22GI23GL18¬
+  GR27GT28HN28HR21HU28IE22IL23IQ23IS26IT27JO30KW30¬
+  KZ20LB28LC32LI21LT20LU20LV21LY25MC27MD24ME22MK19¬
+  MN20MR27MT27MU30NI28NL18NO15OM23PK24PL28PS29PT25¬
+  QA29RO24RS22RU33SA24SC31SD18SE24SI19SK24SM27SO23¬
+  ST25SV28TL23TM24TR26UA29VA22VG24XK20YE30"   // 89 codes as of 2026
+
+  StrSetLeadingSpace( No )                    // No leading space in str()
+
+  // Clean up iban: uppercase and no spaces
+  nr = ucase( nr )
+  CFMutableStringRef  iban = fn MutableStringWithString( nr )
+  MutableStringReplaceAllOccurrencesOfString( iban, @" ", @"" )
+
+  // Get the number of digits for the country code
+  Int  nd = instr( 0, cc, left( iban, 2 ) )   // Find position of code
+  nd = intval( mid( cc, nd + 2, 2 ) )         // Next 2 chars is length
+  if nd != len( iban ) then return No         // Wrong code or length
+
+  // Move first 4 chars to the end
+  CFStringRef  t = left( iban, 4 )
+  MutableStringDeleteCharacters( iban, fn CFRangeMake( 0, 4 ) )
+  MutableStringAppendString( iban, t )
+
+  // Recode A = 10, B = 11 etc
+  for Int i = 65 to 91
+    CFStringRef  u = ucs( i )                // Char unicode string
+    CFStringRef  s = str( i - 55 )           // New code
+    CFRange  r = fn CFRangeMake( 0, len( iban ) )   // Whole string
+    MutableStringReplaceOccurrencesOfString( iban, u, s, 1, r )
+  next
+
+  // Check if iban mod 97 = 1 with method recommended by CEFACT TBG5
+  Int  n = intval( mid ( iban, 0, 9 ) )       // Start with first 9 chars
+  Int  m =  n % 97                            // Take remainder
+  CFStringRef d = mid( iban, 9 )              // Remove used 9 chars
+  // Next steps
+  do
+    CFStringRef  a = mid ( d, 0, 7 )         // Take first 7 chars
+    CFStringRef  b = concat( str( m ), a )   // Add to previous remainder
+    n = intval( b )
+    m = n % 97
+    d = mid( d, 7 )                          // Remove used 7 char
+  until m = n                                 // Done
+
+end fn = ( m = 1 )
+
+/* ----- */
+
+CFStringRef  iban = @"GB82 WEST 1234 5698 7654 32"
+print iban
+CFStringRef  r = @"No" : if fn isValid( iban ) then r = @"Yes"
+print concat( @"Computer says ", r )
+
+handleevents

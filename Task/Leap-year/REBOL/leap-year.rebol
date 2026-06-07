@@ -1,3 +1,8 @@
+Rebol [
+    title: "Rosetta code: Leap year"
+    file:  %Leap_year.r3
+    url:   https://rosettacode.org/wiki/Leap_year
+]
 leap-year?: func [
     {Returns true if the specified year is a leap year; false otherwise.}
     year [date! integer!]
@@ -7,12 +12,12 @@ leap-year?: func [
     ;; Validate that the year is not negative
     assert [not negative? year]
     ;; If divisible by 100...
-    if zero? year // 100 [
+    if zero? remainder year 100 [
         ;; ... it's a leap year only if divisible by 400
-        return zero? year // 400
+        return zero? remainder year 400
     ]
     ;; Otherwise, it's a leap year if divisible by 4
-    zero? year // 4
+    zero? remainder year 4
 ]
 print "Leap year examples:"
 foreach year [

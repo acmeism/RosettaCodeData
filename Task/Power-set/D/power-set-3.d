@@ -7,7 +7,7 @@ S foldr(T, S)(S function(T, S) f, S z, T[] rest) {
 
 // Haskell definition:
 //powerSet = foldr (\x acc -> acc ++ map (x:) acc) [[]]
-T[][] powerset(T)(T[] set) {
+T[][] powerSet(T)(T[] set) {
     import std.algorithm;
     import std.array;
     // Note: The types before x and acc aren't needed, so this could be made even more concise, but I think it helps

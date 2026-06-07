@@ -2,6 +2,7 @@ Rebol [
     title: "Rosetta code: Knapsack problem/0-1"
     file:  %Knapsack_problem-0-1.r3
     url:   https://rosettacode.org/wiki/Knapsack_problem/0-1
+    needs: 3.22.0 ;; `printf` is now doing automatic reduce
 ]
 
 knapsack: function/with [
@@ -78,7 +79,7 @@ result: knapsack 400 items
 
 print "Bagged the following items:"
 foreach [item weight value] result/3 [
-    printf [" * " 12 -4 -4] reduce [item value weight]
+    printf [" * " 12 -4 -4] [item value weight]
 ]
 print [
     "Total value  :" as-green result/1 LF

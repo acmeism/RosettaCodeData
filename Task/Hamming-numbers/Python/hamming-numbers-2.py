@@ -1,11 +1,9 @@
-import psyco
-
 def hamming(limit):
     h = [1] * limit
     x2, x3, x5 = 2, 3, 5
     i = j = k = 0
 
-    for n in xrange(1, limit):
+    for n in range(1, limit):
         h[n] = min(x2, x3, x5)
         if x2 == h[n]:
             i += 1
@@ -19,7 +17,6 @@ def hamming(limit):
 
     return h[-1]
 
-psyco.bind(hamming)
-print [hamming(i) for i in xrange(1, 21)]
-print hamming(1691)
-print hamming(1000000)
+print([hamming(i) for i in range(1, 21)])
+print(hamming(1691))
+print(hamming(1000000))

@@ -28,7 +28,7 @@ to-mayan: function/with [
         digits: copy []
         if n = 0 [return [0]]            ;; zero is a single digit: 0
         while [n > 0] [
-            insert digits (n // 20)      ;; prepend the least-significant digit
+            insert digits remainder n 20 ;; prepend the least-significant digit
             n: to integer! (n / 20)      ;; shift right in base 20
         ]
         digits

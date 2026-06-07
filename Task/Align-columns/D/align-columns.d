@@ -1,7 +1,7 @@
 void main() {
     import std.stdio, std.string, std.algorithm, std.range, std.typetuple;
 
-    immutable data =
+    immutable data = cast(immutable string[][])
 "Given$a$txt$file$of$many$lines,$where$fields$within$a$line$
 are$delineated$by$a$single$'dollar'$character,$write$a$program
 that$aligns$each$column$of$fields$by$ensuring$that$words$in$each$

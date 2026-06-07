@@ -13,9 +13,9 @@ def hamming(limit)
   h[limit - 1]
 end
 
-start = Time.monotonic
+start = Time.instant
 print "Hamming Number (1..20): "; (1..20).each { |i| print "#{hamming(i)} " }
 puts
 puts "Hamming Number 1691: #{hamming 1691}"
 puts "Hamming Number 1,000,000: #{hamming 1_000_000}"
-puts "Elasped Time: #{(Time.monotonic - start).total_seconds} secs"
+puts "Elasped Time: #{(Time.instant - start).total_seconds} secs"

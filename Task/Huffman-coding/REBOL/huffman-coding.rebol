@@ -48,7 +48,7 @@ register-codec [
             merge-2knots table             ;; Merge two lowest-count knots into new parent knot
         ]
         set-code table/1 copy ""           ;; Recursively assign binary codes by tree depth
-        foreach chr msg [                  ;; Encode the original message
+        foreach chr data [                 ;; Encode the original message
             k: select/case knots chr
             append output k/code           ;; Append binary code for each character
         ]

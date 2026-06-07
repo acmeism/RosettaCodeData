@@ -3,7 +3,7 @@ Rebol [
     file:  %Nim_game.r3
     url:   https://rosettacode.org/wiki/Nim_game
 ]
-
+if function? :wait-for-key [wait-key: :wait-for-key] ;; backward compatibility
 nim-game: function/with [
     "Nim (12-token variant) - the computer always wins with perfect play"
 ][
@@ -28,7 +28,7 @@ nim-game: function/with [
     take-tokens: function [][
         forever [
             print "Take 1, 2, or 3 tokens (q to quit)?"
-            n: wait-for-key
+            n: wait-key
             if n = #"q" [quit]
             n: n - #"0"
             either any [n < 1  n > 3][

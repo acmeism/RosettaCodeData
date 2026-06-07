@@ -1,5 +1,8 @@
 import bigints, times
 
+converter toBigInt (n: int): BigInt = initBigInt(n)
+converter toBigInt (n: int32): BigInt = initBigInt(n)
+
 iterator func_hamming() : BigInt =
   type Thunk[T] = proc(): T {.closure.}
   type Lazy[T] = ref object of RootObj # tuple[val: T, thnk: Thunk[T]]

@@ -48,7 +48,7 @@ unittest {
            "Discoflux, in the YOLD 3177");
 }
 
-void main(string args[]) {
+void main(string[] args) {
     int yyyymmdd, day, mon, year, sign;
     if (args.length == 1) {
        (cast(Date)Clock.currTime).discordianDate.writeln;

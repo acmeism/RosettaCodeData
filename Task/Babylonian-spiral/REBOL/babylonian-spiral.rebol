@@ -28,12 +28,12 @@ babylonian-spiral: function/with [
             ;; Enumerate all pairs (i,j) where i²+j²=delta-squared
             for i 0 (-1 + length? square-cache) 1 [
                 a: pickz square-cache i
-                if a > delta-squared / 2 [break]  ;; a <= delta-squared/2 by symmetry
+                if a > (delta-squared / 2) [break]  ;; a <= delta-squared/2 by symmetry
                 j: 1 + to integer! square-root delta-squared
                 while [j >= 1] [
                     b: square-cache/(j + 1)
-                    if delta-squared > a + b [break]  ;; j only decreases from here
-                    if delta-squared = a + b [
+                    if delta-squared > (a + b) [break]  ;; j only decreases from here
+                    if delta-squared = (a + b) [
                         ;; Add all 8 reflections of the (i,j) solution
                         -i: negate i
                         -j: negate j

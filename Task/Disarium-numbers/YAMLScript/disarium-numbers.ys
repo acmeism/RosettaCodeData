@@ -1,0 +1,52 @@
+!ys-0
+
+# DFS with bounds. After placing digits d1..d_l of a k-digit number:
+#   nn = d1*10^(l-1) + ... + d_l  (concatenated so far, integer)
+#   ns = sum of d_i^i             (Disarium-style partial sum)
+# Once all k digits land we need nn (now full magnitude) == ns. After
+# l, the remaining (k-l) digits can add tail-n in [0, 10^(k-l) - 1] to
+# nn*10^(k-l) and tail-s in [0, sum(9^j for j in l+1..k)] to ns.
+# Solvable iff (nn*shift - ns) sits in (-max-tail-n .. max-tail-s).
+
+MAX-TAIL-S =:
+  vec:
+    map _ (0 .. 7):
+      fn(level):
+        reduce(+ 0 map(\(9 ** _) (level.++ .. 7)))
+
+defn main():
+  ds =: (0 .. 9) + find-k.mapcat(2 .. 7)
+  say: 'First 18 Disarium numbers:'
+  say: ds.take(18):joins
+  say: 'All Disarium numbers below 1e7:'
+  say: ds:joins
+
+defn- find-k(k):
+  sort: dfs(k 1 0 0 [])
+
+defn- dfs(k level pn ps hits):
+  start =: (level == 1).if(1 0)
+  loop d start, hs hits:
+    if d > 9:
+      then: hs
+      else:
+        recur d.++:
+          try-digit: k level pn ps d hs
+
+defn- try-digit(k level pn ps d hits):
+  nn =: (pn * 10) + d
+  ns =: ps + (d ** level)
+  if level == k:
+    then:
+      if nn == ns:
+        hits: .conj(nn)
+        else: hits
+    else:
+      if in-bounds?(level k nn ns):
+        dfs: k level.++ nn ns hits
+        else: hits
+
+defn- in-bounds?(level k pn ps):
+  shift =: 10 ** (k - level)
+  needed =: (pn * shift) - ps
+  (needed >= (- shift.--)) &&: needed <= MAX-TAIL-S.$level

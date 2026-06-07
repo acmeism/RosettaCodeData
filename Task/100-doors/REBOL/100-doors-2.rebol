@@ -7,7 +7,7 @@ repeat i 100 [
     ;; Inner loop: Check each door position (j = 1 to 100)
     repeat j 100 [
         ;; If door j index is divisible by pass number i (no remainder)
-        if zero? (j // i) [
+        if zero? remainder j i [
             ;; Toggle the door's bit:
             ;; doors/:j accesses door j in the bitset
             ;; 'not' flips the bit value (0 -> 1, 1 -> 0)

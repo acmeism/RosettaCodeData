@@ -16,10 +16,10 @@ def raymonds_hamming():
     m5 = (5*x for x in p5)                          # multiples of 5
     merged = merge(m2, m3, m5)
     combined = chain([1], merged)                   # prepend a starting point
-    output = (k for k,g in groupby(combined))       # eliminate duplicates
+    output = (k for k, _ in groupby(combined))       # eliminate duplicates
 
     return result
 
-print list(islice(raymonds_hamming(), 20))
-print islice(raymonds_hamming(), 1689, 1690).next()
-print islice(raymonds_hamming(), 999999, 1000000).next()
+print(list(islice(raymonds_hamming(), 20)))
+print(next(islice(raymonds_hamming(), 1690, 1691)))
+print(next(islice(raymonds_hamming(), 999999, 1000000)))

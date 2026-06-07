@@ -1,0 +1,123 @@
+!ys-0
+
+# Canonical Rosetta puzzle needs 52 moves. IDA* in interpreted YS
+# is too slow for that depth; demo uses a shorter scramble.
+defn main():
+  start =: vector(5 1 7 3 9 2 11 4 13 6 0 8 10 14 15 12)
+  say: 'Solving:'
+  show: start
+  say: ''
+  solution =: ida-star(start)
+  if solution:
+    then:
+      say: "Solution ($(solution.#) moves):"
+      say: solution.join('')
+    else:
+      say: 'No solution found'
+
+defn- show(board):
+  loop r 0:
+    when r < 4:
+      cells =: board.row-str(r)
+      say: cells
+      recur: r.++
+
+defn- row-str(board r):
+  parts =:
+    map _ (0 .. 3):
+      fn(c):
+        idx =: (r * 4) + c
+        format '%3d': board.$idx
+  joins: parts
+
+defn- blank-pos(board):
+  loop i 0:
+    if board.$i:zero?: i recur(i.++)
+
+defn- manhattan(board):
+  dists =: (0 .. 15).map(\(tile-dist(board _)))
+  reduce: + 0 dists
+
+defn- tile-dist(board i):
+  v =: board.$i
+  if v:zero?:
+    then: 0
+    else:
+      cr =: quot(i 4)
+      cc =: i %% 4
+      tr =: quot(v.-- 4)
+      tc =: v.-- %% 4
+      abs(cr - tr) +: abs(cc - tc)
+
+defn- moves():
+  +{:U -4 :D 4 :L -1 :R 1}
+
+defn- valid?(blank dir):
+  r =: quot(blank 4)
+  c =: blank %% 4
+  cond:
+    dir == :U : r > 0
+    dir == :D : r < 3
+    dir == :L : c > 0
+    dir == :R : c < 3
+
+defn- opp(dir):
+  cond:
+    dir == :U : :D
+    dir == :D : :U
+    dir == :L : :R
+    dir == :R : :L
+    else: nil
+
+defn- apply-move(board blank dir):
+  delta =: moves().$dir
+  nb =: blank + delta
+  v =: board.$nb
+  board: .assoc(blank v).assoc(nb 0)
+
+defn- dir-char(dir):
+  cond:
+    dir == :U : 'u'
+    dir == :D : 'd'
+    dir == :L : 'l'
+    dir == :R : 'r'
+
+defn- ida-star(start):
+  found =: atom(nil)
+  bound =: atom(manhattan(start))
+  loop done false:
+    when-not done:
+      r =: search(start blank-pos(start) 0 deref(bound) nil vector() found)
+      stop? =: found.@ || r:zero?
+      when-not stop?: bound.reset(r)
+      recur: stop?
+  deref: found
+
+defn- search(board blank g bound last-dir path found):
+  h =: manhattan(board)
+  f =: g + h
+  cond:
+    f > bound: f
+    h:zero?: goal-hit(found path)
+    else: explore(board blank g bound last-dir path found)
+
+defn- goal-hit(found path):
+  reset: found path
+  =>: 0
+
+defn- explore(board blank g bound last-dir path found):
+  min-atom =: atom(99999)
+  done =: atom(false)
+  each dir [:U :D :L :R]:
+    when-not done.@:
+      when (valid?(blank dir) && (dir != opp(last-dir))):
+        delta =: moves().$dir
+        nb =: blank + delta
+        nboard =: apply-move(board blank dir)
+        np =: path.conj(dir-char(dir))
+        r =: search(nboard nb g.++ bound dir np found)
+        cond:
+          found.@: done.reset(true)
+          r:zero?: done.reset(true)
+          r < deref(min-atom): min-atom.reset(r)
+  if done.@: 0 min-atom.@

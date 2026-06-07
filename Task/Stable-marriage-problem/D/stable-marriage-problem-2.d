@@ -10,7 +10,7 @@ alias Couples = M[F];
 immutable PrefMapF womenPref;
 immutable PrefMapM menPref;
 
-static this() pure nothrow @safe {
+shared static this() pure nothrow @safe {
     with (F) with (M) {
         womenPref = [
              abi:  [bob, fred, jon, gav, ian, abe, dan, ed, col, hal],

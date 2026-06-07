@@ -25,7 +25,7 @@ caesar: function/with [
         key  [number!]
         ofs  [char!]
     ][
-        to char! key + char - ofs // 26 + ofs
+        to char! ofs + remainder key + char - ofs 26
     ]
 ]
 

@@ -1,6 +1,7 @@
 import std.stdio, std.algorithm, power_set2;
 
-T[] lis(T)(T[] items) pure nothrow {
+T[] lis(T)(T[] items) //pure nothrow
+{
     //return items.powerSet.filter!isSorted.max!q{ a.length };
     return items
            .powerSet

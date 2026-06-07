@@ -3,7 +3,7 @@ Rebol [
     file:  %Go_fish.r3
     url:   https://rosettacode.org/wiki/Go_Fish
 ]
-
+if function? :wait-for-key [wait-key: :wait-for-key] ;; backward compatibility
 go-fish-game: function/with [
     "Play a game of Go Fish"
 ][
@@ -163,7 +163,7 @@ go-fish-game: function/with [
             print as-red {  -------------------^/  -  COMPUTER TURN  -^/  -------------------}
             clear message
             prin ajoin ["  Do you have any " as-green kind "s? "]
-            a: wait-for-key/only player-yes-no
+            a: wait-key/only player-yes-no
             if any [none? a a = #"x"][ halt ]
             either a = #"y" [
                 transfer-cards my-hand ai-hand kind
@@ -190,7 +190,7 @@ go-fish-game: function/with [
             print as-green {  -------------------^/  -   PLAYER TURN   -^/  -------------------}
             clear message
             prin "  Your guess: "
-            kind: wait-for-key/only player-card-keys
+            kind: wait-key/only player-card-keys
             if any [none? kind kind = #"x"][ halt ]
             kind: uppercase kind
             unless find-in my-hand kind [
@@ -213,5 +213,6 @@ go-fish-game: function/with [
         ]
     ]
 ]
+
 ;--- Main ---
 go-fish-game

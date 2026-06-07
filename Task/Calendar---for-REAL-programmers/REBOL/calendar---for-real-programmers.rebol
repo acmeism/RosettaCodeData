@@ -4,7 +4,7 @@ Rebol [
     url:   https://rosettacode.org/wiki/Calendar_-_for_%22REAL%22_programmers
     note: "Based on Red language implementation!"
 ]
-REAL-CALENDAR: FUNCTION/WITH [YEAR [INTEGER!]][
+REAL-CALENDAR: FUNCTION/WITH [Y[INTEGER!]][
     PRINT CENTR "[ S N O O P Y ]" 130 ; PRINT SNOOPY BLOCK CENTERED
     PRINT CENTR TO-STRING Y 130 ; PRINT YEAR
 

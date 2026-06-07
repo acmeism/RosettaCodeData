@@ -2,15 +2,15 @@ from itertools import islice, chain, tee
 
 def merge(r, s):
     # This is faster than heapq.merge.
-    rr = r.next()
-    ss = s.next()
+    rr = next(r)
+    ss = next(s)
     while True:
         if rr < ss:
             yield rr
-            rr = r.next()
+            rr = next(r)
         else:
             yield ss
-            ss = s.next()
+            ss = next(s)
 
 def p(n):
     def gen():
@@ -33,6 +33,6 @@ def hamming(a, b = None):
     seq = (chain([1], pp(5, pp(3, p(2)))))
     return list(islice(seq, a - 1, b - 1))
 
-print hamming(1, 21)
-print hamming(1691)[0]
-print hamming(1000000)[0]
+print(hamming(1, 21))
+print(hamming(1691)[0])
+print(hamming(1000000)[0])

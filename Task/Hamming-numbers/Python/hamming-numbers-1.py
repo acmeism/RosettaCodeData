@@ -24,23 +24,27 @@ def hamming2():
                 if (x5==h[n]) { x5=5*h[++k]; }
     '''
     h = 1
-    _h=[h]    # memoized
+    _h = [h]    # memoized
     multipliers  = (2, 3, 5)
-    multindeces  = [0 for i in multipliers] # index into _h for multipliers
-    multvalues   = [x * _h[i] for x,i in zip(multipliers, multindeces)]
+    multindices  = [0 for _ in multipliers] # index into _h for multipliers
+    multvalues   = [x * _h[i] for x, i in zip(multipliers, multindices)]
     yield h
     while True:
         h = min(multvalues)
         _h.append(h)
-        for (n,(v,x,i)) in enumerate(zip(multvalues, multipliers, multindeces)):
+        for (n, (v, x, i)) in enumerate(zip(multvalues, multipliers, multindices)):
             if v == h:
                 i += 1
-                multindeces[n] = i
+                multindices[n] = i
                 multvalues[n]  = x * _h[i]
         # cap the memoization
-        mini = min(multindeces)
+        mini = min(multindices)
         if mini >= 1000:
             del _h[:mini]
-            multindeces = [i - mini for i in multindeces]
+            multindices = [i - mini for i in multindices]
         #
         yield h
+
+print(list(islice(hamming2(), 20)))
+print(list(islice(hamming2(), 1690, 1691)))
+print(list(islice(hamming2(), 999999, 1000000)))

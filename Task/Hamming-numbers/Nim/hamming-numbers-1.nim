@@ -1,5 +1,7 @@
 import bigints
 
+converter toBigInt (n: int): BigInt = initBigInt(n)
+
 proc min(a: varargs[BigInt]): BigInt =
   result = a[0]
   for i in 1..a.high:

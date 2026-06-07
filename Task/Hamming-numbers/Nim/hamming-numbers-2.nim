@@ -1,5 +1,7 @@
 import bigints, times
 
+converter toBigInt (n: int): BigInt = initBigInt(n)
+
 proc hamming(limit: int): BigInt =
   doAssert limit > 0
   var

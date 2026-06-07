@@ -15,7 +15,7 @@ string Pascal(alias dg, T, T initValue)(int n) {
         append(lines[0]);
         foreach (i; 1 .. n) {
             lines ~= lines[i - 1] ~ initValue; // length + 1
-            foreach (int j; 1 .. lines[i-1].length)
+            foreach (int j; 1 .. cast(int)lines[i-1].length)
                 lines[i][j] = dg(lines[i-1][j], lines[i-1][j-1]);
             append(lines[i]);
         }

@@ -1,5 +1,7 @@
 import bigints, math, algorithm, times
 
+converter toBigInt (n: int32): BigInt = initBigInt(n)
+
 type TriVal = (uint32, uint32, uint32)
 
 proc convertTrival2BigInt(tv: TriVal): BigInt =

@@ -2,8 +2,7 @@ import std.stdio, std.algorithm, std.range, std.bitmanip;
 
 /// Not extendible Sieve of Eratosthenes.
 BitArray sieve(in uint n) pure nothrow /*@safe*/ {
-    BitArray composites;
-    composites.init([true, true]);
+    auto composites = BitArray([true, true]);
     composites.length = n;
     if (n < 2)
         return composites;

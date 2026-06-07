@@ -1,27 +1,39 @@
-#!/usr/bin/env bash
+#!/usr/bin/env ys-0
+!ys-0
 
-set -e -u -o pipefail
+API-URL =: 'https://rosettacode.org/w/api.php'
 
-params=(
-  action=query
-  list=categorymembers
-  cmtitle=Category%3AProgramming_Tasks
-  cmprop=title
-  cmlimit=1500
-  format=json
-)
+defn main():
+  each name fetch-category('Category:Programming_Tasks' 'page'):
+    say: name
 
-url=https://rosettacode.org/w/api.php?$(IFS='&'; echo "${params[*]}")
+defn- fetch-category(category cmtype):
+  loop names [], cont nil:
+    base =: "$API-URL?action=query&list=categorymembers\
+             &cmtitle=$(url-encode(category))&cmlimit=max\
+             &cmtype=$cmtype&format=json&formatversion=2"
+    url =:
+      if cont:
+        then: "$base&cmcontinue=$(url-encode(cont))"
+        else: base
+    body =: http/get(url).body:json/load
+    page-names =:
+      map \(_.title):
+        body.query.categorymembers
+    new =: into(names page-names)
+    next-cont =:
+      when body.continue:
+        body.continue.cmcontinue
+    if next-cont:
+      then: recur(new next-cont)
+      else: new
 
-more=''
-
-while true; do
-  json=$(curl -Ls "$url$more")
-
-  <<<"$json" jq -r '.query .categorymembers | .[] .title'
-
-  cmcontinue=$(<<<"$json" jq -r .continue.cmcontinue)
-  [[ $cmcontinue == null ]] && break
-
-  more="&cmcontinue=$cmcontinue"
-done
+defn- url-encode(s):
+  s.replace(qr(" ") "_")
+   .replace(qr("[+]") "%2B")
+   .replace(qr("[#]") "%23")
+   .replace(qr("'") "%27")
+   .replace(qr("[\"]") "%22")
+   .replace(qr("[?]") "%3F")
+   .replace(qr("&") "%26")
+   .replace(qr("[|]") "%7C")

@@ -9,6 +9,7 @@ include $M/clean.mk
 include $M/shell.mk
 
 MAKES-CLEAN := Meta/ rosettacode.log rosettacode-errors.log
+MAKES-DISTCLEAN += Cache .clj-kondo .lsp
 
 override PATH := $(ROOT)/bin:$(PATH)
 export PATH

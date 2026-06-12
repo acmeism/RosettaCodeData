@@ -1,0 +1,101 @@
+include "gmp.incl"
+
+CFMutableStringRef mutStr
+mutStr = fn MutableStringNew
+
+void local fn Compute_GCD( result as mpz_t, a as mpz_t, b as mpz_t )
+  mpz_gcd( result, a, b )
+end fn
+
+void local fn Pollards_Rho( factor as mpz_t, n as mpz_t )
+  if ( fn mpz_even_p( n ) )
+    mpz_set_ui( factor, 2 )
+    return
+  end if
+
+  gmp_randstate_t state
+  gmp_randinit_default( state )
+  gmp_randseed_ui( state, 254893255633 )
+
+  mpz_t x, y, c, d, abs_diff
+  mpz_inits( x, y, c, d, abs_diff, NULL )
+
+  mpz_urandomm( x, state, n )
+  mpz_set( y, x )
+  mpz_urandomm( c, state, n )
+  mpz_set_ui( d, 1 )
+
+  while ( fn mpz_cmp_ui( d, 1 ) == 0 )
+    mpz_mul( x, x, x )
+    mpz_add( x, x, c )
+    mpz_mod( x, x, n )
+
+    for int i = 0 to 1
+      mpz_mul( y, y, y )
+      mpz_add( y, y, c )
+      mpz_mod( y, y, n )
+    next
+
+    mpz_sub( abs_diff, x, y )
+    mpz_abs( abs_diff, abs_diff )
+    fn Compute_GCD( d, abs_diff, n )
+  wend
+
+  if ( fn mpz_cmp( d, n ) == 0 )
+    mpz_set_ui( factor, 0 )
+  else
+    mpz_set( factor, d )
+  end if
+
+  mpz_clears( x, y, c, d, abs_diff, NULL )
+  gmp_randclear( state )
+end fn
+
+void local fn Factor_Recursive( n as mpz_t )
+  if ( fn mpz_cmp_ui( n, 1 ) == 0 ) then return
+
+  if ( fn mpz_probab_prime_p( n, 25 ) )
+    MutableStringAppendFormat( mutStr, @"%@ * \b", fn mpz_cf2( n ) )
+    exit fn
+  end if
+
+  mpz_t factor
+  mpz_init( factor )
+
+  while ( 1 )
+    fn Pollards_Rho( factor, n )
+    if ( fn mpz_cmp_ui( factor, 0 ) != 0 ) then break
+  wend
+
+  mpz_t cofactor
+  mpz_init( cofactor )
+  mpz_div( cofactor, n, factor )
+
+  fn Factor_Recursive( factor )
+  fn Factor_Recursive( cofactor )
+
+  mpz_clear( factor )
+  mpz_clear( cofactor )
+end fn
+
+local fn GetFactors( numberToFactor as CFStringRef )
+  mpz_t number
+  mpz_init( number )
+
+  fn mpz_init_set_cf( number, numberToFactor, 10 )
+  fn Factor_Recursive( number )
+  printf @"%@ = %@", numberToFactor, fn StringSubstringToIndex( mutStr, len(mutStr) -3 )
+  MutableStringSetString( mutStr, @"" )
+
+  mpz_clear( number )
+end fn
+
+CFTimeInterval t : t = fn CACurrentMediaTime
+fn GetFactors( @"13" )
+fn GetFactors( @"4294967213" )
+fn GetFactors( @"9759463979" )
+fn GetFactors( @"34225158206557151" )
+fn GetFactors( @"5465610891074107968111136514192945634873647594456118359804135903459867604844945580205745718497" )
+printf @"\nCompute time: %.3f seconds",(fn CACurrentMediaTime-t)
+
+HandleEvents

@@ -1,0 +1,542 @@
+(*
+
+  Tree sort based on the algorithm at http://archive.today/WM83M
+
+  One change is that, instead of a comparison function returning an
+  integer, we have a template function that serves as order
+  predicate. In other words, it is a "less than" function.
+
+  The mutable structures are implemented in C. The doubly-linked list
+  implementation is "unsafe". (A "safe" implementation of
+  doubly-linked lists would be nontrivial.) The ATS code is in an
+  "imperative" style.
+
+*)
+
+#define ATS_EXTERN_PREFIX "tree_sort_task_"
+
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+%{^
+
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+
+struct tree_sort_task_dlnode {
+  atstype_ptr data;
+  struct tree_sort_task_dlnode *prev;
+  struct tree_sort_task_dlnode *next;
+};
+
+typedef struct tree_sort_task_dlnode *tree_sort_task_dlnode_t;
+
+struct tree_sort_task_dllist {
+  tree_sort_task_dlnode_t head;
+  tree_sort_task_dlnode_t tail;
+  atstype_int count;
+};
+
+typedef struct tree_sort_task_dllist *tree_sort_task_dllist_t;
+
+static tree_sort_task_dlnode_t
+tree_sort_task_dlnode_make__ (atstype_ptr data)
+{
+  tree_sort_task_dlnode_t node =
+    ATS_MALLOC (sizeof (struct tree_sort_task_dlnode));
+  node->data = data;
+  node->prev = NULL;
+  node->next = NULL;
+  return node;
+}
+
+static inline atstype_ptr
+tree_sort_task_dlnode_get_data__ (tree_sort_task_dlnode_t node)
+{
+  return node->data;
+}
+
+static inline tree_sort_task_dlnode_t
+tree_sort_task_dlnode_get_prev__ (tree_sort_task_dlnode_t node)
+{
+  return node->prev;
+}
+
+static inline tree_sort_task_dlnode_t
+tree_sort_task_dlnode_get_next__ (tree_sort_task_dlnode_t node)
+{
+  return node->next;
+}
+
+static inline void
+tree_sort_task_dlnode_set_prev__ (tree_sort_task_dlnode_t node,
+                                  tree_sort_task_dlnode_t new_prev)
+{
+  node->prev = new_prev;
+}
+
+static inline void
+tree_sort_task_dlnode_set_next__ (tree_sort_task_dlnode_t node,
+                                  tree_sort_task_dlnode_t new_next)
+{
+  node->next = new_next;
+}
+
+static tree_sort_task_dllist_t
+tree_sort_task_dllist_make__ (void)
+{
+  tree_sort_task_dllist_t list =
+    ATS_MALLOC (sizeof (struct tree_sort_task_dllist));
+  list->head = NULL;
+  list->tail = NULL;
+  list->count = 0;
+  return list;
+}
+
+static inline tree_sort_task_dlnode_t
+tree_sort_task_dllist_get_head__ (tree_sort_task_dllist_t list)
+{
+  return list->head;
+}
+
+static inline tree_sort_task_dlnode_t
+tree_sort_task_dllist_get_tail__ (tree_sort_task_dllist_t list)
+{
+  return list->tail;
+}
+
+static inline int
+tree_sort_task_dllist_get_count__ (tree_sort_task_dllist_t list)
+{
+  return list->count;
+}
+
+static inline void
+tree_sort_task_dllist_set_head__ (tree_sort_task_dllist_t list,
+                                  tree_sort_task_dlnode_t new_head)
+{
+  list->head = new_head;
+}
+
+static inline void
+tree_sort_task_dllist_set_tail__ (tree_sort_task_dllist_t list,
+                                  tree_sort_task_dlnode_t new_tail)
+{
+  list->tail = new_tail;
+}
+
+static inline void
+tree_sort_task_dllist_set_count__ (tree_sort_task_dllist_t list,
+                                   int new_count)
+{
+  list->count = new_count;
+}
+
+%}
+
+abstype dlnode (a : t@ype+, is_nil : bool) = ptr
+typedef dlnode (a : t@ype+) = [is_nil : bool] dlnode (a, is_nil)
+
+abstype dllist (a : t@ype+, n : int) = ptr
+typedef dllist (a : t@ype+) = [n : int] dllist (a, n)
+
+fn {a : t@ype}
+dlnode_make (elem : a) : dlnode (a, false) =
+  let
+    extern fn dlnode_make__ : ptr -> ptr = "mac#%"
+    val data = $extfcall (ptr, "ATS_MALLOC", sizeof<a>)
+    val () = $UN.ptr0_set<a> (data, elem)
+  in
+    $UN.cast (dlnode_make__ data)
+  end
+
+fn {a : t@ype}
+dlnode_nil () : dlnode (a, true) =
+  $UN.cast the_null_ptr
+
+fn {}
+dlnode_is_nil
+          {is_nil : bool}
+          {a      : t@ype}
+          (node   : dlnode (a, is_nil))
+    : [b : bool | b == is_nil] bool b =
+  $UN.cast (iseqz ($UN.cast{ptr} node))
+
+fn {}
+dlnode_isnot_nil
+          {is_nil : bool}
+          {a      : t@ype}
+          (node   : dlnode (a, is_nil))
+    : [b : bool | b == ~is_nil] bool b =
+  $UN.cast (isneqz ($UN.cast{ptr} node))
+
+fn {a : t@ype}
+dlnode_get_elem (node : dlnode (a, false)) : a =
+  let
+    extern fn dlnode_get_data__ : ptr -> ptr = "mac#%"
+    val data = dlnode_get_data__ ($UN.cast node)
+  in
+    $UN.ptr0_get<a> data
+  end
+
+fn {a : t@ype}
+dlnode_get_prev (node : dlnode (a, false)) : dlnode a =
+  let
+    extern fn dlnode_get_prev__ : ptr -> ptr = "mac#%"
+  in
+    $UN.cast (dlnode_get_prev__ ($UN.cast node))
+  end
+
+fn {a : t@ype}
+dlnode_get_next (node : dlnode (a, false)) : dlnode a =
+  let
+    extern fn dlnode_get_next__ : ptr -> ptr = "mac#%"
+  in
+    $UN.cast (dlnode_get_next__ ($UN.cast node))
+  end
+
+fn {a : t@ype}
+dlnode_set_prev
+          (node     : dlnode (a, false),
+           new_prev : dlnode a)
+    : void =
+  let
+    extern fn dlnode_set_prev__ : (ptr, ptr) -> void = "mac#%"
+  in
+    dlnode_set_prev__ ($UN.cast node, $UN.cast new_prev)
+  end
+
+fn {a : t@ype}
+dlnode_set_next
+          (node     : dlnode (a, false),
+           new_next : dlnode a)
+    : void =
+  let
+    extern fn dlnode_set_next__ : (ptr, ptr) -> void = "mac#%"
+  in
+    dlnode_set_next__ ($UN.cast node, $UN.cast new_next)
+  end
+
+overload iseqz with dlnode_is_nil
+overload isneqz with dlnode_isnot_nil
+overload get_elem with dlnode_get_elem
+overload get_prev with dlnode_get_prev
+overload get_next with dlnode_get_next
+overload set_prev with dlnode_set_prev
+overload set_next with dlnode_set_next
+
+fn {a : t@ype}
+dllist_make () : dllist (a, 0) =
+  let
+    extern fn dllist_make__ : () -> ptr = "mac#%"
+  in
+    $UN.cast (dllist_make__ ())
+  end
+
+fn {a : t@ype}
+dllist_get_head (lst : dllist a) : dlnode a =
+  let
+    extern fn dllist_get_head__ : ptr -> ptr = "mac#%"
+  in
+    $UN.cast (dllist_get_head__ ($UN.cast lst))
+  end
+
+fn {a : t@ype}
+dllist_get_tail (lst : dllist a) : dlnode a =
+  let
+    extern fn dllist_get_tail__ : ptr -> ptr = "mac#%"
+  in
+    $UN.cast (dllist_get_tail__ ($UN.cast lst))
+  end
+
+fn {}
+dllist_get_count
+          {n   : int}
+          {a   : t@ype}
+          (lst : dllist (a, n))
+    : int n =
+  let
+    extern fn dllist_get_count__ : ptr -> int = "mac#%"
+  in
+    $UN.cast (dllist_get_count__ ($UN.cast lst))
+  end
+
+fn {a : t@ype}
+dllist_set_head
+          (lst      : dllist a,
+           new_head : dlnode a)
+    : void =
+  let
+    extern fn dllist_set_head__ : (ptr, ptr) -> void = "mac#%"
+  in
+    dllist_set_head__ ($UN.cast lst, $UN.cast new_head)
+  end
+
+fn {a : t@ype}
+dllist_set_tail
+          (lst      : dllist a,
+           new_tail : dlnode a)
+    : void =
+  let
+    extern fn dllist_set_tail__ : (ptr, ptr) -> void = "mac#%"
+  in
+    dllist_set_tail__ ($UN.cast lst, $UN.cast new_tail)
+  end
+
+fn {a : t@ype}
+dllist_set_count {n         : int}
+                 (lst       : &dllist a >> dllist (a, n),
+                  new_count : int n)
+    : void =
+  let
+    extern fn dllist_set_count__ : (ptr, int) -> void = "mac#%"
+    val () = dllist_set_count__ ($UN.cast lst, $UN.cast new_count)
+    prval () = $UN.castvwtp2void{dllist (a, n)} lst
+  in
+  end
+
+fn {}
+dllist_is_empty
+          {n   : int}
+          {a   : t@ype}
+          (lst : dllist (a, n))
+    : [b : bool | b == (n == 0)] bool b =
+  dllist_get_count lst = 0
+
+fn {}
+dllist_isnot_empty
+          {n   : int}
+          {a   : t@ype}
+          (lst : dllist (a, n))
+    : [b : bool | b == (n != 0)] bool b =
+  dllist_get_count lst <> 0
+
+overload length with dllist_get_count
+overload iseqz with dllist_is_empty
+overload isneqz with dllist_isnot_empty
+overload get_head with dllist_get_head
+overload get_tail with dllist_get_tail
+overload get_count with dllist_get_count
+overload set_head with dllist_set_head
+overload set_tail with dllist_set_tail
+overload set_count with dllist_set_count
+
+fn {a : t@ype}
+dllist_insert_at_end
+          {n        : int}
+          (lst      : &dllist (a, n) >> dllist (a, n + 1),
+           new_elem : a)
+    : void =
+  let
+    val node = dlnode_make<a> new_elem
+    val n = length lst
+  in
+    set_count<a> (lst, succ n);
+    if n = 0 then
+      begin
+        set_head<a> (lst, node);
+        set_tail<a> (lst, node)
+      end
+    else
+      let
+        val last_node = get_tail<a> lst
+        val () = assertloc (isneqz last_node)
+      in
+        set_next<a> (last_node, node);
+        set_prev<a> (node, last_node);
+        set_tail<a> (lst, node)
+      end
+  end
+
+infix +=
+overload += with dllist_insert_at_end
+
+fn {a : t@ype}
+dllist2list {n   : nat}
+            (lst : dllist (a, n))
+    : list (a, n) =
+  let
+    val n = length lst
+    fun
+    loop {i : nat | i <= n}
+         .<n - i>.
+         (last_node : dlnode a,
+          accum     : list (a, i),
+          i         : int i)
+        : list (a, n) =
+      if i = n then
+        let
+          val () = assertloc (iseqz last_node)
+        in
+          accum
+        end
+      else
+        let
+          val () = assertloc (isneqz last_node)
+          val elem = get_elem<a> last_node
+        in
+          loop (get_prev<a> last_node,
+                list_cons (elem, accum),
+                succ i)
+        end
+  in
+    loop (get_tail<a> lst, list_nil (), 0)
+  end
+
+fn {a : t@ype}
+list2dllist {n   : nat}
+            (lst : list (a, n))
+    : dllist (a, n) =
+  let
+    fun
+    loop {i     : nat | i <= n}
+         .<n - i>.
+         (lst   : list (a, n - i),
+          accum : &dllist (a, i) >> dllist (a, n))
+        : void =
+      case+ lst of
+      | list_nil () => ()
+      | list_cons (elem, rest) =>
+        begin
+          accum += elem;
+          loop (rest, accum)
+        end
+
+    var retval = dllist_make<a> ()
+  in
+    loop {0} (lst, retval);
+    retval
+  end
+
+extern fn {a : t@ype}           (* The "less than" template. *)
+dllist_tree_sort$lt : (a, a) -> bool
+
+fn {a : t@ype}
+dllist2tree {n    : nat}
+            (lst  : &dllist (a, n) >> _,
+             root : &dlnode a? >> dlnode a)
+    : void =
+  begin
+    root := get_head lst;
+    if isneqz root then
+      let
+        var node : dlnode a = get_next<a> root
+      in
+        set_prev<a> (root, dlnode_nil ());
+        set_next<a> (root, dlnode_nil ());
+        while (isneqz node)
+          let
+            val next = get_next<a> node
+            var current : dlnode a = root
+            var previous : dlnode a = dlnode_nil ()
+            var node_lt_curr : bool = false
+          in
+            while (isneqz current)
+              begin
+                previous := current;
+                node_lt_curr :=
+                  dllist_tree_sort$lt<a> (get_elem<a> node,
+                                          get_elem<a> current);
+                if node_lt_curr then
+                  current := get_prev<a> current
+                else
+                  current := get_next<a> current
+              end;
+            let
+              prval () =
+                $UN.castvwtp2void{[b : bool] dlnode (a, b)} previous
+              val () = assertloc (isneqz previous)
+            in
+              if node_lt_curr then
+                set_prev<a> (previous, node)
+              else
+                set_next<a> (previous, node)
+            end;
+            set_prev<a> (node, dlnode_nil ());
+            set_next<a> (node, dlnode_nil ());
+            node := next
+          end
+      end
+  end
+
+fn {a : t@ype}
+tree2dllist {n    : nat}
+            (lst  : &dllist (a, n) >> _,
+             root : dlnode a)
+    : void =
+  let
+    fun
+    recurs (lst      : &dllist (a, n) >> _,
+            root     : dlnode a,
+            previous : &dlnode a >> _,
+            count    : &int >> _)
+        : void =
+      if isneqz root then
+        let
+          val left = get_prev<a> root
+          and right = get_next<a> root
+        in
+          recurs (lst, left, previous, count);
+          if iseqz (get_prev<a> root) * iseqz (get_head<a> lst) then
+            begin               (* We are at the first element. *)
+              set_head<a> (lst, root);
+              set_prev<a> (root, dlnode_nil ())
+            end
+          else
+            let
+              val () = assertloc (isneqz previous)
+            in
+              set_next<a> (previous, root);
+              set_prev<a> (root, previous)
+            end;
+          if succ count = length lst then
+            begin               (* We are at the last element. *)
+              set_tail<a> (lst, root);
+              set_next<a> (root, dlnode_nil ())
+            end;
+          previous := root;
+          count := succ count;
+          recurs (lst, right, previous, count)
+        end
+
+    var previous : dlnode a = dlnode_nil ()
+    var count : int = 0
+  in
+    set_head<a> (lst, dlnode_nil ());
+    set_tail<a> (lst, dlnode_nil ());
+    recurs (lst, root, previous, count)
+  end
+
+fn {a : t@ype}
+dllist_tree_sort
+          {n   : nat}
+          (lst : &dllist (a, n) >> _)
+    : void =
+  let
+    var root : dlnode a
+  in
+    dllist2tree (lst, root);
+    tree2dllist (lst, root)
+  end
+
+implement
+dllist_tree_sort$lt<int> (x, y) =
+  x < y
+
+implement
+main0 () =
+  let
+    var i : int
+    var data : List0 int = list_nil ()
+  in
+    for (i := 1; i <= 20; i := succ i)
+      data := list_cons ($extfcall (int, "rand") % 20, data);
+    let
+      var lst = list2dllist<int> data
+    in
+      println! (dllist2list<int> lst);
+      dllist_tree_sort<int> lst;
+      println! (dllist2list<int> lst)
+    end
+  end

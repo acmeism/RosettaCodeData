@@ -1,0 +1,573 @@
+Const NULL As Any Ptr = 0
+
+Type Rule
+    ruleType As String
+    value    As String
+    eltos    As Rule Ptr
+    sgte     As Rule Ptr
+End Type
+
+Type Token
+    tokenType As String
+    value     As String
+    idx       As Integer
+End Type
+
+Type Production
+    ident As String
+    idx   As Integer
+    rule  As Rule Ptr
+End Type
+
+Dim Shared As String src
+Dim Shared As Integer charVal, sdx
+Dim Shared As Token currentToken
+Dim Shared As Boolean eror
+Dim Shared As String idents(100)
+Dim Shared As Integer ididx(100)
+Dim Shared As Production productions(100)
+Dim Shared As Integer prodCount = 0
+
+Declare Function Term() As Rule Ptr
+Declare Function Expression() As Rule Ptr
+Declare Function Factor() As Rule Ptr
+
+Function CreateRule(rtype As String, valor As String = "") As Rule Ptr
+    Dim As Rule Ptr r = Callocate(Sizeof(Rule))
+    r->ruleType = rtype
+    r->value = valor
+    Return r
+End Function
+
+Sub PrintRule(r As Rule Ptr)
+    If r = NULL Then Exit Sub
+
+    Print "{";
+
+    If r->ruleType = "terminal" Then
+        Print """terminal"", """ & r->value & """";
+    Elseif r->ruleType = "ident" Then
+        Print """ident"", """ & r->value & """";
+        ' Find the production index
+        For i As Integer = 0 To prodCount - 1
+            If productions(i).ident = r->value Then
+                Print ", " & productions(i).idx;
+                Exit For
+            End If
+        Next
+    Elseif r->ruleType = "or" Then
+        Print """or"", ";
+        PrintRule(r->eltos)
+        Print ", ";
+        PrintRule(r->sgte)
+    Elseif r->ruleType = "repeat" Then
+        Print """repeat"", ";
+        PrintRule(r->eltos)
+    Elseif r->ruleType = "optional" Then
+        Print """optional"", ";
+        PrintRule(r->eltos)
+    Elseif r->ruleType = "sequence" Then
+        If r->eltos <> NULL Then
+            PrintRule(r->eltos)
+            If r->sgte <> NULL Then
+                Print ", ";
+                PrintRule(r->sgte)
+            End If
+        End If
+    Else
+        Print """" & r->ruleType & """";
+        If r->value <> "" Then Print ", """ & r->value & """";
+        If r->eltos <> NULL Then
+            Print ", ";
+            PrintRule(r->eltos)
+        End If
+    End If
+
+    Print "}";
+End Sub
+
+Sub SkipSpaces()
+    While sdx <= Len(src)
+        charVal = Asc(Mid(src, sdx, 1))
+        If charVal <> Asc(" ") Andalso charVal <> Asc(!"\t") Andalso _
+        charVal <> Asc(!"\r") Andalso charVal <> Asc(!"\n") Then Exit While
+        sdx += 1
+    Wend
+End Sub
+
+Function GetToken() As Token
+    Dim result As Token
+    SkipSpaces()
+
+    If sdx > Len(src) Then
+        result.tokenType = "-1"
+        Return result
+    End If
+
+    charVal = Asc(Mid(src, sdx, 1))
+
+    If Instr("{}()[]|=.;", Chr(charVal)) > 0 Then
+        result.tokenType = Chr(charVal)
+        sdx += 1
+        Return result
+    End If
+
+    If charVal = Asc("""") Or charVal = Asc("'") Then
+        Dim closech As Integer = charVal
+        For tokend As Integer = sdx + 1 To Len(src)
+            If Asc(Mid(src, tokend, 1)) = closech Then
+                result.tokenType = "terminal"
+                result.value = Mid(src, sdx + 1, tokend - sdx - 1)
+                sdx = tokend + 1
+                Return result
+            End If
+        Next
+    End If
+
+    If (charVal >= Asc("a") And charVal <= Asc("z")) Or (charVal >= Asc("A") And charVal <= Asc("Z")) Then
+        Dim tokstart As Integer = sdx
+        Do
+            sdx += 1
+            If sdx > Len(src) Then Exit Do
+            charVal = Asc(Mid(src, sdx, 1))
+        Loop While (charVal >= Asc("a") And charVal <= Asc("z")) Or _
+        (charVal >= Asc("A") And charVal <= Asc("Z")) Or _
+        (charVal >= Asc("0") And charVal <= Asc("9"))
+        result.tokenType = "ident"
+        result.value = Mid(src, tokstart, sdx - tokstart)
+        Return result
+    End If
+
+    If charVal >= Asc("0") And charVal <= Asc("9") Then
+        Dim tokstart As Integer = sdx
+        Do
+            sdx += 1
+            If sdx > Len(src) Then Exit Do
+            charVal = Asc(Mid(src, sdx, 1))
+        Loop While charVal >= Asc("0") And charVal <= Asc("9")
+        result.tokenType = "number"
+        result.value = Mid(src, tokstart, sdx - tokstart)
+        Return result
+    End If
+
+    result.tokenType = "-1"
+    Return result
+End Function
+
+Function ParseProduction() As Boolean
+    If currentToken.tokenType <> "ident" Then
+        Print "invalid ebnf (ident expected)"
+        Return False
+    End If
+
+    ' Remove trailing spaces from identifier
+    Dim ident As String = Rtrim(currentToken.value)
+    currentToken = GetToken()
+
+    If currentToken.tokenType <> "=" Then
+        Print "invalid ebnf (= expected)"
+        Return False
+    End If
+
+    currentToken = GetToken()
+    Dim rule As Rule Ptr = Expression()
+
+    If currentToken.tokenType <> "." Andalso currentToken.tokenType <> ";" Then
+        Print "invalid ebnf (. or ; expected)"
+        Return False
+    End If
+
+    currentToken = GetToken()
+
+    ' Add to productions
+    productions(prodCount).ident = ident
+    productions(prodCount).idx = prodCount + 1
+    productions(prodCount).rule = rule
+    prodCount += 1
+
+    Return True
+End Function
+
+Function ParseGrammar() As Boolean
+    If currentToken.tokenType <> "{" Then
+        Print "invalid ebnf (missing opening {)"
+        Return False
+    End If
+
+    currentToken = GetToken()
+
+    While currentToken.tokenType <> "}" Andalso currentToken.tokenType <> "-1"
+        ' Check for invalid identifiers (with spaces)
+        If currentToken.tokenType = "ident" Then
+            If Instr(currentToken.value, " ") > 0 Then
+                Print "invalid ebnf (ident with spaces)"
+                Return False
+            End If
+        End If
+
+        If Not ParseProduction() Then Return False
+    Wend
+
+    If currentToken.tokenType <> "}" Then
+        Print "invalid ebnf (missing closing })"
+        Return False
+    End If
+
+    currentToken = GetToken()
+    Return True
+End Function
+
+Function ValidateRule(r As Rule Ptr) As Boolean
+    If r = NULL Then Return True
+
+    Select Case r->ruleType
+
+    Case "ident"
+        Dim found As Boolean = False
+        For i As Integer = 0 To prodCount - 1
+            If productions(i).ident = r->value Then
+                found = True
+                Exit For
+            End If
+        Next
+
+        If Not found Then
+            Print "invalid ebnf (undefined: " & r->value & ")"
+            eror = True
+            Return False
+        End If
+
+    Case "sequence", "or"
+        If Not ValidateRule(r->eltos) Then Return False
+        If Not ValidateRule(r->sgte)  Then Return False
+
+    Case "repeat", "optional"
+        If Not ValidateRule(r->eltos) Then Return False
+
+    End Select
+
+    Return True
+End Function
+
+Function Parse(ebnf As String) As Integer
+    Print "parse: "; ebnf; " ===> "
+
+    src = ebnf: sdx = 1: eror = False
+    prodCount = 0
+    currentToken = GetToken()
+
+    ' Case: "terminal" followed by { ... }
+    If currentToken.tokenType = "terminal" Then
+        Print "{";
+        Print """terminal"", """ & currentToken.value & """, 1";
+
+        currentToken = GetToken()
+
+        If currentToken.tokenType <> "{" Then
+            Print "invalid ebnf (missing opening {)"
+            Return -1
+        End If
+
+        currentToken = GetToken()
+
+        If Not ParseProduction() Then Return -1
+
+        If currentToken.tokenType <> "}" Then
+            Print "invalid ebnf (missing closing })"
+            Return -1
+        End If
+
+        currentToken = GetToken()
+
+        ' Print the parsed rule
+        PrintRule(productions(0).rule)
+        Print "}"
+
+        Print !"\ntests:"
+        Return 1
+    End If
+
+    ' Case: { ... }
+    If currentToken.tokenType = "{" Then
+        If ParseGrammar() Then
+            For i As Integer = 0 To prodCount - 1
+                If Not ValidateRule(productions(i).rule) Then
+                    eror = True
+                    Return -1
+                End If
+            Next
+
+            Print "{";
+            ' Print all productions
+            For i As Integer = 0 To prodCount - 1
+                If i > 0 Then Print ", ";
+                Print " {""" & productions(i).ident & """, " & productions(i).idx & ", ";
+                PrintRule(productions(i).rule)
+                Print "}";
+            Next
+
+            Print "}"
+            Print !"\ntests:"
+            Return 1
+        Else
+            Return -1
+        End If
+    End If
+
+    ' Single production without braces
+    If currentToken.tokenType = "ident" Then
+        Print "invalid ebnf (missing opening {)"
+        Return -1
+    End If
+
+    Print "invalid ebnf (unexpected token)"
+    Return -1
+End Function
+
+Function Factor() As Rule Ptr
+    Dim res As Rule Ptr = NULL
+
+    Select Case currentToken.tokenType
+    Case "ident"
+        res = CreateRule("ident", currentToken.value)
+        currentToken = GetToken()
+
+    Case "terminal"
+        res = CreateRule("terminal", currentToken.value)
+        currentToken = GetToken()
+
+    Case "number"
+        res = CreateRule("number", currentToken.value)
+        currentToken = GetToken()
+
+    Case "["
+        currentToken = GetToken()
+        res = CreateRule("optional")
+        res->eltos = Expression()
+
+        If currentToken.tokenType <> "]" Then
+            Print "invalid ebnf (missing closing ])"
+            eror = True
+            Return NULL
+        End If
+
+        currentToken = GetToken()
+
+    Case "("
+        currentToken = GetToken()
+        res = Expression()
+
+        If currentToken.tokenType <> ")" Then
+            Print "invalid ebnf (missing closing ))"
+            eror = True
+            Return NULL
+        End If
+
+        currentToken = GetToken()
+
+    Case "{"
+        currentToken = GetToken()
+        res = CreateRule("repeat")
+        res->eltos = Expression()
+
+        If currentToken.tokenType <> "}" Then
+            Print "invalid ebnf (missing closing })"
+            eror = True
+            Return NULL
+        End If
+
+        currentToken = GetToken()
+
+    Case Else
+        Return NULL
+    End Select
+
+    Return res
+End Function
+
+Function Term() As Rule Ptr
+    Dim first As Rule Ptr = Factor()
+    If first = NULL Then Return NULL
+
+    Dim seq As Rule Ptr = first
+    Dim next_factor As Rule Ptr
+
+    ' Build sequence of factors
+    While currentToken.tokenType <> "-1" Andalso _
+        currentToken.tokenType <> "|" Andalso _
+        currentToken.tokenType <> "." Andalso _
+        currentToken.tokenType <> ";" Andalso _
+        currentToken.tokenType <> ")" Andalso _
+        currentToken.tokenType <> "]" Andalso _
+        currentToken.tokenType <> "}"
+
+        next_factor = Factor()
+        If next_factor = NULL Then Exit While
+
+        Dim newSeq As Rule Ptr = CreateRule("sequence")
+        newSeq->eltos = seq
+        newSeq->sgte = next_factor
+        seq = newSeq
+    Wend
+
+    Return seq
+End Function
+
+Function Expression() As Rule Ptr
+    Dim first As Rule Ptr = Term()
+    If first = NULL Then Return NULL
+
+    Dim orRule As Rule Ptr = first
+
+    While currentToken.tokenType = "|"
+        Dim newOr As Rule Ptr = CreateRule("or")
+        newOr->eltos = orRule
+
+        currentToken = GetToken()
+        newOr->sgte = Term()
+        orRule = newOr
+    Wend
+
+    Return orRule
+End Function
+
+Function FindProduction(nombre As String) As Rule Ptr
+    Dim nombreRecortado As String = Trim(nombre)
+
+    For i As Integer = 0 To prodCount - 1
+        If productions(i).ident = nombreRecortado Then Return productions(i).rule
+    Next
+
+    Print "invalid ebnf (undefined: " & nombre & ")"
+    eror = True  ' set global error flag
+    Return NULL
+End Function
+
+Function Applies(rule As Rule Ptr, test As String) As Boolean
+    Dim wassdx As Integer = sdx
+
+    If rule = NULL Then Return True
+
+    Dim As Integer i, savedSdx
+
+    Select Case rule->ruleType
+    Case "terminal"
+        SkipSpaces()
+        For i = 1 To Len(rule->value)
+            If sdx > Len(src) Orelse Mid(src, sdx, 1) <> Mid(rule->value, i, 1) Then
+                sdx = wassdx
+                Return False
+            End If
+            sdx += 1
+        Next
+        Return True
+
+    Case "sequence"
+        If Applies(rule->eltos, test) Then
+            Return Applies(rule->sgte, test)
+        End If
+        sdx = wassdx
+        Return False
+
+    Case "or"
+        savedSdx = sdx
+        If Applies(rule->eltos, test) Then Return True
+        sdx = savedSdx
+        Return Applies(rule->sgte, test)
+
+    Case "repeat"
+        Dim progress As Boolean = True
+        Dim lastSdx As Integer = sdx
+
+        While progress
+            savedSdx = sdx
+            progress = Applies(rule->eltos, test)
+
+            If Not progress Then
+                sdx = savedSdx
+                Exit While
+            End If
+
+            If sdx = lastSdx Then Exit While
+            lastSdx = sdx
+        Wend
+        Return True
+
+    Case "optional"
+        savedSdx = sdx
+        If Not Applies(rule->eltos, test) Then sdx = savedSdx
+        Return True
+
+    Case "ident"
+        Dim prodRule As Rule Ptr = FindProduction(rule->value)
+        If prodRule = NULL Then
+            eror = True
+            Return False
+        End If
+        Return Applies(prodRule, test)
+    End Select
+
+    Return True
+End Function
+
+Sub CheckValid(test As String)
+    src = test
+    sdx = 1
+
+    If prodCount > 0 Then
+        Dim result As Boolean = Applies(productions(0).rule, test)
+        SkipSpaces()
+
+        Print """" & test & """, ",
+        If result Andalso sdx > Len(src) Then
+            Print "pass"
+        Else
+            Print "fail"
+        End If
+    End If
+End Sub
+
+' Test cases
+Dim As String tests(1 To 2, 0 To 6)
+
+tests(1, 0) = "a1a3a4a4a5a6"
+tests(1, 1) = "a1 a2a6"
+tests(1, 2) = "a1 a3 a4 a6"
+tests(1, 3) = "a1 a4 a5 a6"
+tests(1, 4) = "a1 a2 a4 a5 a5 a6"
+tests(1, 5) = "a1 a2 a4 a5 a6 a7"
+tests(1, 6) = "your ad here"
+
+tests(2, 0) = "2"
+tests(2, 1) = "2*3 + 4/23 - 7"
+tests(2, 2) = "(3 + 4) * 6-2+(4*(4))"
+tests(2, 3) = "-2"
+tests(2, 4) = "3 +"
+tests(2, 5) = "(4 + 3"
+tests(2, 6) = ""
+
+' Test data
+Dim As String ebnf(0 To 5) = { _
+!"\"a\" {\n    a = \"a1\" ( \"a2\" | \"a3\" ) { \"a4\" } [ \"a5\" ] \"a6\" ;\n} \"z\"", _
+!"{\n    expr = term { plus term } .\n    term = factor { times factor } .\n    factor = number | '(' expr ')' .\n\n    plus = \"+\" | \"-\" .\n    times = \"*\" | \"/\" .\n\n    number = digit { digit } .\n    digit = \"0\" | \"1\" | \"2\" | \"3\" | \"4\" | \"5\" | \"6\" | \"7\" | \"8\" | \"9\" .\n}", _
+!"a = \"1\"", _
+!"{ a = \"1\" ;", _
+!"{ hello world = \"1\"; }", _
+!"{ foo = bar . }" }
+
+' Main program
+Dim As Integer i, j
+
+For i = 0 To Ubound(ebnf)
+    If Parse(ebnf(i)) = 1 Then
+        If i = 0 Or i = 1 Then
+            For j = 0 To Ubound(tests, 2)
+                If tests(i + 1, j) <> "" Then CheckValid(tests(i + 1, j))
+            Next j
+        End If
+    End If
+    'sleep
+    Print
+Next i
+
+Sleep

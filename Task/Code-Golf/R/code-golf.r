@@ -1,0 +1,6 @@
+## easy way
+cat("Code Golf")
+
+## no  quotes or string literals
+cat(rlang::string(c(0x43, 0x6F, 0x64, 0x65, 0x20,
+                    0x47, 0x6F, 0x6C, 0x66)))

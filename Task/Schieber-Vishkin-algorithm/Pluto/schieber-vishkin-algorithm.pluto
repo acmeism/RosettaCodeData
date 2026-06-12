@@ -1,0 +1,261 @@
+local class Node
+    function __construct()
+        self.child = 0
+        self.sib   = 0
+        self.parnt = 0 -- NOTE: parent is a reserved word
+    end
+end
+
+local class Result
+    -- NOTE: 0-based indexing used for all 5 arrays.
+    function __construct(pi, beta, alfa, tau, lam)
+        self.pi   = pi
+        self.beta = beta
+        self.alfa = alfa
+        self.tau  = tau
+        self.lam  = lam
+    end
+end
+
+-- NOTE: A is a 0-based array.
+local function process(N, A)
+    -- NOTE: 0-based indexing used for all 6 of the following arrays.
+    local pi    = {}
+    local beta  = {}
+    local alfa  = {}
+    local tau   = {}
+    local lam   = {}
+    local nodes = {}
+    for i = 0, N do
+        pi[i]    = 0
+        beta[i]  = 0
+        alfa[i]  = 0
+        tau[i]   = 0
+        lam[i]   = 0
+        nodes[i] = new Node()
+    end
+
+    -- Make triply linked tree.
+    local t = 0
+    for v = N, 1, -1 do
+        local u = 0
+        while A[v] > A[t] or (A[v] == A[t] and v > t) do
+            u = t
+            t = nodes[t].parnt
+        end
+        if u != 0 then
+            nodes[v].sib = nodes[u].sib
+            nodes[u].sib = 0
+            nodes[u].parnt = v
+            nodes[v].child = u
+        else
+            nodes[v].sib = nodes[t].child
+        end
+        nodes[t].child = v
+        nodes[v].parnt = t
+        t = v
+    end
+
+    -- Begin first traversal.
+    local p = nodes[0].child
+    local n = 0
+    lam[0] = -1
+
+    local function traversal()
+        -- s3: Compute beta in the easy case.
+        while true do
+            ++n
+            pi[p] = n
+            tau[n] = 0
+            lam[n] = 1 + lam[n >> 1]
+
+            if nodes[p].child != 0 then
+                p = nodes[p].child
+                continue
+            end
+
+            beta[p] = n
+            break
+        end
+
+        -- s4: Compute tau, bottom-up.
+        while true do
+            tau[beta[p]] = nodes[p].parnt
+
+            if nodes[p].sib != 0 then
+                p = nodes[p].sib
+                return true  -- go back to s3
+            end
+
+            p = nodes[p].parnt
+
+            -- Compute beta in the hard case.
+            if p != 0 then
+                local h = lam[n & -pi[p]]
+                beta[p] = ((n >> h) | 1) << h
+            else
+                return false  -- exit traversal
+            end
+        end
+    end
+
+    -- Perform first traversal.
+    while traversal() do ; end
+
+    -- Begin second traversal.
+    p = nodes[0].child
+    lam[0]  = lam[n]
+    alfa[0] = 0
+    beta[0] = 0
+    pi[0]   = 0
+
+    local function computeAlfa(node)
+        -- s7: Compute alfa, top-down.
+        alfa[node] = alfa[nodes[node].parnt] | (beta[node] & -beta[node])
+
+        if nodes[node].child != 0 then
+            computeAlfa(nodes[node].child)
+        end
+
+        -- s8: Continue traversal.
+        if nodes[node].sib != 0 then
+            computeAlfa(nodes[node].sib)
+        end
+    end
+
+    -- Perform second traversal.
+    if p != 0 then computeAlfa(p) end
+
+    return new Result(pi, beta, alfa, tau, lam)
+end
+
+-- NOTE: All 5 incoming arrays are 0-based.
+local function nca(x, y, beta, alfa, tau, lam, pi)
+    -- Find common height.
+    local h
+    if beta[x] <= beta[y] then
+        h = lam[beta[y] & -beta[x]]
+    else
+        h = lam[beta[x] & -beta[y]]
+    end
+
+    -- Find true height.
+    local k = alfa[x] & alfa[y] & -(1 << h)
+    h = lam[k & -k]
+
+    -- Find beta[z].
+    local j = ((beta[x] >> h) | 1) << h
+
+    -- Find x' and y'.
+    local l
+    if j != beta[x] then
+        l = lam[alfa[x] & ((1 << h) - 1)]
+        x = tau[((beta[x] >> l) | 1) << l]
+    end
+
+    if j != beta[y] then
+        l = lam[alfa[y] & ((1 << h) - 1)]
+        y = tau[((beta[y] >> l) | 1) << l]
+    end
+
+    -- Find z.
+    local z = pi[x] <= pi[y] ? x : y
+    return z
+end
+
+local function solve_test_case(n, values, queries)
+    local results = {}
+
+    -- NOTE: A, R and B are 0-based arrays.
+    local A = {}
+    A[0] = math.maxinteger
+    local R = {}
+    local B = {}
+    for i = 0, n + 1  do
+        R[i] = 0
+        B[i] = 0
+    end
+
+    local N = 1
+    local count = 0
+    local oldx = nil
+
+    for i = 1, n do
+        local x = values[i] -- values is 1-based
+
+        if i > 1 and x != oldx then
+            A:insert(count)
+            R[N] = i
+            N += 1
+            count = 0
+        end
+
+        B[i] = N
+        count += 1
+        oldx = x
+    end
+
+    A:insert(count)
+    R[N] = n + 1
+
+    local r = process(N, A)
+
+    for queries as t do  -- t is 1-based
+        local i = t[1]
+        local j = t[2]
+        local x = B[i]
+        local y = B[j]
+        local z
+
+        if x == y then
+            z = j - i + 1
+        else
+            if x + 1 != y then
+                z = A[nca(x + 1, y - 1, r.beta, r.alfa, r.tau, r.lam, r.pi)]
+            else
+                z = 0
+            end
+            z = math.max(z, math.max(R[x] - i, A[y] - R[y] + j + 1))
+        end
+        results:insert(z)
+    end
+    return results
+end
+
+-- Hard-coded test data.
+local testCases = {
+    {
+        n        = 10,
+        values   = {-1, -1, 1, 1, 1, 1, 3, 10, 10, 10},
+        queries  = {{2, 3}, {1, 10}, {5, 10}},
+        expected = {1, 4, 3}
+    }
+}
+
+for idx, test in testCases do
+    local n = test["n"]
+    local values = test["values"]
+    local queries = test["queries"]
+    local expected = test["expected"]
+
+    print($"Test Case {idx}:")
+    print($"Size: {n}, Queries: {#queries}")
+    print($"Values: {values:concat(" ")}")
+
+    local results = solve_test_case(n, values, queries)
+
+    print("Queries and Results:")
+    for qIdx = 1, #queries do
+        local q = queries[qIdx]
+        local i = q[1]
+        local j = q[2]
+        local result = results[qIdx]
+        local exp = expected[qIdx]
+        print($"Query: {i} {j}")
+        print($"Result: {result} (Expected: {exp})")
+        if result != exp then
+            print("  WARNING: Result doesn't match expected output")
+        end
+    end
+    print()
+end

@@ -1,0 +1,258 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program oddwords64.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ BUFFERSIZE, 300000
+.equ WORDSIZE,   4
+
+//.include "../../ficmacros64.inc"        // use for developper debugging
+/*******************************************/
+/* Structures                          **/
+/*******************************************/
+/* structure words array  */
+    .struct  0
+st_word_adr:
+    .struct st_word_adr + 8
+st_word_size:
+    .struct st_word_size + 8
+st_word_end:
+/************************************/
+/* Initialized data                 */
+/************************************/
+.data
+szMessOpen:           .asciz "File open error.\n"
+szMessRead:           .asciz "File read error.\n"
+szMessClose:          .asciz "File close error.\n"
+szFileName:           .asciz "unixdict.txt"
+szMessResult:         .asciz " : "
+szCarriageReturn:     .asciz "\n"
+szMessStart:          .asciz "Program 64 bits start.\n"
+/************************************/
+/* UnInitialized data               */
+/************************************/
+.bss
+sZoneConv:            .skip 24
+sBuffer:              .skip BUFFERSIZE     // file buffer
+.align 4
+WordArray:            .skip st_word_end * 0x10000
+/************************************/
+/*  code section                    */
+/************************************/
+.text
+.global main
+main:                        // entry of program
+    ldr x0,qAdrszMessStart
+    bl affichageMess
+    ldr x0,qAdrszFileName    // file name
+    ldr x1,qAdrsBuffer       // read buffer address
+    ldr x2,#iBufferSize      // buffer size
+    ldr x3,qAdrWordArray     // word address array
+    bl readFile
+    cmp x0,#-1               // file error ?
+    beq 100f
+    mov x2,x0                // word counter
+    ldr x0,qAdrsBuffer
+    ldr x1,qAdrWordArray     // array address
+    bl traitWord
+
+100:                         // standard end of the program
+    mov x0, #0               // return code
+    mov x8, #EXIT            // request to exit program
+    svc 0                    // perform the system call
+
+qAdrsZoneConv:            .quad  sZoneConv
+qAdrszMessResult:         .quad  szMessResult
+qAdrszCarriageReturn:     .quad  szCarriageReturn
+qAdrszMessStart:          .quad  szMessStart
+qAdrszFileName:           .quad  szFileName
+qAdrszMessOpen:           .quad  szMessOpen
+qAdrszMessRead:           .quad  szMessRead
+qAdrszMessClose:          .quad  szMessClose
+qAdrsBuffer:              .quad  sBuffer
+iBufferSize:              .quad  BUFFERSIZE
+qAdrWordArray:            .quad  WordArray
+/***************************************************/
+/*   read file and create array words                   */
+/***************************************************/
+/* x0 contains file name */
+/* x1 contains a file buffer */
+/* x2 contains buffer size */
+/* x3 contains array word address */
+readFile:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    stp x8,x9,[sp,-16]!
+    mov x9,x1                // file buffer
+    mov x6,x2
+    mov x1,x0
+    mov x10,x3
+    mov x0,AT_FDCWD
+    mov x2,#O_RDWR           // flags
+    mov x3,#0                // mode
+    mov x8,#OPEN             // file open
+    svc 0
+    cmp x0,#0                // error ?
+    ble 99f
+    mov x7,x0                // FD save
+
+    mov x0,x7
+    mov x1,x9                // read buffer address
+    mov x2,x6
+    mov x8,#READ             // call system read file
+    svc 0
+    cmp x0,#0                // error read ?
+    blt 97f
+    mov x6,x0                // save file size
+    mov x0,x7                // FD
+    mov x8,#CLOSE            // call system close file
+    svc 0
+    cmp x0,#0                // error close ?
+    blt 96f
+    mov x1,#0                // index buffer
+    mov x2,x9                // file buffer address
+    mov x3,#0                // word length
+    mov x5,#0                // word counter
+1:
+    ldrb w4,[x9,x1]          // load character file buffer
+    cmp x4,#0x0D             // end word ?
+    beq 2f                   // yes
+    add x1,x1,#1             // increment index and length
+    add x3,x3,#1
+    b 1b                     // and loop
+2:              //
+    strb wzr,[x9,x1]          // store 0 final in word
+    cmp x3,#WORDSIZE         // word length  ?
+    ble 3f                   // no ?
+    mov x0,#st_word_end      // structure size
+    madd x0,x5,x0,x10        // compute word item address
+    str x2,[x0,#st_word_adr] // store word address in array word
+    str x3,[x0,#st_word_size] // store word size in array word
+    add x5,x5,#1             // increment word counter
+3:
+    add x1,x1,#2             // increment index buffer (0D0A)
+    cmp x1,x6                // end ?
+    bge 4f
+    add x2,x9,x1             // new word begin
+    mov x3,#0                // init word length
+    b 1b                     // and loop
+4:
+    mov x0,x5                // return word counter
+    b 100f
+96:                          // display error messages
+    ldr x0,qAdrszMessClose
+    bl affichageMess
+    mov x0,#-1               // error
+    b 100f
+97:
+    ldr x0,qAdrszMessRead
+    bl affichageMess
+    mov x0,#-1               // error
+    b 100f
+99:
+    ldr x0,qAdrszMessOpen
+    bl  affichageMess
+    mov x0,#-1               // error
+
+ 100:
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+/***************************************************/
+/*   word analyse                                  */
+/***************************************************/
+/* x0 contains a file buffer */
+/* x1 contains array word address */
+/* x2 contains array element */
+traitWord:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    stp x8,x9,[sp,-16]!
+    stp x10,x12,[sp,-16]!
+    mov x7,x0               // save buffer address
+    mov x8,x1               // save array word address
+    mov x9,x2               // save size
+    mov x10,#0              // init index word array
+    sub sp,sp,#80           // reserve 80 byte on stack for work array
+    mov fp,sp               // work array address
+1:
+    mov x0,#st_word_end     // structure size
+    madd x0,x10,x0,x8       // compute word item address
+    ldr x12,[x0,#st_word_adr]  // load one word address
+    ldr x5,[x0,#st_word_size]  // load word size
+    mov x3,#0               // index word
+    mov x6,#0               // size new word
+2:
+    ldrb w4,[x12,x3]        // load characters on odd index
+    strb w4,[fp,x6]         // store in wprk array on stack
+    add x6,x6,#1            // increment size new word
+    add x3,x3,#2            // increment index
+    cmp x3,x5               // end word ?
+    ble 2b
+    cmp x6,#WORDSIZE        // length new word ok ?
+    ble 10f
+    strb wzr,[fp,x6]        // store 0 final new word
+                            // search new word in word array by binary search
+                            // in french recherche dichotomique
+    mov x3,#0               // low index
+    sub x4,x9,#1            // high index = number of elements - 1
+3:                          // begin search loop
+    cmp x3,x4               // low > high
+    bgt 10f                 // not found
+    add x7,x3,x4            // compute (low + high) /2
+    lsr x7,x7,#1
+    mov x1,#st_word_end     // structure size
+    madd x2,x7,x1,x8         // compute word item address
+    ldr x0,[x2,#st_word_adr]  // load word array address at new index r7
+    mov x1,fp               // search word address
+    bl comparerChaines      // alpha comparison
+    cmp x0,#0
+    beq 4f                  // find
+    add x0,x7,1
+    csel x3,x0,x3,lt        // lower -> index low = index + 1
+    sub x0,x7,1
+    csel x4,x0,x4,gt        // bigger -> index high = index - 1
+    b 3b                    // and loop
+
+4:                          // ok -> display result
+    mov x0,x12
+    bl affichageMess
+    ldr x0,qAdrszMessResult
+    bl affichageMess
+    mov x0,fp
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+10:
+    mov x6,#0                // init new length new word
+    add x10,x10,#1           // increment index word array
+    cmp x10,x9               // end ?
+    blt 1b                   // no -> loop
+
+100:
+    add sp,sp,#80            // stack alignement release work array
+    ldp x10,x12,[sp],16
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"
+

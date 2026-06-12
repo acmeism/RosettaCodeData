@@ -1,0 +1,5 @@
+MODE LEAF = INT;
+MODE NODE = STRUCT( TREE left, TREE right );
+MODE TREE = UNION( VOID, LEAF, REF NODE );
+
+TREE t1   = LOC NODE := ( LEAF( 1 ), LOC NODE := ( LEAF( 2 ), LEAF( 3 ) ) );

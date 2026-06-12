@@ -1,0 +1,168 @@
+'''Practical numbers'''
+
+from itertools import accumulate, chain, groupby, product
+from math import floor, sqrt
+from operator import mul
+from functools import reduce
+from typing import Callable, List
+
+
+def isPractical(n: int) -> bool:
+    '''True if n is a Practical number
+       (a member of OEIS A005153)
+    '''
+    ds = properDivisors(n)
+    return all(map(
+        sumOfAnySubset(ds),
+        range(1, n)
+    ))
+
+
+def sumOfAnySubset(xs: List[int]) -> Callable[[int], bool]:
+    '''True if any subset of xs sums to n.
+    '''
+    def go(n):
+        if n in xs:
+            return True
+        else:
+            total = sum(xs)
+            if n == total:
+                return True
+            elif n < total:
+                h, *t = reversed(xs)
+                d = n - h
+                return d in t or (
+                    d > 0 and sumOfAnySubset(t)(d)
+                ) or sumOfAnySubset(t)(n)
+            else:
+                return False
+    return go
+
+
+# ------------------------- TEST -------------------------
+def main() -> None:
+    '''Practical numbers in the range [1..333],
+       and the OEIS A005153 membership of 666.
+    '''
+
+    xs = [x for x in range(1, 334) if isPractical(x)]
+    print(
+        f'{len(xs)} OEIS A005153 numbers in [1..333]\n\n' + (
+            spacedTable(
+                chunksOf(10)([
+                    str(x) for x in xs
+                ])
+            )
+        )
+    )
+    print("\n")
+    for n in [666]:
+        print(
+            f'{n} is practical :: {isPractical(n)}'
+        )
+
+
+# ----------------------- GENERIC ------------------------
+
+def chunksOf(n: int) -> Callable[[List[str]], List[List[str]]]:
+    '''A series of lists of length n, subdividing the
+       contents of xs. Where the length of xs is not evenly
+       divible, the final list will be shorter than n.
+    '''
+    def go(xs):
+        return [
+            xs[i:n + i] for i in range(0, len(xs), n)
+        ] if 0 < n else None
+    return go
+
+
+def primeFactors(n: int) -> List[int]:
+    '''A list of the prime factors of n.
+    '''
+    def f(qr):
+        r = qr[1]
+        return step(r), 1 + r
+
+    def step(x):
+        return 1 + (x << 2) - ((x >> 1) << 1)
+
+    def go(x):
+        root = floor(sqrt(x))
+
+        def p(qr):
+            q = qr[0]
+            return root < q or 0 == (x % q)
+
+        q = until(p)(f)(
+            (2 if 0 == x % 2 else 3, 1)
+        )[0]
+        return [x] if q > root else [q] + go(x // q)
+
+    return go(n)
+
+
+def properDivisors(n: int) -> List[int]:
+    '''The ordered divisors of n, excluding n itself.
+    '''
+    def go(a, x):
+        return [a * b for a, b in product(
+            a,
+            accumulate(chain([1], x), mul)
+        )]
+    return sorted(
+        reduce(go, [
+            list(g) for _, g in groupby(primeFactors(n))
+        ], [1])
+    )[:-1] if 1 < n else []
+
+
+def listTranspose(xss: List[List[str]]) -> List[List[str]]:
+    '''Transposed matrix'''
+    def go(xss):
+        if xss:
+            h, *t = xss
+            return (
+                [[h[0]] + [xs[0] for xs in t if xs]] + (
+                    go([h[1:]] + [xs[1:] for xs in t])
+                )
+            ) if h and isinstance(h, list) else go(t)
+        else:
+            return []
+    return go(xss)
+
+
+def until(p: Callable[[int], bool]) -> Callable[[int], bool]:
+    '''The result of repeatedly applying f until p holds.
+       The initial seed value is x.
+    '''
+    def go(f):
+        def g(x):
+            v = x
+            while not p(v):
+                v = f(v)
+            return v
+        return g
+    return go
+
+
+# ---------------------- FORMATTING ----------------------
+
+def spacedTable(rows: List[List[str]]) -> str:
+    '''Tabulation with right-aligned cells'''
+    columnWidths = [
+        len(str(row[-1])) for row in listTranspose(rows)
+    ]
+
+    def aligned(s, w):
+        return s.rjust(w, ' ')
+
+    return '\n'.join(
+        ' '.join(
+            map(aligned, row, columnWidths)
+        ) for row in rows
+    )
+
+
+# MAIN ---
+if __name__ == '__main__':
+    main()

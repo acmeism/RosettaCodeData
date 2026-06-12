@@ -1,0 +1,210 @@
+; Definition of structures
+Structure Graph
+  n.i
+  *adj
+EndStructure
+
+Structure BoolValue
+  value.i
+EndStructure
+
+Structure StringValue
+  s.s
+EndStructure
+
+; Auxiliary functions for adjacency matrix
+Procedure.i get_adj_value(*g.Graph, u.i, v.i)
+  ProcedureReturn PeekB(*g\adj + (u * *g\n + v))
+EndProcedure
+
+; Procedimiento renombrado para evitar conflicto de nombres
+Procedure set_adj_value(*g.Graph, u.i, v.i, value.i)
+  PokeB(*g\adj + (u * *g\n + v), value)
+EndProcedure
+
+; Create a new graph on n vertices (0..n-1), no edges.
+Procedure Graph_init(*g.Graph, n.i)
+  *g\n = n
+  *g\adj = AllocateMemory(n * n)
+  If Not *g\adj
+    PrintN("Error: No se pudo asignar memoria")
+    End
+  EndIf
+  FillMemory(*g\adj, n * n, 0)
+EndProcedure
+
+; Free graph memory
+Procedure Graph_free(*g.Graph)
+  If *g\adj
+    FreeMemory(*g\adj)
+    *g\adj = 0
+  EndIf
+EndProcedure
+
+; Return a deep copy of the graph.
+Procedure Graph_clone(*src.Graph, *dest.Graph)
+  Graph_init(*dest, *src\n)
+  CopyMemory(*src\adj, *dest\adj, *src\n * *src\n)
+EndProcedure
+
+; Add an undirected edge u--v.
+Procedure Graph_add_edge(*g.Graph, u.i, v.i)
+  If u < 0 Or u >= *g\n Or v < 0 Or v >= *g\n
+    PrintN("IndexError: vertex index out of bounds")
+    End
+  EndIf
+  set_adj_value(*g, u, v, #True)
+  set_adj_value(*g, v, u, #True)
+EndProcedure
+
+; Degree of vertex u.
+Procedure.i Graph_degree(*g.Graph, u.i)
+  d = 0
+  For v = 0 To *g\n-1
+    If get_adj_value(*g, u, v)
+      d + 1
+    EndIf
+  Next
+  ProcedureReturn d
+EndProcedure
+
+; Compute the Chvátal closure in-place.
+; Repeatedly adds edges {u,v} whenever (u,v) is a non-edge
+; with degree(u) + degree(v) >= n, until no more can be added.
+Procedure Graph_closure(*g.Graph)
+  n = *g\n
+  added = #True
+  While added
+    added = #False
+    For u = 0 To n-1
+      For v = u+1 To n-1
+        If get_adj_value(*g, u, v) = 0
+          If Graph_degree(*g, u) + Graph_degree(*g, v) >= n
+            Graph_add_edge(*g, u, v)
+            added = #True
+            Break 2
+          EndIf
+        EndIf
+      Next
+      If added : Break : EndIf
+    Next
+  Wend
+EndProcedure
+
+; Is the graph complete?
+Procedure.i Graph_isComplete(*g.Graph)
+  For u = 0 To *g\n-1
+    For v = u+1 To *g\n-1
+      If get_adj_value(*g, u, v) = 0
+        ProcedureReturn #False
+      EndIf
+    Next
+  Next
+  ProcedureReturn #True
+EndProcedure
+
+; Find a Hamiltonian cycle in the original graph by simple backtracking.
+; Returns a list of vertices including the return to the start, or None.
+Procedure DFS_Hamiltonian(*g.Graph, *visited, *path, depth.i, *found.BoolValue, *result.StringValue)
+  n = *g\n
+  If *found\value : ProcedureReturn : EndIf
+  u = PeekI(*path + depth * SizeOf(Integer))
+  If depth = n-1
+    If get_adj_value(*g, u, PeekI(*path))
+      For i = 0 To n-1
+        *result\s + Str(PeekI(*path + i * SizeOf(Integer))) + " → "
+      Next
+      *result\s + Str(PeekI(*path))
+      *found\value = #True
+    EndIf
+    ProcedureReturn
+  EndIf
+  For v = 0 To n-1
+    If Not PeekB(*visited + v) And get_adj_value(*g, u, v)
+      PokeB(*visited + v, #True)
+      PokeI(*path + (depth+1) * SizeOf(Integer), v)
+      DFS_Hamiltonian(*g, *visited, *path, depth+1, *found, *result)
+      PokeB(*visited + v, #False)
+      If *found\value : Break : EndIf
+    EndIf
+  Next
+EndProcedure
+
+Procedure.s Graph_Hamiltonian_cycle(*g.Graph)
+  n = *g\n
+  *visited = AllocateMemory(n)
+  *path = AllocateMemory(n * SizeOf(Integer))
+  FillMemory(*visited, n, 0)
+  PokeI(*path, 0)
+  PokeB(*visited, #True)
+  *foundStruct.BoolValue = AllocateMemory(SizeOf(BoolValue))
+  *resultStruct.StringValue = AllocateMemory(SizeOf(StringValue))
+  *foundStruct\value = #False
+  *resultStruct\s = ""
+  DFS_Hamiltonian(*g, *visited, *path, 0, *foundStruct, *resultStruct)
+  found = *foundStruct\value
+  result$ = *resultStruct\s
+  FreeMemory(*visited)
+  FreeMemory(*path)
+  FreeMemory(*foundStruct)
+  FreeMemory(*resultStruct)
+  If found
+    ProcedureReturn result$
+  Else
+    ProcedureReturn ""
+  EndIf
+EndProcedure
+
+; Main program
+; Example: 5 vertices, almost complete graph missing edge 0--1.
+; This satisfies Ore's condition: deg(0)=3, deg(1)=3, 3+3>=5.
+OpenConsole()
+Define g.Graph
+Graph_init(@g, 5)
+
+; Add all edges except (0,1)
+For u = 0 To 4
+  For v = u+1 To 4
+    If Not (u = 0 And v = 1)
+      Graph_add_edge(@g, u, v)
+    EndIf
+  Next
+Next
+PrintN("Original graph degrees:")
+For u = 0 To g\n-1
+  PrintN("  deg(" + Str(u) + ") = " + Str(Graph_degree(@g, u)))
+Next
+
+; Compute closure
+Define closure.Graph
+Graph_clone(@g, @closure)
+Graph_closure(@closure)
+
+PrintN(#CRLF$ + "After Chvátal closure:")
+For u = 0 To closure\n-1
+  line$ = "  " + Str(u) + ":"
+  For v = 0 To closure\n-1
+    If get_adj_value(@closure, u, v)
+      line$ + " " + Str(v)
+    EndIf
+  Next
+  PrintN(line$)
+Next
+
+If Graph_isComplete(@closure)
+  PrintN(#CRLF$ + "Closure is complete ⇒ graph is Hamiltonian (by Bondy-Chvátal).")
+  cycle$ = Graph_Hamiltonian_cycle(@g)
+  If cycle$ <> ""
+    PrintN("Found Hamiltonian cycle in original graph:")
+    PrintN(cycle$)
+  Else
+    PrintN("Unexpected: could not find a Hamiltonian cycle.")
+  EndIf
+Else
+  PrintN(#CRLF$ + "Closure is not complete ⇒ no guarantee of Hamiltonian cycle.")
+EndIf
+Graph_free(@g)
+Graph_free(@closure)
+
+PrintN(#CRLF$ + "Press ENTER to exit"): Input()
+CloseConsole()

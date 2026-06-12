@@ -1,0 +1,79 @@
+require "table2"
+
+$define INF = 32_767
+
+-- Solve the Traveling Salesman Problem using the Held–Karp algorithm.
+-- dist is a 2D square matrix (array of arrays) of pairwise distances.
+-- Returns (min_cost, tour) where tour is a list of node indices, starting
+-- ending at 0.
+local function held_karp(dist)
+    local n = #dist
+    local N = 1 << n  -- number of subsets 2 ^ n
+
+    -- dp[mask][j] = minimum cost to reach subset 'mask' and end at node j
+    local dp = table.create(N)
+    for i = 1, N do dp[i] = table.rep(n, INF) end
+
+    -- parents[mask][j] = previous node before j in optimal path for (mask, j)
+    local parents = table.create(N)
+    for i = 1, N do parents[i] = table.rep(n, -1) end
+
+    -- Base case: start at node 1, mask = 1<<0
+    dp[2][1] = 0
+
+    -- Iterate over all subsets that include node 1.
+    for mask = 1, N - 1, 2 do  -- zero based mask, but 1 based indexing
+        for j = 2, n do
+            if mask & (1 << (j - 1)) == 0 then continue end  -- not in subset
+            local prev_mask = mask ~ (1 << (j - 1))
+            -- Try all possibilities of coming to j from some k in prev_mask.
+            for k = 1, n do
+                if prev_mask & (1 << (k - 1)) == 0 then continue end
+                local cost = dp[prev_mask + 1][k] + dist[k][j]
+                if cost < dp[mask + 1][j] then
+                    dp[mask + 1][j] = cost
+                    parents[mask + 1][j] = k - 1
+                end
+            end
+        end
+    end
+
+    -- Close the tour: return to node 1.
+    local full_mask = N - 1
+    local min_cost = INF
+    local last = 0
+    for j = 2, n do
+        local cost = dp[full_mask + 1][j] + dist[j][1]
+        if cost < min_cost then
+            min_cost = cost
+            last = j - 1
+        end
+    end
+
+    -- Reconstruct path.
+    local path = {}
+    local mask = full_mask
+    local curr = last
+    while curr != 0 do
+        path:insert(curr)
+        local prev = parents[mask + 1][curr + 1]
+        mask ~= 1 << curr
+        curr = prev
+    end
+    path:insert(0)      -- add the start node
+    path:reverse()      -- reverse to get 0 -> ... -> last
+    path:insert(0)      -- and return to 0
+    return min_cost, path
+end
+
+-- Example test case: 4 cities, symmetric distances.
+local dist_matrix = {
+    {0,  2,  9, 10},
+    {1,  0,  6,  4},
+    {15, 7,  0,  8},
+    {6,  3, 12,  0}
+}
+
+local cost, tour = held_karp(dist_matrix)
+print($"Minimum tour cost: {cost}")
+print($"Tour: {tour:concat(", ")}")

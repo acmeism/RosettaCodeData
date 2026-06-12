@@ -1,0 +1,135 @@
+HAI 1.3
+
+BTW NKTg Law in Earth orbit - translation of Rust via Pluto
+
+    I HAS A DMDT ITZ -1.8  BTW kg/s
+
+    HOW IZ I MOMENTUM YR M AN YR V
+        FOUND YR PRODUKT OF M AN V
+    IF U SAY SO
+
+    OBTW NKTG1 NUMBARS R 2 BIG SO IT SKALES THEM
+         THE ACHEWL REZULT IZ PRODUKT 10000000 AN NKTG1
+    TLDR
+    HOW IZ I NKTG1 YR X AN YR P
+        FOUND YR PRODUKT OF QUOSHUNT OF X 10000.0 AN QUOSHUNT OF P AN 1000.0
+    IF U SAY SO
+
+    HOW IZ I NKTG2 YR P
+        FOUND YR PRODUKT OF DMDT AN P
+    IF U SAY SO
+
+    HOW IZ I RELATIFERROR YR SIM AN YR NASA
+        FOUND YR PRODUKT OF QUOSHUNT OF DIFF OF SIM AN NASA  AN NASA   AN 100
+    IF U SAY SO
+
+    BTW Simulated NKTg 2025 dataset.
+
+    I HAS A E4      ITZ         10000.0
+    I HAS A E11     ITZ  100000000000.0
+    I HAS A E12     ITZ 1000000000000.0
+    I HAS A E24     ITZ PRODUKT OF E12 AN E12
+
+    O HAI IM SIMDAITA0
+        I HAS A DATE ITZ "01/01/2025"
+        I HAS A X    ITZ PRODUKT OF 1.471012         AN E11
+        I HAS A V    ITZ PRODUKT OF 3.0276           AN E4
+        I HAS A M    ITZ PRODUKT OF 5.97219          AN E24
+    KTHX
+
+    O HAI IM SIMDAITA1
+        I HAS A DATE ITZ "04/01/2025"
+        I HAS A X    ITZ PRODUKT OF 1.494953         AN E11
+        I HAS A V    ITZ PRODUKT OF 2.9791           AN E4
+        I HAS A M    ITZ PRODUKT OF 5.97218999999998 AN E24
+    KTHX
+
+    O HAI IM SIMDAITA2
+        I HAS A DATE ITZ "07/01/2025"
+        I HAS A X    ITZ PRODUKT OF 1.520965         AN E11
+        I HAS A V    ITZ PRODUKT OF 2.9282           AN E4
+        I HAS A M    ITZ PRODUKT OF 5.97218999999997 AN E24
+    KTHX
+
+    O HAI IM SIMDAITA3
+        I HAS A DATE ITZ "10/01/2025"
+        I HAS A X    ITZ PRODUKT OF 1.496328         AN E11
+        I HAS A V    ITZ PRODUKT OF 2.9764           AN E4
+        I HAS A M    ITZ PRODUKT OF 5.97218999999995 AN E24
+    KTHX
+
+    O HAI IM SIMDAITA4
+        I HAS A DATE ITZ "12/31/2025"
+        I HAS A X    ITZ PRODUKT OF 1.471025         AN E11
+        I HAS A V    ITZ PRODUKT OF 3.0276           AN E4
+        I HAS A M    ITZ PRODUKT OF 5.97218999999994 AN E24
+    KTHX
+
+    I HAS A SIM2025 ITZ A BUKKIT
+            SIM2025 HAS A SRS 0 ITZ SIMDAITA0
+            SIM2025 HAS A SRS 1 ITZ SIMDAITA1
+            SIM2025 HAS A SRS 2 ITZ SIMDAITA2
+            SIM2025 HAS A SRS 3 ITZ SIMDAITA3
+            SIM2025 HAS A SRS 4 ITZ SIMDAITA4
+
+    BTW NASA observed velocities.
+
+    O HAI IM OBSAVAISHUN0
+        I HAS A DATE ITZ "01/01/2025"
+        I HAS A V    ITZ PRODUKT OF 3.0287           AN E4
+    KTHX
+
+    O HAI IM OBSAVAISHUN1
+        I HAS A DATE ITZ "04/01/2025"
+        I HAS A V    ITZ PRODUKT OF 2.9791           AN E4
+    KTHX
+
+    O HAI IM OBSAVAISHUN2
+        I HAS A DATE ITZ "07/01/2025"
+        I HAS A V    ITZ PRODUKT OF 2.9291           AN E4
+    KTHX
+
+    O HAI IM OBSAVAISHUN3
+        I HAS A DATE ITZ "10/01/2025"
+        I HAS A V    ITZ PRODUKT OF 2.9778           AN E4
+    KTHX
+
+    O HAI IM OBSAVAISHUN4
+        I HAS A DATE ITZ "12/31/2025"
+        I HAS A V    ITZ PRODUKT OF 3.0286           AN E4
+    KTHX
+
+    I HAS A NASA2025 ITZ A BUKKIT
+            NASA2025 HAS A SRS 0 ITZ OBSAVAISHUN0
+            NASA2025 HAS A SRS 1 ITZ OBSAVAISHUN1
+            NASA2025 HAS A SRS 2 ITZ OBSAVAISHUN2
+            NASA2025 HAS A SRS 3 ITZ OBSAVAISHUN3
+            NASA2025 HAS A SRS 4 ITZ OBSAVAISHUN4
+
+    VISIBLE "Experimental Verification of NKTg Law (Earth 2025)"
+    VISIBLE "Date       Momentum(p)  NKTg1*  NKTg2       v_sim        v_NASA     Error"
+    VISIBLE "--------------------------------------------------------------------------"
+
+    I HAS A DATA
+    IM IN YR ORBITALPLANE UPPIN YR IDX TIL BOTH SAEM IDX AN 5
+        DATA R SIM2025'Z SRS IDX
+        I HAS A P     ITZ I IZ MOMENTUM YR DATA'Z M AN YR DATA'Z V MKAY
+        I HAS A N1    ITZ I IZ NKTG1 YR DATA'Z X AN YR P MKAY
+        I HAS A N2    ITZ I IZ NKTG2 YR P MKAY
+        I HAS A VSIM  ITZ DATA'Z V
+        I HAS A OBZ   ITZ NASA2025'Z SRS IDX
+        I HAS A VNASA ITZ OBZ'Z V
+        I HAS A ERR   ITZ I IZ RELATIFERROR YR DATA'Z V AN YR VNASA MKAY
+        BOTH SAEM DATA'Z DATE AN OBZ'Z DATE, O RLY?
+        YA RLY
+           VISIBLE DATA'Z DATE " " P
+           VISIBLE "                        " N1
+           VISIBLE "                               " N2
+           VISIBLE "                                            " VSIM "     " VNASA "   " ERR "%"
+        NO WAI
+           VISIBLE "FAIL!!! DATA AN OBZ DATE NOT SAEM FOR " IDX
+        OIC
+    IM OUTTA YR ORBITALPLANE
+
+KTHXBYE
+

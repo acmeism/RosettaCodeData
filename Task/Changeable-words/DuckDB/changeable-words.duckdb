@@ -1,0 +1,37 @@
+# Read the dictionary into a table with the entries as the PRIMARY KEY:
+create or replace table unixdict (word VARCHAR PRIMARY KEY);
+
+INSERT INTO unixdict
+FROM read_csv('unixdict.txt', header=false, sep='\t', columns= {'word': 'VARCHAR'})
+where length(word)>11;
+
+# 1 <= ix <= length(w)
+create or replace function words_after (w, ix) as table (
+  with prefix as (select w[0:ix-1] as prefix),
+    suffix as (select w[ix+1:] as suffix),
+    c as (select ascii(w[ix]) as c)
+  select (prefix || chr(next::INT) || suffix) as word
+  from prefix, suffix, c, range(c+1, 123) _(next)  -- ascii('z') is 122
+  where word IN( from unixdict )
+);
+
+# A table of words that are "greater than" word w and that differ by just one character.
+# LEFT JOIN is needed so we can be sure to iterate over all the relevant values of ix.
+create or replace function changeable_from(w) as table (
+  with recursive cte as (
+    select 1 as ix, '' as word
+    union all
+    select ix+1 as ix, wa.word as word
+    from cte LEFT JOIN words_after(w, ix) as wa ON true
+    where ix <= length(w)
+  )
+  select word
+  from cte
+  where word is not null and word !=''
+);
+
+# Putting it all together:
+SELECT wt.word
+FROM unixdict u
+CROSS JOIN changeable_from(u.word) AS wt
+ORDER BY wt.word ;

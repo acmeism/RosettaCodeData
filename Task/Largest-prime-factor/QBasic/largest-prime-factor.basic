@@ -1,0 +1,9 @@
+REM No primality testing is even required.
+DIM a AS DOUBLE
+a = 600851475143#
+i = 3
+DO
+    IF INT(a / i) = a / i THEN a = a / i
+    i = i + 2
+LOOP UNTIL a = i    ' o WHILE a <> i
+PRINT a

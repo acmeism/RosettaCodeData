@@ -1,0 +1,9 @@
+FOR n = 1 TO 50
+    p = n
+    FOR i = 2 TO n / 2
+        IF n MOD i = 0 THEN p = p * i
+    NEXT i
+    IF (n - 1) MOD 5 = 0 THEN PRINT
+    PRINT USING "###########"; p;
+NEXT n
+END

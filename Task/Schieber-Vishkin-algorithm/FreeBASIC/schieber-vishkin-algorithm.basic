@@ -1,0 +1,195 @@
+Type Node
+    child As Integer
+    sib As Integer
+    parent As Integer
+End Type
+
+Sub compute_alfa(node As Integer, nodes() As Node, beta() As Integer, alfa() As Integer)
+    ' s7: Compute alfa, top-down
+    alfa(node) = alfa(nodes(node).parent) Or (beta(node) And -beta(node))
+
+    If nodes(node).child <> 0 Then compute_alfa(nodes(node).child, nodes(), beta(), alfa())
+
+    ' s8: Continue traversal
+    If nodes(node).sib <> 0 Then compute_alfa(nodes(node).sib, nodes(), beta(), alfa())
+End Sub
+
+Sub process(N As Integer, A() As Integer, pi() As Integer, beta() As Integer, alfa() As Integer, tau() As Integer, lam() As Integer)
+    Dim As Node nodes(0 To 100)
+
+    ' Make triply linked tree
+    Dim As Integer t = 0
+    For v As Integer = N To 1 Step -1
+        Dim As Integer u = 0
+        While A(v) > A(t) Or (A(v) = A(t) And v > t)
+            u = t
+            t = nodes(t).parent
+        Wend
+
+        If u <> 0 Then
+            nodes(v).sib = nodes(u).sib
+            nodes(u).sib = 0
+            nodes(u).parent = v
+            nodes(v).child = u
+        Else
+            nodes(v).sib = nodes(t).child
+        End If
+
+        nodes(t).child = v
+        nodes(v).parent = t
+        t = v
+    Next
+
+    ' Begin first traversal
+    Dim As Integer p = nodes(0).child
+    Dim As Integer m = 0
+    lam(0) = -1
+
+    Do
+        ' s3: Compute beta in the easy case
+        Do
+            m += 1
+            pi(p) = m
+            tau(m) = 0
+            lam(m) = 1 + lam(m Shr 1)
+            If nodes(p).child <> 0 Then
+                p = nodes(p).child
+            Else
+                beta(p) = m
+                Exit Do
+            End If
+        Loop
+
+        ' s4: Compute tau, bottom-up
+        Do
+            tau(beta(p)) = nodes(p).parent
+
+            If nodes(p).sib <> 0 Then
+                p = nodes(p).sib
+                Exit Do
+            End If
+
+            p = nodes(p).parent
+
+            ' Compute beta in the hard case
+            If p <> 0 Then
+                Dim h As Integer = lam(m And -pi(p))
+                beta(p) = ((m Shr h) Or 1) Shl h
+            Else
+                Exit Do, Do
+            End If
+        Loop
+    Loop While p <> 0
+
+    ' Begin second traversal
+    p = nodes(0).child
+    lam(0) = lam(m)
+    pi(0) = 0 : beta(0) = 0 : alfa(0) = 0
+
+    ' Perform second traversal
+    If p <> 0 Then compute_alfa(p, nodes(), beta(), alfa())
+End Sub
+
+Function nca(x As Integer, y As Integer, beta() As Integer, alfa() As Integer, tau() As Integer, lam() As Integer, pi() As Integer) As Integer
+    Dim As Integer h, k, j, l
+
+    ' Find common height
+    If beta(x) <= beta(y) Then
+        h = lam(beta(y) And -beta(x))
+    Else
+        h = lam(beta(x) And -beta(y))
+    End If
+
+    ' Find true height
+    k = alfa(x) And alfa(y) And -(1 Shl h)
+    If k = 0 Then
+        h = 0
+    Else
+        h = lam(k And -k)
+    End If
+
+    ' Find beta[z]
+    j = ((beta(x) Shr h) Or 1) Shl h
+
+    ' Find x' and y'
+    If j <> beta(x) Then
+        l = lam(alfa(x) And ((1 Shl h) - 1))
+        x = tau(((beta(x) Shr l) Or 1) Shl l)
+    End If
+
+    If j <> beta(y) Then
+        l = lam(alfa(y) And ((1 Shl h) - 1))
+        y = tau(((beta(y) Shr l) Or 1) Shl l)
+    End If
+
+    ' Find z
+    Return Iif(pi(x) <= pi(y), x, y)
+End Function
+
+Sub solve_test_case(m As Integer, values() As Integer, queries() As Integer, num_queries As Integer, expected() As Integer)
+    Dim As Integer A(100), R(100), B(100)
+    Dim As Integer pi(100), beta(100), alfa(100), tau(100), lam(100)
+
+    A(0) = 2147483647
+    Dim As Integer N = 1, cnt = 0, oldx = 0
+
+    For i As Integer = 1 To m
+        Dim As Integer x = values(i)
+        If i > 1 And x <> oldx Then
+            A(N) = cnt
+            R(N) = i
+            N += 1
+            cnt = 0
+        End If
+        B(i) = N
+        cnt += 1
+        oldx = x
+    Next
+    A(N) = cnt
+    R(N) = m + 1
+
+    process(N, A(), pi(), beta(), alfa(), tau(), lam())
+
+    Print "Queries and Results:"
+    For q As Integer = 1 To num_queries
+        Dim As Integer i1 = queries((q - 1) * 2 + 1)
+        Dim As Integer j1 = queries((q - 1) * 2 + 2)
+        Dim As Integer x1 = B(i1)
+        Dim As Integer y1 = B(j1)
+        Dim As Integer z
+
+        If x1 = y1 Then
+            z = j1 - i1 + 1
+        Else
+            If x1 + 1 <> y1 Then
+                z = A(nca(x1 + 1, y1 - 1, beta(), alfa(), tau(), lam(), pi()))
+            Else
+                z = 0
+            End If
+            If (R(x1) - i1) > z Then z = R(x1) - i1
+            If (A(y1) - R(y1) + j1 + 1) > z Then z = A(y1) - R(y1) + j1 + 1
+        End If
+
+        Print "Query: "; i1; " "; j1
+        Print "Result: "; z; " (Expected: "; expected(q); ")"
+        If z <> expected(q) Then Print "  WARNING: Result doesn't match expected output"
+    Next
+    Print
+End Sub
+
+' Hard-coded test data
+Dim As Integer values(1 To 10) = {-1, -1, 1, 1, 1, 1, 3, 10, 10, 10}
+Dim As Integer queries(1 To 6) = {2, 3, 1, 10, 5, 10}
+Dim As Integer expected(1 To 3) = {1, 4, 3}
+
+Print "Test Case 1:"
+Print "Size: 10, Queries: 3"
+Print "Values: ";
+For i As Integer = 1 To 10
+    Print values(i);  ' " ";
+Next
+Print
+
+solve_test_case(10, values(), queries(), 3, expected())
+
+Sleep

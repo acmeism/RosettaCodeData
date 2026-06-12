@@ -1,0 +1,150 @@
+(* ===================== Hopcroft-Karp in Mathematica ===================== *)
+(* Uses indexed global symbols for mutable graph state, since Associations   *)
+(* are immutable value types in Mathematica and cannot be mutated in-place.  *)
+
+$NIL = 1;
+$INF = Infinity;
+
+(* ---------- Graph constructor ----------
+   Stores graph data in global indexed symbols:
+     hkM[id], hkN[id], hkAdj[id,u], hkPairU[id,u], hkPairV[id,v], hkDist[id,u]
+   Returns a graph id (integer). *)
+
+$hkNextId = 1;
+
+HKGraph[m_, n_] := Module[{id = $hkNextId},
+  $hkNextId++;
+  hkM[id] = m;
+  hkN[id] = n;
+  Do[hkAdj[id, u] = {}, {u, 1, m + 1}];
+  Do[hkPairU[id, u] = $NIL, {u, 1, m + 1}];
+  Do[hkPairV[id, v] = $NIL, {v, 1, n + 1}];
+  Do[hkDist[id, u] = $INF, {u, 1, m + 1}];
+  id
+]
+
+(* ---------- Add edge (2-based indices) ---------- *)
+AddEdge[id_, u_, v_] :=
+  If[2 <= u <= hkM[id] + 1 && 2 <= v <= hkN[id] + 1,
+    hkAdj[id, u] = Append[hkAdj[id, u], v],
+    Print["Warning: Edge (", u, ",", v, ") out of bounds"]
+  ]
+
+(* ---------- BFS ---------- *)
+BFS[id_] := Module[{queue = {}, u, v, mu},
+  Do[
+    If[hkPairU[id, u] == $NIL,
+      hkDist[id, u] = 0; AppendTo[queue, u],
+      hkDist[id, u] = $INF
+    ],
+    {u, 2, hkM[id] + 1}
+  ];
+  hkDist[id, $NIL] = $INF;
+  While[queue =!= {},
+    u = First[queue]; queue = Rest[queue];
+    If[hkDist[id, u] < hkDist[id, $NIL],
+      Do[
+        mu = hkPairV[id, v];
+        If[hkDist[id, mu] == $INF,
+          hkDist[id, mu] = hkDist[id, u] + 1;
+          AppendTo[queue, mu]
+        ],
+        {v, hkAdj[id, u]}
+      ]
+    ]
+  ];
+  hkDist[id, $NIL] =!= $INF
+]
+
+(* ---------- DFS ---------- *)
+DFS[id_, u_] := Module[{mu, found = False},
+  If[u == $NIL, Return[True]];
+  Do[
+    mu = hkPairV[id, v];
+    If[hkDist[id, mu] == hkDist[id, u] + 1,
+      If[DFS[id, mu],
+        hkPairV[id, v] = u;
+        hkPairU[id, u] = v;
+        found = True;
+        Break[]
+      ]
+    ],
+    {v, hkAdj[id, u]}
+  ];
+  If[!found, hkDist[id, u] = $INF];
+  found
+]
+
+(* ---------- Main algorithm ---------- *)
+HopcroftKarp[id_] := Module[{matchingSize = 0},
+  Do[hkPairU[id, u] = $NIL, {u, 1, hkM[id] + 1}];
+  Do[hkPairV[id, v] = $NIL, {v, 1, hkN[id] + 1}];
+  While[BFS[id],
+    Do[
+      If[hkPairU[id, u] == $NIL && DFS[id, u],
+        matchingSize++
+      ],
+      {u, 2, hkM[id] + 1}
+    ]
+  ];
+  matchingSize
+]
+
+(* ===================== Tests ===================== *)
+
+Print["Running tests..."]
+
+(* Test 1: single edge *)
+g1 = HKGraph[3, 5];
+AddEdge[g1, 2, 5];
+res1 = HopcroftKarp[g1];
+Print["Test 1: Result=", res1, ", Expected=1"];
+Assert[res1 == 1, "Test 1 Failed"]
+
+(* Test 2 *)
+g2 = HKGraph[6, 6];
+AddEdge[g2, 2, 5]; AddEdge[g2, 2, 6]; AddEdge[g2, 6, 2];
+res2 = HopcroftKarp[g2];
+Print["Test 2: Result=", res2, ", Expected=2"];
+Assert[res2 == 2, "Test 2 Failed"]
+
+(* Test 3: Complete bipartite K_{3,3} *)
+g3 = HKGraph[3, 3];
+Do[AddEdge[g3, i, j], {i, 2, 4}, {j, 2, 4}];
+res3 = HopcroftKarp[g3];
+Print["Test 3: Result=", res3, ", Expected=3"];
+Assert[res3 == 3, "Test 3 Failed"]
+
+(* Test 4: No edges *)
+g4 = HKGraph[2, 2];
+res4 = HopcroftKarp[g4];
+Print["Test 4: Result=", res4, ", Expected=0"];
+Assert[res4 == 0, "Test 4 Failed"]
+
+Print["All tests passed!"]
+
+(* ===================== Hard-coded main example ===================== *)
+
+Print["\n--- Running main execution with hard-coded input ---"]
+
+v1 = 4; v2 = 4;
+hardcodedEdges = {{2,2},{2,4},{3,4},{4,5},{5,4},{5,3}};
+elen = Length[hardcodedEdges];
+
+g = HKGraph[v1, v2];
+Print["Hard-coded graph dimensions: m=", v1, ", n=", v2, ", edges=", elen];
+Print["Adding hard-coded edges:"];
+
+Do[
+  {u, v} = e;
+  Print["  Adding edge: 2-based (", u, ", ", v, "), 1-based (", u-1, ", ", v-1, ") "];
+  If[2 <= u <= v1+1 && 2 <= v <= v2+1,
+    AddEdge[g, u, v],
+    Print["Warning: Skipping invalid hard-coded edge (", u, ",", v, ") - indices out of range"]
+  ],
+  {e, hardcodedEdges}
+]
+
+maxMatchingSize = HopcroftKarp[g];
+Print["Maximum matching size is ", maxMatchingSize]
+

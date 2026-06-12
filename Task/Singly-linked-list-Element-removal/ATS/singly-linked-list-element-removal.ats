@@ -1,0 +1,138 @@
+(*------------------------------------------------------------------*)
+
+(* The Rosetta Code linear list type can contain any vt@ype.
+   (The ‘@’ means it doesn’t have to be the size of a pointer.
+   You can read {0 <= n} as ‘for all non-negative n’. *)
+dataviewtype rclist_vt (vt : vt@ype+, n : int) =
+| rclist_vt_nil (vt, 0)
+| {0 <= n} rclist_vt_cons (vt, n + 1) of (vt, rclist_vt (vt, n))
+
+(* A lemma one will need: lists never have negative lengths. *)
+extern prfun {vt : vt@ype}
+lemma_rclist_vt_param
+          {n : int}
+          (lst : !rclist_vt (vt, n)) :<prf> [0 <= n] void
+
+(* Proof of the lemma. *)
+primplement {vt}
+lemma_rclist_vt_param lst =
+  case+ lst of
+  | rclist_vt_nil () => ()
+  | rclist_vt_cons _ => ()
+
+(*------------------------------------------------------------------*)
+
+(* For simplicity, the Rosetta Code linear list deletion routine will
+   be specifically for lists of ‘int’. *)
+
+(* Some things that will be needed. *)
+#include "share/atspre_staload.hats"
+
+(* The list is passed by reference and will be overwritten with
+   the new list. It will be proven that the new list is either
+   equal in length to the original or exactly one node shorter
+   than it.
+     (One might notice that in type expressions the equals sign
+   is ‘==’, even though in executable code it is ‘=’. There are
+   two distinct sublanguages; to my knowledge, this is merely how
+   the operators happen to be assigned in each sublanguage, within
+   the compiler’s prelude.) *)
+extern fun
+rclist_int_delete
+          {m   : int}                   (* ‘for all list lengths m’ *)
+          (lst : &rclist_vt (int, m) >> (* & = pass by reference *)
+                   (* The new type will be a list of the same
+                      length or one less. *)
+                   [n : int | n == m || (m <> 0 && n == m - 1)]
+                   rclist_vt (int, n),
+           x   : int) : void
+
+(* The implementation is rather involved, and it will help to have
+   some convenient notation. The :: operator is already declared
+   in the compiler’s prelude as a right-associative infix operator. *)
+#define NIL rclist_vt_nil ()
+#define :: rclist_vt_cons
+
+implement
+rclist_int_delete {m} (lst, x) =
+  let
+    (* A recursive nested function that finds and deletes the node. *)
+    fun
+    find {k : int | 1 <= k}
+         .<k>. (* Means: ‘k must uniformly decrease towards zero.’
+                  If so, that is proof that ‘find’ terminates. *)
+         (lst : &rclist_vt (int, k) >>
+                  [j : int | j == k || j == k - 1]
+                  rclist_vt (int, j),
+          x   : int) : void =
+      case+ lst of
+      | (_ :: NIL) => ()        (* x was not found. Do nothing. *)
+      | (_ :: v :: _) when v = x =>
+        {
+          val+ @ (u :: tl) = lst (* @ = unfold. tl will be mutable. *)
+          val+ ~ (v :: tail) = tl (* ~ = consume. The v node will be
+                                     freed back into the heap. *)
+          val () = (tl := tail) (* Replace the u node’s tail with the
+                                   shortened tail. *)
+          prval () = fold@ lst  (* Refold. Using ‘prval’ rather than
+                                   ‘val’ means this statement applies
+                                   only to the typechecking phase. *)
+        }
+      | (_ :: _ :: _) =>
+        {
+          val+ @ (_ :: tl) = lst (* Unfold, so tl will be
+                                    referenceable. *)
+          val () = find (tl, x) (* Loop by tail recursion. *)
+          prval () = fold@ lst  (* Refold. Using ‘prval’ rather than
+                                   ‘val’ means this statement applies
+                                   only to the typechecking phase. *)
+        }
+
+    (* The following is needed to prove that lst does not have a
+       negative length. *)
+    prval _ = lemma_rclist_vt_param lst
+  in
+    case+ lst of
+    | NIL => ()                 (* An empty list. Do nothing. *)
+    (* In the following, the ‘~’ means that the v node is consumed.
+       It will be freed back into the heap. The type notation
+       ‘(v : int)’ is because (perhaps due to an overload of the
+       ‘=’ operator) the typechecker had difficulty determining the
+       type of v. *)
+    | ~(v :: tail) when (v : int) = x =>
+      (* The first element matches. Replace the list with its tail. *)
+      lst := tail
+    | (_ :: _) => find (lst, x) (* Search in the list. *)
+  end
+
+(* Now let’s try it. *)
+
+overload delete with rclist_int_delete
+
+val A = 123
+val B = 789
+val C = 456
+
+(* ‘var’ instead of ‘val’, to make lst a mutable variable that can be
+   passed by reference. *)
+var lst = A :: C :: B :: NIL
+
+val () = delete (lst, C)
+
+fun
+loop {k : int | 0 <= k} .<k>.
+     (p : !rclist_vt (int, k)) : void =
+  case+ p of
+  | NIL => ()
+  | head :: tail =>
+    begin
+      println! (head);
+      loop tail
+    end
+prval () = lemma_rclist_vt_param lst
+val () = loop lst
+
+(*------------------------------------------------------------------*)
+
+implement
+main0 () = ()

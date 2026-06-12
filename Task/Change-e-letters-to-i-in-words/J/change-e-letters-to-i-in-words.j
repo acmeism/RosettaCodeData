@@ -1,0 +1,27 @@
+   >(([-.-.)rplc&'ei'&.>@(#~ ('e'&e. * 5<#)@>)) cutLF fread 'unixdict.txt'
+analysis
+atlantis
+billow
+briton
+clinch
+convict
+crisis
+diagnosis
+francis
+galatia
+hardin
+hickman
+infant
+inflict
+iniquity
+inquiry
+jacobian
+martin
+moduli
+pigging
+psychosis
+rabbit
+stirling
+synopsis
+victor
+willis

@@ -1,0 +1,395 @@
+// ------------------------------------------------------------
+//  Erdos–Woods Numbers
+//
+//  Using FutureBasic 7.0.36
+//  November 2025, R.W.
+// ------------------------------------------------------------
+
+include "gmp.incl"
+
+_kPrimeReps      = 25
+_kMaxN           = 300       // search k up to 300
+_kMaxPrimes      = 64        // primes < 300 → 62 primes, fits in 64 bits
+_kMaxPartitions  = 65536     // partition cap for search tree
+
+CFTimeInterval t
+long gN                      // next k to start from when [Next] is pressed
+
+// Global mpz_t reused for speed
+mpz_t gX, gY, gTmp
+mpz_t gResult                // minimal a for last successful Erdos_Woods(k)
+
+// primes list (ascending)
+long gPrimes( _kMaxPrimes - 1 )
+
+// divMask[a] bitmask of which primes divide a
+// bitmask partition supports 64-bit masks
+
+UInt64 gDivMask( _kMaxN - 1 )
+
+// partition storage
+UInt64 gPartSetA( _kMaxPartitions - 1 )
+UInt64 gPartSetB( _kMaxPartitions - 1 )
+UInt64 gPartR(    _kMaxPartitions - 1 )
+
+// sort arrays
+int gOrder( _kMaxN - 2 )
+int gKey(   _kMaxN - 2 )
+
+// ------------------------------------------------------------
+//  BuildPrimes(limit) – fill gPrimes() with primes <= limit
+// ------------------------------------------------------------
+local fn BuildPrimes( limit as long ) as long
+  long np, n, i, pval
+  Boolean isPrime
+  np = 0
+  if limit < 2 then RETURN 0
+  for n = 2 to limit
+    isPrime = _true
+    for i = 0 to np - 1
+      pval = gPrimes(i)
+      if (pval * pval) > n
+        exit for
+      end if
+      if (n MOD pval) == 0
+        isPrime = _false
+        exit for
+      end if
+    next i
+    if isPrime
+      gPrimes(np) = n
+      np = np + 1
+      if np >= _kMaxPrimes
+        exit for
+      end if
+    end if
+  next n
+end fn = np
+
+// ------------------------------------------------------------
+//  FirstOneIndex(mask, np)
+//  Return index (0..np-1) of least significant 1-bit in mask,
+//  or -1 if mask == 0.
+// ------------------------------------------------------------
+local fn FirstOneIndex( mask as UInt64, np as long ) as int
+  int bitIdx
+  if mask == 0 then RETURN -1
+  for bitIdx = 0 to np - 1
+    if (mask AND (1ULL << bitIdx)) <> 0
+      return bitIdx
+    end if
+  next bitIdx
+end fn = -1
+
+// ------------------------------------------------------------
+//  SortPositionsByKey – insertion sort on gKey/gOrder
+// ------------------------------------------------------------
+local fn SortPositionsByKey( n1 as long )
+  long i, j
+  int kVal, idxVal
+  for i = 1 to n1 - 1
+    kVal   = gKey(i)
+    idxVal = gOrder(i)
+    j = i - 1
+    while (j >= 0) && (gKey(j) < kVal)
+      gKey(j + 1)   = gKey(j)
+      gOrder(j + 1) = gOrder(j)
+      j = j - 1
+    wend
+    gKey(j + 1)   = kVal
+    gOrder(j + 1) = idxVal
+  next i
+end fn
+
+// ------------------------------------------------------------
+//  Erdos_Woods( n )
+//
+//  Returns _true if k = n is an Erdős–Woods number and writes
+//  the minimal start value a into gResult.
+// ------------------------------------------------------------
+local fn Erdos_Woods( n as long ) as Boolean
+  long n1, np
+  long a, i
+  long posCount, pIndex, bitIdx
+  long idx
+  UInt64 mask, fullMask
+  long pval
+  UInt64 px, py, w
+  UInt64 mask1, mask2
+
+  if n < 2 then RETURN _false
+  if n > _kMaxN then RETURN _false
+
+  n1 = n - 1
+
+  //  primes < n
+  np = fn BuildPrimes( n1 )
+  if np <= 0 then RETURN _false
+  if np > 63 then RETURN _false   // 64-bit mask limit
+
+  // build gDivMask[a] for a = 0..n-1
+  for a = 0 to n - 1
+    UInt64 m
+    m = 0
+    for bitIdx = 0 to np - 1
+      pval = gPrimes(bitIdx)
+      if (a MOD pval) == 0
+        m = m OR (1ULL << bitIdx)
+      end if
+    next bitIdx
+    gDivMask(a) = m
+  next a
+
+  // heuristic keys for positions 1..n-1
+  posCount = n1
+  for idx = 0 to posCount - 1
+    i = idx + 1                       // positions are 1..n-1
+    mask = gDivMask(i) OR gDivMask(n - i)
+    gKey(idx)   = fn FirstOneIndex( mask, np )   // -1 if no bits
+    gOrder(idx) = i
+  next idx
+
+  // sort positions by descending key
+  fn SortPositionsByKey( posCount )
+
+  // initial partition: (A,B,R) = (0,0, all primes)
+  if np > 0
+    fullMask = (1ULL << np) - 1
+  else
+    fullMask = 0
+  end if
+
+  long partN
+  partN = 1
+  gPartSetA(0) = 0
+  gPartSetB(0) = 0
+  gPartR(0)    = fullMask
+
+  UInt64 newA( _kMaxPartitions - 1 )
+  UInt64 newB( _kMaxPartitions - 1 )
+  UInt64 newR( _kMaxPartitions - 1 )
+
+  // grow partitions over all positions
+  for idx = 0 to posCount - 1
+    i = gOrder(idx)
+
+    UInt64 fac, oth
+    fac = gDivMask(i)
+    oth = gDivMask(n - i)
+
+    long newN
+    newN = 0
+
+    for pIndex = 0 to partN - 1
+      UInt64 setA, setB, rSet
+      setA = gPartSetA(pIndex)
+      setB = gPartSetB(pIndex)
+      rSet = gPartR(pIndex)
+
+      if ((fac AND setA) != 0) || ((oth AND setB) != 0)
+        // keep this partition as-is
+        newA(newN) = setA
+        newB(newN) = setB
+        newR(newN) = rSet
+        newN = newN + 1
+        if newN >= _kMaxPartitions then RETURN _false
+      else
+        // branch on primes still free in rSet for A and B
+
+        mask1 = fac AND rSet
+        for bitIdx = 0 to np - 1
+          w = (1ULL << bitIdx)
+          if (mask1 AND w) <> 0
+            newA(newN) = setA XOR w
+            newB(newN) = setB
+            newR(newN) = rSet XOR w
+            newN = newN + 1
+            if newN >= _kMaxPartitions then RETURN _false
+          end if
+        next bitIdx
+
+        mask2 = oth AND rSet
+        for bitIdx = 0 to np - 1
+          w = (1ULL << bitIdx)
+          if (mask2 AND w) <> 0
+            newA(newN) = setA
+            newB(newN) = setB XOR w
+            newR(newN) = rSet XOR w
+            newN = newN + 1
+            if newN >= _kMaxPartitions then RETURN _false
+          end if
+        next bitIdx
+      end if
+    next pIndex
+
+    partN = newN
+    if partN <= 0 then RETURN _false
+
+    // copy new partitions back
+    for pIndex = 0 to partN - 1
+      gPartSetA(pIndex) = newA(pIndex)
+      gPartSetB(pIndex) = newB(pIndex)
+      gPartR(pIndex)    = newR(pIndex)
+    next pIndex
+  next idx
+
+  if partN <= 0 then RETURN _false
+
+  // compute minimal a using GMP
+  Boolean first
+  first = _false
+
+  for pIndex = 0 to partN - 1
+    px = gPartSetA(pIndex)
+    py = gPartSetB(pIndex)
+
+    fn mpz_set_ui( gX, 1 )
+    fn mpz_set_ui( gY, 1 )
+
+    for bitIdx = 0 to np - 1
+      pval = gPrimes(bitIdx)
+      w    = (1ULL << bitIdx)
+
+      if (px AND w) <> 0
+        fn mpz_mul_ui( gX, gX, pval )
+      end if
+      if (py AND w) <> 0
+        fn mpz_mul_ui( gY, gY, pval )
+      end if
+    next bitIdx
+
+    int ok
+    ok = fn mpz_invert( gTmp, gX, gY )
+    if ok <> 0
+      fn mpz_mul_ui( gTmp, gTmp, n )
+      fn mpz_mod(    gTmp, gTmp, gY )
+      fn mpz_mul(    gTmp, gTmp, gX )
+      fn mpz_sub_ui( gTmp, gTmp, n )
+
+      if first = _false
+        fn mpz_set( gResult, gTmp )
+        first = _true
+      else
+        if fn mpz_cmp( gTmp, gResult ) < 0
+          fn mpz_set( gResult, gTmp )
+        end if
+      end if
+    end if
+  next pIndex
+
+  if first then RETURN _true
+
+end fn = _false
+
+// ------------------------------------------------------------
+//  Erdos_Woods_More – [Next] button handler
+//  Computes the next E–W numbers starting at gN.
+// ------------------------------------------------------------
+void local fn Erdos_Woods_More
+  CFStringRef pline
+  long k
+  int count
+
+  t = fn CACurrentMediaTime
+
+  count = 0
+  k = gN
+
+  print @""
+
+  while (count < 20) and (k <= _kMaxN)
+    if fn Erdos_Woods( k )
+      // mpz_cf2 is an FB wrapper to take
+      // mpz_t value into a CFString
+      pline = fn mpz_cf2( gResult )
+      printf @"%4d -> %@", k, pline
+      count = count + 1
+    end if
+    k = k + 1
+  wend
+
+  gN = k
+
+  if (k > _kMaxN) and (count < 20)
+    printf @"\nNote: Reached search limit; bit mask exceeds UInt64\n¬
+    only %d additional Erdős–Woods numbers can be calculated.", count
+    button 2, NO
+  end if
+
+  printf @"\nElapsed time: %.3f secs\n", ( fn CACurrentMediaTime - t )
+end fn
+
+// ------------------------------------------------------------
+//  Main — compute the first 20 Erdos–Woods numbers
+// ------------------------------------------------------------
+local fn Main
+  CFStringRef pline
+  long k
+  int count
+
+  print @""
+  print @"The first 20 Erdos–Woods numbers and their minimum interval start:"
+  print @""
+
+  count = 0
+  t = fn CACurrentMediaTime
+
+  k = 3
+  while (count < 20) and (k <= _kMaxN)
+    if fn Erdos_Woods( k )
+      // mpz_cf2 is an FB wrapper to take
+      // mpz_t value into a CFString
+      pline = fn mpz_cf2( gResult )
+      printf @"%4d -> %@", k, pline
+      count = count + 1
+    end if
+    k = k + 1
+  wend
+
+  gN = k  // set for next series
+
+  printf @"\nElapsed time: %.3f secs\n", ( fn CACurrentMediaTime - t )
+  print @"Click [Next] for the next sequence."
+
+end fn
+
+// ------------------------------------------------------------
+//  Dialog handler
+// ------------------------------------------------------------
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ev
+    case _btnClick
+      select tag
+        case 2
+          fn Erdos_Woods_More
+      end select
+
+    case _windowShouldClose
+      // clear any global mpz_t
+      fn mpz_clear( gX )
+      fn mpz_clear( gY )
+      fn mpz_clear( gTmp )
+      fn mpz_clear( gResult )
+      end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+// ------------------------------------------------------------
+//  Main
+// ------------------------------------------------------------
+window 1, @"Erdos–Woods Numbers", (0,0,640,560)
+button 2, YES,, @"Next", (500,20,100,20),,, 1
+
+// init global mpz_t
+fn mpz_init( gX )
+fn mpz_init( gY )
+fn mpz_init( gTmp )
+fn mpz_init( gResult )
+
+gN = 3
+
+fn Main
+
+HandleEvents

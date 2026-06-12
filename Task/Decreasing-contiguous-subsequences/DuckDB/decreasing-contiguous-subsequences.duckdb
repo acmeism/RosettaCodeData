@@ -1,0 +1,33 @@
+# The data
+create or replace table sequence as (
+ select row_number() over () as id, c::INTEGER as c
+ from (select unnest(regexp_extract_all(content, '[0-9]+') ) as c
+       from read_text('input.txt') )
+);
+
+# The buckets
+create or replace function bucketize(value) as (
+  case
+    when value <= 0 then NULL
+    when value <= 4 then   4
+    when value < 8  then   8
+    when value < 12 then  12
+    when value < 16 then  16
+    when value < 25 then  25
+    else 100
+  end
+);
+
+# Add a flag to signal the start of a new subsequence, and then form partitions
+create or replace table partitions as (
+  select *, sum(flag) over (order by id) as partition_number
+  from (select *, if(id=1 or (c > (lag(c) over ())), 1, 0) as flag
+        from sequence)
+);
+
+# The classification
+select histogram(decline) as buckets
+from (select partition_number,
+            bucketize( 100 * (max(c) - min(c)) / max(c)) as decline
+      from partitions
+      group by partition_number);

@@ -1,0 +1,33 @@
+DECLARE FUNCTION lcs$ (list$())
+
+DIM pre$(2) '= {"baabababc","baabc","bbbabc"}   'abc
+pre$(0) = "baabababc"
+pre$(1) = "baabc"
+pre$(2) = "bbbabc"
+longitud = UBOUND(pre$)
+
+PRINT "There are"; longitud; "words in the list:  ";
+FOR n = 1 TO longitud
+    PRINT pre$(n); "  ";
+NEXT n
+
+PRINT
+PRINT "The longest common suffix is:  "; lcs$(pre$())
+
+FUNCTION lcs$ (list$())
+    IF UBOUND(list$) = -1 THEN lcs$ = "": EXIT FUNCTION
+
+    ref$ = list$(0)
+    FOR i = 1 TO UBOUND(list$)
+        IF LEN(list$(i)) < LEN(ref$) THEN ref$ = list$(i)
+    NEXT
+
+    FOR i = 1 TO LEN(ref$)
+        sub$ = RIGHT$(ref$, i)
+        FOR j = 0 TO UBOUND(list$)
+            IF RIGHT$(list$(j), i) <> sub$ THEN lcs$ = RIGHT$(ref$, i - 1): EXIT FUNCTION
+        NEXT
+    NEXT
+
+    lcs$ = ref$
+END FUNCTION

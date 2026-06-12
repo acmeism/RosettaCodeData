@@ -1,0 +1,125 @@
+Const UNTREATED = 0
+Const IRREGULAR = 1
+Const REGULAR   = 2
+Const DOSE_FOR_REGULAR = 100
+
+' A subject for the study
+Type Subject
+    cumDose As Double
+    category As Integer
+    hadCovid As Boolean
+    updateCount As Integer
+End Type
+
+'Set treatment category based on cumulative treatment taken.
+Sub categorize (Byref s As Subject)
+    If s.cumDose = 0 Then
+        s.category = UNTREATED
+    Elseif s.cumDose >= DOSE_FOR_REGULAR Then
+        s.category = REGULAR
+    Else
+        s.category = IRREGULAR
+    End If
+End Sub
+
+'Daily update on the subject to check for infection and randomly dose.
+Sub update (Byref s As Subject, pCovid As Double, pStartingTreatment As Double, pRedose As Double, dRange As Double)
+    If Not s.hadCovid Then
+        If Rnd < pCovid Then
+            s.hadCovid = True
+        Elseif (s.cumDose = 0 And Rnd < pStartingTreatment) Or (s.cumDose > 0 And Rnd < pRedose) Then
+            s.cumDose += Int(Rnd * dRange)
+            categorize(s)
+        End If
+    End If
+    s.updateCount += 1
+End Sub
+
+Function sumRanks(a() As Integer) As Integer
+    Dim As Integer sum = 0
+    For i As Integer = Lbound(a) To Ubound(a)
+        sum += a(i)
+    Next i
+    Return sum
+End Function
+
+Function kruskal(a() As Integer, b() As Integer, c() As Integer) As Double
+    Dim As Integer n = Ubound(a) + Ubound(b) + Ubound(c) + 3
+    Dim As Double sra = sumRanks(a())
+    Dim As Double srb = sumRanks(b())
+    Dim As Double src = sumRanks(c())
+    Dim As Double H = 12/(n*(n+1)) * (sra*sra/Ubound(a) + srb*srb/Ubound(b) + src*src/Ubound(c)) - 3*(n+1)
+    Return H
+End Function
+
+'Run the study using the population of size 'N' for 'duration' days
+Sub runStudy(numSubjects As Integer, duration As Integer, interval As Integer)
+    Dim As Integer i
+    Dim As Subject population(numSubjects - 1)
+    For i = 0 To numSubjects - 1
+        population(i).cumDose = 0
+        population(i).category = UNTREATED
+        population(i).hadCovid = False
+        population(i).updateCount = 0
+    Next i
+
+    Dim As Integer unt, untCovid, irr, irrCovid, reg, regCovid, dia
+    Print "Total subjects:"; numSubjects
+    For dia = 0 To duration - 1
+        For i = 0 To numSubjects - 1
+            update(population(i), 0.001, 0.005, 0.25, Int(Rnd * 9) + 3)
+        Next i
+        If (dia + 1) Mod interval = 0 Then
+            Print !"\nDay"; dia + 1
+            unt = 0
+            untCovid = 0
+            irr = 0
+            irrCovid = 0
+            reg = 0
+            regCovid = 0
+            For i = 0 To numSubjects - 1
+                If population(i).category = UNTREATED Then
+                    unt += 1
+                    If population(i).hadCovid Then untCovid += 1
+                Elseif population(i).category = IRREGULAR Then
+                    irr += 1
+                    If population(i).hadCovid Then irrCovid += 1
+                Elseif population(i).category = REGULAR Then
+                    reg += 1
+                    If population(i).hadCovid Then regCovid += 1
+                End If
+            Next i
+            Print "    Untreated: N ="; unt; ", with infection ="; untCovid
+            Print "Irregular Use: N ="; irr; ", with infection ="; irrCovid
+            Print "  Regular Use: N ="; reg; ", with infection ="; regCovid
+        End If
+
+        If dia = duration \ 2 - 1 Then
+            Print !"\nAt midpoint, Infection case percentages are:"
+            Print "  Untreated :"; 100 * untCovid / unt
+            Print "  Irregulars:"; 100 * irrCovid / irr
+            Print "  Regulars  :"; 100 * regCovid / reg
+        End If
+    Next dia
+
+    Print !"\nAt study end, Infection case percentages are:"
+    Print "  Untreated :"; 100 * untCovid / unt; " of group size of"; unt
+    Print "  Irregulars:"; 100 * irrCovid / irr; " of group size of"; irr
+    Print "  Regulars  :"; 100 * regCovid / reg; " of group size of"; reg
+
+    Dim As Integer sinTratar(numSubjects - 1)
+    Dim As Integer esIrregular(numSubjects - 1)
+    Dim As Integer esRegular(numSubjects - 1)
+    For i = 0 To numSubjects - 1
+        If population(i).category = UNTREATED Then sinTratar(i) = population(i).hadCovid
+        If population(i).category = IRREGULAR Then esIrregular(i) = population(i).hadCovid
+        If population(i).category = REGULAR Then esRegular(i) = population(i).hadCovid
+    Next i
+
+    Print !"\nFinal statistics: H = "; kruskal(sinTratar(), esIrregular(), esRegular())
+End Sub
+
+Randomize Timer
+runStudy(1000, 180, 30)
+
+Sleep

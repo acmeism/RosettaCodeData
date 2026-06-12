@@ -1,0 +1,12 @@
+(fenced-hash-clear! d)
+(displayln d)
+(dict-set! d "a" 55)
+(dict-set! d "b" 66)
+(displayln d)
+(fenced-hash-clear! d) ;dict-clear is not defined
+(displayln d)
+(dict-set! d "a" 55)
+(dict-set! d "b" 66)
+(displayln d)
+(dict-remove! d "a")
+(displayln d)

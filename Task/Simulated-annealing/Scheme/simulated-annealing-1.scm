@@ -1,0 +1,202 @@
+(cond-expand
+  (r7rs)
+  (chicken (import r7rs)))
+
+(import (scheme base))
+(import (scheme inexact))
+(import (scheme write))
+(import (only (srfi 1) delete))
+(import (only (srfi 1) iota))
+(import (srfi 27))                      ; Random numbers.
+
+;;
+;; You can do without SRFI-144 by changing fl+ to +, etc.
+;;
+(import (srfi 144))                     ; Optimizations for flonums.
+
+(cond-expand
+  (chicken (import (format)))
+  (else))
+
+(random-source-randomize! default-random-source)
+
+(define (n->ij n)
+  (truncate/ n 10))
+
+(define (ij->n i j)
+  (+ (* 10 i) j))
+
+(define neighbor-offsets
+  '((0 . 1)
+    (1 . 0)
+    (1 . 1)
+    (0 . -1)
+    (-1 . 0)
+    (-1 . -1)
+    (1 . -1)
+    (-1 . 1)))
+
+(define (neighborhood n)
+  (let-values (((i j) (n->ij n)))
+    (let recurs ((offsets neighbor-offsets))
+      (if (null? offsets)
+          '()
+          (let* ((offs (car offsets))
+                 (i^ (+ i (car offs)))
+                 (j^ (+ j (cdr offs))))
+            (if (and (not (negative? i^))
+                     (not (negative? j^))
+                     (< i^ 10)
+                     (< j^ 10))
+                (cons (ij->n i^ j^) (recurs (cdr offsets)))
+                (recurs (cdr offsets))))))))
+
+(define (distance m n)
+  (let-values (((im jm) (n->ij m))
+               ((in jn) (n->ij n)))
+    (flsqrt (inexact (+ (square (- im in)) (square (- jm jn)))))))
+
+(define (shuffle! vec i n)
+  ;; A Fisher-Yates shuffle of n elements of vec, starting at index i.
+  (do ((j 0 (+ j 1)))
+      ((= j n))
+    (let* ((k (+ i j (random-integer (- n j))))
+           (xi (vector-ref vec i))
+           (xk (vector-ref vec k)))
+      (vector-set! vec i xk)
+      (vector-set! vec k xi))))
+
+(define (make-s0)
+  (let ((vec (list->vector (iota 100))))
+    (shuffle! vec 1 99)
+    vec))
+
+(define (swap-s-elements! vec u v)
+  (let loop ((j 1)
+             (iu 0)
+             (iv 0))
+    (cond ((positive? iu)
+           (if (= (vector-ref vec j) v)
+               (begin (vector-set! vec iu v)
+                      (vector-set! vec j u))
+               (loop (+ j 1) iu iv)))
+          ((positive? iv)
+           (if (= (vector-ref vec j) u)
+               (begin (vector-set! vec j v)
+                      (vector-set! vec iv u))
+               (loop (+ j 1) iu iv)))
+          ((= (vector-ref vec j) u) (loop (+ j 1) j 0))
+          ((= (vector-ref vec j) v) (loop (+ j 1) 0 j))
+          (else (loop (+ j 1) 0 0)))))
+
+(define (update-s! vec)
+  (let* ((u (+ 1 (random-integer 99)))
+         (neighbors (delete 0 (neighborhood u) =))
+         (n (length neighbors))
+         (v (list-ref neighbors (random-integer n))))
+    (swap-s-elements! vec u v)))
+
+(define (s->s vec)                      ; s_k -> s_(k + 1)
+  (let ((vec^ (vector-copy vec)))
+    (update-s! vec^)
+    vec^))
+
+(define (path-length vec)               ; E(s)
+  (let loop ((plen (distance (vector-ref vec 0)
+                             (vector-ref vec 99)))
+             (x (vector-ref vec 0))
+             (i 1))
+    (if (= i 100)
+        plen
+        (let ((y (vector-ref vec i)))
+          (loop (fl+ plen (distance x y)) y (+ i 1))))))
+
+(define (make-temperature-procedure kT kmax)
+  (let ((kT (inexact kT))
+        (kmax (inexact kmax)))
+    (lambda (k)
+      (fl* kT (fl- 1.0 (fl/ (inexact k) kmax))))))
+
+(define (probability delta-E T)
+  (if (flnegative? delta-E)
+      1.0
+      (if (flzero? T)
+          0.0
+          (flexp (fl- (fl/ delta-E T))))))
+
+(define fmt10 (string-append "       k       T          E(s)~%"
+                             " -----------------------------~%"))
+(define fmt20 " ~7D     ~3,1F  ~12,5F~%")
+
+(define (simulate-annealing kT kmax)
+  (let* ((temperature (make-temperature-procedure kT kmax))
+         (s0 (make-s0))
+         (E0 (path-length s0))
+         (kmax/10 (truncate-quotient kmax 10))
+         (show (lambda (k T E)
+                 (if (zero? (truncate-remainder k kmax/10))
+                     (cond-expand
+                       (chicken (format #t fmt20 k T E))
+                       (else (display k)
+                             (display " ")
+                             (display T)
+                             (display " ")
+                             (display E)
+                             (newline)))))))
+    (cond-expand
+      (chicken (format #t fmt10))
+      (else))
+    (let loop ((k 0)
+               (s s0)
+               (E E0))
+      (if (= k (+ 1 kmax))
+          s
+          (let* ((T (temperature k))
+                 (_ (show k T E))
+                 (s^ (s->s s))
+                 (E^ (path-length s^))
+                 (delta-E (fl- E^ E))
+                 (P (probability delta-E T)))
+            (if (or (fl=? P 1.0) (fl<=? (random-real) P))
+                (loop (+ k 1) s^ E^)
+                (loop (+ k 1) s E)))))))
+
+(define (display-path vec)
+  (do ((i 0 (+ i 1)))
+      ((= i 100))
+    (let ((x (vector-ref vec i)))
+      (when (< x 10)
+        (display " "))
+      (display x)
+      (display " -> ")
+      (when (= 7 (truncate-remainder i 8))
+        (newline))))
+  (let ((x (vector-ref vec 0)))
+    (when (< x 10)
+      (display " "))
+    (display x)))
+
+(define kT 1)
+(define kmax 1000000)
+
+(newline)
+(display "   kT: ")
+(display kT)
+(newline)
+(display "   kmax: ")
+(display kmax)
+(newline)
+(newline)
+(define s-final (simulate-annealing kT kmax))
+(newline)
+(display "Final path:")
+(newline)
+(display-path s-final)
+(newline)
+(newline)
+(cond-expand
+  (chicken (format #t "Final E(s): ~,5F~%" (path-length s-final)))
+  (else (display "Final E(s): ")
+        (display (path-length s-final))
+        (newline)))
+(newline)

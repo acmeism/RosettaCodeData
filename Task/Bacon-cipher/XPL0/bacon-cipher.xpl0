@@ -1,0 +1,114 @@
+include xpllib; \for StrCmp, StrLen, Print, ToLower, StrNCopy
+
+int Codes;
+
+func GetCode(C);
+char C;
+[if C >= 97 and C <= 122 then return Codes(C-97);
+return Codes(26);
+];
+
+func GetChar(Code);
+char Code;
+int  I;
+[if StrCmp(Codes(26), Code) = 0 then return ^ ;
+for I:= 0 to 26-1 do
+    if StrCmp(Codes(I), Code) = 0 then return 97+I;
+Print("\nCode ^"%s^" is invalid\n", Code);
+exit(1);
+];
+
+proc StrToLower(S);
+char S;
+int  I;
+for I:= 0 to StrLen(S)-1 do S(I):= ToLower(S(I));
+
+func BaconEncode(PlainText, Message);
+char PlainText, Message;
+int  I, Count;
+int  PLen, MLen, ELen;
+char C, P, Et, Mt;
+[PLen:= StrLen(PlainText);
+ MLen:= StrLen(Message);
+ ELen:= 5 * PLen;
+Et:= MAlloc(ELen+1);
+StrToLower(PlainText);
+P:= Et;
+for I:= 0 to PLen-1 do
+    [C:= PlainText(I);
+    StrNCopy(P, GetCode(C), 5);
+    P:= P+5;
+    ];
+P:= P+1;  P(0):= 0;
+
+\'A's to be in lowercase, 'B's in uppercase
+StrToLower(Message);
+Mt:= MAlloc(MLen+1);
+Count:= 0;
+for I:= 0 to MLen-1 do
+    [C:= Message(I);
+    if C >= ^a and C <= ^z then
+        [if Et(Count) = ^A then Mt(I):= C
+        else Mt(I):= C-32;      \uppercase equivalent
+        Count:= Count+1;
+        if Count = ELen then I:= MLen;
+        ]
+    else Mt(I):= C;
+    ];
+Release(Et);
+return Mt;
+];
+
+func BaconDecode(CipherText);
+char CipherText;
+int  I, Count, CLen, PLen;
+char P, Ct, Pt, C, Quintet(6);
+[CLen:= StrLen(CipherText);
+Ct:= MAlloc(CLen+1);
+Count:= 0;
+for I:= 0 to CLen-1 do
+    [C:= CipherText(I);
+    if C >= ^a and C <= ^z then
+        [Ct(Count):= ^A;  Count:= Count+1]
+    else if C >= ^A and C <= ^Z then
+        [Ct(Count):= ^B;  Count:= Count+1];
+    ];
+PLen:= StrLen(Ct) / 5;
+Pt:= MAlloc(PLen+1);
+P:= Ct;
+for I:= 0 to PLen-1 do
+    [StrNCopy(Quintet, P, 5);
+    Quintet(5):= 0;
+    Pt(I):= GetChar(Quintet);
+    P:= P+5;
+    ];
+Pt(PLen):= 0;
+Release(Ct);
+return Pt;
+];
+
+char PlainText, Message, CipherText, HiddenText;
+[\Maps successively from 'a' to 'z' plus ' ' to denote any non-letter
+Codes:= ["AAAAA", "AAAAB", "AAABA", "AAABB", "AABAA",
+         "AABAB", "AABBA", "AABBB", "ABAAA", "ABAAB",
+         "ABABA", "ABABB", "ABBAA", "ABBAB", "ABBBA",
+         "ABBBB", "BAAAA", "BAAAB", "BAABA", "BAABB",
+         "BABAA", "BABAB", "BABBA", "BABBB", "BBAAA",
+         "BBAAB", "BBBAA"];
+PlainText:= "the quick brown fox jumps over the lazy dog";
+
+Message:= "bacon's cipher is a method of steganography created by francis bacon.
+this task is to implement a program for encryption and decryption of
+plaintext using the simple alphabet of the baconian cipher or some
+other kind of representation of this alphabet (make anything signify anything).
+the baconian alphabet may optionally be extended to encode all lower
+case characters individually and/or adding a few punctuation characters
+such as the space.";
+
+CipherText:= BaconEncode(PlainText, Message);
+Print("Cipher text ->\n\n%s\n", CipherText);
+HiddenText:= BaconDecode(CipherText);
+Print("\nHidden text ->\n\n%s\n", HiddenText);
+Release(CipherText);
+Release(HiddenText);
+]

@@ -1,0 +1,30 @@
+CONST False = 0: True = NOT False
+
+DATA 9,3,3,3,2,1,7,8,5
+DATA 5,2,9,3,3,7,8,4,1
+DATA 1,4,3,6,7,3,8,3,2
+DATA 1,2,3,4,5,6,7,8,9
+DATA 4,6,8,7,2,3,3,3,1
+DIM lista(1 TO 5, 1 TO 9) AS INTEGER
+FOR i = 1 TO UBOUND(lista)
+    FOR j = 1 TO UBOUND(lista, 2)
+        READ lista(i, j)
+    NEXT j
+NEXT i
+
+FOR i = 1 TO UBOUND(lista)
+    go = False
+    pass = True
+    c = 0
+    FOR j = 1 TO UBOUND(lista, 2)
+        IF lista(i, j) = 3 THEN
+            c = c + 1
+            go = True
+        ELSE
+            IF go = True AND c <> 3 THEN pass = False
+            go = False
+        END IF
+    NEXT j
+    PRINT i; "   ";
+    IF c = 3 AND pass THEN PRINT "True" ELSE PRINT "False"
+NEXT i

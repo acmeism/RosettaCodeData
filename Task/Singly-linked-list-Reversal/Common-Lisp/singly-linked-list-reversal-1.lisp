@@ -1,0 +1,5 @@
+(defun my-reverse (list)
+  (let ((result nil))
+    (dolist (obj list)
+      (push obj result))
+    result))

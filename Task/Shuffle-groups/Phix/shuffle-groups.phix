@@ -1,0 +1,120 @@
+-- demo\rosetta\ShuffleGroups.exw
+with javascript_semantics
+-- digits are held least-significant first and +1
+-- for digit-counting purposes and fwd indexing,
+-- eg 102 is held as {3,1,2}
+sequence digits = {2}, -- aka "1"
+         dc = {0,1,0,0,0,0,0,0,0,0}, -- digit counts
+         groups = {},
+         bases = {},
+         done = repeat(false,5)
+integer lim = 9, high_tide = 2
+atom t0 = time(), t1 = t0+1
+do
+    sequence wits = {}
+    for m=2 to lim do
+        sequence mdc = repeat(0,10)
+        integer carry = 0
+        for d in digits do
+            d = (d-1)*m+carry
+            carry = floor(d/10)
+            d = d+1-carry*10
+            mdc[d] += 1
+            if mdc[d]>dc[d] then
+                carry = 1 -- (signal fail)
+                exit
+            end if
+        end for
+        if carry=0 then wits &= m end if
+    end for
+    integer l = length(wits)
+    if l then
+        atom n = 0
+        for i=length(digits) to 1 by -1 do
+            n = n*10+digits[i]-1
+        end for
+        groups = append(groups,wits)
+        if length(groups)<=20 then
+            bases &= n
+            if length(groups)==20 then
+                printf(1,"First 20 shuffle groups:\n")
+                printf(1,"index group\n")
+                for k,base in bases do
+                    sequence g = groups[k]
+                    printf(1," %2d   %5d %v ie %v\n", {k, base, g, sq_mul(g,base)})
+                end for
+            end if
+        end if
+        if l>2 and not done[l] then
+            progress("")
+            printf(1,"\nFirst shuffle group with %d witnesses\n",{l})
+            printf(1,"index group\n")
+            sequence g = groups[$]
+            printf(1," %d  %d %v ie %v\n", {length(groups), n, g, sq_mul(n,g)})
+            printf(1,"\nFor the first %d shuffle groups, there are:\n",length(groups))
+            sequence cw = repeat(0,9)
+            for wits in groups do
+                cw[length(wits)] += 1
+            end for
+            integer widest = length(sprintf("%d",max(cw)))
+            string fmt = sprintf("%%%dd with %%d witness%%s\n",widest)
+            for k,c in cw do
+                if c>0 then
+                    printf(1, fmt, {c, k, iff(k>1 ? "es" : "")})
+                end if
+            end for
+            if l=iff(platform()=JS?3:4) then exit end if
+            done[l] = true
+        end if
+    end if
+
+    -- increment digits, updating dc as we go,
+    --  repeat until it does not end with a 0
+    do
+        integer d = digits[1]
+        if d<10 then
+            dc[d] -= 1
+            d += 1
+            dc[d] += 1
+            digits[1] = d
+        else
+            dc[10] -= 1
+            digits[1] = 1
+            dc[1] += 1
+            for i,d in digits from 2 do
+                dc[d] -= 1
+                if d<10 then
+                    d += 1
+                    dc[d] += 1
+                    digits[i] = d
+                    exit
+                end if
+                digits[i] = 1 -- ie '0'
+                dc[1] += 1   -- 0s += 1
+            end for
+        end if
+    until digits[1]!=1 -- (least significant digit!=0)
+
+    integer high_digit = digits[$]
+    if high_digit>5 then
+        -- nowt > 4{9} can be the base of a shuffle group
+        dc = length(digits)&{1,0,0,0,0,0,0,0,0}
+        digits = repeat(1,length(digits))&2
+        lim = 9
+        high_tide = 2
+    elsif high_digit>high_tide then
+        -- the max multiplier for {1,2,3,4} is {9,4,3,2}
+        lim = {4,3,2}[high_digit-2]
+        high_tide += 1
+    end if
+    if time()>t1 then
+        l = length(groups)
+        atom f = l/126853,
+            et = time()-t0
+        string e = elapsed(et),
+               etc = elapsed(et*((1-f)/f))
+        progress("%d/%d (%.2f%%, elapsed:%s, etc:%s)\r",{l,126853,f*100,e,etc})
+        t1 = time()+1
+    end if
+until true=false
+?elapsed(time()-t0)

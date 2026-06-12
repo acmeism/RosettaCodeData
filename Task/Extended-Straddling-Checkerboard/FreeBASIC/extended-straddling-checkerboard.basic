@@ -1,0 +1,208 @@
+Const As String efigs = "0123456789"
+Const As String spc_ = "90"
+Const As String dot = "91"
+Const As String fsl = "98"
+
+Const As String row1 = "AEINOT"
+Const As String row2 = "BCDFGHJKLM"
+Const As String row3 = "PQRSUVWXYZ"
+Const As String row4 = " ."
+
+Dim Shared As String emapKeys(Len(row1) + Len(row2) + Len(row3) + Len(row4))
+Dim Shared As String emapValues(Len(row1) + Len(row2) + Len(row3) + Len(row4))
+Dim As Integer i, index = 0
+
+For i = 1 To Len(row1)
+    emapKeys(index) = Mid(row1, i, 1)
+    emapValues(index) = Str(i - 1)
+    index += 1
+Next
+For i = 1 To Len(row2)
+    emapKeys(index) = Mid(row2, i, 1)
+    emapValues(index) = Str(70 + i - 1)
+    index += 1
+Next
+For i = 1 To Len(row3)
+    emapKeys(index) = Mid(row3, i, 1)
+    emapValues(index) = Str(80 + i - 1)
+    index += 1
+Next
+For i = 1 To Len(row4)
+    emapKeys(index) = Mid(row4, i, 1)
+    emapValues(index) = Str(90 + i - 1)
+    index += 1
+Next
+
+Function getEmapValue(Byval key As String) As String
+    For i As Integer = 0 To Ubound(emapKeys)
+        If emapKeys(i) = key Then Return emapValues(i)
+    Next
+    Return ""
+End Function
+
+Type Map
+    Dim As String keys(100)
+    Dim As String values(100)
+End Type
+
+Dim Shared As Map ewords
+ewords.keys(0) = "ACK"  : ewords.values(0) = "92"
+ewords.keys(1) = "REQ"  : ewords.values(1) = "93"
+ewords.keys(2) = "MSG"  : ewords.values(2) = "94"
+ewords.keys(3) = "RV"   : ewords.values(3) = "95"
+ewords.keys(4) = "GRID" : ewords.values(4) = "96"
+ewords.keys(5) = "SEND" : ewords.values(5) = "97"
+ewords.keys(6) = "SUPP" : ewords.values(6) = "99"
+
+Function getValue(Byval key As String, Byval map As Map) As String
+    For i As Integer = 0 To Ubound(map.keys)
+        If map.keys(i) = key Then Return map.values(i)
+    Next
+    Return ""
+End Function
+
+Dim Shared As String*6 drow1 = "012345"
+
+Dim Shared As String dmapKeys(Len(drow1))
+Dim Shared As String dmapValues(Len(drow1))
+
+For i = 1 To Len(drow1)
+    dmapKeys(i - 1) = Mid(drow1, i, 1)
+    dmapValues(i - 1) = emapKeys(i - 1)
+Next
+
+Dim Shared As Map dwords
+dwords.keys(0) = "92" : dwords.values(0) = "ACK"
+dwords.keys(1) = "93" : dwords.values(1) = "REQ"
+dwords.keys(2) = "94" : dwords.values(2) = "MSG"
+dwords.keys(3) = "95" : dwords.values(3) = "RV"
+dwords.keys(4) = "96" : dwords.values(4) = "GRID"
+dwords.keys(5) = "97" : dwords.values(5) = "SEND"
+dwords.keys(6) = "99" : dwords.values(6) = "SUPP"
+
+Function getDmapValue(Byval key As String) As String
+    For i As Integer = 0 To Ubound(dmapKeys)
+        If dmapKeys(i) = key Then Return dmapValues(i)
+    Next
+    Return ""
+End Function
+
+Function keyExists(Byval key As String, keys() As String) As Boolean
+    For i As Integer = 0 To Ubound(keys)
+        If keys(i) = key Then Return True
+    Next
+    Return False
+End Function
+
+Function encode(Byval s As String) As String
+    s = Ucase(s)
+    Dim As String res = ""
+    Dim As String word = ""
+    Dim As Integer wc = Len(s)
+
+    For i As Integer = 1 To wc
+        Dim As String c = Mid(s, i, 1)
+        If c <> " " And i <> wc Then
+            word &= c
+        Else
+            If i = wc Then word &= c
+            Dim As String add_ = ""
+            If keyExists(word, ewords.keys()) Then
+                add_ = getValue(word, ewords)
+            Elseif keyExists(Left(word, Len(word) - 1), ewords.keys()) And Right(word, 1) = "." Then
+                add_ = getValue(Left(word, Len(word) - 1), ewords) & dot
+            Elseif Left(word, 4) = "CODE" Then
+                add_ = "6" & Mid(word, 5)
+            Else
+                Dim As Boolean figs = False
+                For j As Integer = 1 To Len(word)
+                    Dim As String c = Mid(word, j, 1)
+                    If Instr(efigs, c) > 0 Then
+                        If figs Then
+                            add_ &= c & c
+                        Else
+                            figs = True
+                            add_ &= fsl & c & c
+                        End If
+                    Else
+                        Dim As String ec = getEmapValue(c)
+                        If ec = "" Then
+                            Print "Message contains unrecognized character '" + c + "'."
+                            End
+                        End If
+                        If figs Then
+                            add_ &= fsl & ec
+                            figs = False
+                        Else
+                            add_ &= ec
+                        End If
+                    End If
+                Next
+                If figs And i < wc Then add_ &= fsl
+            End If
+            res &= add_
+            If i < wc Then res &= spc_
+            word = ""
+        End If
+    Next
+    Return res
+End Function
+
+Function decode(Byval s As String) As String
+    Dim As String res = ""
+    Dim As Integer sc = Len(s)
+    Dim As Integer figs = 0
+    Dim As Integer i = 1
+
+    While i <= sc
+        Dim As String c = Mid(s, i, 1)
+        Dim As String twoChars = Mid(s, i, 2)
+
+        If figs Then
+            If twoChars = fsl Then
+                figs = 0
+            Else
+                res &= c
+            End If
+            i += 2
+        Elseif Instr(drow1, c) > 0 Then
+            res &= emapKeys(Val(c))
+            i += 1
+        Elseif c = "6" Then
+            res &= "CODE" & Mid(s, i + 1, 3)
+            i += 4
+        Elseif c = "7" Or c = "8" Then
+            Dim As String mapKey = twoChars
+            For j As Integer = 0 To Ubound(emapKeys)
+                If emapValues(j) = mapKey Then
+                    res &= emapKeys(j)
+                    Exit For
+                End If
+            Next
+            i += 2
+        Elseif c = "9" Then
+            Dim As String d = Mid(s, i + 1, 1)
+            If d = "0" Then
+                res &= " "
+            Elseif d = "1" Then
+                res &= "."
+            Elseif d = "8" Then
+                figs = Not figs
+            Else
+                res &= getValue(c & d, dwords)
+            End If
+            i += 2
+        End If
+    Wend
+
+    Return res
+End Function
+
+Dim As String msg = "Admin ACK your MSG. CODE291 SEND further 2000 SUPP to HQ by 1 March"
+Print !"Message:\n"; msg
+Dim As String enc = encode(msg)
+Print !"\nEncoded:\n"; enc
+Dim As String dec = decode(enc)
+Print !"\nDecoded:\n"; dec
+
+Sleep

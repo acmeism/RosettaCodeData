@@ -1,0 +1,208 @@
+// ------------------------------------------------------------
+//  Prime reciprocal sum
+//
+//  Using FutureBasic 7.0.37
+//  November 2025, R.W.
+//
+// ------------------------------------------------------------
+
+include "gmp.incl"
+
+CFTimeInterval tim, elapsed
+
+// ------------------------------------------------------------
+// Global GMP objects and state
+// ------------------------------------------------------------
+mpz_t mb                 // unused, but kept from template
+mpz_t gPZ                // current prime term
+mpz_t gNumZ, gDenZ       // numerator, denominator of q
+mpz_t gQuotZ             // floor(num/den) temp
+
+mpq_t gSumQ              // cumulative sum of reciprocals
+mpq_t gQ                 // q = 1 / (1 - gSumQ)
+mpq_t gR                 // r = 1 / p
+long gN                  // how many terms have been obtained
+
+// -----------------------------------------------------------
+//  Helper: Abbreviate big numeric CFString: head...tail
+// -----------------------------------------------------------
+local fn AbbrevString( s as CFStringRef, head as int, ¬
+  tail as int ) as CFStringRef
+
+  if s == 0 then RETURN @""
+  CFStringRef a, b, out
+  int nLen
+  nLen = len( s )
+  if nLen <= head + tail then RETURN s
+  a   = left( s, head )
+  b   = right( s, tail )
+  out = @""
+  out = concat( a, @"...", b )
+end fn = out
+
+// -----------------------------------------------------------
+// Helper: Convert mpz_t to CFString
+// -----------------------------------------------------------
+local fn mpz_to_CFString( m as mpz_t ) as CFStringRef
+  CFStringRef result = @""
+  result = fn mpz_cf2( m )  // FB wrapper mpz_t→CFString base 10
+end fn = result
+
+// -----------------------------------------------------------
+// Helper: returns elapsed time in CFStringRef
+// -----------------------------------------------------------
+local fn timeElapsed( et as CFTimeInterval ) as CFStringRef
+  CFStringRef pline
+  if et < 1
+    pline = fn StringWithFormat( @"%.3f ms", et * 1000 )
+  else
+    pline = fn StringWithFormat( @"%.3f secs", et )
+  end if
+end fn = pline
+
+// ------------------------------------------------------------
+//  Next_PR_Term
+//  Compute and print the next term in the sequence
+//  Uses and updates global gSumQ, gPZ, gN
+// ------------------------------------------------------------
+void local fn Next_PR_Term
+  CFStringRef sVal, sAbbrev, pline
+  long        digits
+  tim = fn CACurrentMediaTime
+  fn mpq_set_ui( gQ, 1, 1 )       // gQ = 1
+  fn mpq_sub( gQ, gQ, gSumQ )     // gQ = 1 - gSumQ
+  fn mpq_inv( gQ, gQ )            // gQ = 1 / (1 - gSumQ)
+  fn mpq_get_num( gNumZ, gQ )     // get q numerator & denominator
+
+  fn mpq_get_den( gDenZ, gQ )
+  // Decide whether q is integer or not
+  if fn mpz_cmp_ui( gDenZ, 1 ) == 0
+    // q is an integer: p0 = q
+    fn mpz_set( gPZ, gNumZ )
+  else
+    // q is not integer: p0 = floor(q) + 1 = ceil(q) for positive q
+    fn mpz_fdiv_q( gQuotZ, gNumZ, gDenZ )   // floor(num/den)
+    fn mpz_add_ui( gPZ, gQuotZ, 1 )         // ceil(q)
+  end if
+  // Replace p0 by the next prime ≥ p0
+  fn mpz_nextprime( gPZ, gPZ )
+  // Increment index and print value
+  gN++
+  sVal   = fn mpz_to_CFString( gPZ )
+  digits = len( sVal )
+  if digits <= 41
+    // Small enough: print full value
+    printf @"%2ld: %@", gN, sVal
+  else
+    pline = @""
+    elapsed = fn CACurrentMediaTime - tim
+    // Abbreviated: first 20, last 20, plus digit count
+    sAbbrev = fn AbbrevString( sVal, 20, 20 )
+    pline = fn StringWithFormat(@"%2ld: %@ (digits: %ld)", gN, sAbbrev, digits)
+    print pline;
+    if digits > 600    // print time
+      print @" ";fn timeElapsed( elapsed)
+    else
+      print @
+    end if
+  end if
+  // Update cumulative sum: gSumQ += 1 / gPZ
+  fn mpq_set_z( gR, gPZ )   // gR = p
+  fn mpq_inv( gR, gR )      // gR = 1/p
+  fn mpq_add( gSumQ, gSumQ, gR )
+end fn
+
+// ------------------------------------------------------------
+//  More_PR
+//  Show the next group when [Next] is clicked
+//  Next 5 Prime reciprocal sum
+// ------------------------------------------------------------
+void local fn More_PR
+  long i, max
+  // Rosetta requirement, next 5
+  max = 5
+  if gN < 16
+    print @"Next 5 Prime reciprocal sum:\n"
+  end if
+  i = 0
+  while i < max
+    fn Next_PR_Term
+    i++
+  wend
+  if i < 6 then button 2, NO
+end fn
+
+// ------------------------------------------------------------
+//  Main — compute the first 10 Prime reciprocal sum
+//  Sequence: smallest prime p_n such that
+//            sum_{k<=n} (1/p_k) < 1
+// ------------------------------------------------------------
+local fn Main
+  long k
+
+  // Initialize global mpz / mpq only once
+  fn mpz_init( mb )
+  fn mpz_init( gPZ )
+  fn mpz_init( gNumZ )
+  fn mpz_init( gDenZ )
+  fn mpz_init( gQuotZ )
+
+  fn mpq_init( gSumQ )
+  fn mpq_init( gQ )
+  fn mpq_init( gR )
+
+  // gSumQ = 0
+  fn mpq_set_ui( gSumQ, 0, 1 )
+  gN = 0
+
+  print @"\nThe first 10 Prime reciprocal sum:\n"
+  tim = fn CACurrentMediaTime
+
+  k = 0
+  while k < 10
+    fn Next_PR_Term
+    k++
+  wend
+
+  elapsed = fn CACurrentMediaTime - tim
+  print @"\nElapsed Time: "; fn timeElapsed( elapsed )
+  print @"\nClick [Next] for the next group.\n"
+end fn
+
+// ------------------------------------------------------------
+//  Dialog handler
+// ------------------------------------------------------------
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case 2
+          fn More_PR
+      end select
+
+    case _windowShouldClose
+      // Clear any GMP objects we initialised
+      fn mpz_clear( mb )
+      fn mpz_clear( gPZ )
+      fn mpz_clear( gNumZ )
+      fn mpz_clear( gDenZ )
+      fn mpz_clear( gQuotZ )
+      fn mpq_clear( gSumQ )
+      fn mpq_clear( gQ )
+      fn mpq_clear( gR )
+      end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+// ------------------------------------------------------------
+//  UI setup and kickoff
+// ------------------------------------------------------------
+window 1, @"Prime reciprocal sum", (0,0,620,500)
+button 2, YES,, @"Next", (500,20,100,20),,, 1
+
+fn Main
+
+HandleEvents
+//

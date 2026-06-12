@@ -43,15 +43,12 @@ data.
 
 * `rcd-api-list-all-tasks`
 
-    List all the programming task names directly from rosettacode.org
+    List all the programming and draft task names directly from
+    rosettacode.org
 
 * `rcd-new-langs`
 
     List the RosettaCode languages not yet add to Conf
-
-* `rcd-new-tasks`
-
-    List the RosettaCode tasks not yet add to Conf
 
 * `rcd-samples-per-lang`
 

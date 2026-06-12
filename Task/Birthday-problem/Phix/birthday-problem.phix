@@ -1,0 +1,70 @@
+constant nDays = 365
+
+-- 5 sigma confidence. Conventionally people think 3 sigmas are
+-- good enough, but for the case of 5 people sharing a birthday,
+-- 3 sigmas actually sometimes gives a slightly wrong answer.
+constant nSigmas = 5.0; -- Change to 3 for smaller run time.
+
+function simulate1(integer nPeople, nCollisions)
+--
+-- Given n people, if m of them have same birthday in one run.
+--
+    sequence days = repeat(0,nDays)
+    for p=1 to nPeople do
+        integer day = rand(nDays)
+        days[day] += 1
+        if days[day] == nCollisions then
+            return true
+        end if
+    end for
+    return false;
+end function
+
+function prob(integer np, nCollisions, atom pThresh)
+--
+-- Decide if the probablity of n out of np people sharing a birthday
+-- is above or below pThresh, with nSigmas sigmas confidence.
+-- If pThresh is very low or hi, minimum runs need to be much higher.
+--
+    atom p, d; -- Probablity and standard deviation.
+    integer nRuns = 0, yes = 0;
+
+    while nRuns<10 or (abs(p - pThresh) < (nSigmas * d)) do
+        yes += simulate1(np, nCollisions)
+        nRuns += 1
+        p = yes/nRuns
+        d = sqrt(p * (1 - p) / nRuns);
+    end while
+
+    return {p,d}
+end function
+
+function findHalfChance(integer nCollisions)
+-- Bisect for truth.
+    atom p, dev
+    integer mid = 1,
+            lo = 0,
+            hi = nDays * (nCollisions - 1) + 1;
+
+    while lo < mid or p < 0.5 do
+        mid = floor((hi + lo) / 2)
+        {p,dev} = prob(mid, nCollisions, 0.5)
+
+        if (p < 0.5) then
+            lo = mid + 1;
+        else
+            hi = mid;
+        end if
+
+        if (hi < lo) then
+            return findHalfChance(nCollisions) -- reset
+        end if
+    end while
+
+    return {p,dev,mid}
+end function
+
+for nCollisions=2 to 6 do
+    atom {p,d,np} = findHalfChance(nCollisions)
+    printf(1,"%d collision: %d people, P = %g +/- %g\n", {nCollisions, np, p, d})
+end for

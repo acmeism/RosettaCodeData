@@ -1,0 +1,1 @@
+say $path.IO.extension;

@@ -1,0 +1,157 @@
+Type Row
+    Address As String
+    Street As String
+    House As String
+    Color As String
+End Type
+
+Function Split(Byref text As String, Byval delim As String, result() As String) As Integer
+    Dim As Integer index = 0, start = 1, posic
+
+    Redim result(0)
+
+    Do
+        posic = Instr(start, text, delim)
+        If posic = 0 Then posic = Len(text) + 1
+        Redim Preserve result(index)
+        result(index) = Mid(text, start, posic - start)
+        index += 1
+        start = posic + Len(delim)
+    Loop Until start > Len(text)
+
+    Return index
+End Function
+
+Function Replace(Byref src As String, Byref find As String, Byref repl As String) As String
+    Dim As String result = src
+    Dim As Integer posic = Instr(result, find)
+
+    While posic > 0
+        result = Left(result, posic - 1) & repl & Mid(result, posic + Len(find))
+        posic = Instr(posic + Len(repl), result, find)
+    Wend
+
+    Return result
+End Function
+
+Function isDigit(Byval ch As String) As Boolean
+    Return (Asc(ch) >= Asc("0") And Asc(ch) <= Asc("9"))
+End Function
+
+Sub SeparateHouseNumber(address As String, Byref street As String, Byref house As String)
+    Dim As String fields()
+    Dim As Integer size = 0
+
+    Split(address, " ", fields())
+    size = Ubound(fields) + 1
+
+    Dim As String last = fields(size - 1)
+    Dim As String penult = fields(size - 2)
+
+    If isDigit(Left(last, 1)) Then
+        Dim As Boolean isdig = isDigit(Left(penult, 1))
+        If size > 2 And isdig And Not Left(penult, 3) = "194" Then
+            house = penult & " " & last
+        Else
+            house = last
+        End If
+    Elseif size > 2 Then
+        house = penult & " " & last
+    End If
+
+    street = Rtrim(Left(address, Len(address) - Len(house)))
+End Sub
+
+Dim Shared As String tmpl
+tmpl = _
+    "<!DOCTYPE html>" & _
+    "<html>" & _
+    "<head>" & _
+    "  <title>Rosetta Code - Start a Web Browser</title>" & _
+    "  <meta charset=""UTF-8"">" & _
+    "</head>" & _
+    "<body bgcolor=""#d8dcd6"">" & _
+    "  <table border=""2"">" & _
+    "    <p align=""center"">" & _
+    "      <font face=""Arial, sans-serif"" size=""5"">Split the house number from the street name</font>" & _
+    "      <tr bgcolor=""#02ccfe""><th>Address</th><th>Street</th><th>House Number</th></tr>" & _
+    "      {{ROWS}}" & _
+    "    </p>" & _
+    "  </table>" & _
+    "</body>" & _
+    "</html>"
+
+Dim As String addresses(32) = { _
+    "Plataanstraat 5", _
+    "Straat 12", _
+    "Straat 12 II", _
+    "Dr. J. Straat   12", _
+    "Dr. J. Straat 12 a", _
+    "Dr. J. Straat 12-14", _
+    "Laan 1940 - 1945 37", _
+    "Plein 1940 2", _
+    "1213-laan 11", _
+    "16 april 1944 Pad 1", _
+    "1e Kruisweg 36", _
+    "Laan 1940-'45 66", _
+    "Laan '40-'45", _
+    "Langeloërduinen 3 46", _
+    "Marienwaerdt 2e Dreef 2", _
+    "Provincialeweg N205 1", _
+    "Rivium 2e Straat 59.", _
+    "Nieuwe gracht 20rd", _
+    "Nieuwe gracht 20rd 2", _
+    "Nieuwe gracht 20zw /2", _
+    "Nieuwe gracht 20zw/3", _
+    "Nieuwe gracht 20 zw/4", _
+    "Bahnhofstr. 4", _
+    "Wertstr. 10", _
+    "Lindenhof 1", _
+    "Nordesch 20", _
+    "Weilstr. 6", _
+    "Harthauer Weg 2", _
+    "Mainaustr. 49", _
+    "August-Horch-Str. 3", _
+    "Marktplatz 31", _
+    "Schmidener Weg 3", _
+    "Karl-Weysser-Str. 6" }
+
+Dim As String browser = "start"      ' For Windows
+' Or alternatively for cross-platform
+'Dim As String browser = "xdg-open"  ' For Linux, xBSD
+
+Dim As String colors(1) = {"#d7fffe", "#9dbcd4"}
+Dim As String fileName = "addresses_table.html"
+Dim As Integer ff = Freefile()
+Dim As Row rows(Ubound(addresses))
+Dim As String rowsHtml = ""
+
+For i As Integer = 0 To Ubound(addresses)
+    Dim As String street, house
+    SeparateHouseNumber(addresses(i), street, house)
+
+    If house = "" Then house = "(none)"
+
+    rows(i).Address = addresses(i)
+    rows(i).Street = street
+    rows(i).House = house
+    rows(i).Color = colors(i Mod 2)
+
+    rowsHtml &= "<tr bgcolor=""" & rows(i).Color & """>" & _
+    "<td>" & rows(i).Address & "</td>" & _
+    "<td>" & rows(i).Street & "</td>" & _
+    "<td>" & rows(i).House & "</td>" & _
+    "</tr>" & Chr(10)
+Next i
+
+tmpl = Replace(tmpl, "{{ROWS}}", rowsHtml)
+
+Open fileName For Output As #ff
+Print #ff, tmpl
+Close #ff
+
+Shell(browser & " " & fileName)
+Sleep 5000 ' wait for 5 seconds before deleting file
+Kill(fileName)
+
+Sleep

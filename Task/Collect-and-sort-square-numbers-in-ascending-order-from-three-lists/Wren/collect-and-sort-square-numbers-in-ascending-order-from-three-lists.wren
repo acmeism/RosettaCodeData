@@ -1,0 +1,14 @@
+import "./math" for Int
+
+var lists = [
+    [3,4,34,25,9,12,36,56,36],
+    [2,8,81,169,34,55,76,49,7],
+    [75,121,75,144,35,16,46,35]
+]
+
+var squares = []
+for (list in lists) {
+    for (e in list) if (Int.isSquare(e)) squares.add(e)
+}
+squares.sort()
+System.print(squares)

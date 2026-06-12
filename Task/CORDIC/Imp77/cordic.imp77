@@ -1,0 +1,325 @@
+! This is effectively a fixed-point implementation of CORDIC sin and cos which
+! checks results against the floating-point library used by C. There are a few
+! things we could do to improve accuracy - but this is good enough for a quick
+! hack that does not use any external math library code, other than the afore-
+! mentioned consistency checks.
+
+! The program is based on Michael Bertrand's CORDIC article which has appeared
+! in multiple places including Dr Dobbs magazine, a copy of which can be found
+! at http://www.pennelynn.com/Documents/CUJ/HTML/92HTML/1992024C.HTM
+
+! Note that in creating this implementation, we hit a bug that manifested at
+! the the extremes of the sin and cos functions (where the values are close
+! to 0 or 1) and which I have patched with an approximation since the functions
+! are close to linear at those points.  However the hack to correct that error
+! does make this code a little larger than the C version from which it was
+! derived.
+
+! I have thrown in a local implementation of atan and sqrt for good measure :-)
+
+! Imp77 does not have unsigned integer data types; however since the CORDIC code
+! effectively uses a 1.14 fixed point implementation to implement angles (with
+! the original C sources being compatible with a 16-bit int environment), and
+! the current Imp77 compiler being a 32 bit implementation, unsigned integers
+! have not required.
+
+%begin
+
+%const %integer debug = 0 { 0 : 4 }
+
+!%external %real %fn %spec atan %alias "atanf" (%real angle)  ;! borrow C's math library for use in demo.
+%real %fn atan(%longreal x1)
+  %const %long %real r1= 1.2595802263029547 @  1
+  %const %long %real r2=-8.6186317517509520 @  1
+  %const %long %real r3=-1.2766919133361079 @  0
+  %const %long %real r4=-8.3921038065840512 @ -2
+  %const %long %real s1= 2.7096164294378656 @  1
+  %const %long %real s2= 6.5581320451487386 @  0
+  %const %long %real s3= 2.1441643116703661 @  0
+  %const %long %real s4= 1.2676256708212610 @  0
+  %const %long %real rt3= 1.7320508075688772 @  0
+  %const %long %real piby6= 5.2359877559829887 @ -1
+  %const %long %real piby2m1= 5.7079632679489661 @ -1
+  %const %long %real rt3m1=7.3205080756887728 @ -1
+  %const %long %real tanpiby12= 2.6794919243112271 @ -1
+  %long %real xx1,xsq,constant=0
+  %integer sign=0,inv=0
+
+  %if x1<0 %then sign=1 %and xx1=-x1 %else xx1=x1
+  %if xx1>1.0 %then xx1=1.0/xx1 %and inv=1
+  %if xx1>tanpiby12 %then xx1=(rt3m1*xx1-1.0+xx1)/(xx1+rt3) %and constant=piby6
+  xsq=xx1*xx1
+  xx1 = xx1*(r1/(xsq+s1+r2/(xsq+s2+r3/(xsq+s3+r4/(xsq+s4)))))
+  xx1 = xx1 + constant
+  %if inv=1 %then xx1=1.0-xx1+piby2m1
+  %if sign=1 %then xx1=-xx1
+  %result=xx1 { shorten from %long %real down to %real when returning result }
+%end
+
+!%external %real %fn %spec sqrt %alias "sqrtf" (%real angle)
+%real %fn sqrt(%long %real X)
+  %integer %fn approx integer sqrt(%integer X)
+    %integer k = 1, result = 1
+    k = k+1 %and result = k*k %while result <= X
+    %result = k-1 {note 'off by 1' bug in original C version due to returning k--}
+  %end
+  %integer I
+  %long %real prev A, A, epsilon = X / 100  {accurate enough due to .14 fixed point}
+  %if X = 2.0 %then %result = 1.41421356237 %else I = approx integer sqrt(INT PT(X))
+  %result = I %if X = I*I { exact root }
+  ! Newton's method: A{n} = (A{n-1} + X/A{n-1})/2
+  A = I; prev A = A %and A = (A + X/A)/2.0 %until prev A - epsilon <= A %and A <= prev A + epsilon
+  %result = A
+%end
+
+%real PI = atan(1) * 4
+
+%const %integer K64 = 1<<16, K32 = K64>>1, K16 = K32>>1, K8  = K16>>1
+
+%routine phex(%integer x)
+  %const %string (16) hex = "0123456789ABCDEF"
+  %integer i
+  print symbol(charno(hex, (x >> (i<<2))&15+1)) %for i = 7, -1, 0
+%end
+
+%routine SinCos({unsigned} %integer theta, %integer %name sin, %integer %name cos)
+  %const %integer QUAD1 = 3, QUAD2 = 2, QUAD3 = 0, QUAD4 = 1   { bit 1 for COS x vs -x,  bit 2 for SIN x vs -x }
+  %const %integer NBITS = 14                                   { NBITS is number of bits for CORDIC units. }
+
+  {unsigned} %const %integer CordicBase = 1 << NBITS                      { base for CORDIC units }
+  {unsigned} %const %integer HalfBase = CordicBase >> 1                   { CordicBase / 2 }
+  {unsigned} %const %integer Quad2Boundary = CordicBase << 1              { 2 * CordicBase }
+  {unsigned} %const %integer Quad3Boundary = CordicBase + Quad2Boundary   { 3 * CordicBase }
+
+  ! these owns are initialised on the first call to SinCos:
+  %own %integer %array ArcTan(0:NBITS-1)                       { angles for rotation }
+  %own %integer xInit                                          { initial x projection }
+
+  %integer xcos,xsin  { used to patch a problem that happens near the zeroes and extremes of the results }
+
+  !  USE : Calc sin and cos with integer CORDIC routine.
+  !  IN  : theta = incoming angle (in CORDIC angle units)
+  !  OUT : sin (in CORDIC fixed point units)
+  !        cos (in CORDIC fixed point units)
+  !  NOTE: The incoming angle theta is in CORDIC angle
+  !        units, which subdivide the circle into 64K parts,
+  !        with 0 deg = 0, 90 deg = 16384 (CordicBase), 180 deg
+  !        = 32768, 270 deg = 49152, etc. The calculated sine
+  !        and cosine are in CORDIC fixed point units - an int
+  !        considered as a fraction of 16384 (CordicBase).
+
+  %integer quadrant  { quadrant of incoming angle }
+  %integer z         { incoming angle moved to 1st quad }
+  %integer i         { to index rotations - one per bit }
+  %integer x, y      { projections onto axes }
+  %integer xl, yl    { projections of rotated vector }
+
+  %own %integer initialised = 0
+  %if initialised = 0 %start
+
+    !   USE : Load globals used by SinCos().
+    !   OUT : Loads globals used in SinCos() :
+    !    CordicBase    = base for CORDIC units
+    !    HalfBase      = Cordicbase / 2
+    !    Quad2Boundary = 2 * CordicBase
+    !    Quad3Boundary = 3 * CordicBase
+    !    ArcTan()      = the arctans of 1/(2^i)
+    !    xInit         = initial value for x projection
+    !   NOTE: Must be called once only to initialize before
+    !    calling SinCos(). xInit is sufficiently less than
+    !    CordicBase to exactly compensate for the expansion
+    !    in each rotation.
+
+    {%integer i}      { to index ArcTan() }
+    %real f           { to calc initial x projection }
+    %integer powr     { powers of 2 up to 2^(2*(NBITS-1)) }
+
+    { ArcTans are diminishingly small angles. }
+    powr = 1
+    %for i = 0, 1, NBITS-1 %cycle
+
+      ! We could alternatively have created ArcTan as an array of constants at compile time.
+      ArcTan(i) = INT(atan(1.0/powr)/(PI/2.0)*CordicBase)
+      %if debug > 1 %start
+        print string("Setting ArcTan("); write(i,0); print string(") to "); phex(ArcTan(i)); newline
+      %finish
+      powr = powr << 1
+      ! xInit is initial value of x projection to compensate for expansions. f = 1/sqrt(2/1 * 5/4 * ...
+      ! Normalize as an NBITS binary fraction (multiply by CordicBase) and store in xInit.
+      ! Get f = 0.607253 and xInit = 9949 = 0x26DD for NBITS = 14.
+    %repeat
+    f = 1.0
+
+    powr = 1
+    %for i = 0, 1, NBITS-1 %cycle
+      f = (f * (powr + 1)) / powr
+      powr = powr << 2
+    %repeat
+
+    f = 1.0/sqrt(f);              { sqrt is expensive but only done once during initialisation }
+                                  { Note could have implemented f = rsqrt(f) instead and been faster }
+
+    xInit = INT(CordicBase * f)   { rounding type conversion to fixed point }
+    %if debug # 0 %start
+      print string("xInit = "); print(CordicBase * f, 12)
+      print string(" = "); write(xInit, 0); newlines(2)
+    %finish
+
+    initialised = 1
+  %finish  { initialisation }
+
+  ! Determine quadrant of incoming angle, translate to 1st quadrant.
+  ! Note use of previously calculated values CordicBase, etc. for speed.
+
+  theta = theta & (K64-1)  { reduce to a single circle }
+  %if       theta < CordicBase    %then quadrant = QUAD1 %and z = theta                 %c
+  %else %if theta < Quad2Boundary %then quadrant = QUAD2 %and z = Quad2Boundary - theta %c
+  %else %if theta < Quad3Boundary %then quadrant = QUAD3 %and z = theta - Quad2Boundary %c
+  %else                                 quadrant = QUAD4 %and z = -theta
+
+  ! Initialize projections; Negate z, so same rotations taking angle z to 0 will take (x, y) = (xInit, 0) to (cos, sin).
+  z = z & (K32-1) { this is a bit dodgy on my part as there *are* cases where z is negative above }
+  x = xInit; y = 0; z = -z
+
+  %for i = 0, 1, NBITS-1 %cycle                                                    { Rotate NBITS times. }
+    %if z < 0 %then z = z+ArcTan(i) %and yl = y + (x >> i) %and xl = x - (y >> i)  { Counter-clockwise rotation. } %c
+    %else z = z-ArcTan(i) %and yl = y - (x >> i) %and xl = x + (y >> i)            { Clockwise rotation. }
+    x = xl; y = yl                                                                 { Put new projections into (x,y) for next go. }
+  %repeat
+
+  %if quadrant&1 # 0 %then cos = x %else cos = -x  { Attach signs depending on quadrant. }
+  %if quadrant&4 # 0 %then sin = y %else sin = -y
+
+  xsin=sin {debug}
+  sin = -sin %if Theta < K32
+  sin = sin & (K64-1); sin = sin!(\(K16-1)) %if sin > K16
+
+  xcos=cos {debug}
+  cos = cos & (K64-1); cos = cos!(\(K16-1)) %if cos > K16
+
+  %if debug > 1 %start
+    print string("                  Theta ="); write(theta*1608//1024,8)
+    print string("; SIN(Theta) = "); phex(xsin);
+    print string("; COS(Theta) = "); phex(xcos);
+    newline
+  %finish
+
+  ! There is a bug in this implementation that fails near multiples of 90 degrees -
+  ! this test catches the broken cases and uses an approximation to repair the results :-(
+  ! I will remove these hacks later, if I ever find and fix the bug properly!
+  ! My suspicion is of overflow of a partial 16x16 multiplication somewhere, or maybe a '<<'.
+  %if xsin&16_FFFFC000 # 16_FFFFC000 %and xsin&16_FFFFC000 # 0 %then %start
+    %if                  theta < 16_0400 %start
+      sin = theta*1608//1024
+    %else %if 16_3C00 <= theta < 16_4000
+      sin = K16 - (16_4000-theta)//25
+    %else %if 16_4000 <= theta < 16_4400
+      sin = K16 - (theta-16_4000)//25
+    %else %if 16_7C00 <= theta < 16_8400
+      sin = (16_8000-theta)*1608//1024
+    %else %if 16_BC00 <= theta < 16_C000
+      sin = -K16 + (16_C000-theta)//25
+    %else %if 16_C000 <= theta < 16_C400
+      sin = -K16 + (theta-16_C000)//25
+    %else %if 16_FC00 <= theta
+      sin = -(16_10000-theta)*1608//1024
+    %else
+      print string("Oops, missed a case: sin "); phex(theta); newline; %stop
+    %finish
+  %finish
+
+  %if xcos&16_FFFFC000 # 16_FFFFC000 %and xcos&16_FFFFC000 # 0 %then %start
+    %if                  theta < 16_0400 %start
+      cos = K16 - (theta)//25
+    %else %if 16_3C00 <= theta < 16_4400
+      cos = (16_4000-theta)*1608//1024
+    %else %if 16_7C00 <= theta < 16_8000
+      cos = -K16 + (16_8000-theta)//25
+    %else %if 16_8000 <= theta < 16_8400
+      cos = -K16 + (theta-16_8000)//25
+    %else %if 16_BC00 <= theta < 16_C400
+      cos = (theta-16_C000)*1608//1024
+    %else %if 16_FC00 <= theta
+      cos = K16 - (16_10000-theta)//25
+    %else
+      print string("Oops, missed a case: cos "); phex(theta); newline; %stop
+    %finish
+  %finish
+%end
+
+%external %real %fn %spec sin %alias "sinf" (%real angle)  ;! use C's math lib to check results.
+%external %real %fn %spec cos %alias "cosf" (%real angle)
+
+%real Theta
+%integer i, sinTheta, cosTheta, CheckSinTheta, CheckCosTheta, sinErr = 0, cosErr = 0, err
+
+%routine pround(%integer f, n)
+  ! This is a quick (and rather ugly) hack due to the current Imp compiler
+  ! not implementing all of the usual floating point I/O library calls yet
+
+  %real r, sign = 1.0
+  %integer tens = 0, p
+
+  %if f=0 %start
+    r = 0
+  %else
+    f = -f %and sign = -1.0 %if f < 0
+    r = f / K16
+    r = r * 10.0 %and tens = tens+1 %until 100 <= INT PT(r) < 1000
+    p = tens
+    r = INT(r)  { round to 3 significant digits }
+    r = r / 10.0 %and tens = tens-1 %while tens > 0
+    r = r + 0.000001 { handle real values not exactly representable in decimal }
+  %finish
+  spaces(n - (p+3))
+  %if sign < 0 %then print symbol('-') %else print symbol(' ')
+  print(r, p+2) { library call truncates, doesn't round :-( }
+%end
+
+  ! We get about 3 significant digits of accuracy
+  print string("Note: this CORDIC was implemented to only 14 bits of accuracy for 16 bit machines,"); newline
+  print string("      so we will report results to 3 significant digits."); newlines(2)
+
+  SinCos(INT(-9*K64/(2*PI)), sinTheta, cosTheta)
+  printstring("sin and cos of  -9 is "); pround(sinTheta,6); space; pround(cosTheta,6); newline
+
+  SinCos(INT(0*K64/(2*PI)), sinTheta, cosTheta)
+  printstring("sin and cos of   0 is "); pround(sinTheta,6); space; pround(cosTheta,6); newline
+
+  SinCos(INT(1.5*K64/(2*PI)), sinTheta, cosTheta)
+  printstring("sin and cos of 1.5 is "); pround(sinTheta,6); space; pround(cosTheta,6); newline
+
+  SinCos(INT(6*K64/(2*PI)), sinTheta, cosTheta)
+  printstring("sin and cos of   6 is "); pround(sinTheta,6); space; pround(cosTheta,6); newline
+
+
+  %if debug # 0 %start
+    %for i = 0, 4096, K64 %cycle  { A circle is 64K units }
+      Theta = i*2*PI/K64 { A circle is 2Pi radians }
+
+      SinCos(i, sinTheta, cosTheta)
+
+      print string("Cordic:         Theta = "); phex(i)
+      print string("; Sin(Theta) = "); write(sinTheta, 0)
+      print string("; Cos(Theta) = "); write(cosTheta, 0)
+      newline;
+
+      CheckSinTheta = INT(sin(Theta)*K16); CheckCosTheta = INT(cos(Theta)*K16);
+
+      print string("Floating point: Theta = "); phex(INT(Theta/(2*PI)*K64))
+      print string("; Sin(Theta) = "); write(CheckSinTheta, 0)
+      print string("; Cos(Theta) = "); write(CheckCosTheta, 0)
+      newlines(2)
+
+      err = CheckSinTheta - sinTheta; err = -err %if err < 0; sinErr = sinErr + err
+      err = CheckCosTheta - cosTheta; err = -err %if err < 0; cosErr = cosErr + err
+
+    %repeat
+
+    { Use this to test if algorithmic tweaks improve the accuracy }
+    print string("Cumulative error:  sin = "); write(sinErr, 0)
+    print string(",  cos = "); write(cosErr, 0)
+    newline
+
+  %finish
+%end %of %program

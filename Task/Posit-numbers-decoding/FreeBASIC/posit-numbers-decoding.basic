@@ -1,0 +1,80 @@
+#define MIN(a, b) iif((a) < (b), (a), (b))
+
+Function twosCompliment2On(bits As String, nbits As Integer) As String
+    Dim As Integer i
+    Dim result As String = bits
+
+    For i = 2 To nbits
+        Mid(result, i, 1) = Iif(Mid(bits, i, 1) = "0", "1", "0")
+    Next
+    For i = nbits To 2 Step -1
+        If Mid(result, i, 1) = "0" Then
+            Mid(result, i, 1) = "1"
+            Exit For
+        End If
+        Mid(result, i, 1) = "0"
+    Next
+
+    Return result
+End Function
+
+Function positDecode(nbits As Integer, es As Integer, bits As String) As String
+    If Len(Str(bits)) <> 8 Then
+        Dim fmt As String = Right("0000000000000000", nbits)
+        bits = Right(fmt & bits, nbits)
+    End If
+    Assert(Len(bits) = nbits)
+
+    Dim ibits As String = bits
+    Dim s As Integer = Iif(Mid(bits, 1, 1) = "1", 1, 0)
+    If s Then bits = twosCompliment2On(bits, nbits)
+    Dim r As Integer = Instr(3, bits, Iif(Mid(bits, 2, 1) = "0", "1", "0")) - 2
+    Dim b2z As Integer = Iif(Mid(bits, 2, 1) = "0", 1, 0)
+    Dim exponent As Integer = 0
+    Dim fraction As Integer = 0
+    Dim fs As Double = 1
+    Dim useed As Double = 2 ^ (2 ^ es)
+    Dim As Integer estart, efinish, k
+    If r < 0 Then
+        If b2z Then
+            If s Then Return ibits & " (es=" & es & ") ==> " & """NaR"""
+            Return ibits & " (es=" & es & ") ==> " & """zero"""
+        End If
+        r = nbits - 1
+    Else
+        estart = r + 3
+        efinish = min(r + 2 + es, nbits)
+        exponent = Val("&b" & Mid(bits, estart, efinish - estart + 1))
+        fraction = Val("&b" & Mid(bits, efinish + 1))
+        fs = 2 ^ (nbits - efinish)
+    End If
+
+    k = Iif(b2z, -r, r - 1)
+    Dim res As Double = Iif(s, -1, 1) * useed ^ k * 2 ^ exponent * (1 + fraction / fs)
+
+    Return ibits & " (es=" & es & ") ==> " & res
+End Function
+
+Dim tests(1 To 19) As String = { _
+"16,3,0000110111011101", "16,3,1000000000000000", "16,3,0000000000000000", _
+"16,1,0110110010101000", "16,1,1001001101011000", "16,2,0000000000000001", _
+"16,0,0111111111111111", "16,2,0111111111111111", "16,6,0111111111111110", _
+"8,1,01000000", "8,1,11000000", "8,1,00110000", _
+"8,1,00100000", "8,2,00000001", "8,2,01111111", "8,7,01111110", _
+"32,2,00000000000000000000000000000001", _
+"32,2,01111111111111111111111111111111", _
+"32,5,01111111111111111111111111111110" }
+
+Dim As Integer i, pos1, pos2, nbits, es
+Dim As String test, bits
+For i = 1 To Ubound(tests)
+    test = tests(i)
+    pos1 = Instr(test, ",")
+    pos2 = Instr(pos1 + 1, test, ",")
+    nbits = Val(Mid(test, 1, pos1 - 1))
+    es = Val(Mid(test, pos1 + 1, pos2 - pos1 - 1))
+    bits = Mid(test, pos2 + 1)
+    Print positDecode(nbits, es, bits)
+Next
+
+Sleep

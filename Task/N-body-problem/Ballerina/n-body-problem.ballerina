@@ -1,0 +1,139 @@
+import ballerina/io;
+
+class Vector3D {
+    float x;
+    float y;
+    float z;
+
+    function init(float x, float y, float z) {
+        self.x = x;
+        self.y = y;
+        self.z = z;
+    }
+
+    function add(Vector3D v) returns Vector3D {
+        return new Vector3D(self.x + v.x, self.y + v.y, self.z + v.z);
+    }
+
+    function sub(Vector3D v) returns Vector3D {
+        return new Vector3D(self.x - v.x, self.y - v.y, self.z - v.z);
+    }
+
+    function mul(float s) returns Vector3D {
+        return new Vector3D(s * self.x, s * self.y, s * self.z);
+    }
+
+    function mod() returns float {
+        return (self.x * self.x + self.y * self.y + self.z * self.z).sqrt();
+    }
+}
+
+final Vector3D origin = new(0, 0, 0);
+
+class NBody {
+    float gc;
+    int bodies;
+    int timeSteps;
+    float[] masses;
+    Vector3D[] positions;
+    Vector3D[] velocities;
+    Vector3D[] accelerations;
+
+    function init(string fileName) returns error? {
+        string[] lines = check io:fileReadLines(fileName);
+        string[] gbt = re ` `.split(lines[0]);
+        self.gc = check float:fromString(gbt[0]);
+        self.bodies = check int:fromString(gbt[1]);
+        self.timeSteps = check int:fromString(gbt[2]);
+        self.masses = [];
+        self.positions = [];
+        self.velocities = [];
+        self.accelerations = [];
+        foreach int i in 0..<self.bodies {
+            self.masses.push(check float:fromString(lines[i * 3 + 1]));
+            self.positions.push(check self.decompose(lines[i * 3 + 2]));
+            self.velocities.push(check self.decompose(lines[i * 3 + 3]));
+            self.accelerations.push(origin);
+        }
+        io:println("Contents of ", fileName);
+        io:println(string:'join("\n", ...lines));
+        io:println("\nBody   :      x          y          z    |     vx         vy         vz");
+    }
+
+    private function decompose(string line) returns Vector3D|error {
+        var xyz = re ` `.split(line).map(e => check float:fromString(e));
+        return new Vector3D(xyz[0], xyz[1], xyz[2]);
+    }
+
+    private function resolveCollisions() {
+        foreach int i in 0..<self.bodies {
+            foreach int j in (i + 1)..<self.bodies {
+                if (self.positions[i].x == self.positions[j].x &&
+                    self.positions[i].y == self.positions[j].y &&
+                    self.positions[i].z == self.positions[j].z) {
+                    var t = self.velocities[i];
+                    self.velocities[i] = self.velocities[j];
+                    self.velocities[j] = t;
+                }
+            }
+        }
+    }
+
+    private function computeAccelerations() {
+        foreach int i in 0..<self.bodies {
+            self.accelerations[i] = origin;
+            foreach int j in 0..<self.bodies {
+                if i != j {
+                    var t = self.gc * self.masses[j] / self.positions[i].sub(self.positions[j]).mod().pow(3);
+                    self.accelerations[i] = self.accelerations[i].add(self.positions[j].sub(self.positions[i]).mul(t));
+                }
+            }
+        }
+    }
+
+    private function computeVelocities() {
+        foreach int i in 0..<self.bodies {
+            self.velocities[i] = self.velocities[i].add(self.accelerations[i]);
+        }
+    }
+
+    private function computePositions() {
+        foreach int i in 0..<self.bodies {
+            var t = self.velocities[i].add(self.accelerations[i].mul(0.5));
+            self.positions[i] = self.positions[i].add(t);
+        }
+    }
+
+    function simulate() {
+        self.computeAccelerations();
+        self.computePositions();
+        self.computeVelocities();
+        self.resolveCollisions();
+    }
+
+    function printResults() {
+        foreach int i in 0..<self.bodies {
+            io:print("Body ", i + 1, " : ");
+            io:print(F(self.positions[i].x, 9, 6), "  ");
+            io:print(F(self.positions[i].y, 9, 6), "  ");
+            io:print(F(self.positions[i].z, 9, 6), " | ");
+            io:print(F(self.velocities[i].x, 9, 6), "  ");
+            io:print(F(self.velocities[i].y, 9, 6), "  ");
+            io:println(F(self.velocities[i].z, 9, 6));
+        }
+    }
+}
+
+function F(float f, int size, int prec) returns string {
+    string s = f.toFixedString(prec);
+    return size >= 0 ? s.padStart(size) : s.padEnd(size);
+}
+
+public function main() returns error? {
+    var nb = check new NBody("nbody.txt");
+    foreach int i in 1...nb.timeSteps {
+        io:println("\nCycle ", i);
+        nb.simulate();
+        nb.printResults();
+    }
+}

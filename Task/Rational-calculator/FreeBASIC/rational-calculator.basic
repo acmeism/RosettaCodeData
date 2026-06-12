@@ -1,0 +1,253 @@
+#include once "inc\math\math.bi"
+
+Enum TokenKind
+    TKEOF = 0, TK_NUM, TK_PLUS, TK_MINUS, TK_MUL, TK_DIV, TK_ABS, TK_LPAREN, TK_RPAREN, TK_AT
+End Enum
+
+Type Token
+    kind As TokenKind
+    text As String
+End Type
+
+Rem NOTE: The FreeBASIC math.bi library is extremely minimal.
+' It is not defined in math.bi
+Function rationalFromString(Byref s As String) As math.rational
+    Dim p As Integer = Instr(s, "/")
+    If p = 0 Then
+        Return math.rational(Clng(Val(s)), 1)
+    Else
+        Return math.rational(Clng(Val(Left(s, p-1))), Clng(Val(Mid(s, p+1))))
+    End If
+End Function
+
+' The math.bi one doesn't work.
+Function rat_abs(Byref r As math.rational) As math.rational
+    Dim As Longint n = r.n, d = r.d
+    If n < 0 Then n = -n
+    Return math.rational(n, d)
+End Function
+
+Function rationalToDecimal(r As math.rational) As String
+    If r.d = 0 Then Return "NaN"
+
+    Dim signo As String = ""
+    Dim As Longint n = r.n, d = r.d
+
+    If n < 0 Then signo = "-" : n = -n
+
+    Dim As Longint entero = n \ d, resto = n Mod d
+
+    If resto = 0 Then Return signo & Str(entero)
+
+    Dim dec As String = ""
+    Dim visto(0 To 99999) As Longint
+    For i As Integer = 0 To 99999 : visto(i) = -1 : Next
+
+    Dim As Longint posi = 0, inic = -1
+
+    While resto <> 0
+        If visto(resto) <> -1 Then inic = visto(resto) : Exit While
+        visto(resto) = posi
+        resto *= 10
+        Dim dig As Longint = resto \ d
+        dec &= Chr(dig + Asc("0"))
+        resto Mod= d
+        posi += 1
+    Wend
+
+    If inic = -1 Then
+        Return signo & Str(entero) & "." & dec
+    Else
+        Return signo & Str(entero) & "." _
+        & Left(dec, inic) & "(" & Mid(dec, inic+1) & ")"
+    End If
+End Function
+
+' ----------- Lexer -----------
+Dim Shared src As String
+Dim Shared idx As Integer
+Dim Shared current As Token
+Dim Shared old_value As math.rational = math.rational(0,1)
+
+Function peekChar() As Integer
+    If idx > Len(src) Then Return 0
+    Return Asc(Mid(src, idx, 1))
+End Function
+
+Sub nextChar()
+    idx += 1
+End Sub
+
+Sub skipBlanks()
+    While peekChar() = 32 Or peekChar() = 9
+        nextChar()
+    Wend
+End Sub
+
+Function nextToken() As Token
+    Dim tok As Token
+    skipBlanks()
+
+    Dim c As Integer = peekChar()
+    If c = 0 Then tok.kind = TKEOF : Return tok
+
+    Select Case c
+    Case Asc("+"): nextChar(): tok.kind = TK_PLUS:   tok.text = "+"
+    Case Asc("-"): nextChar(): tok.kind = TK_MINUS:  tok.text = "-"
+    Case Asc("*"): nextChar(): tok.kind = TK_MUL:    tok.text = "*"
+    Case Asc("/"): nextChar(): tok.kind = TK_DIV:    tok.text = "/"
+    Case Asc("("): nextChar(): tok.kind = TK_LPAREN: tok.text = "("
+    Case Asc(")"): nextChar(): tok.kind = TK_RPAREN: tok.text = ")"
+    Case Asc("@"): nextChar(): tok.kind = TK_AT:     tok.text = "@"
+
+    Case Else
+        If c >= Asc("0") And c <= Asc("9") Then
+            Dim s As String = ""
+            While c >= Asc("0") And c <= Asc("9")
+                s &= Chr(c)
+                nextChar()
+                c = peekChar()
+            Wend
+
+            If c = Asc("/") Then
+                s &= "/"
+                nextChar()
+                c = peekChar()
+                While c >= Asc("0") And c <= Asc("9")
+                    s &= Chr(c)
+                    nextChar()
+                    c = peekChar()
+                Wend
+            End If
+
+            tok.kind = TK_NUM
+            tok.text = s
+            Return tok
+        End If
+
+        If (c >= Asc("a") And c <= Asc("z")) Or (c >= Asc("A") And c <= Asc("Z")) Then
+            Dim id As String = ""
+            While ((c >= Asc("a") And c <= Asc("z")) Or (c >= Asc("A") And c <= Asc("Z")))
+                id &= Chr(c)
+                nextChar()
+                c = peekChar()
+            Wend
+
+            If Lcase(id) = "abs" Then
+                tok.kind = TK_ABS
+                tok.text = id
+            Else
+                Print "Unknown identifier: "; id
+                tok.kind = TKEOF
+            End If
+            Return tok
+
+        Else
+            Print "Unrecognized character: "; Chr(c)
+            tok.kind = TKEOF
+            Return tok
+        End If
+    End Select
+
+    Return tok
+End Function
+
+Sub consume(expected As TokenKind)
+    If current.kind <> expected Then
+        Print "Error: expected "; expected; ", found "; current.kind
+        End 1
+    End If
+    current = nextToken()
+End Sub
+
+' ----------- Parser -----------
+Declare Function parseExpr() As math.rational
+Declare Function parseTerm() As math.rational
+Declare Function parseFactor() As math.rational
+
+Function parseExpr() As math.rational
+    Dim res As math.rational = parseTerm()
+
+    While current.kind = TK_PLUS Or current.kind = TK_MINUS
+        Dim op As TokenKind = current.kind
+        consume(current.kind)
+        Dim dcha As math.rational = parseTerm()
+
+        If op = TK_PLUS Then res += dcha Else res -= dcha
+    Wend
+
+    Return res
+End Function
+
+Function parseTerm() As math.rational
+    Dim res As math.rational = parseFactor()
+
+    While current.kind = TK_MUL Or current.kind = TK_DIV
+        Dim op As TokenKind = current.kind
+        consume(current.kind)
+        Dim dcha As math.rational = parseFactor()
+
+        If op = TK_MUL Then res *= dcha Else res /= dcha
+    Wend
+
+    Return res
+End Function
+
+Function parseFactor() As math.rational
+    Select Case current.kind
+
+    Case TK_ABS
+        consume(TK_ABS)
+        Return rat_abs(parseFactor())
+
+    Case TK_PLUS
+        consume(TK_PLUS)
+        Return parseFactor()
+
+    Case TK_MINUS
+        consume(TK_MINUS)
+        Return -parseFactor()
+
+    Case TK_LPAREN
+        consume(TK_LPAREN)
+        Dim r As math.rational = parseExpr()
+        consume(TK_RPAREN)
+        Return r
+
+    Case TK_AT
+        consume(TK_AT)
+        Return old_value
+
+    Case TK_NUM
+        Dim txt As String = current.text
+        consume(TK_NUM)
+        Return rationalFromString(txt)
+
+    Case Else
+        Print "Error: expected number, abs, @, (, + or -"
+        End 1
+    End Select
+End Function
+
+' ----------- MAIN -----------
+Print "Enter empty line to exit"
+
+Do
+    Line Input "> ", src
+
+    If Len(Trim(src)) = 0 Then Exit Do
+
+    idx = 1
+    current = nextToken()
+
+    Dim result As math.rational = parseExpr()
+
+    If current.kind <> TKEOF Then
+        Print "Error: extra characters from position "; idx
+    Else
+        old_value = result
+        Print "= "; rationalToDecimal(result)
+    End If
+Loop
+
+Sleep

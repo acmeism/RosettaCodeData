@@ -1,0 +1,37 @@
+-- Constants.
+local RE  <const> = 6371000  -- radius of earth in meters
+local DD  <const> = 0.001    -- integrate in this fraction of the distance already covered
+local FIN <const> = 1e7      -- integrate only to a height of 10000km, effectively infinity
+
+-- The density of air as a function of height above sea level.
+local function rho(a) return math.exp(-a / 8500) end
+
+-- a = altitude of observer
+-- z = zenith angle (in degrees)
+-- d = distance along line of sight
+local function height(a, z, d)
+    local aa = RE + a
+    local hh = math.sqrt(aa * aa + d * d - 2 * d * aa * math.cos(math.rad(180 - z)))
+    return hh - RE
+end
+
+-- Integrates density along the line of sight.
+local function column_density(a, z)
+    local sum = 0
+    local d = 0
+    while d < FIN do
+        local delta = math.max(DD, DD * d)  -- adaptive step size to avoid it taking forever
+        sum = sum + rho(height(a, z, d + 0.5 * delta)) * delta
+        d   = d + delta
+    end
+    return sum
+end
+
+local function air_mass(a, z) return column_density(a, z) / column_density(a, 0) end
+
+print("Angle     0 m              13700 m")
+print("------------------------------------")
+for z = 0, 90, 5 do
+    local f = "%2d      %11.8f      %11.8f"
+    print(string.format(f, z, air_mass(0, z), air_mass(13700, z)))
+end

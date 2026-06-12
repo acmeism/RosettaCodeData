@@ -1,0 +1,111 @@
+with javascript_semantics
+
+function polynomial(sequence t)
+    atom a = 1,                                 // create characteristic polynomial
+         b = -(t[1,1] + t[2,2] + t[3,3]),                   // = -trace
+         c = ( t[1,1]*t[2,2] + t[2,2]*t[3,3] + t[3,3]*t[1,1] )
+             -(t[2,3]*t[3,2] + t[3,1]*t[1,3] + t[1,2]*t[2,1] ),
+         d = - t[1,1] * t[2,2] * t[3,3]
+             - t[1,2] * t[2,3] * t[3,1]
+             - t[1,3] * t[2,1] * t[3,2]
+             + t[1,1] * t[3,2] * t[2,3]
+             + t[1,2] * t[2,1] * t[3,3]
+             + t[1,3] * t[2,2] * t[3,1];                    // = -determinant
+    return {a, b, c, d}
+end function
+
+function reduction(sequence poly)
+    atom {a, b, c, d} = poly,
+         b3 = power(b,3),
+         b2 = power(b,2),
+         a3 = power(a,3),
+         a2 = power(a,2),
+         delta = 18*a*b*c*d - 4*b3*d + b2*power(c,2) - 4*a*power(c,3) - 27*a2*power(d,2),
+         p = (3*a*c - b2) / (3*a2),
+         q = (2*b3 - 9*a*b*c + 27*a2*d) / (27*a3),
+         d0 = b2 - 3*a*c,
+         d1 = 2*b3 - 9*a*b*c + 27*a2*d;
+    return { delta, p, q, d0, d1 }
+end function
+
+include complex.e
+
+function horner(object x, atom a, b, c, d ) // cubic polynomial using horner's method
+    if complex(x) then
+        complexn r = 0
+        for f in {a,b,c,d} do
+            r = complex_add(complex_mul(r,x),f)
+        end for
+        return r
+    end if
+    return ((a*x + b)*x + c)*x + d
+end function
+
+function solution(atom a, b, /*c*/, /*d*/, delta, p, q, d0, d1)
+    sequence x
+    if abs(delta)<1e-12 then        // multiple real roots
+        if abs(p)<1e-12 then        // triple equal real roots
+            x = {0,0,0}
+        else                        // double real root
+            atom x23 = -3*q/(2*p)
+            x = {3*q/p, x23, x23}
+        end if
+    elsif delta > 0 then            // three distinct real roots
+        x = {}
+        for i=1 to 3 do
+            x &= 2*sqrt(-p/3) * cos(arccos(sqrt(-3/p)*3*q/(2*p))/3 - 2*PI*(i-1)/3)
+        end for
+    else // delta < 0               // one real root and two complex conjugate roots
+        complexn g
+        if d0=0 and d1<0 then
+            g = -power(-d1,1/3)
+        elsif d0<0 and d1=0 then
+            g = -sqrt(-d0)
+        else
+            complex s = complex_sqrt(power(d1,2) - 4*power(d0,3)),
+                   g1 = complex_power(complex_div(complex_add(d1,s),2),1/3),
+                   g2 = complex_power(complex_div(complex_sub(d1,s),2),1/3)
+            g = iff(g1={0,0} ? g2 : g1)
+        end if
+        complex z = complex_mul(g,complex_div(complex_add(-1,complex_sqrt(-3)),2)),
+                x1 = complex_mul(-1/3,complex_add(g,complex_div(d0,g))),
+                x2 = complex_mul(-1/3,complex_add(z,complex_div(d0,z)))
+        x = {x1,x2,complex_conjugate(x2)}
+        for i=1 to 3 do
+            x[i] = complex_sub(x[i],(1/3)*b/a)
+        end for
+        return x
+    end if
+    for i=1 to 3 do
+        x[i] -= (1/3)*b/a
+    end for
+    return x
+end function
+
+function spectrum(sequence m)
+    sequence poly = polynomial(m)
+    atom {a, b, c, d} = poly,
+         {delta, p, q, d0, d1} = reduction(poly);
+    sequence s = solution(a, b, c, d, delta, p, q, d0, d1 ),
+             e = apply(true,horner,{s,a,b,c,d})
+    return {s, e}
+end function
+
+constant r = 1/sqrt(2),
+         m = {{"wren1",    {{ 1, -1,  0}, { 0,  1,  1}, { 0,  0,  1}}},
+              {"wren2",    {{-2, -4,  2}, {-2,  1,  2}, { 4,  2,  5}}},
+              {"triple",   {{ 1, -1,  0}, { 0,  1, -1}, { 0,  0,  1}}},
+              {"double",   {{ 2,  0,  0}, { 0, -1,  0}, { 0,  0, -1}}},
+              {"distinct", {{ 2,  0,  0}, { 0,  3,  4}, { 0,  4,  9}}},
+              {"rotation", {{ 1,  0,  0}, { 0,  r, -r}, { 0,  r,  r}}}}
+for i,pair in m do
+    {string desc, sequence t} = pair
+    printf(1," %d:  %8s matrix: %v\n",{i,desc,t})
+    sequence poly = polynomial(t),
+           reduct = reduction(poly),
+            {s,e} = spectrum(t)
+    printf(1,"          polynomial: %v\n",{poly})
+    printf(1,"           reduction: %v\n",{reduct})
+    printf(1,"         eigenvalues: %v\n",{s})
+    printf(1,"              errors: %v\n",{e})
+end for

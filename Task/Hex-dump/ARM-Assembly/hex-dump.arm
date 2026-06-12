@@ -1,0 +1,189 @@
+/* ARM assembly Raspberry PI  */
+/*  program hexadump.s   */
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.include "../constantes.inc"
+.equ NBCARLIBEL, 45
+
+/*******************************************/
+/*   Macros                              */
+/*******************************************/
+//.include "../../ficmacros32.inc"            @ for developer debugging
+
+/*******************************************/
+/* Initialized data */
+/*******************************************/
+.data
+szMessDebutPgm:    .asciz "Program 32 bits start. \n"
+szCarriageReturn:  .asciz "\n"
+szMessFinOK:       .asciz "Program normal end. \n"
+szTitre1:          .asciz "Dump memory 1"
+szTitre2:          .asciz "Dump memory main"
+
+                   @ title info line display
+szTitleDump:       .ascii "Memory dump : "
+sadr1:             .ascii " address : "
+sBlockAddress:     .ascii "          "
+sTitleDisp:        .fill NBCARLIBEL,1,' '
+                   .asciz "\n"
+                  @ block datas line display
+sAreaBlockAddress: .fill 9, 1, ' '
+                   .ascii " "
+sAreaHexaChar:     .fill 48, 1, ' '
+                   .ascii " "
+sAreaCharAscii:    .fill 16, 1, ' '
+s3mem:             .asciz "\n"
+
+
+/*******************************************/
+/* UnInitialized data */
+/*******************************************/
+.bss
+//buffer_conversion: .skip 40
+.align 4
+
+/*******************************************/
+/*  code section */
+/*******************************************/
+.text
+.global main
+main:
+    ldr r0,iAdrszMessDebutPgm
+    bl affichageMess
+    ldr r0,iAdrszMessDebutPgm
+    mov r1,#4                   @ display 4 blocks
+    ldr r2,iAdrszTitre1
+    bl hexaDump
+
+    adr r0,main
+    add r0,#5                   @ for no block address
+    mov r1,#2                   @ display 2 blocks
+    ldr r2,iAdrszTitre2
+    bl hexaDump
+
+    ldr r0,iAdrszMessFinOK
+    bl affichageMess
+
+100:                              @ standard end of the program
+    mov r0, #0                    @ return code
+    mov r7, #EXIT                 @ request to exit program
+    svc 0                         @ perform system call
+iAdrszMessDebutPgm:       .int szMessDebutPgm
+iAdrszMessFinOK:          .int szMessFinOK
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszTitre1:             .int szTitre1
+iAdrszTitre2:             .int szTitre2
+
+/*******************************************/	
+/* display memory area                  */
+/*******************************************/	
+/*  r0  address memoire  r1 nombre de bloc r2 titre */
+hexaDump:                 @
+    push {r0-r8,fp,lr}
+    mov r4,r0
+    mov r6,r1                  @ number of blocks
+    ldr r1,iAdrsBlockAddress  @ result address
+    bl conversion16
+    mov r7,#0
+    ldr r5,iAdrsTitleDisp      @
+1:                             @ title copy loop
+    ldrb r3,[r2,r7]
+    cmp r3,#0
+    strneb r3,[r5,r7]
+    addne r7,#1
+    bne 1b
+    mov r3,#' '
+2:
+    cmp r7,#NBCARLIBEL
+    strltb r3,[r5,r7]
+    addlt r7,#1
+    blt 2b
+
+    mov r2,r4                  @ memory address begin
+    ldr r0,iAdrszTitleDump     @ display dump title
+    bl affichageMess
+
+    mov r1, r2, ASR #4         @ compute block 16 bytes begin
+    mov r1, r1, LSL #4         @ divide by 16 and  mult by 16
+    mov r8,#3                  @ 3 charaters by byte displayed
+    sub r0,r2,r1               @ memory offset in block
+    mul r5,r0,r8               @ character display offset
+    ldr r0,iAdrsAreaHexaChar       @ store address
+    add r7,r0,r5               @ compute position
+    sub r7,r7,#1               @ in front of the character display
+    mov r0,#'*'                @ store star of memory address begin
+    strb r0,[r7]
+3:                             @ loop display block
+    mov r4,r1                  @ display block address
+    mov r0,r1
+    ldr r1,iAdrsAreaBlockAddress   @ area block address
+    bl conversion16             @ conversion hexa
+    mov r1,r4                   @ restaur block address
+    mov r8,#3
+    mov r2,#0
+4:                              @ begin loop display 16 byte in hexa
+    ldrb r4,[r1,r2]             @ load byte
+    ldr r0,iAdrsAreaHexaChar    @
+    mul r5,r2,r8                @ compute store offset
+    add r0,r5
+    mov r3, r4, ASR #4          @ conversion byte in two hexa characters
+    cmp r3,#9                   @ < 10
+    addle r5,r3,#48             @ number
+    addgt r5,r3,#55             @ letter A-F
+    strb r5,[r0]                @ store result
+    add r0,#1                   @ second character
+    mov r5,r3,LSL #4            @
+    sub r3,r4,r5                @ compute remander divsion by 10
+    cmp r3,#9                   @ < 10
+    addle r5,r3,#48             @ number
+    addgt r5,r3,#55             @ letter A-F
+    strb r5,[r0]                @ store second character
+    add r2,r2,#1                @ increment byte indice
+    cmp r2,#16                  @ block 16 bytes end ?
+    blt 4b                      @ no -> loop
+                                @ display in characters ascii
+    mov r2,#0                   @ byte indice
+5:                              @ begin loop ascii display
+    ldrb r4,[r1,r2]             @ load byte
+    cmp r4,#31                  @ character ascii ?
+    ble 6f                      @ no
+    cmp r4,#125                 @ character ascii ?
+    bgt 6f                      @ no
+    b 7f
+6:
+    mov r4,#46                  @ character ascii
+7:
+    ldr r0,iAdrsAreaCharAscii   @
+    add r0,r2
+    strb r4,[r0]
+    add r2,r2,#1
+    cmp r2,#16                  @ block end ?
+    blt 5b                      @ no ->loop
+    ldr r0,iAdrsAreaBlockAddress   @ begin block address
+    bl affichageMess
+    mov r0,#' '
+    strb r0,[r7]                @ raz star address for other line
+    add r1,r1,#16               @ next block
+    subs r6,#1                  @ decrement block number
+    bgt 3b                      @ and loop if not zero
+
+100:
+    pop {r0-r8,fp,pc}
+
+iAdrszTitleDump:       .int szTitleDump
+iAdrsBlockAddress:     .int sBlockAddress
+iAdrsTitleDisp:        .int sTitleDisp
+iAdrsAreaHexaChar:     .int sAreaHexaChar
+iAdrsAreaBlockAddress: .int sAreaBlockAddress
+iAdrsAreaCharAscii:    .int sAreaCharAscii
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"
+

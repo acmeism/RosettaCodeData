@@ -1,0 +1,129 @@
+integer max_state_count; // The maximum number of states required to process the 'targets' words
+// 'results' stores indexes of all the 'target' words in 'targets' that end in the current state,
+//           as a bit field, ie each index is stored as a power of two.
+sequence results,
+// 'failures' stores the index of the failure link state in the trie for each index of a 'target' word in 'targets'
+         failures,  // nb 1 is "undefined" (not 0)
+         trie;      // The trie containing the characters of the 'target' words
+
+constant ALPHABET_SIZE = 26;
+
+procedure validate_lower_case_letters(string word)
+    for ch in word do
+        assert(ch>='a' and ch<='z')
+    end for
+end procedure
+
+// Return the next state to which the matching machine will transition
+function find_next_state(integer current_state, next_character)
+    integer ch = next_character - 'a' + 1;
+    // Follow the links to the first state not undefined
+    while trie[current_state][ch] == 1 do
+        current_state = failures[current_state];
+    end while
+    return trie[current_state][ch];
+end function
+
+procedure build_matching_machine(sequence targets)
+     // Initialisation
+    failures = repeat(1,max_state_count);
+    results = repeat(0,max_state_count);
+    trie = repeat(repeat(1,ALPHABET_SIZE),max_state_count)
+
+    integer next_state_id = 2; // Initially there is only the empty state (1)
+
+    // Build the trie
+    for i,target in targets do
+        validate_lower_case_letters(target);
+        integer current_state = 1;
+
+        // Process all characters of the current target
+        for ch in target do
+            integer char_code = ch - 'a' + 1;
+
+            // Allocate a new state for 'char_code', if one does not already exist
+            if trie[current_state][char_code] == 1 then
+                trie[current_state][char_code] = next_state_id
+                next_state_id += 1
+            end if
+
+            current_state = trie[current_state][char_code];
+        end for
+
+        // Bit-map the index of the 'target' word in 'targets' to the 'results' list,
+        // indicating that it ends in the 'current_state'
+        results[current_state] ||= power(2,i-1)
+    end for
+
+    // Determine 'failures' values using a breadth first search
+    sequence queue = {}
+
+    // If an alphabetic character has a positive state, its failure value is 1
+    for ch = 1 to ALPHABET_SIZE do
+        if trie[1][ch] > 1 then
+            failures[trie[1][ch]] = 1;
+            queue &= trie[1][ch]
+        end if
+    end for
+
+    while length(queue) do
+        integer state = queue[1]
+        queue = queue[2..$]
+
+        // Determine the 'failures' value for all alphabetic characters with an undefined state
+        for ch=1 to ALPHABET_SIZE do
+            if trie[state][ch] != 1 then
+                integer failure = failures[state];
+
+                while trie[failure][ch] == 1 do
+                    failure = failures[failure];
+                end while
+
+                failure = trie[failure][ch];
+                failures[trie[state][ch]] = failure;
+
+                // Merge 'results' values
+                results[trie[state][ch]] ||= results[failure];
+
+                // Insert the next level state into the queue
+                queue &= trie[state][ch]
+            end if
+        end for
+    end while
+end procedure
+
+// Display all occurrences of the target words in the given text
+procedure search_for_targets(string text, sequence targets)
+    validate_lower_case_letters(text);
+
+    sequence printable_results = repeat({},length(targets))
+    integer current_state = 1;
+
+    // Process the characters of 'text' through the matching machine
+    for i,ch in text do
+        current_state = find_next_state(current_state, ch)
+
+        // If a match is not found, move to next character of 'text'
+        if results[current_state] != 0 then
+
+            // A match has been found, so store the start index of the target word in the 'printable_results' map
+            for j,target in targets do
+                if and_bits(results[current_state],power(2,j-1)) then
+                    printable_results[j] &= i + 1 - length(target);
+                end if
+            end for
+        end if
+    end for
+
+    // Print the results of the search
+    for i,target in targets do
+        printf(1,"The word \"%s\" appears in \"%s\" starting at indexes %v\n",{target,text,printable_results[i]})
+    end for
+end procedure
+
+string text = "abaaabaa";
+sequence targets = {"a", "aa", "abaa", "abaaa", "bb"}; // nb must be sorted
+max_state_count = sum(apply(targets,length))
+
+build_matching_machine(targets);
+search_for_targets(text, targets);

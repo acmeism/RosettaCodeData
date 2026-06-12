@@ -1,0 +1,1 @@
+{"applicate", "architect", "astronomy", "christine", "christoph", "committee", "composite", "constrict", "construct", "different", "extensive", "greenwood", "implement", "improvise", "intercept", "interpret", "interrupt", "philosoph", "prescript", "receptive", "telephone", "transcend", "transport", "transpose"}

@@ -1,0 +1,1 @@
+print(end="Code Golf")

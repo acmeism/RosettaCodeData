@@ -1,0 +1,366 @@
+constant MAXN = 2500,
+         EPS  = 1e-8
+
+// Globals
+integer TIME = 0
+
+sequence Facets = {},
+         pts = {},  // vect
+         e = repeat(repeat(0,MAXN),2), // Edge
+         vistimeArr = repeat(0,MAXN),
+         resfnew,
+         resfdel
+
+// Basic floating comparisons
+function eq(atom a, b) return abs(a-b) < EPS end function
+function gtr(atom a, b) return a-b > EPS end function
+
+// Vect represents a 3D point/vector
+enum X, Y, Z, VECID
+type vect(sequence s)
+    return length(s)=VECID
+       and atom(s[X])
+       and atom(s[Y])
+       and atom(s[Z])
+       and integer(s[VECID])
+end type
+
+function Sub(vect a, b)
+    vect res = {a[X]-b[X], a[Y]-b[Y], a[Z]-b[Z], 0}
+    return res
+end function
+
+function Cross(vect a, b)
+    vect res = {a[Y]*b[Z] - a[Z]*b[Y],
+                a[Z]*b[X] - a[X]*b[Z],
+                a[X]*b[Y] - a[Y]*b[X],
+                0}
+    return res
+end function
+
+function Dot(vect a, b)
+    return a[X]*b[X] + a[Y]*b[Y] + a[Z]*b[Z]
+end function
+
+function Mag(vect a)
+    return sqrt(a[X]*a[X] + a[Y]*a[Y] + a[Z]*a[Z])
+end function
+
+function Eq(vect a, b)
+    return eq(a[X], b[X])
+       and eq(a[Y], b[Y])
+       and eq(a[Z], b[Z])
+end function
+
+// line is the segment u->v
+enum U, V, W
+type line(sequence l)
+    return length(l)=V
+       and vect(l[U])
+       and vect(l[V])
+end type
+
+// Plane is defined by three points u, v, w
+type plane(sequence p)
+    return length(p)=W
+       and vect(p[U])
+       and vect(p[V])
+       and vect(p[W])
+end type
+
+// Normal vector of the plane
+function Normal(plane p)
+    vect res = Cross(Sub(p[V],p[U]),Sub(p[W],p[U]))
+    return res
+end function
+
+// Facet is a face in the hull
+enum NEIGH, /*FACET_ID,*/ VISTIME, ISDEL, P
+type Facet(sequence f)
+    return length(f)=P
+       and sequence(f[NEIGH]) -- 3 ints
+--     and integer(f[FACET_ID])
+       and integer(f[VISTIME])
+       and bool(f[ISDEL])
+       and plane(f[P])
+end type
+
+// Edge on the horizon
+enum NETID, FACET_ID
+type Edge(sequence e)
+    return length(e)=FACET_ID
+       and integer(e[NETID])
+       and integer(e[FACET_ID])
+end type
+
+// ConvexHulls3d manages hull construction
+enum HULLID, SURFACEAREA
+type ConvexHulls3d(sequence h)
+    return length(h)=SURFACEAREA
+       and integer(h[HULLID])
+       and atom(h[SURFACEAREA])
+end type
+
+// Distances
+function distPointPlane(vect v, plane p)
+    vect np = Normal(p)
+    atom num := Dot(Sub(v,p[U]),np),
+         den := Mag(np)
+    return num / den
+end function
+
+function distPointLine(vect v, line f)
+    atom d := Mag(Sub(v,f[U]))
+    if d == 0 then return 0 end if
+    return Mag(Cross(Sub(f[V],f[U]),Sub(v,f[U]))) / Mag(Sub(f[V],f[U]))
+end function
+
+function distPointPoint(vect u, v)
+    return Mag(Sub(u,v))
+end function
+
+function isAbove(vect v, plane p)
+    return gtr(Dot(Sub(v,p[U]),Normal(p)), 0)
+end function
+
+// DFS to accumulate area
+function dfsArea(ConvexHulls3d h, integer nf)
+    if Facets[nf][VISTIME] != TIME then
+        Facets[nf][VISTIME] = TIME
+        vect nrm := Normal(Facets[nf][P])
+        h[SURFACEAREA] += Mag(nrm) / 2
+        for i=1 to 3 do
+            h = dfsArea(h,Facets[nf][NEIGH][i])
+        end for
+    end if
+    return h
+end function
+
+// GetSurfaceArea returns (and caches) the hull surface area
+function GetSurfaceArea(ConvexHulls3d h)
+    if not gtr(h[SURFACEAREA], 0) then
+        TIME += 1
+        h = dfsArea(h,h[HULLID])
+    end if
+    return h[SURFACEAREA]
+end function
+
+// Recursively find the horizon around point p
+function getHorizon(ConvexHulls3d h, integer f, vect p)
+    if not isAbove(p, Facets[f][P]) then
+        return 0
+    end if
+    if Facets[f][VISTIME] == TIME then
+        return -1
+    end if
+    Facets[f][VISTIME] = TIME
+    Facets[f][ISDEL] = true
+    resfdel = append(resfdel, f)
+    integer ret := -2
+    for i=1 to 3 do
+        integer r := getHorizon(h,Facets[f][NEIGH][i], p)
+        if r == 0 then
+            integer j = {2,3,1}[i],
+                    a := Facets[f][P][i][VECID],
+                    b := Facets[f][P][j][VECID]
+            for j, pt in {a, b} do
+                integer edgedx = 2
+                if vistimeArr[pt] != TIME then
+                    vistimeArr[pt] = TIME
+                    edgedx = 1
+                end if
+                e[edgedx][pt] = {{b,a}[j], Facets[f][NEIGH][i]}
+            end for
+            ret = a
+        elsif r != -1 and r != -2 then
+            ret = r
+        end if
+    end for
+    return ret
+end function
+
+// Build the initial tetrahedron
+function getStart(sequence points)
+    sequence pt = repeat(points[1],6)
+    vect s1,s2,s3,s4
+    // pick extreme coords
+    for v in points do
+        if gtr(v[X], pt[1][X]) then pt[1] = v end if
+        if gtr(pt[2][X], v[X]) then pt[2] = v end if
+        if gtr(v[Y], pt[3][Y]) then pt[3] = v end if
+        if gtr(pt[4][Y], v[Y]) then pt[4] = v end if
+        if gtr(v[Z], pt[5][Z]) then pt[5] = v end if
+        if gtr(pt[6][Z], v[Z]) then pt[6] = v end if
+    end for
+    // take furthest pair
+    {s1,s2} = pt[1..2]
+    for i,pi in pt do
+        for pj in pt from i+1 do
+            if gtr(distPointPoint(pi, pj),
+                   distPointPoint(s1, s2)) then
+                {s1, s2} = {pi, pj}
+            end if
+        end for
+    end for
+    // furthest from that line
+    line L := {s1, s2}
+    s3 = pt[1]
+    for pi in pt from 2 do
+        if gtr(distPointLine(pi, L),
+               distPointLine(s3, L)) then
+            s3 = pi
+        end if
+    end for
+    // furthest from the plane
+    s4 = points[1]
+    plane base := {s1, s2, s3}
+    for p in points do
+        if gtr(abs(distPointPlane(p, base)),
+               abs(distPointPlane(s4, base))) then
+            s4 = p
+        end if
+    end for
+    if gtr(0, distPointPlane(s4, base)) then
+        {s2, s3} = {s3, s2}
+    end if
+    // make 4 facets
+    Facets = {{{4, 3, 2},0,0,{s1, s3, s2}},
+              {{1, 3, 4},0,0,{s1, s2, s4}},
+              {{1, 4, 2},0,0,{s2, s3, s4}},
+              {{1, 2, 3},0,0,{s3, s1, s4}}}
+    // prepare point-lists
+    for i=1 to 4 do
+        pts = append(pts, {})
+    end for
+    // assign remaining points
+    for v in points do
+        if not Eq(v,s1)
+        and not Eq(v,s2)
+        and not Eq(v,s3)
+        and not Eq(v,s4) then
+            for j=1 to 4 do
+                if isAbove(v, Facets[j][P]) then
+                    pts[j] = append(pts[j], v)
+                    exit
+                end if
+            end for
+        end if
+    end for
+    ConvexHulls3d res = {1,0}
+    return res
+end function
+
+// The main QuickHull3D loop
+function quickHull3d(sequence points)
+    ConvexHulls3d hull := getStart(points)
+    sequence queue = hull[HULLID]&Facets[hull[HULLID]][NEIGH]
+    integer snew := 0
+
+    while length(queue) do
+        integer nf := queue[1]
+        queue = queue[2..$]
+        if Facets[nf][ISDEL] or length(pts[nf]) == 0 then
+            if not Facets[nf][ISDEL] then
+                snew = nf
+            end if
+        else
+            // find farthest point
+            vect p := pts[nf][1]
+            for v in pts[nf] from 2 do
+                if gtr(distPointPlane(v, Facets[nf][P]),
+                       distPointPlane(p, Facets[nf][P])) then
+                    p = v
+                end if
+            end for
+            // find horizon
+            TIME += 1
+            resfdel = {}
+            integer s := getHorizon(hull,nf, p)
+
+            // build new faces around the horizon
+            resfnew = {}
+            TIME += 1
+            integer frm := -1,
+                  lastf := -1,
+                   fstf := -1
+            while vistimeArr[s] != TIME do
+                vistimeArr[s] = TIME
+                integer net, f, fnew
+                if e[0][s][NETID] == frm then
+                    {net, f} = {e[1][s][NETID], e[1][s][FACET_ID]}
+                else
+                    {net, f} = {e[0][s][NETID], e[0][s][FACET_ID]}
+                end if
+                // find indices of s and net on facet f
+                integer pt1, pt2
+                for i=1 to 3 do
+                    if Eq(points[s],Facets[f][P][i]) then
+                        pt1 = i
+                    end if
+                    if Eq(points[net],Facets[f][P][i]) then
+                        pt2 = i
+                    end if
+                end for
+                if {2,3,1}[pt1] != pt2 then
+                    {pt1, pt2} = {pt2, pt1}
+                end if
+                // create new facet facing outwards
+                Facets = append(Facets, {{0,0,0},0,0,{Facets[f][P][pt2], Facets[f][P][pt1], p}})
+                fnew = length(Facets)
+                pts = append(pts, {})
+                resfnew = append(resfnew, fnew)
+
+                Facets[fnew][NEIGH][1] = f
+                Facets[f][NEIGH][pt1] = fnew
+                if lastf >= 0 then
+                    // link with previous new facet
+                    if Eq(Facets[fnew][P][2],Facets[lastf][P][U]) then
+                        {Facets[fnew][NEIGH][1], Facets[lastf][NEIGH][2]} = {lastf, fnew}
+                    else
+                        {Facets[fnew][NEIGH][2], Facets[lastf][NEIGH][1]} = {lastf, fnew}
+                    end if
+                else
+                    fstf = fnew
+                end if
+                lastf = fnew
+                frm = s
+                s = net
+            end while
+            // close the loop
+            if Eq(Facets[fstf][P][V],Facets[lastf][P][U]) then
+                {Facets[fstf][NEIGH][1], Facets[lastf][NEIGH][2]} = {lastf, fstf}
+            else
+                {Facets[fstf][NEIGH][2], Facets[lastf][NEIGH][1]} = {lastf, fstf}
+            end if
+            // collect points from deleted faces
+            sequence respt = {}
+            for fid in resfdel do
+                respt &= pts[fid]
+                pts[fid] = {}
+            end for
+            // reassign them
+            for v in respt do
+                if v != p then
+                    for fid in resfnew do
+                        if isAbove(v, Facets[fid][P]) then
+                            pts[fid] = append(pts[fid], v)
+                            exit
+                        end if
+                    end for
+                end if
+            end for
+            // enqueue new faces
+            queue &= resfnew
+        end if
+    end while
+
+    hull[HULLID] = snew
+    return hull
+end function
+
+// Example: a unit tetrahedron
+constant unit_tetrahedron = {{0, 0, 0, 1},
+                             {1, 0, 0, 2},
+                             {0, 1, 0, 3},
+                             {0, 0, 1, 4}}
+printf(1,"%.3f\n", GetSurfaceArea(quickHull3d(unit_tetrahedron)))

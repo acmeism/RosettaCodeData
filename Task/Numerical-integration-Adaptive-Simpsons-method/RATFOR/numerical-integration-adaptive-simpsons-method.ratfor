@@ -1,0 +1,131 @@
+#
+# This is RATFOR 77, which is a preprocessor for FORTRAN 77. In
+# neither language can you do anything that might look like it would
+# be a recursive call, and have it actually be a recursive call. They
+# are languages that assume all variables are equivalent to "extern"
+# or "static" variables in C.
+#
+# There are other options, however.
+#
+# One method would be to keep track of interval size as one goes
+# along, and perform the whole computation "flat": without anything
+# resembling a stack. This could result, in this case, in the
+# recalculation of intermediate results.  Usually, however, it is my
+# favorite way to do adaptive bisection, because it is safest
+# (especially if you have big integers). There is no possibility of
+# running out of stack.
+#
+# Another method is to build up a queue or stack of subtasks to
+# perform, as if these subtasks were on the system stack. This also
+# can be safer than recursion, because it lets you put the subtasks in
+# the heap instead of the stack. (A stack of subtasks to perform is,
+# in fact, how most compilers for other languages would implement
+# recursive calls.)
+#
+# I will use the latter method, but without a heap. (An external heap
+# would require either a language extension or a foreign function
+# call.)
+#
+
+define(STKSZ,1000)
+
+subroutine simpsn (f, a, fa, b, fb, m, fm, quad)
+  implicit none
+
+  external f
+  double precision f
+  double precision a, fa, b, fb, m, fm, quad
+
+  m = (a + b) / 2
+  fm = f(m)
+  quad = ((b - a) / 6) * (fa + (4 * fm) + fb)
+end
+
+subroutine adapt (sum, f, a, fa, b, fb, tol, quad, m, fm)
+  implicit none
+
+  external f, simpsn
+  double precision f
+  double precision a(STKSZ), fa(STKSZ), b(STKSZ), fb(STKSZ)
+  double precision tol(STKSZ), quad(STKSZ), m(STKSZ), fm(STKSZ)
+  double precision sum
+
+  integer i
+  double precision lm, flm, left
+  double precision rm, frm, right
+  double precision delta, tol2
+
+  i = 1
+  while (i != 0)
+    {
+      if (i == STKSZ)
+        {                      # It is not possible to bisect further.
+          sum = sum + quad(i)
+          i = i - 1
+        }
+      else
+        {
+          call simpsn (f, a(i), fa(i), m(i), fm(i), lm, flm, left)
+          call simpsn (f, m(i), fm(i), b(i), fb(i), rm, frm, right)
+          delta = left + right - quad(i)
+          tol2 = tol(i) / 2
+          if (tol2 == tol(i) .or. abs (delta) <= 15 * tol(i))
+            {                   # The tolerance is satisfied.
+              sum = sum + left + right + (delta / 15)
+              i = i - 1
+            }
+          else
+            {        # The tolerance is not satisfied. Bisect further.
+              b(i + 1) = b(i);      fb(i + 1) = fb(i)
+              a(i + 1) = m(i);      fa(i + 1) = fm(i)
+              b(i) = m(i);          fb(i) = fm(i)
+              tol(i + 1) = tol2;    tol(i) = tol2
+              quad(i + 1) = right;  quad(i) = left
+              m(i + 1) = rm;        m(i) = lm
+              fm(i + 1) = frm;      fm(i) = flm
+              i = i + 1
+            }
+        }
+    }
+end
+
+function asimps (f, a0, b0, tol0)
+  implicit none
+  double precision asimps
+
+  external f, simpsn, adapt
+  double precision f, a0, b0, tol0
+
+  double precision sum
+  double precision a(STKSZ), fa(STKSZ)
+  double precision b(STKSZ), fb(STKSZ)
+  double precision m(STKSZ), fm(STKSZ)
+  double precision quad(STKSZ), tol(STKSZ)
+
+  sum = 0
+  tol(1) = tol0
+  a(1) = a0;  fa(1) = f(a0)
+  b(1) = b0;  fb(1) = f(b0)
+  call simpsn (f, a(1), fa(1), b(1), fb(1), m(1), fm(1), quad(1))
+  call adapt (sum, f, a, fa, b, fb, tol, quad, m, fm)
+  asimps = sum
+end
+
+function sine (x)
+  implicit none
+  double precision sine, x
+  sine = dsin (x)
+end
+
+program asrtsk
+  implicit none
+
+  external asimps, sine
+  double precision asimps, sine
+  double precision quad
+
+  quad = asimps (sine, 0.0D0, 1.0D0, 1D-9)
+  write (*, 1000) quad
+1000 format ("estimated definite integral of sin(x) ", _
+             "for x from 0 to 1: ", F15.13)
+end

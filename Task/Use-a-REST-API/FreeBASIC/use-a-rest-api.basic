@@ -1,0 +1,247 @@
+#include once "win\winsock.bi"
+#include once "file.bi"
+#include once "string.bi"
+
+Type EventTime
+    timestamp As Double
+End Type
+
+Type Result
+    id As String
+    status As String
+    nombre As String
+    eventUrl As String
+    description As String
+    eventTime As EventTime
+End Type
+
+Type EventResponse
+    results(Any) As Result
+    cnt As Integer
+End Type
+
+Function readApiKey() As String
+    Dim As String keyFile = "api_key.txt"
+    Dim As Integer ff = Freefile
+    Dim As String content = ""
+
+    If Fileexists(keyFile) Then
+        Open keyFile For Input As #ff
+        Line Input #ff, content
+        Close #ff
+    Else
+        Print "API key file not found: " & keyFile
+    End If
+
+    Return Trim(content)
+End Function
+
+Function getEventData(apiKey As String) As String
+    Dim As String buffer = ""
+    Dim As String host = "api.meetup.com"
+    Dim As String path = "/2/open_events.json?topic=photo&time=,1w&key=" & apiKey
+    Dim As String request = "GET " & path & " HTTP/1.1" & Chr(13) & Chr(10) & _
+    "Host: " & host & Chr(13) & Chr(10) & _
+    "Connection: close" & Chr(13) & Chr(10) & Chr(13) & Chr(10)
+
+    Dim As WSADATA wsaData
+    If WSAStartup(&h0202, @wsaData) <> 0 Then
+        Print "WSAStartup failed"
+        Return ""
+    End If
+
+    Dim As Long sock = OpenSocket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
+    If sock = INVALID_SOCKET Then
+        Print "Socket creation failed"
+        WSACleanup()
+        Return ""
+    End If
+
+    Dim As hostent Ptr hp = gethostbyname(host)
+    If hp = NULL Then
+        Print "Host resolution failed"
+        closesocket(sock)
+        WSACleanup()
+        Return ""
+    End If
+
+    Dim As sockaddr_in sa
+    sa.sin_family = AF_INET
+    sa.sin_port = htons(80)
+    sa.sin_addr = *Cast(in_addr Ptr, hp->h_addr)
+
+    If connect(sock, Cast(sockaddr Ptr, @sa), Sizeof(sa)) = 0 Then
+        send(sock, Strptr(request), Len(request), 0)
+
+        Dim As String chunk = Space(4096)
+        Dim As Integer bytes
+
+        Do
+            bytes = recv(sock, Strptr(chunk), 4096, 0)
+            If bytes > 0 Then buffer += Left(chunk, bytes)
+        Loop While bytes > 0
+    Else
+        Print "Connection failed"
+    End If
+
+    closesocket(sock)
+    WSACleanup()
+
+    Dim headerEnd As Integer = Instr(buffer, Chr(13) & Chr(10) & Chr(13) & Chr(10))
+    If headerEnd > 0 Then buffer = Mid(buffer, headerEnd + 4)
+
+    Return buffer
+End Function
+
+' Simple function to extract a string value from JSON
+Function extractJsonString(json As String, key As String) As String
+    Dim As String pattern = """" & key & """\s*:\s*""([^""]*)"
+    Dim As Integer start = Instr(json, pattern)
+    If start <= 0 Then Return ""
+
+    start = Instr(start, json, ":") + 1
+    start = Instr(start, json, """") + 1
+    Dim As Integer endPos = Instr(start, json, """")
+
+    If start > 0 And endPos > start Then
+        Return Mid(json, start, endPos - start)
+    End If
+
+    Return ""
+End Function
+
+' Simple function to extract a number value from JSON
+Function extractJsonNumber(json As String, key As String) As Double
+    Dim As String pattern = """" & key & """\s*:\s*([0-9.]+)"
+    Dim As Integer start = Instr(json, pattern)
+    If start <= 0 Then Return 0
+
+    start = Instr(start, json, ":") + 1
+    Dim As Integer endPos = Instr(start, json, ",")
+    If endPos <= 0 Then endPos = Instr(start, json, "}")
+
+    If start > 0 And endPos > start Then
+        Dim As String numStr = Trim(Mid(json, start, endPos - start))
+        Return Val(numStr)
+    End If
+
+    Return 0
+End Function
+
+' Simple function to extract an array of objects from JSON
+Sub extractJsonArray(json As String, arrayName As String, Byref response As EventResponse)
+    Dim As String arrayStart = """" & arrayName & """\s*:\s*\["
+    Dim As Integer startPos = Instr(json, arrayStart)
+    If startPos <= 0 Then
+        response.cnt = 0
+        Exit Sub
+    End If
+
+    startPos = Instr(startPos, json, "[")
+    Dim As Integer endPos = Instr(startPos, json, "]")
+
+    If startPos > 0 And endPos > startPos Then
+        Dim As String arrayContent = Mid(json, startPos + 1, endPos - startPos - 1)
+
+        ' Cnt objects in array
+        Dim As Integer objCnt = 0
+        Dim As Integer posic = 1
+
+        Do
+            posic = Instr(posic, arrayContent, "{")
+            If posic > 0 Then
+                objCnt += 1
+                posic += 1
+            Else
+                Exit Do
+            End If
+        Loop
+
+        response.cnt = objCnt
+        If objCnt > 0 Then
+            Redim response.results(objCnt - 1)
+
+            ' Extract each object
+            Dim As Integer objStart = 1
+            Dim As Integer objEnd = 0
+            Dim As Integer objIndex = 0
+
+            Do
+                objStart = Instr(objStart, arrayContent, "{")
+                If objStart <= 0 Then Exit Do
+
+                objEnd = Instr(objStart, arrayContent, "}")
+                If objEnd <= 0 Then Exit Do
+
+                Dim As String objJson = Mid(arrayContent, objStart, objEnd - objStart + 1)
+
+                ' Extract fields from this object
+                With response.results(objIndex)
+                    .id = extractJsonString(objJson, "id")
+                    .nombre = extractJsonString(objJson, "name")
+                    .eventUrl = extractJsonString(objJson, "event_url")
+                    .description = extractJsonString(objJson, "description")
+                    .eventTime.timestamp = extractJsonNumber(objJson, "time")
+                End With
+
+                objStart = objEnd + 1
+                objIndex += 1
+
+                If objIndex >= objCnt Then Exit Do
+            Loop
+        End If
+    Else
+        response.cnt = 0
+    End If
+End Sub
+
+Sub parseEvents(jsonData As String, Byref response As EventResponse)
+    If Len(jsonData) = 0 Then
+        Print "No JSON data to parse"
+        response.cnt = 0
+        Exit Sub
+    End If
+
+    extractJsonArray(jsonData, "results", response)
+End Sub
+
+Sub printEvent(event As Result)
+    Print "ID: " & event.id
+    Print "Name: " & event.nombre
+    Print "URL: " & event.eventUrl
+
+    ' Convert Unix timestamp to readable date
+    If event.eventTime.timestamp > 0 Then
+        Print "Time: " & Format(event.eventTime.timestamp / 1000, "yyyy-mm-dd hh:mm:ss")
+    Else
+        Print "Time: Unknown"
+    End If
+
+    Dim As String desc = event.description
+    If Len(desc) > 65 Then desc = Left(desc, 64) & "..."
+    Print "Description: " & desc
+    Print
+End Sub
+
+' Main program
+Print "Reading API key..."
+Dim As String apiKey = readApiKey()
+
+If Len(apiKey) = 0 Then
+    Print "No API key found. Please create api_key.txt with your Meetup API key."
+    Sleep: End 1
+End If
+
+Print "Fetching event data..."
+Dim As String jsonData = getEventData(apiKey)
+
+Dim As EventResponse response
+parseEvents(jsonData, response)
+
+Print "Got " & response.cnt & " events"
+If response.cnt > 0 Then
+    Print "First event:"
+    printEvent(response.results(0))
+End If
+
+Sleep

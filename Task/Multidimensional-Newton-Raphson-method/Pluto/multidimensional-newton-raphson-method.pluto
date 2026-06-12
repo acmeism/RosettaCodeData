@@ -1,0 +1,76 @@
+require "matrix"
+local fmt = require "fmt"
+
+local function solve(funcs, jacobian, guesses)
+    local size = #funcs
+    local gu1 = {}
+    local gu2 = guesses:slice(1)
+    local jac = matrix.of(size, size)
+    local tol = 1e-8
+    local max_iter = 12
+    local iter = 0
+    while true do
+        gu1 = gu2
+        local g = matrix.from({ gu1 }):transpose()
+        local v = {}
+        for i = 1, size do v[i] = funcs[i](gu1) end
+        local f = matrix.from({ v }):transpose()
+        for i = 1, size do
+            for j = 1, size do jac:set(i, j, jacobian[i][j](gu1)) end
+        end
+        local g1 = g - jac:inverse():matmul(f)
+        gu2 = {}
+        for i = 1, size do gu2[i] = g1:get(i, 1) end
+        if ++iter == max_iter then break end
+        if range(1, size):checkall(|i| -> math.abs(gu2[i] - gu1[i]) <= tol) then
+            break
+        end
+    end
+    return gu2
+end
+
+--[[ solve the two non-linear equations:
+   y = -x^2 + x + 0.5
+   y + 5xy = x^2
+   given initial guesses of x = y = 1.2
+
+   Example taken from:
+   http://www.fixoncloud.com/Home/LoginValidate/OneProblemComplete_Detailed.php?problemid=286
+
+   Expected results: x = 1.23332, y = 0.2122
+]]
+local f1 = |x| -> -x[1] * x[1] + x[1] + 0.5 - x[2]
+local f2 = |x| ->  x[2] + 5 * x[1] * x[2] - x[1] * x[1]
+local funcs = {f1, f2}
+local jacobian = {
+    { |x| -> -2 * x[1] + 1, |_| -> -1 },
+    { |x| -> 5 * x[2] - 2 * x[1], |x| -> 1 + 5 * x[1] }
+}
+local guesses = {1.2, 1.2}
+local [sol1, sol2] = solve(funcs, jacobian, guesses)
+fmt.print("Approximate solutions are x = %.7f, y = %.7f", sol1, sol2)
+
+--[[ solve the three non-linear equations:
+   9x^2 + 36y^2 + 4z^2 - 36 = 0
+   x^2 - 2y^2 - 20z = 0
+   x^2 - y^2 + z^2 = 0
+   given initial guesses of x = y = 1.0 and z = 0.0
+
+   Example taken from:
+   http://mathfaculty.fullerton.edu/mathews/n2003/FixPointNewtonMod.html (exercise 5)
+
+   Expected results: x = 0.893628, y = 0.894527, z = -0.0400893
+]]
+print()
+local f3 = |x| -> 9 * x[1] * x[1] + 36 * x[2] *x[2] + 4 * x[3] * x[3] - 36
+local f4 = |x| -> x[1] * x[1] - 2 * x[2] * x[2] - 20 * x[3]
+local f5 = |x| -> x[1] * x[1] - x[2] * x[2] + x[3] * x[3]
+funcs = {f3, f4, f5}
+jacobian = {
+    { |x| -> 18 * x[1], |x| -> 72 * x[2], |x| -> 8 * x[3] },
+    { |x| ->  2 * x[1], |x| -> -4 * x[2], |_| -> -20 },
+    { |x| ->  2 * x[1], |x| -> -2 * x[2], |x| -> 2 * x[3] }
+}
+guesses = {1, 1, 0}
+local [sol3, sol4, sol5] = solve(funcs, jacobian, guesses)
+fmt.print("Approximate solutions are x = %.7f, y = %.7f, z = %.7f", sol3, sol4, sol5)

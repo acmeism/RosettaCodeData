@@ -1,0 +1,145 @@
+*        Ramsey's theorem          19/03/2017
+RAMSEY   CSECT
+         USING  RAMSEY,R13         base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LA     R6,1               i=1
+       DO WHILE=(C,R6,LE,NN)       do i=1 to nn
+         LR     R1,R6                i
+         MH     R1,=AL2(N)           *n
+         LR     R0,R6                i
+         AR     R1,R0                i*i+i
+         SLA    R1,1                 *2
+         LA     R0,2                 2
+         STH    R0,A-36(R1)          a(i,i)=2
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         LA     R6,1               i=1
+       DO WHILE=(C,R6,LE,=F'8')    do while i<=8
+         LA     R7,1                 j=1
+       DO WHILE=(C,R7,LE,NN)         do j=1 to nn
+         LR     R8,R7                  j
+         AR     R8,R6                  +i
+         BCTR   R8,0                   -1
+         SRDA   R8,32                  ~
+         D      R8,NN                  /nn
+         LA     R8,1(R8)               k=((j+i-1) mod nn)+1
+         LR     R1,R7                  j
+         MH     R1,=AL2(N)             *n
+         LR     R0,R8                  k
+         AR     R1,R0                  j*n+ki
+         SLA    R1,1                   *2
+         LA     R0,1                   1
+         STH    R0,A-36(R1)            a(j,k)=1
+         LR     R1,R8                  k
+         MH     R1,=AL2(N)             *n
+         LR     R0,R7                  j
+         AR     R1,R0                  k*n+j
+         SLA    R1,1                   *2
+         LA     R0,1                   1
+         STH    R0,A-36(R1)            a(k,j)=1
+         LA     R7,1(R7)               j++
+       ENDDO    ,                    enddo j
+         AR     R6,R6                i=i+i
+       ENDDO    ,                  enddo i
+         LA     R6,1               i=1
+       DO WHILE=(C,R6,LE,NN)       do i=1 to nn
+         LA     R7,1                 j=1
+         LA     R10,PG               pgi=0
+       DO WHILE=(C,R7,LE,NN)         do j=1 to nn
+         LR     R1,R6                  i
+         MH     R1,=AL2(N)             *n
+         LR     R0,R7                  j
+         AR     R1,R0                  i*n+j
+         SLA    R1,1                   *2
+         LH     R4,A-36(R1)            a(i,j)
+       IF CH,R4,EQ,=H'2' THEN          if a(i,j)=2 then
+         MVC    0(2,R10),=C' -'          output '-'
+       ELSE     ,                      else
+         XDECO  R4,XDEC                  edit a(i,j)
+         MVC    0(2,R10),XDEC+10         output a(i,j)
+       ENDIF    ,                      endif
+         LA     R10,2(R10)             pgi+=2
+         LA     R7,1(R7)               j++
+       ENDDO    ,                    enddo j
+         XPRNT  PG,L'PG              print buffer
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         LA     R6,1               i=1
+       DO WHILE=(C,R6,LE,NN)       do i=1 to nn
+         SR     R0,R0                0
+         STH    R0,BH                bh=0
+         STH    R0,BV                bv=0
+         LA     R7,1                 j=1
+       DO WHILE=(C,R7,LE,NN)         do j=1 to nn
+         LR     R1,R6                  i
+         MH     R1,=AL2(N)             *n
+         LR     R0,R7                  j
+         AR     R1,R0                  i*n+j
+         SLA    R1,1                   *2
+         LH     R2,A-36(R1)            a(i,j)
+       IF CH,R2,EQ,=H'1' THEN          if a(i,j)=1 then
+         LH     R2,BH                    bh
+         LA     R2,1(R2)                 +1
+         STH    R2,BH                    bh=bh+1
+       ENDIF    ,                      endif
+         LR     R1,R7                  j
+         MH     R1,=AL2(N)             *n
+         LR     R0,R6                  i
+         AR     R1,R0                  j*n+i
+         SLA    R1,1                   *2
+         LH     R2,A-36(R1)            a(j,i)
+       IF CH,R2,EQ,=H'1' THEN          if a(j,i)=1 then
+         LH     R2,BV                    bv
+         LA     R2,1(R2)                 +1
+         STH    R2,BV                    bv=bv+1
+       ENDIF    ,                      endif
+         LA     R7,1(R7)               j++
+       ENDDO    ,                    enddo j
+         L      R2,NN                nn
+         SRA    R2,1                 /2
+         MVI    XX,X'01'             xx=true
+       IF CH,R2,NE,BH THEN           if bh<>nn/2 then
+         MVI    XX,X'00'               xx=false
+       ENDIF    ,                    endif
+         NC     OKH,XX               okh=okh and (bh=nn/2)
+         L      R2,NN                nn
+         SRA    R2,1                 /2
+         MVI    XX,X'01'             xx=true
+       IF CH,R2,NE,BV THEN           if bv<>nn/2 then
+         MVI    XX,X'00'               xx=false
+       ENDIF    ,                    endif
+         NC     OKV,XX               okv=okv and (bv=nn/2)
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         MVC    XX,OKH             xx=okh
+         NC     XX(1),OKV          xx=okh and okv
+       IF CLI,XX,EQ,X'01' THEN     if okh and okv then
+         MVC    WOK,=CL4'yes'        wok='yes'
+       ELSE     ,                  else
+         MVC    WOK,=CL4'no'         wok='no'
+       ENDIF    ,                  endif
+         MVC    PG,=CL80'check='   output 'check='
+         MVC    PG+6(L'WOK),WOK    output wok
+         XPRNT  PG,L'PG            print buffer
+         L      R13,4(0,R13)       restore previous savearea pointer
+         LM     R14,R12,12(R13)    restore previous context
+         XR     R15,R15            return_code=0
+         BR     R14                exit
+N        EQU    17                 n=17
+NN       DC     A(N)               nn=n
+A        DC     (N*N)H'0'          table a(n,n) halfword init 0
+BH       DS     H                  count horizontal
+BV       DS     H                  count vertical
+OKH      DC     X'01'              check horizontal
+OKV      DC     X'01'              check vertical
+WOK      DS     CL4                temp ok
+XX       DS     X                  temp logical
+PG       DC     CL80' '            buffer
+XDEC     DS     CL12               temp xdeco
+         YREGS
+         END    RAMSEY

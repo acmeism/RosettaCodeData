@@ -1,0 +1,240 @@
+Type Queue
+    Dato(Any) As Integer
+    Front As Integer
+    Rear As Integer
+    Size As Integer
+    Capacity As Integer
+End Type
+
+' Queue operations
+Function CreateQueue(capacity As Integer) As Queue
+    Dim q As Queue
+    q.Capacity = capacity
+    q.Size = 0
+    q.Front = 0
+    q.Rear = -1
+    Redim q.Dato(capacity - 1)
+    Return q
+End Function
+
+Function isEmpty(q As Queue) As Integer
+    Return (q.Size = 0)
+End Function
+
+Sub Enqueue(Byref q As Queue, item As Integer)
+    q.Rear = (q.Rear + 1) Mod q.Capacity
+    q.Dato(q.Rear) = item
+    q.Size += 1
+End Sub
+
+Function Dequeue(Byref q As Queue) As Integer
+    Dim item As Integer = q.Dato(q.Front)
+    q.Front = (q.Front + 1) Mod q.Capacity
+    q.Size -= 1
+    Return item
+End Function
+
+Sub ClearQueue(Byref q As Queue)
+    q.Size = 0
+    q.Front = 0
+    q.Rear = -1
+End Sub
+
+' Global variables for the algorithm
+Dim Shared g_n As Integer
+Dim Shared g_adj() As Integer
+Dim Shared g_adjSize() As Integer
+Dim Shared g_match() As Integer
+Dim Shared g_p() As Integer
+Dim Shared g_base() As Integer
+Dim Shared g_used() As Integer
+Dim Shared g_blossom() As Integer
+Dim Shared g_q As Queue
+
+' Find least common ancestor of a and b in the forest of alternating tree
+Function LCA(a As Integer, b As Integer) As Integer
+    Dim usedPath(g_n-1) As Integer
+
+    ' Mark path from a to root
+    Do
+        a = g_base(a)
+        usedPath(a) = 1
+        If g_match(a) = -1 Then Exit Do
+        a = g_p(g_match(a))
+    Loop
+
+    ' Find first marked vertex in path from b to root
+    Do
+        b = g_base(b)
+        If usedPath(b) Then Return b
+        b = g_p(g_match(b))
+    Loop
+
+    Return -1 ' Should never reach here
+End Function
+
+' Mark vertices along the path from v to base b, setting their parent to x
+Sub MarkPath(v As Integer, b As Integer, x As Integer)
+    While g_base(v) <> b
+        g_blossom(g_base(v)) = 1
+        g_blossom(g_base(g_match(v))) = 1
+        g_p(v) = x
+        x = g_match(v)
+        v = g_p(x)
+    Wend
+End Sub
+
+' Try to find an augmenting path starting from root
+Function FindPath(root As Integer) As Boolean
+    Dim As Integer i, j
+    ' Reset arrays
+    For i = 0 To g_n-1
+        g_used(i) = 0
+        g_p(i) = -1
+        g_base(i) = i
+        g_blossom(i) = 0
+    Next
+
+    ClearQueue(g_q)
+    g_used(root) = 1
+    Enqueue(g_q, root)
+
+    While Not isEmpty(g_q)
+        Dim v As Integer = Dequeue(g_q)
+
+        For i = 0 To g_adjSize(v) - 1
+            Dim u As Integer = g_adj(v * g_n + i)
+
+            ' Two cases to skip
+            If g_base(v) = g_base(u) Or g_match(v) = u Then Continue For
+
+            ' Found a blossom or an odd cycle edge
+            If u = root Or (g_match(u) <> -1 And g_p(g_match(u)) <> -1) Then
+                Dim curbase As Integer = LCA(v, u)
+
+                ' Reset blossom array
+                For j = 0 To g_n-1
+                    g_blossom(j) = 0
+                Next
+
+                MarkPath(v, curbase, u)
+                MarkPath(u, curbase, v)
+
+                ' Contract blossom
+                For j = 0 To g_n-1
+                    If g_blossom(g_base(j)) Then
+                        g_base(j) = curbase
+                        If Not g_used(j) Then
+                            g_used(j) = 1
+                            Enqueue(g_q, j)
+                        End If
+                    End If
+                Next
+
+                ' Otherwise extend the alternating tree
+            Elseif g_p(u) = -1 Then
+                g_p(u) = v
+
+                If g_match(u) = -1 Then
+                    ' Augmenting path found: flip matches along the path
+                    Dim curr As Integer = u
+                    While curr <> -1
+                        Dim prev As Integer = g_p(curr)
+                        If prev = -1 Then Exit While
+                        Dim sgte As Integer = g_match(prev)
+                        g_match(curr) = prev
+                        g_match(prev) = curr
+                        curr = sgte
+                    Wend
+                    Return True
+                End If
+
+                ' Else continue BFS from the matched partner
+                g_used(g_match(u)) = 1
+                Enqueue(g_q, g_match(u))
+            End If
+        Next
+    Wend
+
+    Return False
+End Function
+
+' Edmonds' Blossom Algorithm
+Sub MaxMatching(adj() As Integer, adjSize() As Integer, n As Integer, match() As Integer, Byref matchSize As Integer)
+    Dim As Integer i, j, v
+    ' Set up global variables
+    g_n = n
+    Redim g_adj(n*n-1)
+    Redim g_adjSize(n-1)
+    Redim g_match(n-1)
+    Redim g_p(n-1)
+    Redim g_base(n-1)
+    Redim g_used(n-1)
+    Redim g_blossom(n-1)
+    g_q = CreateQueue(n * n)
+
+    ' Copy input arrays to global arrays
+    For i = 0 To n-1
+        g_adjSize(i) = adjSize(i)
+        For j = 0 To adjSize(i)-1
+            g_adj(i * n + j) = adj(i * n + j)
+        Next
+    Next
+
+    ' Initialize match array
+    For i = 0 To n-1
+        g_match(i) = -1
+    Next
+
+    ' Main loop: try to grow matching by finding augmenting paths
+    matchSize = 0
+    For v = 0 To n-1
+        If g_match(v) = -1 Then
+            If FindPath(v) Then matchSize += 1
+        End If
+    Next
+
+    ' Copy result back to output array
+    For i= 0 To n-1
+        match(i) = g_match(i)
+    Next
+End Sub
+
+' Example: 5-cycle (odd cycle)
+' Vertices: 0-1-2-3-4-0
+Dim As Integer n = 5
+Dim As Integer edges(4, 1) = { {0,1}, {1,2}, {2,3}, {3,4}, {4,0} }
+
+Dim As Integer i, u, v
+' Create adjacency list representation
+Dim As Integer adj(n*n-1)    ' Flattened adjacency list
+Dim As Integer adjSize(n-1)  ' Size of each adjacency list
+
+For i = 0 To 4
+    u = edges(i, 0)
+    v = edges(i, 1)
+
+    adj(u * n + adjSize(u)) = v
+    adjSize(u) += 1
+
+    adj(v * n + adjSize(v)) = u
+    adjSize(v) += 1
+Next
+
+' Find maximum matching
+Dim As Integer match(n-1)
+Dim As Integer matchSize
+
+MaxMatching(adj(), adjSize(), n, match(), matchSize)
+
+' Print results
+Print "Maximum matching size:"; matchSize
+Print "Matched pairs:"
+
+Dim seen(n*n-1) As Integer
+For u = 0 To n-1
+    v = match(u)
+    If v <> -1 And u < v Then Print "  " & u & " - " & v
+Next
+
+Sleep

@@ -1,0 +1,160 @@
+REM  wavelet_matrix.bas
+
+' BitRank class for rank operations
+Type BitRank
+    bits(Any) As Ulong     ' Array to store bits
+    count(Any) As Integer  ' Array to store counts
+End Type
+
+' WaveletMatrix class
+Type WaveletMatrix
+    B(Any) As BitRank      ' Array of BitRanks
+    posic(Any) As Integer  ' posicition array
+    height As Integer      ' Height of the matrix
+End Type
+
+' Get bit at position i from value
+Function GetBitAt(value As Integer, i As Integer) As Integer
+    Return (value Shr i) And 1
+End Function
+
+' Count number of 1's in [0, i)
+Function Rank1(Byref br As BitRank, i As Integer) As Integer
+    Dim As Integer blockIndex = i Shr 6
+    Dim As Integer bitposic = i And 63
+    Dim As Integer cnt = 0
+
+    ' Add cnt from previous blocks
+    If blockIndex > 0 Then cnt = br.count(blockIndex - 1)
+
+    ' Count bits in current block
+    For j As Integer = 0 To bitposic - 1
+        If (br.bits(blockIndex) And (1ULL Shl j)) <> 0 Then cnt += 1
+    Next
+
+    Return cnt
+End Function
+
+' Count number of 0's in [0, i)
+Function Rank0(Byref br As BitRank, i As Integer) As Integer
+    Return i - Rank1(br, i)
+End Function
+
+' Initialize a BitRank structure
+Sub InitBitRank(Byref br As BitRank, size As Integer)
+    Dim As Integer numBlocks = (size + 63) \ 64
+    Redim br.bits(0 To numBlocks)
+    Redim br.count(0 To numBlocks)
+
+    ' Initialize arrays
+    For i As Integer = 0 To numBlocks
+        br.bits(i) = 0
+        br.count(i) = 0
+    Next
+End Sub
+
+' Initialize the WaveletMatrix with a vector
+Sub CreateWaveletMatrix(Byref wm As WaveletMatrix, vec() As Integer, n As Integer, maxVal As Integer)
+    ' Calculate height based on maximum value
+    wm.height = 0
+    Dim As Integer i, tmp = maxVal
+    While tmp > 0
+        wm.height += 1
+        tmp Shr= 1
+    Wend
+
+    ' Initialize arrays
+    Redim wm.B(0 To wm.height - 1)
+    Redim wm.posic(0 To wm.height - 1)
+
+    ' Create a copy of the input vector for manipulation
+    Dim As Integer tmpVec(n - 1)
+    For i = 0 To n - 1
+        tmpVec(i) = vec(i)
+    Next
+
+    For h As Integer = 0 To wm.height - 1
+        ' Initialize BitRank
+        InitBitRank(wm.B(h), n)
+        'Redim wm.B(h).bits(0 To (n + 63) \ 64)
+        'Redim wm.B(h).cnt(0 To (n + 63) \ 64)
+
+        ' Count zeros
+        Dim As Integer zeros = 0
+        For i = 0 To n - 1
+            If GetBitAt(tmpVec(i), wm.height - h - 1) = 0 Then
+                zeros += 1
+            Else
+                ' Set bit in BitRank
+                Dim As Integer blockIdx = i Shr 6
+                Dim As Integer bitposic = i And 63
+                wm.B(h).bits(blockIdx) = wm.B(h).bits(blockIdx) Or (1ULL Shl bitposic)
+            End If
+        Next
+
+        ' Build cnt array
+        Dim As Integer runningCount = 0
+        For i = 0 To Ubound(wm.B(h).bits)
+            Dim As Integer bitCount = 0
+            Dim As Ulong bits = wm.B(h).bits(i)
+
+            ' Count bits in this block
+            While bits <> 0
+                If (bits And 1) <> 0 Then bitCount += 1
+                bits Shr= 1
+            Wend
+
+            wm.B(h).count(i) = runningCount
+            runningCount += bitCount
+        Next
+
+        ' Stable partition - separate 0's and 1's
+        Dim As Integer zeroValues(zeros - 1)
+        Dim As Integer oneValues(n - zeros - 1)
+        Dim As Integer zeroIdx = 0, oneIdx = 0
+
+        For i = 0 To n - 1
+            If GetBitAt(tmpVec(i), wm.height - h - 1) = 0 Then
+                zeroValues(zeroIdx) = tmpVec(i)
+                zeroIdx += 1
+            Else
+                oneValues(oneIdx) = tmpVec(i)
+                oneIdx += 1
+            End If
+        Next
+
+        ' Combine arrays back
+        For i = 0 To zeros - 1
+            tmpVec(i) = zeroValues(i)
+        Next
+
+        For i = 0 To n - zeros - 1
+            tmpVec(zeros + i) = oneValues(i)
+        Next
+
+        wm.posic(h) = zeros
+    Next
+End Sub
+
+' kth smallest element in [l, r)
+Function Quantile(Byref wm As WaveletMatrix, k As Integer, l As Integer, r As Integer) As Integer
+    Dim As Integer i, zeros, res = 0
+
+    For i = 0 To wm.height - 1
+        zeros = Rank0(wm.B(i), r) - Rank0(wm.B(i), l)
+
+        If zeros > k Then
+            ' Go to left (0) child
+            l = Rank0(wm.B(i), l)
+            r = Rank0(wm.B(i), r)
+        Else
+            ' Go to right (1) child
+            l = wm.posic(i) + Rank1(wm.B(i), l)
+            r = wm.posic(i) + Rank1(wm.B(i), r)
+            k -= zeros
+            res Or= (1 Shl (wm.height - i - 1))
+        End If
+    Next
+
+    Return res
+End Function

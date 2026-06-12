@@ -1,0 +1,19 @@
+DECLARE FUNCTION min! (a!, b!)
+DECLARE SUB minab (n!)
+
+CLS
+minab (10)
+END
+
+FUNCTION min (a, b)
+	IF a <= b THEN min = a ELSE min = b
+END FUNCTION
+
+SUB minab (n)
+	FOR i = 1 TO n
+		FOR j = 1 TO n
+			PRINT USING "## "; min(min(i - 1, n - i), min(j - 1, n - j));
+		NEXT j
+		PRINT
+	NEXT i
+END SUB

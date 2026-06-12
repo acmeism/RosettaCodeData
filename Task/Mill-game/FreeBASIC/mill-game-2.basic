@@ -1,0 +1,460 @@
+Randomize Timer
+
+Const EMPTY = 0
+Const WHITE = 1   ' Human
+Const BLACK = 2   ' AI
+
+Type Punto
+    x As Integer
+    y As Integer
+End Type
+
+Dim Shared board(1 To 24) As Integer
+
+' Mills (16 lines of 3)
+Dim Shared mills(1 To 16, 1 To 3) As Integer = { _
+{ 1,  2,  3}, { 4,  5,  6}, { 7,  8,  9}, {10, 11, 12}, _
+{13, 14, 15}, {16, 17, 18}, {19, 20, 21}, {22, 23, 24}, _
+{ 1, 10, 22}, { 4, 11, 19}, { 7, 12, 16}, { 2,  5,  8}, _
+{17, 20, 23}, { 9, 13, 18}, { 6, 14, 21}, { 3, 15, 24} }
+
+' Adjacencies (0 = no neighbor)
+Dim Shared adj(1 To 24, 1 To 4) As Integer = { _
+{ 2, 10,  0,  0}, _
+{ 1,  3,  5,  0}, _
+{ 2, 15,  0,  0}, _
+{ 5, 11,  0,  0}, _
+{ 2,  4,  6,  8}, _
+{ 5, 14,  0,  0}, _
+{ 8, 12,  0,  0}, _
+{ 5,  7,  9,  0}, _
+{ 8, 13,  0,  0}, _
+{ 1, 11, 22,  0}, _
+{ 4, 10, 12, 19}, _
+{ 7, 11, 16,  0}, _
+{ 9, 14, 18,  0}, _
+{ 6, 13, 15, 21}, _
+{ 3, 14, 24,  0}, _
+{12, 17,  0,  0}, _
+{16, 18, 20,  0}, _
+{13, 17,  0,  0}, _
+{11, 20,  0,  0}, _
+{17, 19, 21, 23}, _
+{14, 20,  0,  0}, _
+{10, 23,  0,  0}, _
+{20, 22, 24,  0}, _
+{15, 23,  0,  0} }
+
+' Screen positions for the 24 points
+Dim Shared posic(1 To 24) As Punto = { _
+(100,100), (400,100), (700,100), _
+(200,200), (400,200), (600,200), _
+(300,300), (400,300), (500,300), _
+(100,400), (200,400), (300,400), _
+(500,400), (600,400), (700,400), _
+(300,500), (400,500), (500,500), _
+(200,600), (400,600), (600,600), _
+(100,700), (400,700), (700,700) }
+
+'----------------- Utilities -----------------
+Function rndInt(lo As Integer, hi As Integer) As Integer
+    Return Int(Rnd * (hi - lo + 1)) + lo
+End Function
+
+Function isMill(posic As Integer, player As Integer) As Boolean
+    Dim As Integer i, j, c
+    For i  = 1 To 16
+        c = 0
+        For j = 1 To 3
+            If board(mills(i,j)) = player Then c += 1
+        Next
+        If c = 3 Then
+            If mills(i,1) = posic Or mills(i,2) = posic Or mills(i,3) = posic Then
+                Return True
+            End If
+        End If
+    Next
+    Return False
+End Function
+
+Function countPieces(player As Integer) As Integer
+    Dim As Integer c, i
+    c = 0
+    For i = 1 To 24
+        If board(i) = player Then c += 1
+    Next
+    Return c
+End Function
+
+Function hasAnyNonMillPiece(player As Integer) As Boolean
+    For i As Integer = 1 To 24
+        If board(i) = player Then
+            If Not isMill(i, player) Then Return True
+        End If
+    Next
+    Return False
+End Function
+
+Function hasMoves(player As Integer) As Boolean
+    Dim As Integer pc, i, j
+    pc = countPieces(player)
+    If pc = 3 Then
+        For i = 1 To 24
+            If board(i) = player Then
+                For j = 1 To 24
+                    If board(j) = EMPTY Then Return True
+                Next
+            End If
+        Next
+        Return False
+    End If
+    For i = 1 To 24
+        If board(i) = player Then
+            For j = 1 To 4
+                If adj(i,j) <> 0 Andalso board(adj(i,j)) = EMPTY Then Return True
+            Next
+        End If
+    Next
+    Return False
+End Function
+
+'----------------- Capture -----------------
+Sub capturePieceHuman(enemy As Integer)
+    ' Not used by AI version, but kept for completeness
+End Sub
+
+Sub aiCapturePiece(enemy As Integer)
+    Dim As Integer candidates(1 To 24)
+    Dim As Integer i, pick, cnt
+    Dim As Boolean allowMill
+
+    cnt = 0
+    allowMill = Not hasAnyNonMillPiece(enemy)
+
+    For i = 1 To 24
+        If board(i) = enemy Then
+            If allowMill Orelse (Not isMill(i, enemy)) Then
+                cnt += 1
+                candidates(cnt) = i
+            End If
+        End If
+    Next
+
+    If cnt > 0 Then
+        pick = candidates(rndInt(1, cnt))
+        board(pick) = EMPTY
+    End If
+End Sub
+
+'----------------- Drawing -----------------
+Sub DrawBoard()
+    Dim As Integer i, a, b
+    Cls
+    ' background color pergamino
+    Line (0,0)-(799,799), Rgb(248,235,205), BF
+
+    ' outer square
+    Color Rgb(200,200,200)
+    For i = 1 To 16
+        a = mills(i,1)
+        b = mills(i,3)
+        Line (posic(a).x, posic(a).y)-(posic(b).x, posic(b).y), Rgb(120,120,120)
+    Next
+
+    ' points
+    For i = 1 To 24
+        Circle (posic(i).x, posic(i).y), 6, Rgb(180,180,180),,,,F
+    Next
+End Sub
+
+Sub DrawPieces(selectedFrom As Integer, phasePlace As Boolean, turn As Integer, whiteInHand As Integer, blackInHand As Integer, winner As Integer)
+    ' pieces
+    For i As Integer = 1 To 24
+        Select Case board(i)
+        Case WHITE
+            Circle (posic(i).x, posic(i).y), 22, Rgb(255,255,255),,,,F
+            Circle (posic(i).x, posic(i).y), 22, Rgb(0,0,0)
+        Case BLACK
+            Circle (posic(i).x, posic(i).y), 22, Rgb(0,0,0),,,,F
+            Circle (posic(i).x, posic(i).y), 22, Rgb(255,255,255)
+        End Select
+    Next
+
+    ' selected piece highlight
+    If selectedFrom > 0 Then
+        Circle (posic(selectedFrom).x, posic(selectedFrom).y), 28, Rgb(255,255,0)
+    End If
+
+    ' HUD
+    Color Rgb(0,0,0), Rgb(248,235,205)
+    Locate 2, 2
+    If winner = 0 Then
+        Print "Phase: " & Iif(phasePlace, "PLACEMENT", "MOVEMENT ");
+        Locate 2, 20 :
+        Print Iif(turn = WHITE, "Turn: HUMAN (White)", "Turn: AI (Black)  ")
+        Locate 4, 2 : Print "White in hand: "; whiteInHand; "   Black in hand: "; blackInHand
+        Locate 6, 2 : Print "ESC to quit"
+    Else
+        Locate 3, 2 : Print Iif(winner = WHITE, "WINNER: HUMAN (White)", "WINNER: AI (Black)")
+        Locate 5, 2 : Print "Press ESC to exit"
+    End If
+End Sub
+
+'----------------- Mouse -----------------
+Function GetClickedPos() As Integer
+    Static lastMb As Integer
+    Dim As Integer i, mx, my, mb, dx, dy
+
+    Getmouse mx, my,, mb
+    If mb = 1 Andalso lastMb = 0 Then
+        ' new click
+        For i = 1 To 24
+            dx = mx - posic(i).x
+            dy = my - posic(i).y
+            If dx*dx + dy*dy <= 25*25 Then
+                lastMb = mb
+                Return i
+            End If
+        Next
+    End If
+    lastMb = mb
+
+    Return 0
+End Function
+
+'----------------- Human moves -----------------
+Sub humanPlace()
+    Dim p As Integer
+    Do
+        p = GetClickedPos()
+        If p > 0 Andalso board(p) = EMPTY Then
+            board(p) = WHITE
+            Exit Do
+        End If
+        Sleep 10
+    Loop
+End Sub
+
+Sub humanMove()
+    Dim As Integer fromPos, toPos, pc, j, cap
+    Dim As Boolean canFly, ok, allowMill
+
+    fromPos = 0
+    pc = countPieces(WHITE)
+    ' select piece
+    Do
+        fromPos = GetClickedPos()
+        If fromPos > 0 Andalso board(fromPos) = WHITE Then Exit Do
+        Sleep 10
+    Loop
+
+    ' select destination
+    canFly = (pc = 3)
+    Do
+        toPos = GetClickedPos()
+        If toPos > 0 Andalso board(toPos) = EMPTY Then
+            If canFly Then
+                Exit Do
+            Else
+                ok = False
+                For j = 1 To 4
+                    If adj(fromPos,j) = toPos Then ok = True
+                Next
+                If ok Then Exit Do
+            End If
+        End If
+        Sleep 10
+    Loop
+
+    board(fromPos) = EMPTY
+    board(toPos) = WHITE
+
+    If isMill(toPos, WHITE) Then
+        ' human chooses capture by clicking enemy piece
+        allowMill = Not hasAnyNonMillPiece(BLACK)
+        Do
+            cap = GetClickedPos()
+            If cap > 0 Andalso board(cap) = BLACK Then
+                If allowMill Orelse (Not isMill(cap, BLACK)) Then
+                    board(cap) = EMPTY
+                    Exit Do
+                End If
+            End If
+            Sleep 10
+        Loop
+    End If
+End Sub
+
+'----------------- AI -----------------
+Function aiPlacePiece(player As Integer) As Integer
+    Dim As Integer enemy, p, r
+
+    enemy = 3 - player
+    ' 1. try to form mill
+    For p = 1 To 24
+        If board(p) = EMPTY Then
+            board(p) = player
+            If isMill(p, player) Then
+                board(p) = EMPTY
+                Return p
+            End If
+            board(p) = EMPTY
+        End If
+    Next
+
+    ' 2. block enemy mill
+    For p = 1 To 24
+        If board(p) = EMPTY Then
+            board(p) = enemy
+            If isMill(p, enemy) Then
+                board(p) = EMPTY
+                Return p
+            End If
+            board(p) = EMPTY
+        End If
+    Next
+
+    ' 3. random
+    Do
+        r = rndInt(1,24)
+    Loop Until board(r) = EMPTY
+
+    Return r
+End Function
+
+Sub aiMovePiece(player As Integer)
+    Dim As Integer enemy, pc, fromPos, toPos, j
+    Dim As Boolean canFly, isAdj
+
+    enemy = 3 - player
+    pc = countPieces(player)
+    canFly = (pc = 3)
+
+    ' 1. move to form mill
+    For fromPos = 1 To 24
+        If board(fromPos) = player Then
+            For toPos = 1 To 24
+                If board(toPos) = EMPTY Then
+                    isAdj = (adj(fromPos,1) = toPos) Orelse _
+                    (adj(fromPos,2) = toPos) Orelse _
+                    (adj(fromPos,3) = toPos) Orelse _
+                    (adj(fromPos,4) = toPos)
+                    If canFly Orelse isAdj Then
+                        board(fromPos) = EMPTY
+                        board(toPos) = player
+                        If isMill(toPos, player) Then
+                            board(toPos) = EMPTY
+                            board(fromPos) = player
+                            Goto AIMOVE
+                        End If
+                        board(toPos) = EMPTY
+                        board(fromPos) = player
+                    End If
+                End If
+            Next
+        End If
+    Next
+
+    ' 2. block enemy mill
+    For fromPos = 1 To 24
+        If board(fromPos) = player Then
+            For toPos = 1 To 24
+                If board(toPos) = EMPTY Then
+                    board(toPos) = enemy
+                    If isMill(toPos, enemy) Then
+                        ' nos quedamos con fromPos/toPos para AIMOVE
+                        board(toPos) = EMPTY
+                        Goto AIMOVE
+                    End If
+                    board(toPos) = EMPTY
+                End If
+            Next
+        End If
+    Next
+
+    ' 3. random move
+    Do
+        fromPos = rndInt(1,24)
+    Loop Until board(fromPos) = player
+
+    If canFly Then
+        Do
+            toPos = rndInt(1,24)
+        Loop Until board(toPos) = EMPTY
+    Else
+        toPos = 0
+        For j = 1 To 4
+            If adj(fromPos,j) <>0  Andalso board(adj(fromPos,j)) = EMPTY Then
+                toPos = adj(fromPos,j)
+                Exit For
+            End If
+        Next
+        If toPos = 0 Then
+            Print "AI ERROR: No legal adjacent moves but not in flying mode."
+            Sleep 2000
+            Exit Sub
+        End If
+    End If
+
+    AIMOVE:
+    board(fromPos) = EMPTY
+    board(toPos) = player
+
+    If isMill(toPos, player) Then aiCapturePiece(enemy)
+End Sub
+
+'----------------- MAIN -----------------
+Screenres 800, 800, 32
+Windowtitle "FreeBASIC Mill game - HUMAN (White) vs AI (Black)"
+
+Dim As Integer whiteInHand = 9, blackInHand = 9
+Dim As Integer turn = WHITE
+Dim As Integer winner = 0
+Dim As Boolean placingPhase = True
+Dim As Integer p, wc, bc
+
+Do
+    Screenlock
+    DrawBoard()
+    DrawPieces(0, placingPhase, turn, whiteInHand, blackInHand, winner)
+    Screenunlock
+
+    If winner <> 0 Then
+        If Multikey(&h01) Then Exit Do ' ESC
+        Sleep 20
+        Continue Do
+    End If
+
+    If placingPhase Then
+        If turn = WHITE Then
+            humanPlace()
+            whiteInHand -= 1
+        Else
+            p = aiPlacePiece(BLACK)
+            board(p) = BLACK
+            If isMill(p, BLACK) Then aiCapturePiece(WHITE)
+            blackInHand -= 1
+        End If
+        If whiteInHand = 0 Andalso blackInHand = 0 Then placingPhase = False
+    Else
+        wc = countPieces(WHITE)
+        bc = countPieces(BLACK)
+        If wc < 3 Then winner = BLACK
+        If bc < 3 Then winner = WHITE
+        If winner = 0 Then
+            If Not hasMoves(turn) Then winner = 3 - turn
+        End If
+        If winner = 0 Then
+            If turn = WHITE Then
+                humanMove()
+            Else
+                aiMovePiece(BLACK)
+            End If
+        End If
+    End If
+
+    turn = 3 - turn
+    Sleep 20
+Loop Until Multikey(&h01) ' ESC
+
+End

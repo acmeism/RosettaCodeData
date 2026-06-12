@@ -1,0 +1,202 @@
+graphsize 600,440
+fastgraphics
+font("arial",20,100)
+
+# Array declarations with proper initialization
+dim i(4):dim j(4):dim l(4):dim o(4):dim s(4):dim t(4):dim z(4)
+
+# Piece definitions using hex values
+i = {0x10F00, 0x12222, 0x100F0, 0x14444}
+j = {0x144C0, 0x18E00, 0x16440, 0x10E20}
+l = {0x14460, 0x10E80, 0x1C440, 0x12E00}
+o = {0x1CC00, 0x1CC00, 0x1CC00, 0x1CC00}
+s = {0x106C0, 0x18C40, 0x16C00, 0x14620}
+t = {0x10E40, 0x14C40, 0x14E00, 0x14640}
+z = {0x10C60, 0x14C80, 0x1C600, 0x12640}
+
+# Game board and statistics
+dim board(14,29)
+dim stat(7)
+
+# Game variables
+score = 0
+endgame = false
+initialwait = 0.1
+
+# Main game loop
+do
+  wait = initialwait
+  rot = int(rand*4)
+  shape = int(rand*7)
+  stat[shape] = stat[shape] + 1
+  cores = int(rand*7) + 1
+  piecedown = false
+  ypos = -1
+  xpos = 5
+
+  # Frame loop
+  do
+    ypos = ypos + 1
+
+    # Handle controls
+    for press = 1 to 4
+      a = key
+      if a = 16777234 then xpos = xpos - checkmove(ref(board), a, xpos, ypos, shape$)
+      if a = 16777236 then xpos = xpos + checkmove(ref(board), a, xpos, ypos, shape$)
+      if a = 16777237 then wait = 0.01
+      if a = 16777235 then
+        oldrot = rot
+        rot = (rot + 1) mod 4
+        gosub selectshape
+        if checkmove(ref(board), a, xpos, ypos, shape$) = 0 then
+          rot = oldrot
+          gosub selectshape
+        end if
+      end if
+      pause wait
+    next press
+
+    # Update display
+    gosub scorepanel
+    gosub selectshape
+    gosub drawboard
+    gosub drawshape
+    refresh
+  until piecedown = true
+
+  # Handle piece placement
+  gosub newboard
+  gosub takeline
+  gosub takeline
+until endgame = true
+
+# Game over screen
+color white
+font("arial", 50, 100)
+text 70, 100, "Game Over"
+refresh
+end
+
+scorepanel:
+color darkgreen
+rect 0, 0, 600, 450
+color green
+text 300, 20, "Use arrow keys"
+text 300, 60, "I .... " + stat[0]
+text 300, 100, "J .... " + stat[1]
+text 300, 140, "L .... " + stat[2]
+text 300, 180, "O .... " + stat[3]
+text 300, 220, "S .... " + stat[4]
+text 300, 260, "T .... " + stat[5]
+text 300, 300, "Z .... " + stat[6]
+text 300, 350, "score .... " + score
+return
+
+selectshape:
+shape$ = ""
+begin case
+  case shape = 0: shape$ = tobinary(i[rot])
+  case shape = 1: shape$ = tobinary(j[rot])
+  case shape = 2: shape$ = tobinary(l[rot])
+  case shape = 3: shape$ = tobinary(o[rot])
+  case shape = 4: shape$ = tobinary(s[rot])
+  case shape = 5: shape$ = tobinary(t[rot])
+  case shape = 6: shape$ = tobinary(z[rot])
+end case
+return
+
+function checkmove(board, a, xpos, ypos, shape$)
+  checkmove = 1
+  p = 1
+  for v = 1 to 4
+    for h = 1 to 4
+      p = p + 1
+      if mid(shape$, p, 1) = "1" then
+        if board[xpos+h, ypos+v] > 0 then checkmove = 0
+        if chr(a) = "N" and (xpos+h > 11 or xpos+h < 2) then
+          checkmove = 0
+          return
+        end if
+        if a = 16777236 and xpos+h > 10 then checkmove = 0
+        if a = 16777236 and board[xpos+h+1, ypos+v] > 0 then checkmove = 0
+        if a = 16777234 and xpos+h < 3 then checkmove = 0
+        if a = 16777234 and board[xpos+h-1, ypos+v] > 0 then checkmove = 0
+      end if
+    next h
+  next v
+end function
+
+drawshape:
+begin case
+  case cores = 1: color red
+  case cores = 2: color blue
+  case cores = 3: color yellow
+  case cores = 4: color orange
+  case cores = 5: color green
+  case cores = 6: color purple
+  case cores = 7: color white
+end case
+
+p = 1
+for v = 1 to 4
+  for h = 1 to 4
+    p = p + 1
+    if mid(shape$, p, 1) = "1" then
+      rect xpos*20 + h*20, ypos*20 + v*20, 19, 19
+      if board[xpos+h, ypos+v+1] > 0 or ypos+v = 20 then piecedown = true
+    end if
+  next h
+next v
+
+if piecedown and ypos < 2 then
+  endgame = true
+  return
+end if
+return
+
+newboard:
+p = 2
+for v = 1 to 4
+  for h = 1 to 4
+    if mid(shape$, p, 1) = "1" then board[xpos+h, ypos+v] = cores
+    p = p + 1
+  next h
+next v
+return
+
+drawboard:
+for y = 1 to 20
+  for x = 2 to 11
+    begin case
+      case board[x,y] = 0: color black
+      case board[x,y] = 1: color red
+      case board[x,y] = 2: color blue
+      case board[x,y] = 3: color yellow
+      case board[x,y] = 4: color orange
+      case board[x,y] = 5: color green
+      case board[x,y] = 6: color purple
+      case board[x,y] = 7: color white
+    end case
+    rect x*20, y*20, 19, 19
+  next x
+next y
+return
+
+takeline:
+for y = 20 to 1 step -1
+  complete = true
+  for x = 2 to 11
+    if board[x,y] = 0 then complete = false
+  next x
+
+  if complete then
+    for row = y to 1 step -1
+      for position = 1 to 10
+        board[position,row] = board[position,row-1]
+      next position
+    next row
+    score = score + 1
+    initialwait = initialwait * 0.9
+  end if
+next y
+return

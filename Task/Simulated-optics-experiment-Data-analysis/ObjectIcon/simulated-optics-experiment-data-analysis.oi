@@ -1,0 +1,425 @@
+#!/bin/env -S oiscript
+#
+# If you run this program as a script, you might get something like
+# the following as a "help" message:
+#
+#   Usage: /tmp/oixcache/f8f91465ab42189d5623040505fa7f12 [-|raw_data_file]
+#
+# But you can instead use "oit" to compile this program into a
+# bytecode executable, which would print this sort of message instead:
+#
+#   Usage: ./my_program [-|raw_data_file]
+#
+
+#
+# Reference:
+#
+#   A. F. Kracklauer, ‘EPR-B correlations: non-locality or geometry?’,
+#   J. Nonlinear Math. Phys. 11 (Supp.) 104–109 (2004).
+#   https://doi.org/10.2991/jnmp.2004.11.s1.13 (Open access, CC BY-NC)
+#
+
+# This is necessary because there are "degree" symbols (°) in the
+# code:
+$encoding UTF-8
+
+# To get the following more specific set of imports, one can write
+# "import io, util" and then run "fiximports" on the source code:
+import
+   io(BufferStream, FileStream, open, stop),
+   ipl.printf(printf),
+   util(Math)
+
+$define angleL1 0.0
+$define angleL2 45.0
+$define angleR1 22.5
+$define angleR2 67.5
+
+procedure main (args)
+  # "&why" does not exist in regular Icon, although "stop"
+  # does.
+  #
+  # Fellow Gentoo users might notice an uncanny resemblance between
+  # the use of "stop" here and the use of "die" in Gentoo ebuilds. In
+  # both cases, if we left out the check, the error might be silently
+  # ignored.
+  case *args of
+  {
+    0 : sally_forth ("-") | stop (&why)
+    1 : sally_forth (args[1]) | stop (&why)
+    default :
+    {
+      io.write ("Usage: ", &progname, " [-|raw_data_file]")
+      exit (1)
+    }
+  }
+end
+
+procedure sally_forth (input_file)
+  local data, dataL1, dataL2, dataR1, dataR2
+  local dataL1R1, dataL1R2, dataL2R1, dataL2R2
+  local kappaL1R1, kappaL1R2, kappaL2R1, kappaL2R2
+  local chsh_contrast, chsh_contrast_nominal
+
+  data := read_raw_data (input_file)
+  data := adjust_for_geometry (data)
+
+  # The following means of dividing the set into four non-overlapping
+  # groups has been designed for clarity rather than efficiency. (We
+  # should not care about efficiency, anyway, in a program such as
+  # this.)
+  dataL1 := filter_set (logL_equals_0, data)
+  dataL2 := filter_set (logL_equals_1, data)
+  dataR1 := filter_set (logR_equals_0, data)
+  dataR2 := filter_set (logR_equals_1, data)
+  dataL1R1 := dataL1 ** dataR1  # Set intersection.
+  dataL1R2 := dataL1 ** dataR2
+  dataL2R1 := dataL2 ** dataR1
+  dataL2R2 := dataL2 ** dataR2
+
+  # The sizes of the groups should add up to the size of the entire
+  # data.
+  *dataL1R1 + *dataL1R2 + *dataL2R1 + *dataL2R2 = *data |
+    {
+      #
+      # "&why" does not exist in regular Icon.
+      #
+      # In all the dialects of Icon, however, it is common for failure
+      # of a procedure to indicate an error.
+      #
+      # This has a severe downside that, in many contexts, a failure
+      # is silently ignored. This behavior is unlike an exception
+      # (which is either caught or it terminates the
+      # program). However, in some ways it is like the practice of
+      # indicating an error through a return value. Differences from
+      # that include: (a) failure will often cause the containing
+      # context to fail as well (possibly resulting in assignments and
+      # swaps/exchanges being undone!), and (b) there is no return
+      # value in case of failure.
+      #
+      # BTW Object Icon does have exceptions:
+      # https://chemoelectric.github.io/objecticon/ExceptionPackage.html
+      #
+      &why := "The four groups of data have been formed incorrectly."
+      fail
+    }
+
+  kappaL1R1 := correlation_coefficient (angleL1, angleR1, dataL1R1)
+  kappaL1R2 := correlation_coefficient (angleL1, angleR2, dataL1R2)
+  kappaL2R1 := correlation_coefficient (angleL2, angleR1, dataL2R1)
+  kappaL2R2 := correlation_coefficient (angleL2, angleR2, dataL2R2)
+
+  chsh_contrast := (-kappaL1R1) + kappaL1R2 + kappaL2R1 + kappaL2R2
+
+  printf ("\n   light pulse events   %9d\n", *data)
+  printf ("\n    correlation coefs\n")
+
+  # The u"" is necessary in Object Icon when the string is a Unicode
+  # string.
+  printf (u"          %4.1r° %4.1r°   %+9.6r\n",
+          angleL1, angleR1, kappaL1R1)
+  printf (u"          %4.1r° %4.1r°   %+9.6r\n",
+          angleL1, angleR2, kappaL1R2)
+  printf (u"          %4.1r° %4.1r°   %+9.6r\n",
+          angleL2, angleR1, kappaL2R1)
+  printf (u"          %4.1r° %4.1r°   %+9.6r\n",
+          angleL2, angleR2, kappaL2R2)
+
+  chsh_contrast_nominal := 2.0 * Math.sqrt (2.0)
+
+  printf ("\n        CHSH contrast   %+9.6r\n", chsh_contrast)
+  printf ("  2*sqrt(2) = nominal   %+9.6r\n", chsh_contrast_nominal)
+  printf ("           difference   %+9.6r\n", (chsh_contrast -
+                                             chsh_contrast_nominal))
+
+  # A "CHSH violation" occurs if the CHSH contrast is >2.
+  # https://en.wikipedia.org/w/index.php?title=CHSH_inequality&oldid=1142431418
+  #
+  # Note CAREFULLY, however, that we are talking here about simulation
+  # of a CLASSICAL optics model, using the CLASSICAL formula for
+  # correlation coefficients (of the respective electromagnetic
+  # fields). We are calculating those coefficients by inference from
+  # detection events.
+  #
+  # Some might try to object that a CHSH contrast cannot be calculated
+  # from correlation coefficients computed according to the classical
+  # formula. But that would be assuming the conclusion: OF COURSE no
+  # classical model can have a CHSH violation, if by fiat you do not
+  # let a classical model and the classical formulas be used!
+  #
+  printf ("\n       CHSH violation   %+9.6r\n\n", (chsh_contrast - 2))
+
+  # The following is necessary (it is equivalent to "return &null"),
+  # because we are using failure to indicate an error.
+  return
+end
+
+procedure correlation_coefficient (angleL, angleR, data_group)
+  local N, NL1, NL2, NR1, NR2, item
+  local cosL, sinL, cosR, sinR, cosLR, sinLR, kappa
+
+  # We know angleL and angleR are in Quadrant 1. Its two
+  # perpendiculars are thus in Quadrants 2 and 4. We can choose
+  # whichever of the two we want. Choose Quadrant 4. The sine is
+  # non-negative in Quadrant 1, and the cosine is non-negative in
+  # Quadrant 4. Thus we can use the following estimates for cosine and
+  # sine, and not have to deal with negative signs.
+  #
+  # This is Equation (2.4) in the reference.
+  #
+  N := real (*data_group)
+  NL1 := 0.0
+  NL2 := 0.0
+  NR1 := 0.0
+  NR2 := 0.0
+  every item := !data_group do
+  {
+    NL1 +:= item.detectedL1()
+    NL2 +:= item.detectedL2()
+    NR1 +:= item.detectedR1()
+    NR2 +:= item.detectedR2()
+  }
+  sinL := Math.sqrt (NL1 / N)
+  cosL := Math.sqrt (NL2 / N)
+  sinR := Math.sqrt (NR1 / N)
+  cosR := Math.sqrt (NR2 / N)
+
+  # Apply the reference's Equation (2.3).
+  cosLR := (cosR * cosL) + (sinR * sinL)
+  sinLR := (sinR * cosL) - (cosR * sinL)
+
+  # Apply Equation (2.5).
+  kappa := (cosLR * cosLR) - (sinLR * sinLR)
+
+  return kappa
+end
+
+procedure read_raw_data (input_file)
+  local data, f
+  local num_lines
+  local logS, logL, logR
+  local detectedL1, detectedL2
+  local detectedR1, detectedR2
+
+  if type (input_file) ~== "string" then
+  {
+    f := input_file
+    num_lines := integer (f.read())
+    data := set ()
+
+    # The "every" construct below goes through all the numbers
+    # generated by "1 to num_lines", after which it quits because the
+    # generator FAILS. (I leave out any loop variable, "every i :=",
+    # because one is not needed here.) One might, especially at first,
+    # accidentally write something like "while i := 1 to num_lines",
+    # but this would actually be a forever-loop, with i always equal
+    # to 1. The "while" construct, unlike "every", would restart the
+    # generator from scratch each time, so that the generator ALWAYS
+    # SUCCEEDS. But "while" is what you would want for something like
+    # "while line := f.read()", because "read" is not a generator. It
+    # is a procedure that either returns a line of input or fails.
+    every 1 to num_lines do
+    {
+      # The following is a "string-scanning environment". It is a
+      # series of operations on the string returned by f.read(). See
+      # also
+      # https://en.wikipedia.org/w/index.php?title=Icon_(programming_language)&oldid=1146573004
+      #
+      # Object Icon is not mentioned in that article, but right now I
+      # do not feel like editing the Wikipedia to mention it.
+      #
+      # It IS mentioned that Python generators are supposedly inspired
+      # by Icon generators (and presumably also by co-expressions). I
+      # do not know if that is true, but there are similarities:
+      # Python "yield" is similar to Icon "suspend". (Scheme’s
+      # "call/cc" is far more general, however, and can be used to
+      # implement yield/suspend in a few lines of code.)
+      f.read() ?
+      {
+        tab(many(' \t'))
+        logS := integer (tab(many(&digits)))
+        tab(many(' \t'))
+        logL := integer (tab(many(&digits)))
+        tab(many(' \t'))
+        logR := integer (tab(many(&digits)))
+        tab(many(' \t'))
+        detectedL1 := integer (tab(many(&digits)))
+        tab(many(' \t'))
+        detectedL2 := integer (tab(many(&digits)))
+        tab(many(' \t'))
+        detectedR1 := integer (tab(many(&digits)))
+        tab(many(' \t'))
+        detectedR2 := integer (tab(many(&digits)))
+      }
+      insert (data, PulseEventData (logS, logL, logR,
+                                    detectedL1, detectedL2,
+                                    detectedR1, detectedR2))
+    }
+  }
+  else if input_file == "-" then
+    data := read_raw_data (BufferStream (FileStream.stdin))
+  else
+  {
+    f := open (input_file, "r") | stop (&why)
+    data := read_raw_data (f) | stop (&why)
+    f.close ()
+  }
+  return data
+end
+
+procedure adjust_for_geometry (data)
+  local S, S1, S2, S2a, item
+  S := data
+  S1 := filter_set (logS_equals_0, S)
+  S2 := S -- S1
+  S2a := set ()
+  every item := !S2 do
+    #
+    # Swap channels, to account for geometry.
+    #
+    # This step has been objected to as introducing "quantum magic",
+    # but note that we are doing a CLASSICAL data analysis, having
+    # nought to do with quantum mechanics. The light pulse source has
+    # recorded for us which type of light pulses were emitted. One
+    # might or might not be able to imagine a device for doing this
+    # with "photons", but we do not need to: (a) this is a SIMULATION,
+    # so we CAN use information we do not KNOW HOW to get, as long as
+    # the information is moving strictly forwards in time; besides
+    # which, (b) we can INSTEAD imagine a device that randomly selects
+    # from one of two pairs of light beams, and which forms pulses by
+    # opening and closing a shutter.
+    #
+    # According to "Bell's Theorem", it is impossible for such a
+    # classical model--one that works solely by contact action moving
+    # forwards in time--to produce the results we get. In my opinion,
+    # this simulation should be enough to end the entire debacle this
+    # "theorem" has helped create. But, in fact, it is easy to show
+    # that John Bell's "proof" does the equivalent of using the
+    # Angle-Side-Side "theorem" in geometry class. It is fake
+    # mathematics. (See the "Talk" page of the task, where I
+    # explain Bell's mistake in just the few words it takes.)
+    #
+    # One might or might not have noticed we are also including
+    # non-detection events in denominators, even though they are not
+    # part of the measured data set, in experiments that do not record
+    # when pulses were emitted in the first place. This is a
+    # SIMULATION, however, so we CAN include them.
+    #
+    #    -- Chemoelectric, 30 May 2023
+    #
+    # In any case, we are demonstrating how to use sets in Object
+    # Icon. Sets are very similar in regular Icon and in Unicon,
+    # although regular Icon does not have "classes". (It DOES have
+    # "records".)
+    #
+    insert (S2a, PulseEventData (item.logS(),
+                                 item.logL(), item.logR(),
+                                 item.detectedL2(),
+                                 item.detectedL1(),
+                                 item.detectedR2(),
+                                 item.detectedR1()))
+  return S1 ++ S2a
+end
+
+procedure filter_set (semidet_predicate, S)
+  # The predicate is "semi-deterministic". It does not return a
+  # boolean. Instead, it either succeeds (and in Object Icon has to
+  # return something, which we ignore) or it fails. You will see the
+  # same approach to decision-making in Prolog and Mercury programs.
+  local S1, item
+  S1 := set ()
+  every item := !S do
+    if semidet_predicate (item) then
+      insert (S1, item)
+  return S1
+end
+
+procedure logS_equals_0 (event_data)
+  # This is a semidet predicate. It succeeds if logS is zero,
+  # otherwise it fails. The return value (which is returned only on
+  # success and is always 0) will be ignored.
+  return event_data.logS() = 0
+end
+
+#######################################
+# Some more semidet predicates:
+
+procedure logL_equals_0 (event_data)
+  return event_data.logL() = 0
+end
+
+procedure logL_equals_1 (event_data)
+  return event_data.logL() = 1
+end
+
+procedure logR_equals_0 (event_data)
+  return event_data.logR() = 0
+end
+
+procedure logR_equals_1 (event_data)
+  return event_data.logR() = 1
+end
+
+#######################################
+
+final class PulseEventData ()
+  # I have tried here to make PulseEventData objects both immutable
+  # and unextendable, so no one can doubt the absence of "clever
+  # tricks". They are merely containers of data: each of them unique,
+  # so they can be stored in sets.
+
+  private var_logS, var_logL, var_logR
+  private var_detectedL1, var_detectedL2
+  private var_detectedR1, var_detectedR2
+
+  public new (logS, logL, logR,
+              detectedL1, detectedL2,
+              detectedR1, detectedR2)
+    var_logS := logS
+    var_logL := logL
+    var_logR := logR
+    var_detectedL1 := detectedL1
+    var_detectedL2 := detectedL2
+    var_detectedR1 := detectedR1
+    var_detectedR2 := detectedR2
+    return
+  end
+
+  public logS ()
+    return var_logS
+  end
+
+  public logL ()
+    return var_logL
+  end
+
+  public logR ()
+    return var_logR
+  end
+
+  public detectedL1 ()
+    return var_detectedL1
+  end
+
+  public detectedL2 ()
+    return var_detectedL2
+  end
+
+  public detectedR1 ()
+    return var_detectedR1
+  end
+
+  public detectedR2 ()
+    return var_detectedR2
+  end
+
+  public to_string ()
+    return ("PulseEventData(" || logS() ||
+            ", " || logL() ||
+            ", " || logR() ||
+            ", " || detectedL1() ||
+            ", " || detectedL2() ||
+            ", " || detectedR1() ||
+            ", " || detectedR2() || ")")
+  end
+end

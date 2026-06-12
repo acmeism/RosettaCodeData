@@ -1,0 +1,101 @@
+PrintChar equ &BB5A     ;Amstrad CPC BIOS Call
+
+        org &8000
+	
+	ld de,TestString
+	call PrintDispatch
+	call NewLine
+	
+	ld de,TestHex
+	call PrintDispatch
+	call NewLine
+
+	ld de,TestBCD
+	call PrintDispatch
+	call NewLine	
+
+
+ReturnToBasic:
+	ret	
+	
+;SUBROUTINES:
+
+	align 8
+TypeTable:
+	word PrintString_Text		;string
+	word PrintHexByte		;a single hexadecimal 8-bit value
+	word PrintHexByte		;a single binary-coded-decimal 8 bit value
+	
+PrintDispatch:
+	;input: DE - pointer to "string" of bytes.
+	
+	ld a,(de)		;read the type header. This is an index into TypeTable
+	inc de			;point DE to actual data.
+	ld h,>TypeTable
+	add a			;double the index, since these are words.
+	ld L,a			;now HL is offset to the desired routine.
+	
+	;We need to dereference HL and get the actual subroutine address.
+	;	You'd think the JP (HL) would do that, but it does not!
+	;	Despite the syntax, JP (HL) doesn't actually dereference HL,
+	;	it just copies the value stored in HL directly to the program counter.
+	;	There are a couple ways to do this. Self-modifying code uses fewer registers but is a
+	;	bit slow. We'll still use that as I think it's the easiest to follow.
+	
+	ld a,(hl)
+	ld (Go+1),a		;store low byte in the low byte of the jump's operand.
+	inc hl			;inc to high byte.
+	
+	ld a,(hl)
+	ld (Go+2),a		;store high byte in the high byte of the jump's operand
+Go:	
+	jp &ABCD		;the &ABCD gets overwritten with the address of the desired function.
+	
+
+	
+PrintString_Text:
+	ld a,(de)			;get next char
+	or a				;is it the terminator?
+	ret z				;if so, exit
+	call PrintChar			;prints accumulator as an ASCII character
+	inc de				;next entry in string
+	jp PrintString_Text		;go back to start
+	
+PrintHexByte:
+	ld a,(de)
+	jp ShowHex			;it returns for us.
+	
+	
+ShowHex:	
+	push af
+		and %11110000
+		rrca
+		rrca
+		rrca
+		rrca
+		call PrintHexChar
+	pop af
+	and %00001111
+PrintHexChar:
+	or a	        ;Clear Carry Flag
+	daa
+	add a,&F0
+	adc a,&40       ;this converts hexadecimal and BCD to ASCII - somehow!
+	jp PrintChar	;it returns for us.
+	
+	
+NewLine:
+	push af
+		ld a,13
+		call PrintChar
+		ld a,10
+		call PrintChar
+	pop af
+	ret
+	
+TestString:
+	byte 0,"Hello World",0
+TestHex:
+	byte 1,&46
+TestBCD:
+	byte 2,&99

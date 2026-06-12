@@ -1,0 +1,18 @@
+pi = 4 * ATN(1)
+a = 0: b = 1: n = 10
+DIM cheby!(n)
+DIM coef!(n)
+
+FOR i = 0 TO n - 1
+    coef(i) = COS(COS(pi / n * (i + 1 / 2)) * (b - a) / 2 + (b + a) / 2)
+NEXT i
+
+FOR i = 0 TO n - 1
+    w = 0
+    FOR j = 0 TO n - 1
+        w = w + coef(j) * COS(pi / n * i * (j + 1 / 2))
+    NEXT j
+    cheby(i) = w * 2 / n
+    PRINT USING " # : ##.#####################"; i; cheby(i)
+NEXT i
+END

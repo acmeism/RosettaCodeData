@@ -1,0 +1,173 @@
+// ------------------------------------------------------------
+//  Super-Poulet numbers (Fermat pseudoprimes base 2)
+//  Using FutureBasic 7.0.36
+//  November 2025, R.W.
+//
+//  A composite n > 1 is Super-Poulet if:
+//    (1) 2^(n-1) ≡ 1 (mod n)   [pseudoprime to base 2]
+//    (2) For every positive divisor d of n: 2^d ≡ 2 (mod d)
+// ------------------------------------------------------------
+
+include "gmp.incl"
+
+_kPrimeReps = 25   // reps for mpz_probab_prime_p
+UInt32 gDivs(4096)
+
+// Int helpers (native FB Ints are fine up to ~1e8 here)
+local fn IsPrimeSmall( n as UInt32 ) as boolean
+  if n < 2 then RETURN _false
+  if (n AND 1) == 0 then RETURN (n = 2)
+  UInt32 d, lim
+  lim = fix(sqr(n))
+  d = 3
+  while d <= lim
+    if (n mod d) = 0 then RETURN _false
+    d = d + 2
+  wend
+end fn = _true
+
+// Return all positive divisors of n in an array
+// (unsorted -> we’ll do a bubble sort)
+
+local fn Divisors( n as UInt32) as UInt32
+  UInt32 cnt : cnt = 0
+  UInt32 i, q
+  UInt32 lim : lim = fix( sqr( n ) )
+  for i = 1 to lim
+    if (n mod i) = 0
+      gDivs(cnt) = i : cnt = cnt + 1
+      q = fix(n / i)
+      if q != i
+        gDivs(cnt) = q : cnt = cnt + 1
+      end if
+    end if
+  next
+  // small array, bubble sort is simplest here)
+  UInt32 a, b
+  for a = 0 to cnt - 1
+    for b = a + 1 to cnt - 1
+      if gDivs(b) < gDivs(a)
+        swap gDivs(a),gDivs(b)  // bubble up
+      end if
+    next
+  next
+end fn = cnt
+
+// GMP powmod checks for base 2
+// Check 2^e ≡ r (mod m), where m fits in UInt32
+
+local fn PowMod2_Equals( e as UInt32, m as UInt32, r as UInt32 ) as boolean
+  boolean test
+  if m = 0 then RETURN _false
+  // quick outs to avoid tiny-GMP calls
+  test = (r MOD 1) == 0
+  if m = 1 then RETURN test  // always true for any r
+  // fast case for r < m and tiny e aren't worth micro-optimizing further
+  mpz_t zBase, zMod, zRes
+  mpz_init_set_ui( zBase, 2 )
+  mpz_init_set_ui( zMod, m )
+  mpz_init( zRes )
+  fn mpz_powm_ui( zRes, zBase, e, zMod )   // zRes = 2^e mod m
+  boolean ok
+  ok = (fn mpz_cmp_ui( zRes, r ) = 0)
+  mpz_clear( zRes )
+  mpz_clear( zMod )
+  mpz_clear( zBase )
+end fn = ok
+
+// Fermat pseudoprime base 2: composite n>1 and 2^(n-1) ≡ 1 (mod n)
+local fn IsPoulet( n as UInt32 ) as boolean
+  if (n <= 1) then RETURN _false
+  if fn IsPrimeSmall( n ) then RETURN _false
+  // 2^(n-1) ≡ 1 (mod n)
+  if fn PowMod2_Equals( n - 1, n, 1 ) = _false then RETURN _false
+end fn = _True
+
+// Super-Poulet: Poulet + for every divisor d: 2^d ≡ 2 (mod d)
+
+local fn IsSuperPoulet( n as UInt32 ) as boolean
+  if fn IsPoulet( n ) = _false then RETURN _false
+  UInt32 dcount, i, d
+  dcount = fn Divisors( n )      // fills gDivs() and sets dcount
+
+  for i = 0 to dcount - 1
+    d = gDivs(i)
+    // For d=1: helper still returns true (2^1 ≡ 2 mod 1 interpreted as 0≡0)
+    if fn PowMod2_Equals( d, d, 2 ) = _false then RETURN _false
+  next
+end fn = _True
+
+// Small helper to print ordinal suffixes (1st, 2nd, 3rd, 4th, …)
+
+local fn OrdSuffix( n as UInt32 ) as str255
+  UInt32 t = n mod 100
+  t = n mod 10
+  if t = 1 then RETURN "st"
+  if t = 2 then RETURN "nd"
+  if t = 3 then RETURN "rd"
+end fn = "th"
+
+// MAIN: enumerate odd n, collect first 20; then find first > 1e6 and > 1e7
+
+window 1, @"Super-Poulet numbers", (0,0,640,400)
+
+print @"\nFirst 20 super-Poulet numbers:"
+
+// start the clock
+CFTimeInterval t
+t = fn CACurrentMediaTime
+
+int found : found = 0
+UInt32 x : x = 1
+
+UInt32 first20(19)  // Collect first 20
+while found < 20
+  x = x + 2
+  if fn IsSuperPoulet( x )
+    first20(found) = x
+    found = found + 1
+  end if
+wend
+
+// Print them comma-separated
+int i
+for i = 0 to 19
+  if i > 0 then print ",";
+  if i mod 12 == 0 then print
+  print first20(i);
+next
+print : print
+
+// Now continue to find first > 1e6 and > 1e7
+UInt32 target1, target2
+target1 = 1e6  // 1 mil
+target2 = 1e7  //10 mil
+
+UInt32 countSoFar : countSoFar = found
+UInt32 hit1N = 0, hit2N = 0
+UInt32 hit1X = 0, hit2X = 0
+
+// Find first > 1e6
+while hit1X = 0
+  x = x + 2
+  if fn IsSuperPoulet( x )
+    countSoFar = countSoFar + 1
+    if x > target1 then hit1N = countSoFar : hit1X = x
+  end if
+wend
+
+print "The"; str$(hit1N); fn OrdSuffix(hit1N); " super-Poulet number is "; using "#,###,###"; hit1X; " and the first greater than "; using "#,###,###"; target1
+
+// Find first > 1e7
+while hit2X = 0
+  x = x + 2
+  if fn IsSuperPoulet( x )
+    countSoFar = countSoFar + 1
+    if x > target2 then hit2N = countSoFar : hit2X = x
+  end if
+wend
+
+print "The"; str$(hit2N); fn OrdSuffix(hit2N); " super-Poulet number is "; using "##,###,###"; hit2X; " and the first greater than "; using "##,###,###"; target2
+printf @"\nElapsed time: %.3f secs", (fn CACurrentMediaTime-t)
+
+HandleEvents

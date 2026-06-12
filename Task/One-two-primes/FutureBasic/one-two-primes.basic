@@ -1,0 +1,448 @@
+// ------------------------------------------------------------
+//  One-Two Primes
+//  Smallest n-digit prime containing only digits 1 or 2
+//                         or -1 if no such prime exists
+//
+//  Using FutureBasic 7.0.37
+//  November 2025, R.W.
+//
+//  This task is not very practical, i.e. to develop code
+//  to handle two specific digits (1 and 2). There are many
+//  other 2 digits combo interesting Primes.
+//
+//  So this code is written to handle any digits combo simply
+//  by replacing digitOne and digitTwo variables in FN Main.
+//
+//  Implements:
+//    OEIS:A036229 (this task), and
+//    OEIS:A036929,..930,..931, through OEIS:A036951
+// ------------------------------------------------------------
+
+include "gmp.incl"
+
+CFTimeInterval tim
+
+// Global mpz_t bigint reused for speed (holds last result)
+mpz_t ts
+
+long digitOne, digitTwo
+
+long nDigits     // number of digits in output
+long gN          // the next [Next] group: 100, 200, 300, ...
+boolean valid      // valid params
+
+// ------------------------------------------------------------
+//  Abbrev
+//  Build a short summary for the current prime in ts.
+//
+//  In this Rosetta Task, it is ironic that it is not the math
+//  that is a challenge but rather producing the abbreviated
+//  output. This is especially true if the digit zero is
+//  involved the pair.
+//
+// ------------------------------------------------------------
+local fn Abbrev( t as mpz_t ) as CFStringRef
+
+  CFStringRef out = @""
+  CFStringRef suffix
+  CFStringRef tailStr
+
+  int digits(4095)
+  long L, dval
+  long p, firstOnePos
+  long leadingZerosInTail
+  long extraZeros
+  long startP
+  long firstIndex, i
+
+  // If negative or zero, just return the full value
+  if fn mpz_sgn( t ) <= 0
+    out = fn mpz_cf2( t )
+    return out
+  end if
+
+  mpz_t tmp, q, r, ten
+  mpz_init( tmp )
+  mpz_init( q )
+  mpz_init( r )
+  mpz_init( ten )
+
+  mpz_set( tmp, t )
+  mpz_set_ui( ten, 10 )
+  L = 0
+
+  // Extract decimal digits via repeated divide-by-10:
+  // digits(0) = LSD, digits(L-1) = MSD
+
+  while (fn mpz_cmp_ui( tmp, 0 ) > 0) && (L < 4096)
+    fn mpz_tdiv_qr( q, r, tmp, ten )      // tmp = q, remainder = r
+    unsigned long remd
+    remd = fn mpz_get_ui( r )
+    digits(L) = remd
+    mpz_set( tmp, q )
+    L = L + 1
+  wend
+
+  // ----------------------------------------------------------------
+  // Special formatting when one digitOne == 0
+  // ----------------------------------------------------------------
+  if digitOne == 0
+
+    // Generate: 1 digit
+    if L <= 1
+      out = fn mpz_cf2( t )
+      mpz_clear( ten )
+      mpz_clear( r )
+      mpz_clear( q )
+      mpz_clear( tmp )
+      return out
+    end if
+
+    long headDigit
+    headDigit = digits( L - 1 )   // MSD (leftmost)
+    // Choose tail length based on size
+    long s, tailLen
+    s = fix(L / 100)
+    if s < 1 then   s = 1
+    tailLen = 7 + (s - 1) * 4
+    if tailLen > L then tailLen = L
+    // Start with: zerosCount = everything except the last tailLen digits
+    long zerosCount
+    zerosCount = L - tailLen
+    if zerosCount < 0 then zerosCount = 0
+    // Analyze tail
+    firstOnePos = -1
+
+    // Find first '1' in the tail (digitTwo) from the left
+    for p = 0 to tailLen - 1
+      dval = digits( tailLen - 1 - p )
+      if dval == digitTwo
+        firstOnePos = p
+        p = tailLen
+      end if
+    next p
+
+    if firstOnePos < 0
+      // No '1' found in the tail; just show the full number
+      out = fn mpz_cf2( t )
+      mpz_clear( ten )
+      mpz_clear( r )
+      mpz_clear( q )
+      mpz_clear( tmp )
+      return out
+    end if
+
+    // Number of leading zeros in tail before the first '1'
+    leadingZerosInTail = firstOnePos
+    extraZeros = 0
+    startP = 0
+
+    if leadingZerosInTail > 1
+      // We only want ONE leading zero in the tail at most.
+      // Move (leadingZerosInTail - 1) zeros out of the tail
+      // and into zerosCount.
+      extraZeros = leadingZerosInTail - 1
+      zerosCount = zerosCount + extraZeros
+      // Tail will start at the last zero before the first '1'
+      startP = firstOnePos - 1   // so we keep exactly one leading zero
+    else
+      // 0 or 1 zero in front is fine; keep tail as is
+      startP = 0
+    end if
+
+    // Build the tail string from p = startP .. tailLen-1
+    tailStr = @""
+
+    for p = startP to tailLen - 1
+      dval = digits( tailLen - 1 - p )
+      tailStr = fn StringWithFormat( @"%@%ld", tailStr, dval )
+    next
+
+    // build out
+    out = fn StringWithFormat( @"%ld (%ld x %4ld) %@", ¬
+    headDigit, digitOne, zerosCount, tailStr )
+
+    mpz_clear( ten )
+    mpz_clear( r )
+    mpz_clear( q )
+    mpz_clear( tmp )
+
+    return out
+  end if
+
+  // ----------------------------------------------------------------
+  // Default formatting
+  //    count leading digitOne's before the first digitTwo,
+  //    then show suffix from that first digitTwo through the end.
+  // ----------------------------------------------------------------
+
+  firstIndex = -1
+
+  // Find first occurrence of digitTwo from the left
+  for i = L - 1 to 0 step -1
+    if digits(i) == digitTwo
+      firstIndex = i
+      i = -99
+    end if
+  next
+
+  if firstIndex < 0
+    // No digitTwo found; just return the full number
+    out = fn mpz_cf2( t )
+
+    mpz_clear( ten )
+    mpz_clear( r )
+    mpz_clear( q )
+    mpz_clear( tmp )
+
+    return out
+  end if
+
+  // Number of leading digitOne's before the first digitTwo
+  long leadCount
+  leadCount = (L - 1) - firstIndex
+  // Build suffix from digits(firstIndex .. 0), left to right
+  suffix = @""
+
+  for i = firstIndex to 0 step -1
+    suffix = fn StringWithFormat( @"%@%ld", suffix, digits(i) )
+  next
+
+  // build out
+  out = fn StringWithFormat( @"(%ld x %4ld) %@", digitOne, leadCount, suffix )
+
+  mpz_clear( ten )
+  mpz_clear( r )
+  mpz_clear( q )
+  mpz_clear( tmp )
+
+end fn = out
+
+
+// ------------------------------------------------------------
+//  P_TwoDigits
+//  Calculate smallest n-digit prime having only digits d1, d2.
+//
+//  Result:
+//    - Stores prime (or -1) into global mpz_t ts
+//    - Returns CFStringRef decimal representation of ts
+// ------------------------------------------------------------
+local fn P_TwoDigits( ctr as long, d1 as long, d2 as long ) as CFStringRef
+
+  CFStringRef out = @""
+  boolean found
+  boolean leadZero
+  UInt64 maxMask, m, tmpMask
+  long i, dpos, maxBits
+
+  mpz_t candidate, factor, term
+  mpz_init( candidate )
+  mpz_init( factor )
+  mpz_init( term )
+
+  found = _false
+
+  // For ctr > 1, if both digits are multiples of 3, any number is divisible by 3.
+  // Only possible prime would be 3 itself, which is 1 digit.
+
+  if ctr > 1
+    if (d1 MOD 3) == 0 && (d2 MOD 3) == 0
+      mpz_set_si( ts, -1 )
+      out = fn mpz_cf2( ts )
+      return out
+    end if
+  end if
+
+  // Determine how many mask bits we will fully explore
+  maxBits = ctr
+  if maxBits > 20
+    maxBits = 20
+  end if
+
+  // maxMask = 2^maxBits - 1
+
+  maxMask = 1
+  for i = 1 to maxBits
+    maxMask = maxMask * 2
+  next
+  maxMask = maxMask - 1
+  m = 0
+
+  do
+    leadZero = _false
+
+    // Build candidate from right to left using this mask m
+    mpz_set_ui( candidate, 0 )
+    mpz_set_ui( factor, 1 )
+    tmpMask = m
+
+    for dpos = 0 to ctr - 1
+      long digit
+      // enforce the number of digits including 0
+      if dpos < maxBits
+        // Use mask bits for the lowest maxBits positions
+        if (tmpMask AND 1) != 0
+          digit = d2
+        else
+          digit = d1
+        end if
+        tmpMask = fix(tmpMask / 2)     // shift mask right
+      else
+        // Fixed prefix for higher positions when ctr > maxBits
+        if dpos == (ctr - 1)
+          // Most significant digit must not be 0
+          if d1 != 0
+            digit = d1
+          else
+            digit = d2
+          end if
+        else
+          // Middle fixed digits, any choice is fine
+          digit = d1
+        end if
+      end if
+
+      // Enforce: most significant digit cannot be 0
+      if (dpos == ctr - 1) && (digit == 0)
+        leadZero = _true
+      end if
+
+      mpz_mul_ui( term, factor, digit )
+      mpz_add( candidate, candidate, term )
+      mpz_mul_ui( factor, factor, 10 )
+    next
+
+    // Skip primality test if we ended up with a leading zero
+    if leadZero == _false
+      int r
+      r = fn mpz_probab_prime_p( candidate, 25 ) // 25 reps sufficient for huge primes
+      // r = 0 = composite, 1 = probabale prime, 2 = prime
+      if r > 0
+        mpz_set( ts, candidate )
+        out = fn mpz_cf2( ts )
+        found = _true
+        exit do
+      end if
+    end if
+
+    if m >= maxMask
+      exit do
+    end if
+    m = m + 1
+  until _false
+
+  if found == _false
+    // No prime found within the explored pattern space
+    mpz_set_si( ts, -1 )
+    out = fn mpz_cf2( ts )
+  end if
+  mpz_clear( term )
+  mpz_clear( factor )
+  mpz_clear( candidate )
+end fn = out
+
+// ------------------------------------------------------------
+//  More_P (OneTwo_More) after [next]
+//  show the next group of 100's with abbreviation
+// ------------------------------------------------------------
+
+void local fn OneTwo_More
+  CFStringRef pline = @""
+  CFStringRef result = @""
+  tim = fn CACurrentMediaTime
+  result = fn P_TwoDigits( gN, digitOne, digitTwo )
+  if len(result) < 4095    // guard buffer overflow
+    if fn mpz_sgn( ts ) < 0
+      // No prime found in explored pattern space
+      pline = fn StringWithFormat( @"%4ld: No %ld-digit prime found with only digits %ld or %ld.", ¬
+      gN, gN, digitOne, digitTwo )
+    else
+      CFStringRef abr
+      abr = fn Abbrev( ts )
+      pline = fn StringWithFormat( @"%4ld: %@", gN, abr )
+    end if
+  end if
+  print  @pline;
+  printf @" (%.3f secs)", (fn CACurrentMediaTime - tim)
+  gN = gN + 100
+  if gN > 4000 then button 2,NO  //we got no more buffer
+end fn
+
+
+// ------------------------------------------------------------
+//  Main — compute the first 20 Two-Digit Primes
+// ------------------------------------------------------------
+local fn Main
+
+  // set digitOne and digitTwo to the two digits desired
+  // e.g.  1 and 2 gives (2, 11, 211, 2111 etc.)
+  //       7 and 9 gives (7, 79, 797, 77797 etc.).
+
+  digitOne = 1    // 0 through 9 only
+  digitTwo = 2
+
+  // Init global big-int once
+  mpz_init( ts )
+
+  CFStringRef pline = @""
+  CFStringRef result = @""
+
+  print @"\nSmallest n-digit prime containing only ¬
+  digits ";digitOne;" or ";digitTwo;@" (-1 if no such prime exists):\n"
+
+  long count
+  tim = fn CACurrentMediaTime
+
+  nDigits = 1
+  count = 0
+  valid = (digitOne > -1 && digitOne < 10) && (digitTwo > -1 && digitTwo < 10)
+
+  while count < 20 && (valid)
+    // Calculate nth result
+    result = fn P_TwoDigits( nDigits, digitOne, digitTwo )
+    pline = fn StringWithFormat( @"%4ld: %@", nDigits, result )
+    print @pline
+    count ++
+    nDigits ++
+  wend
+
+  if valid
+    printf @"Time elapsed (%.3f secs)", (fn CACurrentMediaTime-tim)
+    print @"\nClick [Next] for the stretch 100 group.\n"
+    gN = 100
+  else
+    print @"Invalid parameters."
+  end if
+
+end fn
+
+// ------------------------------------------------------------
+//  Dialog handler
+// ------------------------------------------------------------
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case 2
+          if valid then fn OneTwo_More
+      end select
+
+    case _windowShouldClose
+      // clear any uncleared mpz, mpfrs
+      mpz_clear( ts )
+      end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+// ------------------------------------------------------------
+//  Main
+// ------------------------------------------------------------
+window 1, @"One-Two Primes", (0,0,620,500)
+button 2, YES,, @"Next", (500,20,100,20),,, 1
+
+fn Main
+
+HandleEvents
+//

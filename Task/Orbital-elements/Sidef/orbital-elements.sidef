@@ -1,0 +1,57 @@
+func orbital_state_vectors(
+    semimajor_axis,
+    eccentricity,
+    inclination,
+    longitude_of_ascending_node,
+    argument_of_periapsis,
+    true_anomaly
+) {
+
+    var (i, j, k) = (
+        Vector(1, 0, 0),
+        Vector(0, 1, 0),
+        Vector(0, 0, 1),
+    )
+
+    func muladd(v1, x1, v2, x2) {
+        (v1 * x1) + (v2 * x2)
+    }
+
+    func rotate(Ref i, Ref j, α) {
+        (*i, *j) = (
+            muladd(*i, +cos(α), *j, sin(α)),
+            muladd(*i, -sin(α), *j, cos(α)),
+        )
+    }
+
+    rotate(\i, \j, longitude_of_ascending_node)
+    rotate(\j, \k, inclination)
+    rotate(\i, \j, argument_of_periapsis)
+
+    var l = (eccentricity == 1 ? 2*semimajor_axis
+                               : semimajor_axis*(1 - eccentricity**2))
+
+    var (c, s) = with(true_anomaly) { (.cos, .sin) }
+
+    var r = l/(1 + eccentricity*c)
+    var rprime = (s * r**2 / l)
+    var position = muladd(i, c, j, s)*r
+
+    var speed = muladd(i, rprime*c - r*s, j, rprime*s + r*c)
+    speed /= speed.abs
+    speed *= sqrt(2/r - 1/semimajor_axis)
+
+    struct Result { position, speed }
+    Result(position, speed)
+}
+
+for args in ([
+    [1, 0.1, 0, 355/(113*6), 0, 0],
+    [1, 0.1, Num.pi/18, Num.pi/6, Num.pi/4, 0]
+]) {
+    var r = orbital_state_vectors(args...)
+
+    say "Arguments: #{args}:"
+    say "Position : #{r.position}"
+    say "Speed    : #{r.speed}\n"
+}

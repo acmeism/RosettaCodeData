@@ -1,0 +1,93 @@
+module TravelingSalesman {
+
+    # Eₛ: length(path)
+    func Eₛ(distances, path) {
+        var total = 0
+        [path, path.slice(1)].zip {|ci,cj|
+            total += distances[ci-1][cj-1]
+        }
+        total
+    }
+
+    # T: temperature
+    func T(k, kmax, kT) { kT * (1 - k/kmax) }
+
+    # ΔE = Eₛ_new - Eₛ_old > 0
+    # Prob. to move if ΔE > 0, → 0 when T → 0 (fronzen state)
+    func P(ΔE, k, kmax, kT) { exp(-ΔE / T(k, kmax, kT)) }
+
+    # ∆E from path ( .. a u b .. c v d ..) to (.. a v b ... c u d ..)
+    # ∆E before swapping (u,v)
+    # Quicker than Eₛ(s_next) - Eₛ(path)
+    func dE(distances, path, u, v) {
+
+        var a = distances[path[u-1]-1][path[u]-1]
+        var b = distances[path[u+1]-1][path[u]-1]
+        var c = distances[path[v-1]-1][path[v]-1]
+        var d = distances[path[v+1]-1][path[v]-1]
+
+        var na = distances[path[u-1]-1][path[v]-1]
+        var nb = distances[path[u+1]-1][path[v]-1]
+        var nc = distances[path[v-1]-1][path[u]-1]
+        var nd = distances[path[v+1]-1][path[u]-1]
+
+        if (v == u+1) {
+            return ((na+nd) - (a+d))
+        }
+
+        if (u == v+1) {
+            return ((nc+nb) - (c+b))
+        }
+
+        return ((na+nb+nc+nd) - (a+b+c+d))
+    }
+
+    const dirs = [1, -1, 10, -10, 9, 11, -11, -9]
+
+    func _prettypath(path) {
+        path.slices(10).map { .map{ "%3s" % _ }.join(', ') }.join("\n")
+    }
+
+    func findpath(distances, kmax, kT) {
+
+        const n = distances.len
+        const R = 2..n
+
+        var path = [1, R.shuffle..., 1]
+        var Emin = Eₛ(distances, path)
+
+        printf("# Entropy(s₀) = s%10.2f\n", Emin)
+        printf("# Random path:\n%s\n\n", _prettypath(path))
+
+        for k in (1 .. kmax) {
+
+            if (k % (kmax//10) == 0) {
+                printf("k: %10d | T: %8.4f | Eₛ: %8.4f\n", k, T(k, kmax, kT), Eₛ(distances, path))
+            }
+
+            var u = R.rand
+            var v = (path[u-1] + dirs.rand)
+            v ~~ R || next
+
+            var δE = dE(distances, path, u-1, v-1)
+            if ((δE < 0) || (P(δE, k, kmax, kT) >= 1.rand)) {
+                path.swap(u-1, v-1)
+                Emin += δE
+            }
+        }
+
+        printf("k: %10d | T: %8.4f | Eₛ: %8.4f\n", kmax, T(kmax, kmax, kT), Eₛ(distances, path))
+        say ("\n# Found path:\n", _prettypath(path))
+        return path
+    }
+}
+
+var citydist = {|ci|
+    { |cj|
+        var v1 = Vec(ci%10, ci//10)
+        var v2 = Vec(cj%10, cj//10)
+        v1.dist(v2)
+    }.map(1..100)
+}.map(1..100)
+
+TravelingSalesman::findpath(citydist, 1e6, 1)

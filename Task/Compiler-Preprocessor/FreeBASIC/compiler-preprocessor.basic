@@ -1,0 +1,287 @@
+Const MAX_INCLUDE_DEPTH = 5
+Const MAX_MACROS = 100
+Const MAX_CONSTS = 100
+Const MAX_ARGS = 10
+
+Type Macro
+    nombre As String
+    params As String
+    expr As String
+End Type
+
+Function BuscarEspacio(s As String) As Integer
+    For i As Integer = 1 To Len(s)
+        If Mid(s, i, 1) = " " Or Mid(s, i, 1) = Chr(9) Then Return i
+    Next
+    Return 0
+End Function
+
+Function TrimAmbos(s As String) As String
+    Dim As Integer i = 1, j = Len(s)
+    While i <= j Andalso (Mid(s, i, 1) = " " Or Mid(s, i, 1) = Chr(9))
+        i += 1
+    Wend
+    While j >= i Andalso (Mid(s, j, 1) = " " Or Mid(s, j, 1) = Chr(9))
+        j -= 1
+    Wend
+    If i > j Then Return ""
+    Return Mid(s, i, j - i + 1)
+End Function
+
+Sub ExtraerMacro(linea As String, Byref nombre As String, Byref params As String, Byref expr As String)
+    Dim As Integer p1 = Instr(linea, "(")
+    Dim As Integer p2 = Instr(linea, ")")
+    If p1 > 0 And p2 > p1 Then
+        nombre = TrimAmbos(Mid(linea, 1, p1 - 1))
+        params = TrimAmbos(Mid(linea, p1 + 1, p2 - p1 - 1))
+        expr = TrimAmbos(Mid(linea, p2 + 1))
+    Else
+        nombre = ""
+        params = ""
+        expr = ""
+    End If
+End Sub
+
+Sub ExtraerArgs(args As String, argList() As String, Byref nArgs As Integer)
+    nArgs = 0
+    Dim As Integer i = 1, j = 1, l = Len(args)
+    While i <= l
+        While i <= l Andalso (Mid(args, i, 1) = " " Or Mid(args, i, 1) = Chr(9))
+            i += 1
+        Wend
+        j = i
+        While j <= l Andalso Mid(args, j, 1) <> ","
+            j += 1
+        Wend
+        argList(nArgs) = TrimAmbos(Mid(args, i, j - i))
+        nArgs += 1
+        i = j + 1
+    Wend
+End Sub
+
+Function SustituirMacro(expr As String, params() As String, args() As String, nParams As Integer) As String
+    Dim As String res = ""
+    Dim As Integer i = 1
+    While i <= Len(expr)
+        Dim As Boolean encontrado = False
+        For j As Integer = 0 To nParams - 1
+            Dim As String pname = params(j)
+            Dim As Integer lpn = Len(pname)
+            If lpn > 0 Then
+                If Mid(expr, i, lpn) = pname Then
+                    res &= args(j)
+                    i += lpn
+                    encontrado = True
+                    Exit For
+                End If
+            End If
+        Next
+        If Not encontrado Then
+            res &= Mid(expr, i, 1)
+            i += 1
+        End If
+    Wend
+    Return res
+End Function
+
+Function SustituirConstantes(linea As String, consts() As String, vals() As String, nConst As Integer) As String
+    Dim As String res = ""
+    Dim As Integer i = 1
+    While i <= Len(linea)
+        Dim As Boolean hecho = False
+        For j As Integer = 0 To nConst - 1
+            Dim As String cname = consts(j)
+            Dim As Integer lcn = Len(cname)
+            If lcn > 0 Then
+                If Mid(linea, i, lcn) = cname Then
+                    res &= vals(j)
+                    i += lcn
+                    hecho = True
+                    Exit For
+                End If
+            End If
+        Next
+        If Not hecho Then
+            res &= Mid(linea, i, 1)
+            i += 1
+        End If
+    Wend
+    Return res
+End Function
+
+Function ExpandirMacros(linea As String, macros() As Macro, nMacros As Integer, _
+    consts() As String, vals() As String, nConst As Integer) As String
+    Dim As String res = ""
+    Dim As Integer i = 1
+    While i <= Len(linea)
+        If Mid(linea, i, 1) = "#" Then
+            Dim As Integer cierra = Instr(i + 1, linea, "#")
+            If cierra > 0 Then
+                Dim As String mcall = Mid(linea, i + 1, cierra - i - 1)
+                Dim As Integer p1 = Instr(mcall, "(")
+                Dim As Integer p2 = Instr(mcall, ")")
+                If p1 > 0 And p2 > p1 Then
+                    Dim As String mname = TrimAmbos(Mid(mcall, 1, p1 - 1))
+                    Dim As String argsStr = TrimAmbos(Mid(mcall, p1 + 1, p2 - p1 - 1))
+
+                    Dim As Boolean encontrado = False
+                    For j As Integer = 0 To nMacros - 1
+                        If macros(j).nombre = mname Then
+                            Dim As String paramList(0 To MAX_ARGS-1), argList(0 To MAX_ARGS-1)
+                            Dim As Integer nParams = 0, nArgs = 0
+                            ExtraerArgs(macros(j).params, paramList(), nParams)
+                            ExtraerArgs(argsStr, argList(), nArgs)
+                            If nArgs = nParams Then
+                                Dim As String exprExpandida = SustituirMacro(macros(j).expr, paramList(), argList(), nParams)
+                                exprExpandida = SustituirConstantes(exprExpandida, consts(), vals(), nConst)
+                                res &= exprExpandida
+                                encontrado = True
+                                Exit For
+                            End If
+                        End If
+                    Next
+                    If Not encontrado Then res &= Mid(linea, i, cierra - i + 1)
+                    i = cierra + 1
+                Else
+                    res &= Mid(linea, i, cierra - i + 1)
+                    i = cierra + 1
+                End If
+            Else
+                res &= Mid(linea, i)
+                Exit While
+            End If
+        Else
+            res &= Mid(linea, i, 1)
+            i += 1
+        End If
+    Wend
+    Return res
+End Function
+
+Sub PreprocesarArchivo(nombreArchivo As String, Byref salida As String, _
+    consts() As String, vals() As String, Byref nConst As Integer, _
+    macros() As Macro, Byref nMacros As Integer, _
+    depth As Integer, debug As Integer)
+
+    If depth > MAX_INCLUDE_DEPTH Then
+        Print "Error: Too much includes depth"
+        End 1
+    End If
+
+    Dim As Integer ff = Freefile()
+    If Open(nombreArchivo For Input As #ff) <> 0 Then
+        Print "It cannot be opened "; nombreArchivo
+        End 1
+    End If
+
+    Dim As Integer i, esp
+    Dim As String nombre, valor, def
+    Dim As Boolean yaExiste = False
+    While Not Eof(ff)
+        Dim As String linea
+        Line Input #ff, linea
+        Dim As String trimLinea = TrimAmbos(linea)
+        If Left(trimLinea, 8) = "#include" Then
+            Dim As Integer q1 = Instr(trimLinea, Chr(34))
+            Dim As Integer q2 = Instr(q1 + 1, trimLinea, Chr(34))
+            If q1 > 0 And q2 > q1 Then
+                Dim As String incfile = Mid(trimLinea, q1 + 1, q2 - q1 - 1)
+                If debug Then salida &= "/* Include " & incfile & " */" & Chr(10)
+                PreprocesarArchivo(incfile, salida, consts(), vals(), nConst, macros(), nMacros, depth + 1, debug)
+                If debug Then salida &= "/* End " & incfile & " */" & Chr(10)
+            End If
+        Elseif Left(trimLinea, 7) = "#define" Then
+            def = TrimAmbos(Mid(trimLinea, 8))
+            If Instr(def, "(") > 0 And Instr(def, ")") > Instr(def, "(") Then
+                Dim As String params, expr
+                ExtraerMacro(def, nombre, params, expr)
+                yaExiste = False
+                For i = 0 To nMacros - 1
+                    If macros(i).nombre = nombre Then yaExiste = True
+                Next
+                If Not yaExiste Then
+                    macros(nMacros).nombre = nombre
+                    macros(nMacros).params = params
+                    macros(nMacros).expr = expr
+                    nMacros += 1
+                    If debug Then salida &= "/* Define " & nombre & "(" & params & ") as " & expr & " */" & Chr(10)
+                End If
+            Else
+                esp = BuscarEspacio(def)
+                If esp > 0 Then
+                    nombre = TrimAmbos(Left(def, esp - 1))
+                    valor = TrimAmbos(Mid(def, esp + 1))
+                Else
+                    nombre = TrimAmbos(def)
+                    valor = ""
+                End If
+
+                yaExiste = False
+                For i = 0 To nConst - 1
+                    If consts(i) = nombre Then yaExiste = True
+                Next
+                If Not yaExiste Then
+                    consts(nConst) = nombre
+                    vals(nConst) = valor
+                    nConst += 1
+                    If debug Then salida &= "/* Define " & nombre & " as " & valor & " */" & Chr(10)
+                End If
+            End If
+        Elseif Left(trimLinea, 6) = "#const" Then
+            def = TrimAmbos(Mid(trimLinea, 7))
+            esp = BuscarEspacio(def)
+            If esp > 0 Then
+                nombre = TrimAmbos(Left(def, esp - 1))
+                valor  = TrimAmbos(Mid(def, esp + 1))
+            Else
+                nombre = TrimAmbos(def)
+                valor  = ""
+            End If
+
+            yaExiste = False
+            For i = 0 To nConst - 1
+                If consts(i) = nombre Then yaExiste = True
+            Next
+            If Not yaExiste Then
+                consts(nConst) = nombre
+                vals(nConst)   = valor
+                nConst += 1
+                If debug Then salida &= "/* Const " & nombre & " = " & valor & " */" & Chr(10)
+            End If
+        Else
+            Dim As String linea2 = ExpandirMacros(linea, macros(), nMacros, consts(), vals(), nConst)
+            linea2 = SustituirConstantes(linea2, consts(), vals(), nConst)
+            salida &= linea2 & Chr(10)
+        End If
+    Wend
+    Close #ff
+End Sub
+
+' --- Main program ---
+Dim As String infile  = "program.src"
+Dim As String prefile = "program.pre"
+Dim debug As Integer = 0
+
+Dim As String salida = ""
+Dim As String consts(MAX_CONSTS), vals(MAX_CONSTS)
+Dim As Macro macros(MAX_MACROS)
+Dim As Integer nConst = 0, nMacros = 0
+
+If Command(1) = "-d" Then
+    debug = 1
+    infile = Command(2)
+End If
+
+PreprocesarArchivo(infile, salida, consts(), vals(), nConst, macros(), nMacros, 0, debug)
+
+If prefile = "" Then
+    Print salida
+Else
+    Dim ff As Integer = Freefile()
+    Open prefile For Output As #ff
+    Print #ff, salida;
+    Close #ff
+    Print "Saved output in "; prefile
+End If
+
+Sleep

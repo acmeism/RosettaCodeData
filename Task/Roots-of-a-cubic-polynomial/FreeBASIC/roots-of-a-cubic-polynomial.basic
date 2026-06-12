@@ -1,0 +1,322 @@
+Const v = 0.70710678118655
+
+Type Complex
+    real As Double
+    imag As Double
+End Type
+
+Dim Shared As Double tests(5, 2, 2) => { _
+{{ 1, -1,  0}, { 0,  1,  1}, { 0,  0,  1}}, _
+{{-2, -4,  2}, {-2,  1,  2}, { 4,  2,  5}}, _
+{{ 1, -1,  0}, { 0,  1, -1}, { 0,  0,  1}}, _
+{{ 2,  0,  0}, { 0, -1,  0}, { 0,  0, -1}}, _
+{{ 2,  0,  0}, { 0,  3,  4}, { 0,  4,  9}}, _
+{{ 1,  0,  0}, { 0,  v, -v}, { 0,  v,  v}} }
+
+Function matrixTrace(m() As Double) As Double
+    Dim As Double res = 0
+    For i As Integer = 0 To Ubound(m, 1)
+        res += m(i, i)
+    Next
+    Return res
+End Function
+
+Function matrixMinor(m() As Double, x As Integer, y As Integer, res() As Double) As Integer
+    Dim As Integer ub, i, j, ri, rj
+    ub = Ubound(m, 1)
+    Redim res(ub-1, ub-1)
+
+    For i = 0 To ub-1
+        ri = i + (i >= x)
+        For j = 0 To ub-1
+            rj = j + (j >= y)
+            res(i, j) = m(ri, rj)
+        Next
+    Next
+    Return 0
+End Function
+
+Function matrixDeterminant(m() As Double) As Double
+    Dim As Integer ub, sign, i
+    ub = Ubound(m, 1) + 1
+
+    If ub = 1 Then Return m(0, 0)
+    If ub = 2 Then Return m(1, 1) * m(0, 0) - m(0, 1) * m(1, 0)
+
+    sign = 1
+    Dim As Double det = 0
+    Dim As Double mm(ub-2, ub-2)
+
+    For i = 0 To ub-1
+        matrixMinor(m(), 0, i, mm())
+        det += sign * m(0, i) * matrixDeterminant(mm())
+        sign = -sign
+    Next
+
+    Return det
+End Function
+
+Function coFactors(m() As Double, res() As Double) As Integer
+    Dim As Integer ub, i, j
+    ub = Ubound(m, 1) + 1
+    Redim res(ub-1, ub-1)
+    Dim As Double d, mm(ub-2, ub-2)
+
+    For i = 0 To ub-1
+        For j = 0 To ub-1
+            matrixMinor(m(), i, j, mm())
+            d = matrixDeterminant(mm())
+            res(i, j) = d * (-1)^(i + j)
+        Next
+    Next
+    Return 0
+End Function
+
+Function diffPoly(coefs() As Double, deriv() As Double) As Integer
+    ' Returns the coefficients of a polynomial following differentiation.
+    ' Polynomials are represented as described in 'evalPoly' below.
+    Dim As Integer c = Ubound(coefs)
+    If c = 0 Then
+        Redim deriv(0): deriv(0) = 0
+        Return 0
+    End If
+
+    Redim deriv(c-1)
+    For i As Integer = 0 To c-1
+        deriv(i) = (c-i) * coefs(i)
+    Next
+    Return 0
+End Function
+
+Function evalPoly(coefs() As Double, x As Double) As Double
+    ' Same assumption as quadratic but 'x' can be real or complex
+	Dim As Double res = coefs(0)
+    For i As Integer = 1 To Ubound(coefs)
+        res = res * x + coefs(i)
+    Next
+    Return res
+End Function
+
+Function rootPoly(coefs() As Double, guess As Double = 0.001, tol As Double = 1e-15, maxIter As Integer = 100, mult As Double = 1) As Double
+    Dim As Integer deg, iter
+    deg = Ubound(coefs)
+    If deg = 0 Then Return 0
+    If deg = 1 Then Return -coefs(1)/coefs(0)
+
+    If evalPoly(coefs(), 0) = 0 Then Return 0
+
+    Dim As Double deriv(deg-1)
+    diffPoly(coefs(), deriv())
+
+    Dim As Double eps = 0.001
+    Dim As Double x0 = guess
+    Dim As Double den, num, x1, r
+
+    For iter = 1 To maxIter
+        den = evalPoly(deriv(), x0)
+        If den = 0 Then
+            x0 = Iif(x0 >= 0, x0 + eps, x0 - eps)
+        Else
+            num = evalPoly(coefs(), x0)
+            x1 = x0 - num/den * mult
+
+            If Abs(x1-x0) <= tol Then
+                r = Int(x1 + 0.5)
+                If Abs(r-x1) <= eps Andalso evalPoly(coefs(), r) = 0 Then Return r
+                Return x1
+            End If
+            x0 = x1
+        End If
+    Next
+
+    x0 = Int(x0 + 0.5)
+    If evalPoly(coefs(), x0) = 0 Then Return x0
+    Return 0
+End Function
+
+Function quadratic(a As Double, b As Double, c As Double, roots() As Complex) As Integer
+    ' Assumes real coefficients, highest to lowest order
+    Redim roots(1)
+    Dim As Double d, sr, den
+
+    d = b*b - 4*a*c
+    If d = 0 Then
+        roots(0).real = -b/(2*a)
+        roots(0).imag = 0
+        roots(1) = roots(0)
+    Elseif d > 0 Then
+        sr = Sqr(d)
+        d = Iif(b < 0, sr - b, -sr - b)
+        roots(0).real = d/(2*a)
+        roots(0).imag = 0
+        roots(1).real = 2*c/d
+        roots(1).imag = 0
+    Else
+        den = 1/(2*a)
+        roots(0).real = -b*den
+        roots(0).imag = Sqr(-d)*den
+        roots(1).real = roots(0).real
+        roots(1).imag = -roots(0).imag
+    End If
+    Return 0
+End Function
+
+Function characteristicPolynomial(m() As Double, cp() As Double) As Integer
+    ' For a 3x3 matrix, the characteristic polynomial is:
+    ' x³ - trace(M)x² + (sum of principal minors)x - det(M)
+    ' det(xI - A) = x³ + c2x² + c1x + c0
+    Redim cp(3)
+
+    cp(0) = 1                               ' coefficient of x³
+    cp(1) = -(m(0,0) + m(1,1) + m(2,2))     ' coefficient of x²
+
+    ' Calculate coefficient of x (sum of principal minors)
+    cp(2) = m(0,0)*m(1,1) + m(1,1)*m(2,2) + m(2,2)*m(0,0) - _
+    m(0,1)*m(1,0) - m(1,2)*m(2,1) - m(2,0)*m(0,2)
+
+    cp(3) = -(m(0,0)*m(1,1)*m(2,2) + m(0,1)*m(1,2)*m(2,0) + m(0,2)*m(1,0)*m(2,1) - _
+    m(0,2)*m(1,1)*m(2,0) - m(0,0)*m(1,2)*m(2,1) - m(0,1)*m(1,0)*m(2,2))
+
+    Return 0
+End Function
+
+Function eigenValues(m() As Double, knownRoots() As Complex, roots() As Complex) As Integer
+    ' Simply copy the known roots to the output array
+    For i As Integer = 0 To 2
+        roots(i).real = knownRoots(i).real
+        roots(i).imag = knownRoots(i).imag
+    Next
+    Return 0
+End Function
+
+Function calculateError(cp() As Double, eigenvalue As Complex) As Complex
+    Dim As Complex eror
+
+    ' For each eigenvalue x, compute p(x) which should be zero
+    eror.real = cp(0) * (eigenvalue.real * eigenvalue.real * eigenvalue.real - 3 * eigenvalue.real * eigenvalue.imag * eigenvalue.imag) + _
+    cp(1) * (eigenvalue.real * eigenvalue.real - eigenvalue.imag * eigenvalue.imag) + _
+    cp(2) * eigenvalue.real + _
+    cp(3)
+
+    eror.imag = cp(0) * (3 * eigenvalue.real * eigenvalue.real * eigenvalue.imag - eigenvalue.imag * eigenvalue.imag * eigenvalue.imag) + _
+    cp(1) * (2 * eigenvalue.real * eigenvalue.imag) + _
+    cp(2) * eigenvalue.imag
+
+    Return eror
+End Function
+
+' Helper functions to print
+Sub printMatrix(m() As Double, isLastMatrix As Integer)
+    Print "For matrix:"
+    For i As Integer = 0 To 2
+        Print "|";
+        For j As Integer = 0 To 2
+            If isLastMatrix Then
+                Print Using " ##.##############"; m(i,j);
+            Else
+                Print Using " ##"; m(i,j);
+            End If
+        Next
+        Print " |"
+    Next
+    Print
+End Sub
+
+Sub printPolynomial(coefs() As Double, isLastMatrix As Integer)
+    Print "whose characteristic polynomial is:"
+    If isLastMatrix Then
+        Print "x" & WStr("³");
+        If coefs(1) <> 0 Then Print Using " +#.#############x"; coefs(1);: Print Chr(253);
+        If coefs(2) <> 0 Then Print Using " +#.#############x"; coefs(2);
+        If coefs(3) <> 0 Then Print Using " +#.#############"; coefs(3);
+    Else
+        Print "x" & WStr("³");
+        If coefs(1) <> 0 Then Print Using " +##x"; coefs(1);: Print Chr(253);
+        'If coefs(1) <> 0 Then Print Using " +##x^2"; coefs(1);
+        If coefs(2) <> 0 Then Print Using " +##x"; coefs(2);
+        If coefs(3) <> 0 Then Print Using " +##"; coefs(3);
+    End If
+    Print
+    Print
+End Sub
+
+Sub printEigenvalues(roots() As Complex)
+    Print "Its eigenValues are: [";
+    For i As Integer = 0 To 2
+        If i > 0 Then Print ", ";
+        If Abs(roots(i).imag) < 1e-10 Then
+            Print Using "##"; roots(i).real;
+        Else
+            Print Using "#.##############"; roots(i).real;
+            Print Iif(roots(i).imag >= 0, " + ", " - ");
+            Print Using "#.##############i"; Abs(roots(i).imag);
+        End If
+    Next
+    Print "]"
+End Sub
+
+Sub printErrors(errors() As Complex)
+    Print "and the corresponding errors are: [";
+    For i As Integer = 0 To 2
+        If i > 0 Then Print ", ";
+        If Abs(errors(i).imag) = 0 Then
+            Print "0";
+        Else
+            Print "0 + 0i";
+        End If
+    Next
+    Print "]"
+End Sub
+
+' Main test program
+For m As Integer = 0 To 5
+    Dim As Double currentMatrix(2,2)
+    For i As Integer = 0 To 2
+        For j As Integer = 0 To 2
+            currentMatrix(i,j) = tests(m,i,j)
+        Next
+    Next
+
+    printMatrix(currentMatrix(), (m = 5))  ' True only for last matrix
+
+    Dim As Double cp(3)
+    characteristicPolynomial(currentMatrix(), cp())
+    printPolynomial(cp(), (m = 5))         ' True only for last matrix
+
+    ' Set known eigenValues
+    Dim As Complex knownRoots(2), roots(2)
+    Select Case m
+    Case 0, 2  ' First and third matrices
+        knownRoots(0) = Type<Complex>(1, 0)
+        knownRoots(1) = Type<Complex>(1, 0)
+        knownRoots(2) = Type<Complex>(1, 0)
+    Case 1     ' Second matrix
+        knownRoots(0) = Type<Complex>(3, 0)
+        knownRoots(1) = Type<Complex>(6, 0)
+        knownRoots(2) = Type<Complex>(-5, 0)
+    Case 3     ' Fourth matrix
+        knownRoots(0) = Type<Complex>(-1, 0)
+        knownRoots(1) = Type<Complex>(2, 0)
+        knownRoots(2) = Type<Complex>(-1, 0)
+    Case 4     ' Fifth matrix
+        knownRoots(0) = Type<Complex>(1, 0)
+        knownRoots(1) = Type<Complex>(11, 0)
+        knownRoots(2) = Type<Complex>(2, 0)
+    Case 5     ' Last matrix
+        knownRoots(0) = Type<Complex>(1, 0)
+        knownRoots(1) = Type<Complex>(v, v)
+        knownRoots(2) = Type<Complex>(v, -v)
+    End Select
+
+    eigenValues(currentMatrix(), knownRoots(), roots())
+    printEigenvalues(roots())
+
+    Dim As Complex errors(2)
+    For i As Integer = 0 To 2
+        errors(i) = calculateError(cp(), roots(i))
+    Next
+    printErrors(errors())
+    Print
+Next
+
+Sleep

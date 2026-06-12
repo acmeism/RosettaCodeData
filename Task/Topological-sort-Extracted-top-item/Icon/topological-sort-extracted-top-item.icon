@@ -1,0 +1,138 @@
+# Determine compile order from a directed graph.
+#   - get the original graph
+#   - Start a new graph with just the nodes listed as arguments and no arcs
+#      - for the nodes in the new graph, add nodes from the old graph that
+#           are successors to those nodes and add them to new graph (with arcs)
+#           until no new nodes added (assumes no cycles in original graph!)
+#   - do an inverse topological sort on the new graph
+
+import util
+
+record graph(nodes,arcs,rarcs)
+
+procedure main(a)
+
+   Args(a)
+   g := getGraph()
+   ng := buildSubGraph(g,set(Args().getArgs()))
+
+   # Try to sort.  tsort(g) will fail if graph contains a cycle
+   if t := tsort(ng) then {
+     write("the inverse topological ordering is:")
+     every write("\t",!t)
+     }
+end
+
+procedure buildSubGraph(g,top)  # starting from nodes in top
+   ng := graph(top,table(),table())
+   osize := *ng.nodes
+   while osize ~= *(ng := addNodes(g,ng)).nodes do osize := *ng.nodes
+   return ng
+end
+
+procedure addNodes(g,ng)
+   every n := !ng.nodes do {
+      sn := sarcs(n,g)   # direct ancestors of n in g
+      if *\sn > 0 then {
+         every insert(ng.nodes,!\sn)  # put them into ng, then add its arcs
+         /ng.arcs[n] := set()
+         ng.arcs[n] := \sn
+         every s := !\sn do {
+            /ng.rarcs[s] := set()
+            insert(ng.rarcs[s],n)
+            }
+         }
+      }
+   return ng
+end
+
+##tnsort(g) -- do an inverse topological sort or print all of the cycles if
+#              the sort can't be done
+procedure tsort(g)
+   t := []
+   while *\(n := g.nodes -- pnodes(g)) > 0 do {
+      every (s := "(") ||:= !n || " "
+      put(t, trim(s) || ")")
+      g := deleteNodes(g,n)
+      }
+
+   if *\(g.nodes) > 0 then {    # can't sort - has at least one cycle!
+      write("graph contains the cycles:")
+      every write("\t",genpath(set(), fn := !g.nodes,fn,g))
+      fail
+      }
+
+   return t
+end
+
+## genpath(f,t,g) -- generate all paths from f to t in g
+#     note: includes a memory of previous paths to avoid duplicates
+procedure genpath(visited,f,t,g)
+   if member(visited, f) then fail
+   sep := " <- "
+   if member(sn := \parcs(f,g),t) then return f || sep || t
+   every insert(visited, f)
+   suspend f || sep || genpath(visited,!\sn,t,g)
+end
+
+## snodes(g) -- return all the successor nodes of g
+#     (those that have an arc into them)
+procedure snodes(g)
+   return set(\[: key(g.rarcs) :] | [])
+end
+
+## pnodes(g) -- return all the predecessor nodes of g
+#     (those that have an arc out of them)
+procedure pnodes(g)
+   return set(\[: key(g.arcs) :] | [])
+end
+
+## sarcs(f,g) -- compute all nodes that immediately follow f in g
+procedure sarcs(f,g)
+   return g.arcs[f]
+end
+
+## parcs(f,g) -- compute all nodes that immediately precede f in g
+procedure parcs(f,g)
+   return g.rarcs[f]
+end
+
+## deleteNodes(g,x) -- deletes all nodes in x from graph g
+#     note that arcs and reverse arcs must be deleted as well
+procedure deleteNodes(g,x)
+   every delete(g.nodes|g.arcs|g.rarcs|!(g.arcs|g.rarcs), !x)
+   # May have some empty arcs now so get rid of those...
+   every *\g.arcs[k := key(g.arcs)] = 0 do delete(g.arcs,k)
+   every *\g.rarcs[k := key(g.rarcs)] = 0 do delete(g.rarcs,k)
+end
+
+## getGraph() -- read and construct a graph
+#
+#      a graph is described via arcs, as in:
+#
+#       phoenix -> flagstaff
+#       tucson -> globe,showlow
+#       flagstaff -> showlow
+#
+# where the node labels are any alphanumeric character strings and
+# the separators are any non-alphanumeric character strings
+procedure getGraph()
+static labchars
+   initial labchars := &letters ++ &digits
+
+   count := 0
+   nodes := set()
+   every (arcs|rarcs) := table()
+   every !&input ? {
+                   tab(upto(labchars))
+                   insert(nodes, nfrom := tab(many(labchars)))
+                   tab(upto(labchars))
+                   while insert(nodes, nto := tab(many(labchars))) do {
+                       tab(upto(labchars))
+                       arcs[nfrom] := insert(\arcs[nfrom]|set(), nto)
+                       rarcs[nto]  := insert(\rarcs[nto]|set(), nfrom)
+                       }
+                   }
+
+   return graph(nodes,arcs, rarcs)
+end

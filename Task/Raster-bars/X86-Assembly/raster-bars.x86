@@ -1,0 +1,177 @@
+        page    240, 132                ;minimize annoying page headers
+;Assemble with:
+; tasm
+; tlink /t
+        .model  tiny
+        .code
+        .486
+        org     100h
+
+;MS-DOS loads .com files with registers set this way:
+; ax=0, bx=0, cx=00FFh, dx=cs, si=0100h, di=-2, bp=09xx, sp=-2, es=ds=cs=ss
+;The direction flag (d) is clear (incrementing).
+start:
+if 0                                    ;if debug then must initialize registers
+        mov     cx, 00FFh
+        mov     dx, cs
+        mov     si, 0100h
+        mov     di, -2
+        mov     bp, 0955h
+endif
+        mov     al,13h                  ;call BIOS to set graphic mode 13h
+        int     10h                     ; 320x200 with 256 colors (ah = 0)
+
+;Set up color registers with sequential shades of red and green (gives yellow,
+; gold, copper, brown, etc.). Since the hardware only allows 64 levels of
+; intensity, the shades are not continuous. Code from SHR's YEW2 demo program.
+yew10:  mov     al,cl                   ;cx is assumed set to 00ffh by loader
+        mov     dx,03c8h                ;select color register ffh down thru 01h
+        out     dx,al
+
+        inc     dx                      ;point to corresponding RGB registers
+        out     dx,al                   ;set red intensity
+
+        aam                             ;set green intensity to 7/8 of red value
+        org     $-1                     ;ah <- al/8; al <- rem
+        db      8                       ;(values other than 0a work just fine)
+        mov     al,cl
+        sub     al,ah
+        out     dx,al
+
+        xor     ax,ax                   ;set blue intensity to 0
+        out     dx,al
+        loop    yew10                   ;loop for 255 color registers (ff-01)
+
+        fninit                          ;initialize math coprocessor (FPU)
+        fldz                            ;push (load) 0.0 onto FPU stack
+        fstp    angle                   ; Angle:= 0.;
+
+; - - - - - - - - - - - - - - - Main Loop - - - - - - - - - - - - - - - - - - -
+ras60:
+;WaitForVSync
+        mov     dx, 03dah
+wait10: in      al, dx                  ;wait for vertical retrace to go away
+        and     al, 08h
+        jne     short wait10
+wait20: in      al, dx                  ;wait for vertical retrace
+        and     al, 08h
+        je      short wait20
+
+;Erase buffer
+        mov     di, offset buffer
+        mov     cx, 200*320/2
+        xor     ax, ax
+        rep stosw                       ;es:[di++]:= ax; cx--
+
+;       for N:= 2 to 9 do
+        mov     dx, 2                   ;dx = N
+        mov     N, dx
+ras70:
+;Phase:= float(N)*0.4;
+        fild    N                       ;can't use dx here; must be memory loc
+        fld     n4
+        fmul
+        fstp    phase
+
+;Y:= fix(80.*Sin(Angle+Phase));
+        fld     n80
+        fld     angle
+        fld     phase
+        fadd
+        fsin                            ;return the sine in one instruction!
+        fmul
+        push    ax
+        mov     bp, sp
+        fistp   word ptr [bp]
+        pop     ax
+
+;ShowBar(Y+100, 2*N, 64*((3&N)+1)-1);
+        add     ax, 100
+        mov     sbY0, ax
+        imul    ax, dx, 2
+        mov     sbR, ax
+        mov     ax, dx
+        and     ax, 3
+        inc     ax
+        shl     ax, 6
+        dec     ax
+        mov     sbC0, ax
+        call    ShowBar
+
+        inc     N
+        mov     dx, N
+        cmp     dx, 9
+        jle     short ras70
+
+;Copy buffer to video RAM
+        mov     cx, 320*200/2
+        mov     si, offset buffer
+        xor     di, di
+        push    0A000h
+        pop     es
+        rep movsw                       ;es:[di++] <- ds:[si++]; cx--
+        push    cs
+        pop     es
+
+;       Angle:= Angle + 0.04;
+        fld     angle
+        fld     n04
+        fadd
+        fstp    angle
+
+        mov     ah, 1                   ;a keystroke terminates the program
+        int     16h
+        je      ras60                   ;loop back if no keystroke
+
+        mov     ah, 0                   ;eat the keystroke
+        int     16h                     ; so it isn't echoed on the display
+
+        mov     ax, 0003h               ;restore the normal text display mode
+        int     10h
+        ret
+
+;-------------------------------------------------------------------------------
+ShowBar:
+; proc ShowBar(Y0, R, C0);              \Display cylindrical rod with its center
+; int  Y0, R, C0;                       \ at Y0, radius R, and center color C0
+
+; for Y:= -R to +R do
+        mov     ax, sbR
+        mov     bp, ax                  ;bp = 'for' loop limit
+        neg     ax
+        mov     si, ax                  ;si = 'for' loop control variable
+sb40:
+;C:= C0 - 31*abs(Y)/R;                  \(looks better than a circular surface)
+        mov     ax, si
+sb45:   neg     ax
+        jl      short sb45
+        imul    ax, 31
+        cwd
+        idiv    sbR
+        neg     ax
+        add     ax, sbC0
+
+;Line(319, Y+Y0, C);                    \draw horizontal line from left to right
+        mov     cx, 320
+        mov     di, si
+        add     di, sbY0
+        imul    di, 320
+        add     di, offset buffer
+        rep stosb                       ;es:[di++]:= al; cx--
+
+        inc     si
+        cmp     si, bp
+        jle     short sb40
+        ret
+
+n4      dd      0.4                     ;single precision 'float' constants
+n04     dd      0.04
+n80     dd      80.0
+N       dw      ?
+angle   dd      ?
+phase   dd      ?
+sbY0    dw      ?
+sbR     dw      ?
+sbC0    dw      ?
+buffer  db      320*200 dup(?)          ;stack starts above this at top of 64K
+        end     start

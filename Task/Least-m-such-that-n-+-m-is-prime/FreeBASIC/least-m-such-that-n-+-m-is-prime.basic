@@ -1,0 +1,148 @@
+#include "big_int/big_integer.bi"
+
+' Constants for Miller-Rabin (sufficient for numbers up to 2^64)
+Const NUM_BASES = 5
+Dim Shared As BigInt BASES(0 To NUM_BASES - 1) = _
+{ BigInt("2"), BigInt("325"), BigInt("9375"), BigInt("28178"), BigInt("450775") }
+
+' Precalculate small primes for fast division
+Dim Shared As Integer smallPrimes()
+Erase smallPrimes
+
+Sub InitSmallPrimes()
+    Dim As Integer i, j
+    Dim As Byte sieve(1000)
+    For i = 2 To 999
+        If sieve(i) = 0 Then
+            Redim Preserve smallPrimes(Ubound(smallPrimes) + 1)
+            smallPrimes(Ubound(smallPrimes)) = i
+            For j = i * i To 999 Step i
+                sieve(j) = 1
+            Next
+        End If
+    Next
+End Sub
+
+' Modular exponentiation for BigInt (a^b mod modu)
+Function ModPow(Byref a As BigInt, Byref b As BigInt, Byref modu As BigInt) As BigInt
+    Dim As BigInt result = 1, basenum = a Mod modu
+    Dim As BigInt exponent = b
+    While exponent > 0
+        If exponent Mod 2 = 1 Then
+            result = (result * basenum) Mod modu
+        End If
+        basenum = (basenum * basenum) Mod modu
+        exponent \= 2
+    Wend
+    Return result
+End Function
+
+Function MillerRabin(Byref n As BigInt) As Boolean
+    If n <= 1 Then Return False
+    If n <= 3 Then Return True
+    If n Mod 2 = 0 Then Return False
+
+    ' Write n-1 as d*2^s
+    Dim As BigInt d = n - 1
+    Dim As Uinteger i, j, s = 0
+    While d Mod 2 = 0
+        d \= 2
+        s += 1
+    Wend
+
+    For i = 0 To NUM_BASES - 1
+        If BASES(i) >= n Then Continue For
+        Dim As BigInt x = ModPow(BASES(i), d, n)
+        If x = 1 Or x = n - 1 Then Continue For
+        For j = 1 To s - 1
+            x = ModPow(x, 2, n)
+            If x = n - 1 Then Exit For
+        Next
+        If j = s Then Return False
+    Next
+    Return True
+End Function
+
+Function isPrime(Byref n As BigInt) As Boolean
+    ' Check divisibility by small primes first
+    If Ubound(smallPrimes) >= Lbound(smallPrimes) Then
+        For i As Integer = Lbound(smallPrimes) To Ubound(smallPrimes)
+            Dim As Integer p = smallPrimes(i)
+            If n = p Then Return True
+            If n Mod p = 0 Then Return False
+        Next
+    End If
+
+    ' Then apply Miller-Rabin
+    Return MillerRabin(n)
+End Function
+
+Function NextPrime(Byref n As BigInt) As BigInt
+    If n < 2 Then Return BigInt("2")
+    Dim As BigInt candidate = n
+    If candidate Mod 2 = 0 Then candidate += 1
+
+    Do
+        If isPrime(candidate) Then Return candidate
+        candidate += 2
+    Loop
+End Function
+
+' Main Program
+InitSmallPrimes()
+Dim As BigInt limite = "3000", incremento = "1000"
+Dim As BigInt n = "0", limiteActual = "1000", f = "1"
+Dim As Integer contador = 0
+Dim As Boolean continuar = True
+
+' Store already reported limits to avoid duplicates
+Dim As Integer reportedLimits(0 To 20)
+Dim As Integer numReportedLimits = 0
+
+Print "Least positive m such that n! + m is prime; first 50:"
+
+Do
+    Dim As BigInt m = NextPrime(f) - f
+
+    ' Show first 50
+    If contador < 50 Then
+        Print Using "###"; m;
+        If contador Mod 10 = 9 Then Print Else Print " ";
+    Else
+        Dim As Integer currentLimit = Val(limiteActual)
+
+        While m > limiteActual
+            ' Check if the limit has already been reported with the same value
+            Dim As Boolean alreadyReported = False
+            For i As Integer = 0 To numReportedLimits - 1
+                If reportedLimits(i) = currentLimit Then
+                    alreadyReported = True
+                    Exit For
+                End If
+            Next
+
+            If Not alreadyReported Then
+                Print Using !"\nFirst m > ##### is ##### at position ###."; limiteActual; m; contador
+                ' Record this limit as reported
+                reportedLimits(numReportedLimits) = currentLimit
+                numReportedLimits += 1
+            End If
+
+            limiteActual += incremento
+            currentLimit += Val(incremento)
+
+            ' Verificar si debemos terminar
+            If limiteActual > limite Then
+                continuar = False
+                Exit Do
+            End If
+        Wend
+    End If
+
+    ' Update factorial
+    contador += 1
+    n += 1
+    f *= n
+Loop While continuar
+
+Sleep

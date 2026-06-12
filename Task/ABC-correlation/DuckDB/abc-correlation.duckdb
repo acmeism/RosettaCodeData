@@ -1,0 +1,40 @@
+create or replace function allEqual(str) as table (
+  select na,nb,nc, allEq
+  from (
+    select
+      list_filter(abc, x-> x='a').length() as na,
+      list_filter(abc, x-> x='b').length() as nb,
+      if ( na = nb,
+           list_filter(abc, x-> x='c').length(),
+           null) as nc,
+      if (na = nc, true, false) as allEq
+      from (select regexp_extract_all(str,'[abc]') as abc)
+  )
+);
+
+create or replace function abc(s) as (
+  select allEq from allEqual(s)
+);
+
+## Examples
+.print unixtxt.dict
+with cte as (from read_text('unixdict.txt'))
+from allEqual( (select content from cte) );
+
+select str, abc(str) as "abc"
+from (select unnest(
+    ['aluminium', 'abc', 'internet', 'adb', 'cda', 'blank', 'black',
+     'mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn',
+     'uranus', 'neptune', 'pluto']) as str )
+  where "abc" ;
+
+.print First 10 abc words from unixtxt.dict that begin with an alphabetic character
+.print and have at least three characters:
+with cte as (from read_csv('unixdict.txt', header=false)
+             where column0 ~ '^[a-zA-Z]...*')
+select word
+from (select word, (select allEq from allEqual(word)) as allEq
+      from (select column0 as word from cte)
+      where allEq
+      order by word)
+limit 10;

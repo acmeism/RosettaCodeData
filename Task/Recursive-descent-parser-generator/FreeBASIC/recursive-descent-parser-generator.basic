@@ -1,0 +1,204 @@
+Const NULL As Any Ptr = 0
+
+Type Token
+    tType As String * 10 ' "SYMBOL", "IDENT", "EOF"
+    tVal As String * 50
+End Type
+
+Type ASTNode
+    tType As String * 10 ' "SYMBOL" o "IDENT"
+    tVal As String * 50
+    izda As ASTNode Ptr
+    dcha As ASTNode Ptr
+End Type
+
+Dim Shared src As String
+Dim Shared sdx As Integer
+Dim Shared currChar As String * 1
+Dim Shared tok As Token
+Dim Shared nxt As Integer
+
+Declare Function primary() As ASTNode Ptr
+
+Function currentChar() As String
+    Return Iif(sdx > Len(src), "", Mid(src, sdx, 1))
+End Function
+
+Sub skipSpaces()
+    Do
+        If sdx > Len(src) Then Exit Do
+        currChar = currentChar()
+        If Instr(" " + Chr(9) + Chr(13) + Chr(10), currChar) = 0 Then Exit Do
+        sdx += 1
+    Loop
+End Sub
+
+Sub nextToken()
+    skipSpaces()
+    If sdx > Len(src) Then
+        tok.tType = "EOF"
+        tok.tVal = ""
+        Return
+    End If
+
+    currChar = currentChar()
+
+    If Instr("()+-/*", currChar) > 0 Then
+        tok.tType = "SYMBOL"
+        tok.tVal = currChar
+        sdx += 1
+    Elseif (currChar >= "a" And currChar <= "z") Or (currChar >= "A" And currChar <= "Z") Then
+        Dim As Integer startPos = sdx
+        Do
+            sdx += 1
+            If sdx > Len(src) Then Exit Do
+            currChar = currentChar()
+        Loop While (currChar = "_") Or _
+        (currChar >= "a" And currChar <= "z") Or _
+        (currChar >= "A" And currChar <= "Z") Or _
+        (currChar >= "0" And currChar <= "9")
+        tok.tType = "IDENT"
+        tok.tVal = Mid(src, startPos, sdx - startPos)
+    Else
+        Print "Error: unexpected character '" & currChar & "'"
+        End 1
+    End If
+End Sub
+
+Function newNode(tType As String, tVal As String, izda As ASTNode Ptr = NULL, dcha As ASTNode Ptr = NULL) As ASTNode Ptr
+    Dim As ASTNode Ptr node = Allocate(Sizeof(ASTNode))
+    If node = NULL Then
+        Print "Error: memory allocation failed"
+        End 1
+    End If
+
+    node->tType = tType
+    node->tVal = tVal
+    node->izda = izda
+    node->dcha = dcha
+
+    Return node
+End Function
+
+Function mulExpr() As ASTNode Ptr
+    Dim As ASTNode Ptr res = primary()
+    Do
+        If tok.tType <> "SYMBOL" Or (tok.tVal <> "*" And tok.tVal <> "/") Then Exit Do
+        Dim As String opVal = tok.tVal
+        nextToken()
+        res = newNode("SYMBOL", opVal, res, primary())
+    Loop
+
+    Return res
+End Function
+
+Function sumExpr() As ASTNode Ptr
+    Dim As ASTNode Ptr res = mulExpr()
+    Do
+        If tok.tType <> "SYMBOL" Or (tok.tVal <> "+" And tok.tVal <> "-") Then Exit Do
+        Dim As String opVal = tok.tVal
+        nextToken()
+        res = newNode("SYMBOL", opVal, res, mulExpr())
+    Loop
+
+    Return res
+End Function
+
+Function primary() As ASTNode Ptr
+    Dim As ASTNode Ptr res
+    If tok.tType = "IDENT" Then
+        res = newNode(tok.tType, tok.tVal)
+        nextToken()
+    Elseif tok.tType = "SYMBOL" And tok.tVal = "(" Then
+        nextToken()
+        res = sumExpr()
+        If tok.tType <> "SYMBOL" Or tok.tVal <> ")" Then
+            Print "Error: ')' was expected"
+            End 1
+        End If
+        nextToken()
+    Else
+        Print "Error: invalid primary expression"
+        End 1
+    End If
+
+    Return res
+End Function
+
+Sub printAST(node As ASTNode Ptr, indent As Integer = 0)
+    If node = NULL Then
+        Print "Error: null AST node in printAST"
+        End 1
+    End If
+
+    Dim i As Integer
+    For i = 1 To indent
+        Print " ";
+    Next
+
+    If node->tType = "SYMBOL" Then
+        Print "{{`" & Trim(node->tType) & "`,"
+        For i = 1 To indent
+            Print " ";
+        Next
+        Print "  `" & Trim(node->tVal) & "`},"
+
+        printAST(node->izda, indent + 1)
+        Print ","
+
+        printAST(node->dcha, indent + 1)
+
+        Print "}";
+    Elseif node->tType = "IDENT" Then
+        Print "{`" & Trim(node->tType) & "`,"
+        For i = 1 To indent
+            Print " ";
+        Next
+        Print " `" & Trim(node->tVal) & "`}";
+    Else
+        Print "Error: Unknown AST node type: " & node->tType
+        End 1
+    End If
+End Sub
+
+Function showAST(ast As ASTNode Ptr) As String
+    If ast = NULL Then
+        Print "Error: null AST node"
+        End 1
+    End If
+
+    If ast->tType = "SYMBOL" Then
+        Dim lhs As String = showAST(ast->izda)
+        Dim rhs As String = showAST(ast->dcha)
+        Dim nid As String
+        nid = "_" & Right("0000" & Str(nxt), 4)
+        Print nid & " = " & lhs & " " & Trim(ast->tVal) & " " & rhs
+        nxt += 1
+        Return nid
+    Elseif ast->tType = "IDENT" Then
+        Return Trim(ast->tVal)
+    Else
+        Print "Error: unknown AST node type: " & ast->tType
+        End 1
+    End If
+End Function
+
+Sub Parse(source As String)
+    src = source
+    sdx = 1
+    nxt = 1
+    nextToken()
+
+    Dim As ASTNode Ptr ast = sumExpr()
+
+    Print "Complete syntactic tree:"
+    printAST(ast)
+    Print
+    Print !"\nIntermediate assignments:"
+    Dim As String result = showAST(ast)
+End Sub
+
+' Main program
+Parse("(one + two) * three - four * five")
+
+Sleep

@@ -1,0 +1,158 @@
+// ------------------------------------------------------------
+//  Quad-Power Prime Seeds
+//
+//  Using FutureBasic 7.0.36
+//  November 2025, R.W.
+// ------------------------------------------------------------
+
+include "gmp.incl"
+
+_kPrimeReps = 25    // Miller–Rabin rounds for mpz_probab_prime_p
+
+CFTimeInterval t
+
+// Global mpz_t bigints reused everywhere
+mpz_t gP        // power accumulator (n, n^2, n^3, n^4)
+mpz_t gQ        // n^k + n + 1
+mpz_t gN        // n as mpz_t for multiplication
+
+// Globals for the “> 1 million” search
+int gNextN      // current n being tested in the big search
+int gM          // current million threshold (1..16)
+int gCount      // how many quad-power seeds found so far (c in PHIX)
+
+// ------------------------------------------------------------
+//  fn Ordinal( n ) → CFStringRef
+//  Produces "the 1st", "the 2nd", "the 3rd", "the 4th", ...
+// ------------------------------------------------------------
+local fn Ordinal( n as long ) as CFStringRef
+  CFStringRef s = @""
+  CFStringRef suf = @""
+  long ns = n MOD 100
+  ns = n MOD 10
+  suf = @"th"
+  if ns == 1 then suf = @"st"
+  if ns == 2 then suf = @"nd"
+  if ns == 3 then suf = @"rd"
+  s = concat(s,@"the", str(n), suf)
+end fn = s
+
+// ------------------------------------------------------------
+//  IsQuadPower(n) ?
+//  Return _true if n^1 + n + 1, n^2 + n + 1, n^3 + n + 1,
+//               and n^4 + n + 1 are all primes.
+// ------------------------------------------------------------
+local fn IsQuadPower( n as long ) as boolean
+  int i, r
+  // gP = n, gN = n
+  fn mpz_set_si( gP, n )
+  fn mpz_set_si( gN, n )
+  for i = 1 to 4
+    if i > 1
+      // gP = gP * n
+      fn mpz_mul( gP, gP, gN )
+    end if
+    // gQ = gP + n + 1
+    fn mpz_add_ui( gQ, gP, n + 1 )
+    r = fn mpz_probab_prime_p( gQ, _kPrimeReps )
+    // 0 = composite
+    if r < 1 then RETURN _false
+  next i
+end fn = _true
+
+// ------------------------------------------------------------
+//  QuadMilPlus
+//  On each [Next] button press, find the next quad-power prime
+//  seeds that's > than the million threshold and display it.
+// ------------------------------------------------------------
+void local fn QuadMilPlus
+  t = fn CACurrentMediaTime
+  while gM <= 16
+    if fn IsQuadPower( gNextN )
+      gCount = gCount + 1
+      if gNextN > (gM * 1000000)
+        CFStringRef ord = fn Ordinal( gCount )
+        CFStringRef s = fn CFStringCreateWithFormat¬
+        ( _kCFAllocatorDefault, 0, @" %2d million is %@:  %d", gM, ord, gNextN)
+        print @s;
+        printf @" (%.3f ms)", (fn CACurrentMediaTime-t)*1000
+        CFRelease( s )
+        gM ++
+        gNextN ++   // move past this seed
+        exit while
+      end if
+    end if
+    gNextN ++
+  wend
+  if gM > 16 then button 2, NO
+end fn
+
+// ------------------------------------------------------------
+//  Main — compute the first 50 quad-power prime seeds
+// ------------------------------------------------------------
+local fn Main
+  long n, found
+
+  fn mpz_init( gP )
+  fn mpz_init( gQ )
+  fn mpz_init( gN )
+
+  print @"\nFirst 50 quad-power prime seeds:\n"
+  n     = 1
+  found = 0
+  t = fn CACurrentMediaTime
+
+  while found < 50
+    if fn IsQuadPower( n )
+      CFStringRef s = fn CFStringCreateWithFormat¬
+      ( _kCFAllocatorDefault, 0, @"%7ld ", n )
+      print s;
+      CFRelease( s )
+      found ++
+      if (found MOD 10) == 0
+        print @
+      end if
+    end if
+    n ++
+  wend
+
+  printf @"\nElapsed time: %.3f secs", (fn CACurrentMediaTime-t)
+  print @"\nClick [Next] for quad-power prime seeds greater than 1 million:\n"
+
+  gNextN = n        // continue from where we stopped
+  gM     = 1        // million: 1,2,...,10
+  gCount = found    // we already did 50
+
+end fn
+
+
+// ------------------------------------------------------------
+//  Dialog handler
+// ------------------------------------------------------------
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case 2
+          fn QuadMilPlus
+      end select
+
+    case _windowShouldClose
+      fn mpz_clear( gP )
+      fn mpz_clear( gQ )
+      fn mpz_clear( gN )
+      end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+// ------------------------------------------------------------
+//  Main
+// ------------------------------------------------------------
+window 1, @"Quad-Power Prime Seeds", (0,0,620,500)
+button 2, YES,, @"Next", (500,20,100,20),,, 1
+
+fn Main
+
+HandleEvents

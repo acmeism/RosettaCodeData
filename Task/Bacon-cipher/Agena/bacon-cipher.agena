@@ -1,0 +1,91 @@
+# Bacon cipher
+
+# Bacon's letter codes but with distinct values for i & j and u & v and an extra for any non-letter
+baconCodes := [ "A" ~ "AAAAA", "B" ~ "AAAAB", "C" ~ "AAABA", "D" ~ "AAABB", "E" ~ "AABAA"
+              , "F" ~ "AABAB", "G" ~ "AABBA", "H" ~ "AABBB", "I" ~ "ABAAA", "J" ~ "ABAAB"
+              , "K" ~ "ABABA", "L" ~ "ABABB", "M" ~ "ABBAA", "N" ~ "ABBAB", "O" ~ "ABBBA"
+              , "P" ~ "ABBBB", "Q" ~ "BAAAA", "R" ~ "BAAAB", "S" ~ "BAABA", "T" ~ "BAABB"
+              , "U" ~ "BABAA", "V" ~ "BABAB", "W" ~ "BABBA", "X" ~ "BABBB", "Y" ~ "BBAAA"
+              , "Z" ~ "BBAAB", "*" ~ "BBBAA"
+              ];
+# yields plain text encoded via stego template
+toBacon    :=
+    proc( plainText :: string, stegoTemplate :: string ) :: string is
+        local stegoPos   := 0;
+        local stegoLen   := size stegoTemplate;
+        # selects the next character from the stego template - wraps-around from the end to the beginning
+        local nextStegoPos := proc() is inc stegoPos, 1; mod stegoPos, stegoLen end;
+        # encode the plain text
+        local encoded    := "";
+        for pos to size plainText do
+            # get the Bacon code of the next character #
+            local plainChar := upper( plainText[ pos ] );
+            local code := baconCodes[ if plainChar < "A" or plainChar > "Z" then "*" else plainChar fi ];
+            for c to size code do
+                # copy punctuation as is from the stego template to the result
+                local s := upper( stegoTemplate[ stegoPos + 1 ] );
+                while s < "A" or s > "Z" do
+                    encoded := encoded & s;
+                    nextStegoPos();
+                    s       := if stegoPos < size stegoTemplate then upper( stegoTemplate[ stegoPos + 1 ] ) else "A" fi
+                od;
+                # encode the character by changing the case of the stego character as appropriate
+                local templateChar := stegoTemplate[ stegoPos + 1 ];
+                encoded := encoded & if code[ c ] = "A" then lower( templateChar ) else upper( templateChar ) fi;
+                nextStegoPos()
+            od
+        od;
+        return encoded
+    end ; # toBacon
+# yields bacon text decoded via stego template
+toPlain := proc( baconText :: string, stegoTemplate :: string ) :: string is
+    local decoded    := "";
+    local codedChar  := 0;
+    local letters    := 0;
+    local codeLength := size baconCodes[ "A" ];
+    for pos to size baconText do
+        local c := baconText[ pos ];
+        if c >= "a" and c <= "z"
+        then
+            # lower case letter
+            mul codedChar, 2;
+            inc letters,   1
+        elif c >= "A" and c <= "Z"
+        then
+            # upper case letter
+            mul codedChar, 2;
+            inc codedChar, 1;
+            inc letters,   1
+        fi;
+        if letters = codeLength
+        then
+            # have a full letter to decode
+            decoded   := decoded & if codedChar > 25 then " " else char( abs( "a" ) + codedChar ) fi;
+            letters   := 0;
+            codedChar := 0
+        fi
+    od;
+    return decoded
+end ; # toPlain
+# test encode and decode
+scope
+    local nl           := char( 10 );
+    local testTemplate := "bacon's cipher is a method of steganography created by francis bacon."            & nl
+                        & "this task is to implement a program for encryption and decryption of "            & nl
+                        & "plaintext using the simple alphabet of the baconian cipher or some "              & nl
+                        & "other kind of representation of this alphabet (make anything signify anything). " & nl
+                        & "the baconian alphabet may optionally be extended to encode all lower "            & nl
+                        & "case characters individually and/or adding a few punctuation characters "         & nl
+                        & "such as the space."                                                               & nl
+                        ;
+    local plainText    := "the quick brown fox jumps over the lazy dog";
+    local baconEncoded := toBacon( plainText,    testTemplate );
+    local baconDecoded := toPlain( baconEncoded, testTemplate );
+    print( "encoded..." );
+    print( baconEncoded );
+    print( "-----------------------------------------------------" );
+    print( "decoded..." );
+    print( baconDecoded );
+    print( "-----------------------------------------------------" );
+    print( if baconDecoded <> plainText then "UNSUCESSFUL" else "sucessful" fi, " decode" )
+epocs

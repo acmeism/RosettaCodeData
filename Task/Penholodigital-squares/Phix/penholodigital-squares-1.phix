@@ -1,0 +1,54 @@
+with javascript_semantics
+procedure penholodigital(integer base)
+    sequence penholodigitals = {}
+    -- search squares of n from eg for base=4 sqrt(123)
+    -- (and stop when next square has too many digits)
+    atom n = 0, t1 = time()+1, carry = 0
+    for d=1 to base-1 do n = n*base+d end for
+    n = ceil(sqrt(n))       assert(integer(n))
+    string digits = "123456789ABCDEF"[1..base-1],
+           square = sprintf("%A",{{base,n*n}})
+    integer div = prime_factors(base-1,true)[$]
+    bool ndz = mod(n,div)=0
+    while true do -- (until we get a carry off the end of square)
+        if ndz and not find('0',square) and sort(square)=digits then
+            penholodigitals &= {{{base,n},square}} -- (fmt later)
+        end if
+        -- add 2n+1 to get the next square (using string maths)
+        carry += 2*n+1
+        n += 1
+        ndz = mod(n,div)=0
+        if ndz then
+            integer d = base-1
+            while carry and d do
+                atom ch = square[d]
+                ch += carry - iff(ch<='9'?'0':'A'-10)
+                carry = floor(ch/base)
+                ch = remainder(ch,base)
+                square[d] = ch + iff(ch<=9?'0':'A'-10)
+                d -= 1
+            end while
+            if carry then exit end if
+            if time()>t1 then
+                integer l = length(penholodigitals),
+                        e = {1,0,0,0,2,1,1,10,30,20,23,0,160,419,740}[base-1]
+                progress("scanning base %d, %s (%d/%d found)\r",{base,square,l,e})
+                t1 = time()+1
+            end if
+        end if
+    end while
+    progress("")
+    integer count = length(penholodigitals)
+    if base>12 and count>2 then
+        penholodigitals = extract(penholodigitals,{1,-1})
+    end if
+    penholodigitals = apply(true,sprintf,{{"%A**2 = %s"},penholodigitals})
+    string p = iff(count?":\n"&iff(base>12?sprintf("%s .. %s\n",penholodigitals)
+                                          :join_by(penholodigitals,1,3)):"\n"),
+           {is,s} = iff(count=1?{"is",""}:{"are","s"})
+    printf(1,"There %s %d penholodigital%s in base %d%s\n",{is,count,s,base,p})
+end procedure
+integer lim = iff(platform()=JS?14:         -- ~18s
+              iff(machine_bits()=32?15      -- (initial square(16) is 4 out)
+                                   :16))    -- ~7.5 mins (ho hum)
+papply(tagset(lim,2),penholodigital)

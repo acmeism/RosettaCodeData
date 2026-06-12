@@ -1,0 +1,96 @@
+require "bignum"
+local fmt = require "fmt"
+
+local zero = bigint.zero
+local one  = bigint.one
+local two  = bigint.two
+mpz.init() -- use GMP
+
+local function ew(n)
+    local primes = {}
+    local k = 1
+    local P = one
+    while k < n do
+        if P % k != zero then primes:insert(k) end
+        P *= k * k
+        k += 1
+    end
+    local divs = {}
+    local np = #primes
+    if np > 0 then
+        for a = 0, n - 1 do
+            local A = bigint.new(a)
+            local s = primes:mapped(|p| -> A % p == zero ? "1" : "0"):concat(""):reverse()
+            divs:insert(bigint.new(tonumber(s, 2)))
+        end
+    end
+    local partitions = { {zero, zero, two ^ np - one} }
+    local function key(x)
+        local t = mpz.bor(divs[x + 1], divs[n - x + 1])
+        t = mpz.tostring(t, 2):reverse()
+        return t:find("1", 1, true)
+    end
+    local function cmp(i, j) return key(j) < key(i) end
+    local r = range(1, n - 1):sort(cmp)
+    for r as i do
+        local new_partitions = {}
+        local factors = divs[i + 1]
+        local other_factors = divs[n - i + 1]
+        for partitions as p do
+            local setA = p[1]
+            local setB = p[2]
+            local rprimes = p[3]
+            if (mpz.band(factors, setA) != zero) or (mpz.band(other_factors, setB) != zero) then
+                new_partitions:insert(p)
+                continue
+            end
+            local fr = mpz.band(factors, rprimes)
+            fr = mpz.tostring(fr, 2):reverse()
+            for ix = 1, #fr do
+                if fr[ix] == "1" then
+                    local w = mpz.shl(one, ix - 1)
+                    new_partitions:insert({mpz.bxor(setA, w), setB, mpz.bxor(rprimes, w)})
+                end
+            end
+            fr = mpz.band(other_factors, rprimes)
+            fr = mpz.tostring(fr, 2):reverse()
+            for ix = 1, #fr do
+                if fr[ix] == "1" then
+                    local w = mpz.shl(one, ix - 1)
+                    new_partitions:insert({setA, mpz.bxor(setB, w), mpz.bxor(rprimes, w)})
+                end
+            end
+        end
+        partitions = new_partitions
+    end
+    local result = nil
+    for partitions as part do
+        local px = part[1]
+        local py = part[2]
+        local x = one
+        local y = one
+        for primes as p do
+            if px % two != zero then x *= p end
+            if py % two != zero then y *= p end
+            px /= two
+            py /= two
+        end
+        local N = bigint.new(n)
+        local x2 = x
+        local temp = ((mpz.modinv(x, y) * N) % y) * x2 - N
+        result = result ? bigint.min(result, temp) : temp
+    end
+    return result
+end
+
+local k = 3
+local count = 0
+print("The first 20 Erdős–Woods numbers and their minimum interval start values are:")
+while count < 20 do
+    local a = ew(k)
+    if a then
+        fmt.print("%3d -> %s", k, a:tostring())
+        count += 1
+    end
+    k += 1
+end

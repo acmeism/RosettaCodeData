@@ -1,0 +1,90 @@
+#define min(a, b)  iif((a) < (b), (a), (b))
+#define floor(x)  ((x*2.0-0.5) Shr 1)
+#define pi  4 * Atn(1)
+
+Sub CORDIC(alfa As Double, iteration As Integer, Byref cosAlfa As Double, Byref sinAlfa As Double)
+    ' Fix for the Wikipedia's MATLAB code bug in sin (sometimes flips sign) when |?| > 2p
+    Dim As Integer newsgn = Iif(Int(floor(alfa / (2 * pi))) Mod 2 = 1, 1, -1)
+    If alfa < -Atn(1) * 2 Then
+        CORDIC(alfa + pi, iteration, cosAlfa, sinAlfa)
+        cosAlfa *= newsgn
+        sinAlfa *= newsgn
+        Exit Sub
+    End If
+    If alfa > Atn(1) * 2 Then
+        CORDIC(alfa - pi, iteration, cosAlfa, sinAlfa)
+        cosAlfa *= newsgn
+        sinAlfa *= newsgn
+        Exit Sub
+    End If
+
+    ' Initialization of tables of constants used by CORDIC
+    ' need a table of arctangents of negative powers of two, in radians:
+    ' angles = atan(2.^-(0:27));
+    Dim As Double angles(27) = { _
+    0.78539816339745, 0.46364760900081, 0.24497866312686, 0.12435499454676, _
+    0.06241880999596, 0.03123983343027, 0.01562372862048, 0.00781234106010, _
+    0.00390623013197, 0.00195312251648, 0.00097656218956, 0.00048828121119, _
+    0.00024414062015, 0.00012207031189, 0.00006103515617, 0.00003051757812, _
+    0.00001525878906, 0.00000762939453, 0.00000381469727, 0.00000190734863, _
+    0.00000095367432, 0.00000047683716, 0.00000023841858, 0.00000011920929, _
+    0.00000005960464, 0.00000002980232, 0.00000001490116, 0.00000000745058 }
+
+    ' and a table of products of reciprocal lengths of vectors (1, 2^-2j):
+    ' Kvalores = cumprod(1./sqrt(1 + 1j*2.^(-(0:23))))
+    Dim As Double Kvalues(23) = { _
+    0.70710678118655, 0.63245553203368, 0.61357199107790, 0.60883391251775, _
+    0.60764825625617, 0.60735177014130, 0.60727764409353, 0.60725911229889, _
+    0.60725447933256, 0.60725332108988, 0.60725303152913, 0.60725295913894, _
+    0.60725294104140, 0.60725293651701, 0.60725293538591, 0.60725293510314, _
+    0.60725293503245, 0.60725293501477, 0.60725293501035, 0.60725293500925, _
+    0.60725293500897, 0.60725293500890, 0.60725293500889, 0.60725293500888 }
+
+    Dim As Double Kn = Kvalues(min(iteration, Ubound(Kvalues)))
+    Dim As Double v(1) = {1, 0} ' start with 2-vector cosine and sine of zero
+    Dim As Double poweroftwo = 1
+    Dim As Double angle = angles(0)
+
+    ' Iterations
+    For j As Integer = 0 To iteration - 1
+        Dim As Integer sigma = Iif(alfa < 0, -1, 1)
+        Dim As Double factor = sigma * poweroftwo
+        ' Note the matrix multiplication can be done using scaling by powers of two and addition subtraction
+        Dim As Double R(1 To 2, 1 To 2)
+        R(1, 1) = 1 :        R(1, 2) = -factor
+        R(2, 1) = factor :   R(2, 2) = 1
+        Dim As Double temp(1)
+        temp(0) = R(1, 1) * v(0) + R(1, 2) * v(1)
+        temp(1) = R(2, 1) * v(0) + R(2, 2) * v(1)
+        v(0) = temp(0)
+        v(1) = temp(1)
+        alfa -= sigma * angle ' update the remaining angle
+        poweroftwo /= 2
+        ' update the angle from table, or eventually by just dividing by two
+        If j + 1 >= Ubound(angles) Then
+            angle /= 2
+        Else
+            angle = angles(j + 1)
+        End If
+    Next
+
+    ' Adjust length of output vector to be [cos(alfa), sin(alfa)]
+    cosAlfa = v(0) * Kn
+    sinAlfa = v(1) * Kn
+End Sub
+
+Print "x(deg)    sin(x)       diff. sine   cos(x)       diff. cosine "
+Dim As Double cosTheta, sinTheta, theta ', thetaR
+For theta = -90 To 90 Step 15
+    CORDIC(theta * Atn(1) / 45, 24, cosTheta, sinTheta)
+    Print Using "+##.#" & Chr(248) & "  +#.######## (+#.########) +#.######## (+#.########)"; theta; sinTheta; sinTheta - Sin(theta * Atn(1) / 45); cosTheta; cosTheta - Cos(theta * Atn(1) / 45)
+Next
+
+Print !"\nx(rad)    sin(x)       diff. sine   cos(x)       diff. cosine "
+Dim As Double thetaR(1 To 4) = {-9, 0, 1.5, 6}
+For r As Integer = 1 To 4 '-9 To 6 Step 1.5
+    CORDIC(thetaR(r), 24, cosTheta, sinTheta)
+    Print Using " +#.#   +#.######## (+#.########) +#.######## (+#.########)"; thetaR(r); sinTheta; sinTheta - Sin(thetaR(r)); cosTheta; cosTheta - Cos(thetaR(r))
+Next
+
+Sleep

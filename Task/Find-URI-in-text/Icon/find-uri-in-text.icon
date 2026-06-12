@@ -1,0 +1,133 @@
+procedure main()
+   every write(findURItext("this URI contains an illegal character, parentheses_
+               and a misplaced full stop:\n_
+               http://en.wikipedia.org/wiki/Erich_Kästner_(camera_designer). _
+               which is handled by http://mediawiki.org/).\n_
+               and another one just to confuse the parser: _
+               http://en.wikipedia.org/wiki/-)\n_
+               \")\" is handled the wrong way by the mediawiki parser.\n_
+               ftp://domain.name/path(balanced_brackets)/foo.html\n_
+               ftp://domain.name/path(balanced_brackets)/ending.in.dot.\n_
+               ftp://domain.name/path(unbalanced_brackets/ending.in.dot.\n_
+               leading junk ftp://domain.name/path/embedded?punct/uation.\n_
+               leading junk ftp://domain.name/dangling_close_paren)\n_
+               if you have other interesting URIs for testing, please add them here:\n_
+               blah (foo://domain.hld/))))"))
+end
+
+$define GENDELIM   ':/?#[]@'
+$define SUBDELIM   '!$&()*+,;=\''
+$define UNRESERVED &letters ++ &digits ++ '-._~'
+$define RESERVED   GENDELIM++SUBDELIM
+$define HEXDIGITS  '0123456789aAbBcCdDeEfF'
+
+procedure findURItext(s)      #: generate all syntatically valid URI's from s
+   local u,p
+   s ? while tab(upto(&letters)) || (u := 2(p := &pos, URI())) do  {
+      suspend u                     # return parsed URI
+      every suspend disambURI(u,p)  # deal with text ambiguities, return many
+      }
+end
+
+procedure disambURI(u,p)      #: generate disambiguous URIs from parsed
+   local u2
+   repeat  {
+      if any('.,;?',u[-1]) then
+         suspend u := u[1:-1]             # remove trailing .,;? from URI
+      else if u[-1] == "'" == &subject[p-:=1] then
+         suspend u := u[1:-1]             # remove trailing ' from 'URI'
+      else if any('()',u[-1]) then   {
+         every u ? u2 := tab(bal())
+         if u ~==:= u2 then suspend u     # longest balanced URI wrt ()
+         }
+      else break                          # done
+      }
+end
+
+procedure URI()               #: match longest URI at cursor
+   static sc2
+   initial sc2 := &letters ++ &digits ++ '+-.'                    # scheme
+   suspend (
+      ( tab(any(&letters)) || (tab(many(sc2)) |="") || =":" ) ||  # scheme
+      ( (="//" || authority() || arbsp("/",segment)) |            # heir ...
+        (="/" || ( path_rootless() |="")) |
+        path_rootless() |
+        =""
+      ) ||
+      ( ( ="?" || queryfrag() ) |="" ) ||                         # query
+      ( ( ="#" || queryfrag() ) |="" )                            # fragment
+      )
+end
+
+procedure queryfrag()         #: match a query or fragment
+   static pc
+   initial pc := UNRESERVED ++ SUBDELIM ++ ':@/?'
+   suspend arbcp(pc,pctencode)
+end
+
+procedure segment(n)          #: match a pchar segment
+   static sc
+   initial sc := UNRESERVED ++ SUBDELIM ++ ':@'
+   suspend arbcp(sc,pctencode,n)
+end
+
+procedure segmentnc(n)        #: match a pchar--':' segment
+   static sc
+   initial sc := UNRESERVED ++ SUBDELIM ++ '@'
+   suspend arbcp(sc,pctencode,n)
+end
+
+procedure path_rootless()     #: match a rootless path
+   suspend segment(1) || arbsp("/",segment)
+end
+
+procedure authority()         #: match authority
+   static uic,rnc
+   initial {
+      rnc := UNRESERVED ++ SUBDELIM    # regular name
+      uic := rnc ++ ':'                # userinfo
+      }
+   suspend  ( (arbcp(uic,pctencode) || ="@") |="")  ||      # userinfo
+            ( IPsimple() | arbcp(rnc,pctencode) )   ||      # host
+            ( (=":" || tab(many(&digits))) |="")
+end
+
+procedure IPsimple()          #: match ip address (trickable )
+   static i4c,i6c,ifc
+   initial {
+      i4c := &digits ++ '.'
+      i6c := HEXDIGITS ++ '.:'
+      ifc := UNRESERVED ++ SUBDELIM ++ ':'
+      }
+   suspend (
+      ="[" ||
+         (  tab(many(i6c)) |
+            ( ="v"||tab(any(HEXDIGITS))||="."||tab(any(ifc))||tab(many(ifc)) )
+      ) || ="]" ) | tab(many(i4c))
+end
+
+procedure arbcp(cs,pr,n)      #: match arbitrary numbers of (cset|proc,n)
+   local p,i
+   /n := 0                    # for 0* / 1*
+   runerr(0 > n,205)
+   p := &pos
+   i := 0
+   while tab(many(cs)) | pr() do i +:= 1
+   if i >= n then suspend &subject[p:&pos]
+   &pos := p                  # restore &pos
+end
+
+procedure arbsp(st,pr,n)      #: match arbitrary numbers of (string || proc,n)
+   local p,i
+   /n := 0                    # for 0* / 1*
+   runerr(0 > n,205)
+   p := &pos
+   i := 0
+   while =st || pr() do i +:= 1
+   if i >= n then suspend &subject[p:&pos]
+   &pos := p                  # restore &pos
+end
+
+procedure pctencode()         #: match 1 % encoded single byte character
+   suspend ="%" || tab(any(HEXDIGITS)) || tab(any(HEXDIGITS))
+end

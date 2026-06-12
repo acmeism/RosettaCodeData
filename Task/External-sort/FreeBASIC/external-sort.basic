@@ -1,0 +1,160 @@
+Type MinHeapNode
+    element As Integer
+    index As Integer
+End Type
+
+Type MinHeap
+    nodes(Any) As MinHeapNode
+End Type
+
+Sub minHeapify(heap() As MinHeapNode, Byval i As Integer)
+    Dim As Integer l, r, smallest, heapSize = Ubound(heap) +1
+    Dim As MinHeapNode tmp
+
+    Do
+        l = (2 * i + 1)
+        r = (2 * i + 2)
+        smallest = i
+
+        If l < heapSize Andalso heap(l).element < heap(i).element Then smallest = l
+        If r < heapSize Andalso heap(r).element < heap(smallest).element Then smallest = r
+
+        If smallest = i Then Exit Do
+
+        tmp = heap(i)
+        heap(i) = heap(smallest)
+        heap(smallest) = tmp
+        i = smallest
+    Loop
+End Sub
+
+Sub buildMinHeap(heap() As MinHeapNode)
+    For i As Integer = (Ubound(heap) -1) \ 2 To 0 Step -1
+        minHeapify(heap(), i)
+    Next
+End Sub
+
+Sub merge(arr() As Integer, Byval l As Integer, Byval m As Integer, Byval r As Integer)
+    Static As Integer tl(1023), tr(1023)  'Static for better performance
+    Dim As Integer n1 = m - l + 1
+    Dim As Integer n2 = r - m
+    Dim As Integer i, j, k
+
+    For i = 0 To n1-1: tl(i) = arr(l + i): Next
+    For j = 0 To n2-1: tr(j) = arr(m + 1 + j): Next
+
+    i = 0: j = 0: k = l
+    While i < n1 Andalso j < n2
+        If tl(i) <= tr(j) Then
+            arr(k) = tl(i): i += 1
+        Else
+            arr(k) = tr(j): j += 1
+        End If
+        k += 1
+    Wend
+
+    While i < n1: arr(k) = tl(i): i += 1: k += 1: Wend
+    While j < n2: arr(k) = tr(j): j += 1: k += 1: Wend
+End Sub
+
+Sub mergeSort(arr() As Integer, Byval l As Integer, Byval r As Integer)
+    If l < r Then
+        Dim As Integer m = l + (r -l) \ 2
+        mergeSort(arr(), l, m)
+        mergeSort(arr(), m +1, r)
+        merge(arr(), l, m, r)
+    End If
+End Sub
+
+Sub mergeFiles(outputFile As String, Byval n As Integer, Byval k As Integer)
+    Static As Integer inFiles(15)  'Assuming max k=16
+    Dim As MinHeapNode nodes(k-1)
+    Dim As Integer outFile, cnt, i
+
+    For i = 0 To k-1
+        inFiles(i) = Freefile
+        Open "es" & i For Input As #inFiles(i)
+        Input #inFiles(i), nodes(i).element
+        nodes(i).index = i
+    Next
+
+    For i = (k-2)\2 To 0 Step -1: minHeapify(nodes(), i): Next
+
+    outFile = Freefile
+    Open outputFile For Output As #outFile
+
+    Do
+        Print #outFile, nodes(0).element;
+        If Eof(inFiles(nodes(0).index)) Then
+            nodes(0).element = &h7FFFFFFF
+            cnt += 1
+            If cnt = k Then Exit Do
+        Else
+            Input #inFiles(nodes(0).index), nodes(0).element
+        End If
+        minHeapify(nodes(), 0)
+    Loop
+
+    For i = 0 To k-1: Close #inFiles(i): Next
+    Close #outFile
+End Sub
+
+Sub createInitialRuns(inputFile As String, Byval runSize As Integer, Byval numWays As Integer)
+    Static As Integer arr(1023)  'Static for better performance
+    Dim As Integer inFile = Freefile
+    Dim As Integer outFiles(numWays-1)
+    Dim As Integer i, j, nextOutputFile
+
+    Open inputFile For Input As #inFile
+    For i = 0 To numWays-1
+        outFiles(i) = Freefile
+        Open "es" & i For Output As #outFiles(i)
+    Next
+
+    Do While Not Eof(inFile)
+        For i = 0 To runSize-1
+            If Eof(inFile) Then Exit For
+            Input #inFile, arr(i)
+        Next
+
+        If i > 0 Then
+            mergeSort(arr(), 0, i-1)
+            For j = 0 To i-1
+                Print #outFiles(nextOutputFile), arr(j);
+            Next
+            nextOutputFile += 1
+        End If
+    Loop
+
+    Close #inFile
+    For i = 0 To numWays-1: Close #outFiles(i): Next
+End Sub
+
+Sub externalSort(inputFile As String, outputFile As String, numWays As Integer, runSize As Integer)
+    createInitialRuns(inputFile, runSize, numWays)
+    mergeFiles(outputFile, runSize, numWays)
+End Sub
+
+'Main program
+Randomize Timer
+
+Dim As Integer numWays = 4
+Dim As Integer runSize = 10
+Dim As String inputFile = "i:\external_sort_input.txt"
+Dim As String outputFile = "i:\external_sort_output.txt"
+
+'Create input file with random numbers
+Dim As Integer ff = Freefile
+Open inputFile For Output As #ff
+For i As Integer = 1 To numWays * runSize
+    Print #ff, Int(Rnd * &h7FFFFFFF);
+Next
+Close #ff
+
+'Sort
+externalSort(inputFile, outputFile, numWays, runSize)
+
+'Clean up temporary files
+For i As Integer = 0 To numWays-1: Kill "es" & i: Next
+
+Sleep

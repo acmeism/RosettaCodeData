@@ -1,0 +1,129 @@
+#Include Once "GL/glut.bi"
+
+Type PFNGLCREATESHADERPROC As Function(Byval As GLenum) As GLuint
+Type PFNGLSHADERSOURCEPROC As Sub(Byval As GLuint, Byval As GLsizei, Byval As GLubyte Ptr Ptr, Byval As GLint Ptr)
+Type PFNGLCOMPILESHADERPROC As Sub(Byval As GLuint)
+Type PFNGLCREATEPROGRAMPROC As Function() As GLuint
+Type PFNGLATTACHSHADERPROC As Sub(Byval As GLuint, Byval As GLuint)
+Type PFNGLLINKPROGRAMPROC As Sub(Byval As GLuint)
+Type PFNGLUSEPROGRAMPROC As Sub(Byval As GLuint)
+Type PFNGLGETUNIFORMLOCATIONPROC As Function(Byval As GLuint, Byval As GLubyte Ptr) As GLint
+Type PFNGLUNIFORM1FPROC As Sub(Byval As GLint, Byval As GLfloat)
+
+Const GL_VERTEX_SHADER = &H8B31
+Const GL_FRAGMENT_SHADER = &H8B30
+
+Dim Shared glCreateShader As PFNGLCREATESHADERPROC
+Dim Shared glShaderSource As PFNGLSHADERSOURCEPROC
+Dim Shared glCompileShader As PFNGLCOMPILESHADERPROC
+Dim Shared glCreateProgram As PFNGLCREATEPROGRAMPROC
+Dim Shared glAttachShader As PFNGLATTACHSHADERPROC
+Dim Shared glLinkProgram As PFNGLLINKPROGRAMPROC
+Dim Shared glUseProgram As PFNGLUSEPROGRAMPROC
+Dim Shared glGetUniformLocation As PFNGLGETUNIFORMLOCATIONPROC
+Dim Shared glUniform1f As PFNGLUNIFORM1FPROC
+
+Declare Function wglGetProcAddress Cdecl Alias "wglGetProcAddress" (Byval procname As ZString Ptr) As Any Ptr
+
+Sub LoadGL2Procs()
+    Dim procname As ZString * 32
+
+    procname = "glCreateShader"       : glCreateShader       = wglGetProcAddress(@procname)
+    procname = "glShaderSource"       : glShaderSource       = wglGetProcAddress(@procname)
+    procname = "glCompileShader"      : glCompileShader      = wglGetProcAddress(@procname)
+    procname = "glCreateProgram"      : glCreateProgram      = wglGetProcAddress(@procname)
+    procname = "glAttachShader"       : glAttachShader       = wglGetProcAddress(@procname)
+    procname = "glLinkProgram"        : glLinkProgram        = wglGetProcAddress(@procname)
+    procname = "glUseProgram"         : glUseProgram         = wglGetProcAddress(@procname)
+    procname = "glGetUniformLocation" : glGetUniformLocation = wglGetProcAddress(@procname)
+    procname = "glUniform1f"          : glUniform1f          = wglGetProcAddress(@procname)
+End Sub
+
+Dim Shared As GLuint ps, vs, prog
+Dim Shared As GLint r_mod
+Dim Shared As Single angle = 0
+
+Sub render Cdecl()
+    glClear(GL_COLOR_BUFFER_BIT)
+    glUniform1f(r_mod, Rnd())
+    glLoadIdentity()
+    glRotatef(angle, angle * 0.1, 1.0, 0.0)
+    glBegin(GL_TRIANGLES)
+    glVertex3f(-1.0, -0.5, 0.0)
+    glVertex3f( 0.0,  1.0, 0.0)
+    glVertex3f( 1.0,  0.0, 0.0)
+    glEnd()
+    angle += 0.02
+    glutSwapBuffers()
+    glutPostRedisplay()
+End Sub
+
+Sub setShader()
+    Dim fsrc As String = _
+    "varying float x, y, z;" & Chr(10) & _
+    "uniform float r_mod;" & Chr(10) & _
+    "float rand(float s, float r) { return mod(mod(s, r + r_mod) * 112341.0, 1.0); }" & Chr(10) & _
+    "void main() {" & Chr(10) & _
+    "    gl_FragColor = vec4(rand(gl_FragCoord.x, x), rand(gl_FragCoord.y, y), rand(gl_FragCoord.z, z), 1.0);" & Chr(10) & _
+    "}"
+    Dim vsrc As String = _
+    "varying float x, y, z;" & Chr(10) & _
+    "void main() {" & Chr(10) & _
+    "    gl_Position = ftransform();" & Chr(10) & _
+    "    x = gl_Position.x; y = gl_Position.y; z = gl_Position.z;" & Chr(10) & _
+    "    x += y; y -= x; z += x - y;" & Chr(10) & _
+    "}"
+
+    Dim fsrc_ptr As ZString Ptr = Strptr(fsrc)
+    Dim vsrc_ptr As ZString Ptr = Strptr(vsrc)
+    Dim srcs(0)  As ZString Ptr
+    Dim lengths(0) As GLint
+
+    ' Vertex shader
+    vs = glCreateShader(GL_VERTEX_SHADER)
+    srcs(0) = vsrc_ptr
+    lengths(0) = Len(vsrc)
+    glShaderSource(vs, 1, @srcs(0), @lengths(0))
+    glCompileShader(vs)
+
+    ' Fragment shader
+    ps = glCreateShader(GL_FRAGMENT_SHADER)
+    srcs(0) = fsrc_ptr
+    lengths(0) = Len(fsrc)
+    glShaderSource(ps, 1, @srcs(0), @lengths(0))
+    glCompileShader(ps)
+
+    ' Program
+    prog = glCreateProgram()
+    glAttachShader(prog, vs)
+    glAttachShader(prog, ps)
+    glLinkProgram(prog)
+    glUseProgram(prog)
+
+    Dim uname As ZString * 16 => "r_mod"
+    r_mod = glGetUniformLocation(prog, @uname)
+End Sub
+
+' --- Main program ---
+glutInit(1, Strptr(""))
+glutInitDisplayMode(GLUT_DOUBLE Or GLUT_RGB)
+glutInitWindowSize(400, 400)
+glutCreateWindow("OpenGL pixel shader")
+
+LoadGL2Procs()
+
+If glCreateShader = 0 Then
+    Print "CRITICAL FAILURE: glCreateShader=0"
+    Print "Defective OpenGL driver"
+    Sleep : End 1
+End If
+
+Dim ver As Const UByte Ptr = glGetString(GL_VERSION)
+Dim major As Integer = (ver[0] - 48)
+
+setShader()
+glutDisplayFunc(@render)
+glutIdleFunc(@render)
+
+
+glutMainLoop()

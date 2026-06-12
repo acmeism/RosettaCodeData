@@ -1,0 +1,94 @@
+with javascript_semantics -- takes about 47s (of blank screen) though, also note the line
+                          -- below which triggered an unexpected violation on desktop/Phix
+                          -- (the fix/hoist for which meant a need to swap result and tmp)
+requires("1.0.2") -- mpz_invert() now a function
+include mpfr.e
+
+function coppy(sequence p, integer ab, j)
+    p = deep_copy(p)
+    p[ab][j] = 1
+    p[3][j] = 0
+    return p
+end function
+
+function erdos_woods(integer n)
+    integer n1 = n-1
+    sequence primes = get_primes_le(n1),
+             divs = repeat(0,n),
+             trailing_zeros = repeat(0,n1)
+    integer np = length(primes)
+    for a=1 to n do
+        sequence d = {}
+        for i=np to 1 by -1 do
+            d &= (remainder(a-1,primes[i])=0)
+        end for
+        divs[a] = d
+    end for
+    for i=1 to n1 do
+        trailing_zeros[i] = rfind(1,sq_or(divs[i+1],divs[n-i+1]))
+    end for
+    sequence smc = custom_sort(trailing_zeros,tagset(n1)),
+             partitions = {{repeat(0,np),repeat(0,np),repeat(1,np)}}
+    for s=1 to length(smc) do
+        integer i = smc[s]
+        sequence new_partitions = {},
+                 facts = divs[i+1],
+                 other = divs[n-i+1]
+        for p=1 to length(partitions) do
+            sequence partp = partitions[p],
+                     {setA,setB,rPrimes} = partp,
+                     fsa = sq_and(facts,setA),
+                     fob = sq_and(other,setB)
+            if find(1,fsa) or find(1,fob) then
+                new_partitions = append(new_partitions,partp)
+            else
+                for j=1 to np do
+                    if facts[j] and rPrimes[j] then
+                        new_partitions = append(new_partitions,coppy(partp,1,j))
+                    end if
+                    if other[j] and rPrimes[j] then
+                        new_partitions = append(new_partitions,coppy(partp,2,j))
+                    end if
+                end for
+            end if
+        end for
+        partitions = new_partitions
+    end for
+    mpz result = null
+    mpz {x,y,tmp} = mpz_inits(3,1)
+    for p=1 to length(partitions) do
+        sequence {px,py} = partitions[p]
+        -- triggers "p2js violation: JavaScript does not support string subscript destructuring"...
+--      mpz {x,y,tmp} = mpz_inits(3,1)
+        mpz_set_si(x,1)
+        mpz_set_si(y,1)
+        for i=1 to np do
+            integer pi = primes[np-i+1]
+            if px[i] then mpz_mul_si(x,x,pi) end if
+            if py[i] then mpz_mul_si(y,y,pi) end if
+        end for
+        assert(mpz_invert(tmp,x,y))
+        mpz_mul_si(tmp,tmp,n)
+        mpz_mod(tmp,tmp,y)
+        mpz_mul(tmp,tmp,x)
+        mpz_sub_si(tmp,tmp,n)
+        if result=null then
+            result = tmp
+            tmp = mpz_init()
+        elsif mpz_cmp(tmp,result)=-1 then
+            {result,tmp} = {tmp,result}
+        end if
+    end for
+    return result
+end function
+
+integer k = 3, count = 0
+printf(1,"The first 20 Erdos–Woods numbers and their minimum interval start values are:\n")
+while count<20 do
+    mpz a = erdos_woods(k)
+    if a then
+        printf(1,"%3d -> %s\n", {k, mpz_get_str(a)})
+        count += 1
+    end if
+    k += 1
+end while

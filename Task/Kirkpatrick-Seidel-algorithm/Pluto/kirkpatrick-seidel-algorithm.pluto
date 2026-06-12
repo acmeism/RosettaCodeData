@@ -1,0 +1,247 @@
+class Point
+    function __construct(public x, public y) end
+
+    function __lt(other)
+        return self.x == other.x ? self.y < other.y : self.x < other.x
+    end
+
+    function __eq(other)
+        return self.x == other.x and self.y == other.y
+    end
+
+    function to_string() return $"({self.x}, {self.y})" end
+end
+
+local function flipped(points)
+    local result = {}
+    for points as point do
+        result:insert(new Point(-point.x, -point.y))
+    end
+    return result
+end
+
+function quick_select(ls, index, lo = 1, hi = -1)
+    if hi == -1 then hi = #ls end
+    if lo == hi then return ls[lo] end
+    local pivot = math.random(lo, hi)
+    ls[lo], ls[pivot] = ls[pivot], ls[lo]
+    local cur = lo
+    for run = lo + 1, hi do
+        if ls[run] < ls[lo] then
+            ++cur
+            ls[cur], ls[run] = ls[run], ls[cur]
+        end
+    end
+    ls[cur], ls[lo] = ls[lo], ls[cur]
+    if index < cur then
+        return quick_select(ls, index, lo, cur - 1)
+    elseif index > cur then
+        return quick_select(ls, index, cur + 1, hi)
+    else
+        return ls[cur]
+    end
+end
+
+function bridge(points_set, vertical_line)
+    local points = points_set:slice(1)
+    if #points == 2 then return {points[1], points[2]} end
+    local candidates = {}
+    local pairs = {}
+    local modify_s = points:slice(1)
+
+    while #modify_s >= 2 do
+        local p1 = modify_s:remove(1)
+        local p2 = modify_s:remove(1)
+        if p1 < p2 do
+            pairs:insert({p1, p2})
+        else
+            pairs:insert({p2, p1})
+        end
+    end
+
+    if #modify_s == 1 then candidates:insert(modify_s[1]) end
+    local slopes = {}
+
+    local ix = 1
+    while ix <= #pairs do
+        local [pi, pj] = pairs[ix]
+        if pi.x == pj.x then
+            candidates:insert(pi.y > pj.y ? pi : pj)
+            pairs:remove(ix)
+            ix -= 1
+        else
+            slopes:insert((pi.y - pj.y) / (pi.x - pj.x))
+        end
+        ++ix
+    end
+
+    candidates:dedup():reorder()
+
+    if #slopes == 0 then
+        -- Handle case when no valid pairs with slopes are found.
+        if #candidates >= 2 then
+            local candidates_array = candidates:slice(1)
+            return {candidates_array[1], candidates_array[2]}
+        end
+        -- If we don't have enough candidates, return the first pair.
+        return {points[1], points[2]}
+    end
+
+    local median_index = #slopes // 2 - (#slopes % 2 == 0 ? 1 : 0) + 1
+    local median_slope = quick_select(slopes:slice(1), median_index)
+
+    local small = {}
+    local equal = {}
+    local large = {}
+
+    for i = 1, #slopes do
+        if slopes[i] < median_slope then
+            small:insert(pairs[i])
+        elseif slopes[i] == median_slope then
+            equal:insert(pairs[i])
+        else
+            large:insert(pairs[i])
+        end
+    end
+
+    local max_slope = -math.maxinteger
+    for points as point do
+        max_slope = math.max(max_slope, point.y - median_slope * point.x)
+    end
+
+    local max_set = {}
+    for points as point do
+        if point.y - median_slope * point.x == max_slope then
+            max_set:insert(point)
+        end
+    end
+
+    local left  = max_set[1]
+    local right = max_set[1]
+	for i = 2, #max_set do
+        local p = max_set[i]
+		if p < left then left = p end
+		if !(p < right) then right = p end
+	end
+
+    if left.x <= vertical_line and right.x > vertical_line then
+        return {left, right}
+    end
+
+    if right.x <= vertical_line then
+        for large as pair do candidates:insert(pair[2]) end
+        for equal as pair do candidates:insert(pair[2]) end
+        for small as pair do
+            candidates:insert(pair[1])
+            candidates:insert(pair[2])
+        end
+    end
+
+    if left.x > vertical_line then
+        for large as pair do candidates:insert(pair[1]) end
+        for equal as pair do candidates:insert(pair[1]) end
+        for small as pair do
+            candidates:insert(pair[1])
+            candidates:insert(pair[2])
+        end
+    end
+
+    candidates:dedup():reorder()
+    return bridge(candidates, vertical_line)
+end
+
+function connect(lower, upper, points_set)
+    local points = points_set:slice(1)
+    if lower == upper then return {lower} end
+
+    local points_vec = points:slice(1)
+    local mid_index  = #points_vec // 2
+
+    local max_left  = quick_select(points_vec:slice(1), mid_index)
+    local min_right = quick_select(points_vec:slice(1), mid_index + 1)
+
+    local [left, right] = bridge(points:slice(1), (max_left.x + min_right.x) / 2)
+    local points_left  = {left}
+    local points_right = {right}
+
+    for points as point do
+        if point.x < left.x then
+            points_left:insert(point)
+        elseif point.x > right.x then
+            points_right:insert(point)
+        end
+    end
+
+    points_left:dedup():reorder()
+    points_right:dedup():reorder()
+
+    local left_result  = connect(lower, left, points_left)
+    local right_result = connect(right, upper, points_right)
+    return table.move(right_result, 1, #right_result, #left_result + 1, left_result)
+end
+
+local function upper_hull(points_set)
+    local points = points_set:slice(1)
+
+    -- Find the leftmost point.
+    local lower = points[1]
+    for i = 2, #points do
+        local p = points[i]
+        if p.x < lower.x or (p.x == lower.x and p.y < lower.y) then lower = p end
+    end
+
+    -- Find the lowest point with the same x-coordinate as the minimum.
+    for points as point do
+        if point.x == lower.x and point.y > lower.y then lower = point end
+    end
+
+    -- Find the rightmost point.
+    local upper = points[1]
+    for i = 2, #points do
+        local p = points[i]
+        if p.x > upper.x or (p.x == upper.x and p.y > upper.y) then upper = p end
+    end
+
+    local filtered_points = {lower, upper}
+    for i = 1, #points do
+        local p = points[i]
+        if lower.x < p.x and p.x < upper.x then
+            if not p in filtered_points then filtered_points:insert(p) end
+        end
+    end
+
+    return connect(lower, upper, filtered_points)
+end
+
+local function convex_hull(points_set)
+    local points = points_set:slice(1)
+    local upper = upper_hull(points:slice(1))
+    local flipped_points = {}
+    for points as p do
+        flipped_points:insert(new Point(-p.x, -p.y))
+    end
+    flipped_points:dedup():reorder()
+    local flipped_upper = upper_hull(flipped_points)
+    local lower = flipped(flipped_upper)
+    if upper:back() == lower[1] then upper:remove() end
+    if upper[1] == lower:back() then lower:remove() end
+    return table.move(upper, 1, #upper, #lower + 1, lower)
+end
+
+-- Test case for a simplex.
+
+-- Create points for a 2D projection of a 3D simplex.
+local points = {
+    new Point(0.0, 0.0),   -- projection of {0.0, 0.0, 0.0}
+    new Point(1.0, 0.0),   -- projection of {1.0, 0.0, 0.0}
+    new Point(0.0, 1.0),   -- projection of {0.0, 1.0, 0.0}
+    new Point(0.5, 0.5)    -- projection of {0.0, 0.0, 1.0} (projected to 2D)
+}
+
+print("Input points:")
+for points as p do print(p:to_string()) end
+
+local hull = convex_hull(points)
+
+print("\nConvex hull points:")
+for hull as p do print(p:to_string()) end

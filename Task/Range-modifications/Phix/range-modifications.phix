@@ -1,0 +1,112 @@
+with javascript_semantics
+function add(sequence ranges, atom v)
+--
+-- eg       {}      + 9 -->    {{9,9}}      -- [1]
+--       {{3,5}}    + 9 --> {{3,5},{9,9}}   -- [1]
+--       {{3,5}}    + 4 -->     as-is       -- [2]
+--       {{3,5}}    + 2 -->    {{2,5}}      -- [3]
+--    {{3,5},{7,9}} + 6 -->    {{3,9}}      -- [4]
+--    {{3,5},{8,9}} + 6 --> {{3,6},{8,9}}   -- [5]
+--    {{3,5},{8,9}} + 7 --> {{3,5},{7,9}}   -- [3]
+--       {{3,5}}    + 6 -->    {{3,6}}      -- [6]
+--       {{3,5}}    + 1 --> {{1,1},{3,5}}   -- [7]
+--
+    integer l = length(ranges)
+    ranges = deep_copy(ranges)
+    for i=1 to l+1 do
+        if i>l then       ranges &= {{v,v}}             exit  -- [1]
+        end if
+        atom nl,{lo,hi} = ranges[i]
+        if v>=lo and v<=hi then                         exit  -- [2]
+        elsif v=lo-1 then ranges[i][1] = v              exit  -- [3]
+        elsif v=hi+1 then
+            if i<l then
+                {nl,hi} = ranges[i+1]
+                if nl=v+1 then
+                          ranges[i..i+1] = {{lo,hi}}    exit  -- [4]
+                else
+                          ranges[i][2] = v              exit  -- [5]
+                end if
+            else
+                          ranges[i][2] = v              exit  -- [6]
+            end if
+        elsif v<lo then   ranges[i..i-1] = {{v,v}}      exit  -- [7]
+        end if
+    end for
+    return ranges
+end function
+
+function del(sequence ranges, atom v)
+--
+-- eg {{1,2}} - 1 -->    {{2,2}}    -- [1]
+--    {{2,2}} - 2 -->      {}       -- [2]
+--    {{1,2}} - 2 -->    {{1,1}}    -- [3]
+--    {{1,3}} - 2 --> {{1,1},{3,3}} -- [4]
+--    {{2,3}} - 1 -->     as-is     -- [5]
+--
+    ranges = deep_copy(ranges)
+    for i=1 to length(ranges) do
+        atom {lo,hi} = ranges[i]
+        if v>=lo and v<=hi then
+            if v=lo then
+                if v<hi then    ranges[i][1] = lo+1                 -- [1]
+                        else    ranges[i..i] = {}   end if          -- [2]
+            elsif v==hi then    ranges[i][2] = hi-1                 -- [3]
+                        else    ranges[i..i] = {{lo,v-1},{v+1,hi}}  -- [4]
+            end if      exit
+        elsif v<hi then exit end if                                 -- [5]
+    end for
+    return ranges
+end function
+
+constant tests = split(`
+Start with ""
+    add 77
+    add 79
+    add 78
+    remove 77
+    remove 78
+    remove 79
+Start with "1-3,5-5"
+    add 1
+    remove 4
+    add 7
+    add 8
+    add 6
+    remove 7
+Start with "1-5,10-25,27-30"
+    add 26
+    add 9
+    add 7
+    remove 26
+    remove 9
+    remove 7
+Start with "13-14,22-22,100000999999-100001000000,100001000003-999999999999"
+    remove 22
+    remove 100000999999
+    remove 100001000000
+       add 100001000001
+       add 100001000002
+    remove 100001000002
+    remove 100001000001
+`,"\n",no_empty:=true)
+
+string range = ""
+sequence ranges -- range internal form
+for i=1 to length(tests) do
+    string ti = tests[i]
+    if match("Start with",ti) then
+        {range} = scanf(trim(ti),"Start with \"%s\"")[1]
+        ranges = split(range,",")
+        ranges = vslice(apply(true,scanf,{ranges,{"%d-%d"}}),1)
+        printf(1,"\n               Start with: \"%s\"\n",{range})
+        --                                     ^^  ^^
+    else
+        {string op, atom v} = scanf(trim(ti),"%s %d")[1]
+        integer rid = routine_id(substitute(op,"remove","del"))
+        ranges = rid(ranges,v)
+        range = join(apply(true,sprintf,{{"%d-%d"},ranges}),",")
+        printf(1," %9s %-12d -> \"%s\"\n",{op,v,range})
+        --                      ^^  ^^
+    end if
+end for

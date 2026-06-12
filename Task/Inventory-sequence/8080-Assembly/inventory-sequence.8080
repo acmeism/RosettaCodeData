@@ -1,0 +1,180 @@
+PRINT   equ     9       ; CP/M call to print a string
+        org     100h
+        lxi     h,tally         ; Zero out the array
+        lxi     d,11000 * 2     ; Two bytes each
+        mvi     b,0
+zero:   mov     m,b
+        inx     h
+        dcx     d
+        mov     a,d
+        ora     e
+        jnz     zero
+restrt: lxi     b,0             ; BC = current number
+
+takinv: mov     d,b             ; Look up count of current number
+        mov     e,c
+        call    talidx
+        mov     e,m             ; DE = current element
+        inx     h
+        mov     d,m
+
+        lxi     h,tabct         ; Any items left to print for the table?
+        mov     a,m
+        ora     a
+        jz      cktrsh
+        dcr     m               ; In any case there's now one less
+        call    atoi
+        lxi     h,numbuf        ; Print the current number
+        call    prstr
+        lxi     h,tabcol        ; Done with the row yet?
+        dcr     m
+        jnz     cktrsh
+        mvi     m,10            ; Yes, reset counter and print a newline
+        lxi     h,nl
+        call    prstr
+
+cktrsh: lhld    trshld          ; Has the threshold been reached?
+        call    cdehl
+        jc      increm
+        xchg                    ; Yes, fill in the numbers
+        call    atoi            ; Threshold (from HL)
+        xchg
+        push    d               ; And add 1000 to it while we've got it here
+        lxi     d,1000
+        dad     d
+        pop     d
+        shld    trshld
+        lxi     h,trsout
+        call    numat
+        call    atoi            ; Our current element
+        lxi     h,numout
+        call    numat
+        lxi     h,trsfmt        ; Print the element and its index
+        call    prstr
+
+increm: call    talidx          ; HL = address of count of element
+        call    inxm            ; Increment count
+        call    incidx          ; Increment index
+        inx     b               ; Increment the search number
+        mov     a,d             ; Reached zero?
+        ora     e
+        jnz     takinv          ; If not, keep going
+        lhld    trshld          ; Once we've done enough, stop
+        lxi     d,-10001
+        dad     d
+        jnc     restrt
+        ret
+
+tabcol: db      10              ; Column counter for table
+tabct:  db      100             ; First 100 items are to be printed
+trshld: dw      1000            ; Initial threshold
+
+        ; 16-bit compare DE and HL
+cdehl:  mov     a,d
+        cmp     h
+        rnz
+        mov     a,e
+        cmp     l
+        ret
+
+        ; 16-bit increment of [HL]
+inxm:   inr     m
+        rnz
+        inx     h
+        inr     m
+        ret
+
+        ; Get HL = &tally[DE]
+talidx: push    d
+        xchg
+        dad     h
+        lxi     d,tally
+        dad     d
+        pop     d
+        ret
+
+        ; print string at HL
+prstr:  push    h
+        push    d
+        push    b
+        xchg
+        mvi     c,PRINT
+        call    5
+        pop     b
+        pop     d
+        pop     h
+        ret
+
+        ; copy number buffer to HL
+numat:  push    d
+        push    b
+        lxi     d,numbuf
+        mvi     b,5
+numcpy: ldax    d
+        mov     m,a
+        inx     d
+        inx     h
+        dcr     b
+        jnz     numcpy
+        pop     b
+        pop     d
+        ret
+
+        ; set numbuf to DE as decimal number
+atoi:   push    h
+        push    d
+        push    b
+        mvi     a,5             ; Space out the buffer
+        lxi     h,nbufe         ; End of number buffer
+        push    h               ; Keep it on the stack
+aspc:   dcx     h
+        mvi     m,' '
+        dcr     a
+        jnz     aspc
+        lxi     b,-10
+adgt:   xchg                    ; Number in HL
+        lxi     d,-1
+adgtlp: inx     d               ; Extract digit
+        dad     b
+        jc      adgtlp
+        mvi     a,'0'+10        ; ASCII digit in A
+        add     l
+        pop     h               ; Get buffer pointer back
+        dcx     h
+        mov     m,a
+        push    h
+        mov     a,d             ; Any digits left?
+        ora     e
+        jnz     adgt            ; If so, next digits
+        pop     b               ; Otherwise we're done
+        pop     b
+        pop     d
+        pop     h
+        ret
+numbuf: db      '*****'
+nbufe:  db      '$'
+
+        ; Format to print first number above threshold, ends in index
+trsfmt: db      'First > '
+trsout: db      '*****: '
+numout: db      '***** at '
+
+        ; Index counter, kept as ASCII decimal so we don't need 32-bit math
+idx:    db      '     0'
+nl:     db      13,10,'$'       ; Newline string which also ends index
+
+        ; Increment index
+incidx: lxi     h,nl-1
+inclp:  mov     a,m
+        cpi     ' '             ; Space should be set to 1
+        jz      one
+        inr     m
+        cpi     '9'
+        rnz
+        mvi     m,'0'
+        dcx     h
+        jmp     inclp
+one:    mvi     m,'1'
+        ret
+
+tally   equ     $               ; Array stored at the end of the program

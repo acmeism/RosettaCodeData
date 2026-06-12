@@ -1,0 +1,2 @@
+dow=: ;:'monday tuesday wednesday thursday friday saturday sunday'
+col=: (,<)/;:'red orange yellow green blue purple'

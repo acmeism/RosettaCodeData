@@ -1,0 +1,335 @@
+(* Evaluate polynomial at given point *)
+evalPoly[coeffs_, z_] := coeffs . z^Range[Length[coeffs] - 1, 0, -1]
+
+(* Print polynomial in formatted form *)
+printPolyMMA[coeffsOrig_] := Module[{coeffs, nOrder, baseParts, expParts, firstTermProcessed},
+  coeffs = N[coeffsOrig];
+  nOrder = Length[coeffs] - 1;
+  baseParts = {};
+  expParts = {};
+  firstTermProcessed = False;
+
+  If[nOrder == -1,
+    Print["\tError: Polynomial is empty."];
+    Return[-1]
+  ];
+
+  Do[
+    With[{coeff = coeffs[[i]], power = nOrder - i + 1},
+      {termBaseStr, termExpStr} = {"", ""};
+
+      If[coeff == 0.0,
+        If[nOrder == 0 && i == 1,
+          termBaseStr = ToString[NumberForm[0., 3]];
+          termExpStr = " ";
+        ,
+          If[!firstTermProcessed && Total[coeffs[[i;;]]] == 0,
+            termBaseStr = ToString[NumberForm[0., 3]];
+            termExpStr = " ";
+            AppendTo[baseParts, termBaseStr];
+            AppendTo[expParts, termExpStr];
+            firstTermProcessed = True;
+            Break[];
+          ,
+            If[firstTermProcessed && power == 0,
+              termBaseStr = termBaseStr <> " + " <> ToString[NumberForm[Abs[coeff], 3]];
+              termExpStr = StringRepeat[" ", StringLength[termBaseStr]];
+            ,
+              Continue[];
+            ]
+          ]
+        ]
+      ,
+        (* coeff != 0 *)
+        If[coeff < 0,
+          termBaseStr = termBaseStr <> If[!firstTermProcessed, "-", " - "];
+        ,
+          If[firstTermProcessed,
+            termBaseStr = termBaseStr <> " + ";
+          ]
+        ];
+
+        absCoeff = Abs[coeff];
+        If[absCoeff != 1.0 || power == 0,
+          termBaseStr = termBaseStr <> ToString[NumberForm[absCoeff, 3]];
+        ];
+
+        If[power > 0,
+          If[StringLength[termBaseStr] > 0 && !StringEndsQ[termBaseStr, " "] && !StringEndsQ[termBaseStr, "-"],
+            If[absCoeff != 1.0, termBaseStr = termBaseStr <> " "];
+          ];
+          termBaseStr = termBaseStr <> "z";
+          If[power > 1,
+            zPos = StringPosition[termBaseStr, "z"][[-1, 1]];
+            expValStr = ToString[power];
+            termExpStr = StringRepeat[" ", zPos - 1] <> expValStr;
+          ,
+            termExpStr = "";
+          ];
+        ,
+          termExpStr = "";
+        ];
+      ];
+
+      termExpStr = StringPadRight[termExpStr, StringLength[termBaseStr]];
+      AppendTo[baseParts, termBaseStr];
+      AppendTo[expParts, termExpStr];
+      firstTermProcessed = True;
+    ]
+  , {i, Length[coeffs]}];
+
+  If[!firstTermProcessed,
+    If[Length[coeffs] > 0 && AllTrue[coeffs, # == 0 &],
+      AppendTo[baseParts, ToString[NumberForm[0., 3]]];
+      AppendTo[expParts, " "];
+    ]
+  ];
+
+  Print["\t" <> StringJoin[expParts]];
+  Print["\t" <> StringJoin[baseParts]];
+  Return[nOrder];
+]
+
+(* Test necessary conditions for stability *)
+myTest3[coeffs_, nOrder_] := Module[{stability, valAt1, test1, valAtMinus1, termWithN, test2, an, a0, test3Cond},
+  stability = True;
+
+  (* Test P(1) > 0 *)
+  valAt1 = evalPoly[coeffs, 1];
+  test1 = (valAt1 > 10^(-9));
+  Print["\t       P(z = 1)  > 0       =>   " <> ToString[NumberForm[valAt1, {9, 3}]] <> " > 0     => " <> If[test1, "TRUE ", "FALSE"]];
+  If[!test1, stability = False];
+
+  (* Test (-1)^n P(-1) > 0 *)
+  valAtMinus1 = evalPoly[coeffs, -1];
+  termWithN = ((-1)^nOrder) * valAtMinus1;
+  test2 = (termWithN > 10^(-9));
+  Print["\t     n "];
+  Print["\t (-1)  P(z = -1) > 0       =>   " <> ToString[NumberForm[termWithN, {9, 3}]] <> " > 0     => " <> If[test2, "TRUE ", "FALSE"] <> "\n"];
+  If[!test2, stability = False];
+
+  (* Test |an| > |a0| *)
+  an = coeffs[[1]];
+  a0 = coeffs[[-1]];
+  test3Cond = (Abs[an] > Abs[a0]);
+
+  If[nOrder > 0 && Abs[an] < 10^(-9),
+    (* Skip this case *)
+    Null
+  ];
+
+  Print["\t            |an| > |a0|    => |" <> ToString[NumberForm[an, {9, 3}]] <> "| > |" <> ToString[NumberForm[a0, {9, 3}]] <> "|   => " <> If[test3Cond, "TRUE ", "FALSE"]];
+  If[!test3Cond, stability = False];
+
+  Return[stability];
+]
+
+(* Build Jury table *)
+juryTableMMA[coeffs_, nOrder_] := Module[{numCoeffs, T},
+  numCoeffs = nOrder + 1;
+  T = ConstantArray[0., {2*nOrder - 3, numCoeffs}];
+
+  (* Initialize first two rows *)
+  T[[1]] = Reverse[coeffs];
+  T[[2]] = coeffs;
+  T[[3]] = T[[1, 1]] * T[[1]] - T[[2, 1]] * T[[2]];
+
+  (* Build remaining rows *)
+  Do[
+    With[{idxPrevMainRow = 2*jM - 1, idxNewEvenRow = 2*jM, idxNewMainRow = 2*jM + 1, sliceLenForFlip = nOrder},
+      T[[idxNewEvenRow, 1 ;; sliceLenForFlip]] = Reverse[T[[idxPrevMainRow, 1 ;; sliceLenForFlip]]];
+      T[[idxNewMainRow]] = T[[idxPrevMainRow, 1]] * T[[idxPrevMainRow]] - T[[idxNewEvenRow, 1]] * T[[idxNewEvenRow]];
+    ]
+  , {jM, 2, nOrder - 1}];
+
+  Return[T];
+]
+
+(* Print Jury table *)
+printJuryTableMMA[T_, nOrder_] := Module[{numTotalCols},
+  numTotalCols = nOrder + 1;
+  Print["   Row\t\t Table\n"];
+
+  Do[
+    With[{row1Idx = iLoop*2 + 1, row2Idx = iLoop*2 + 2, numElementsToPrint = numTotalCols - iLoop},
+      WriteString["stdout", "\t" <> ToString[nOrder - iLoop] <> "\t| "];
+      Do[
+        WriteString["stdout", "\t" <> ToString[NumberForm[T[[row1Idx, jCol]], {6, 3}]]];
+      , {jCol, numElementsToPrint}];
+      Print["\n"];
+
+      WriteString["stdout", "\t\t| "];
+      Do[
+        WriteString["stdout", "\t" <> ToString[NumberForm[T[[row2Idx, jCol]], {6, 3}]]];
+      , {jCol, numElementsToPrint}];
+      Print["\n"];
+
+      WriteString["stdout", "\t-------"];
+      Do[
+        WriteString["stdout", "\t-------"];
+      , {i, numElementsToPrint}];
+      Print["---\n"];
+    ]
+  , {iLoop, 0, nOrder - 3}];
+
+  (* Print last row *)
+  With[{lastMainRowIdx = (nOrder - 2)*2 + 1},
+    WriteString["stdout", "\t2\t| "];
+    Do[
+      If[jCol <= Dimensions[T][[2]],
+        WriteString["stdout", "\t" <> ToString[NumberForm[T[[lastMainRowIdx, jCol]], {6, 3}]]];
+      ];
+    , {jCol, 1, 3}];
+    Print["\t\n\n\n"];
+  ];
+]
+
+(* Additional tests for Jury criterion *)
+addTestMMA[T_, nOrder_] := Module[{stability},
+  stability = True;
+
+  Do[
+    With[{riga = 2*iMLoop + 1, idxLastCoeff = nOrder - iMLoop + 1},
+      {valFirst, valLast} = {T[[riga, 1]], T[[riga, idxLastCoeff]]};
+      currentTest = (Abs[valFirst] > Abs[valLast]);
+      Print["\t| " <> ToString[NumberForm[valFirst, {9, 3}]] <> " | > | " <> ToString[NumberForm[valLast, {9, 3}]] <> " | \t\t => " <> If[currentTest, "TRUE ", "FALSE"]];
+      If[!currentTest, stability = False];
+    ]
+  , {iMLoop, 1, nOrder - 2}];
+
+  Return[stability];
+]
+
+(* Print polynomial roots *)
+printRootsMMA[coeffs_] := Module[{actualCoeffs, calculatedRoots},
+  If[Length[coeffs] <= 1 && (Length[coeffs] == 0 || coeffs[[1]] == 0),
+    Print["\t Polynomial is zero or empty, roots are undefined or infinite."];
+    Return[];
+  ];
+
+  If[Length[coeffs] == 1,
+    Print["\t Polynomial is a non-zero constant, no roots."];
+    Return[];
+  ];
+
+  (* Remove leading zeros *)
+  actualCoeffs = coeffs;
+  While[Length[actualCoeffs] > 0 && actualCoeffs[[1]] == 0, actualCoeffs = Rest[actualCoeffs]];
+
+  If[Length[actualCoeffs] == 0,
+    Print["\t Polynomial is all zeros, roots are undefined."];
+    Return[];
+  ];
+
+  If[Length[actualCoeffs] == 1,
+    Print["\t Polynomial reduced to a non-zero constant, no roots."];
+    Return[];
+  ];
+
+  (* Calculate roots *)
+  calculatedRoots = NSolve[Sum[actualCoeffs[[i]] * z^(Length[actualCoeffs] - i), {i, Length[actualCoeffs]}] == 0, z];
+
+  Do[
+    With[{rVal = z /. calculatedRoots[[i]]},
+      {modulus, rReal, rImag} = {Abs[rVal], Re[rVal], Im[rVal]};
+      If[Abs[rImag] < 10^(-9),
+        Print["\t z" <> ToString[i] <> " = " <> ToString[NumberForm[rReal, {7, 3}]] <> " \t\t\t\t\t=> modulus = " <> ToString[NumberForm[modulus, {7, 3}]]];
+      ,
+        sign = If[rImag >= 0, "+", ""];
+        Print["\t z" <> ToString[i] <> " = " <> ToString[NumberForm[rReal, {7, 3}]] <> " " <> sign <> ToString[NumberForm[rImag, {7, 3}]] <> " i\t\t\t=> modulus = " <> ToString[NumberForm[modulus, {7, 3}]]];
+      ];
+    ]
+  , {i, Length[calculatedRoots]}];
+]
+
+(* Main Jury criterion function *)
+juryC[PIn_] := Module[{coeffsOrig, coeffs, nOrder, TTable, stabilityFlag},
+  If[!ListQ[PIn],
+    Print["\n\nInput error. P must be a list."];
+    Print["\tjuryC[{an, an-1, ..., a1, a0}]"];
+    Return[None];
+  ];
+
+  coeffsOrig = N[PIn];
+
+  If[Length[Dimensions[coeffsOrig]] != 1 || Length[coeffsOrig] == 0,
+    Print["\n\nInput error. P must be a 1D list."];
+    Print["\tjuryC[{an, an-1, ..., a1, a0}]"];
+    Return[None];
+  ];
+
+  (* Remove leading zeros *)
+  coeffs = coeffsOrig;
+  While[Length[coeffs] > 0 && coeffs[[1]] == 0, coeffs = Rest[coeffs]];
+
+  If[Length[coeffs] == 0,
+    Print["\n\nInput error: Polynomial is all zeros."];
+    Return[None];
+  ];
+
+  If[Length[coeffs] < 2,
+    Print["\n\nInput error or trivial case: Polynomial order is < 1 (P=" <> ToString[coeffs] <> ")."];
+    Print["Jury criterion is for order >= 1."];
+    Return[None];
+  ];
+
+  Print["\n*****************************************"];
+  Print["\tPolynomial under test:\n"];
+
+  (* Make leading coefficient positive *)
+  If[coeffs[[1]] < 0, coeffs = -coeffs];
+
+  nOrder = printPolyMMA[coeffs];
+  TTable = None;
+  stabilityFlag = False;
+
+  If[nOrder <= 2,
+    Print["\n\nPolynomial order = " <> ToString[nOrder] <> " THEN\n"];
+    Print["necessary and sufficient conditions:\n"];
+    stabilityFlag = myTest3[coeffs, nOrder];
+    If[stabilityFlag,
+      Print["\nThe system is stable. The roots are:"];
+    ,
+      Print["\n*** The system IS NOT STABLE ***. \n\nThe roots are:\n"];
+    ];
+  ,
+    (* nOrder > 2 *)
+    Print["\n\nPolynomial order = " <> ToString[nOrder] <> " \n\n"];
+    Print["necessary conditions:\n"];
+    stabilityFlag = myTest3[coeffs, nOrder];
+    If[stabilityFlag,
+      Print["\nThe necessary conditions are met. \n"];
+      Print["It is necessary to build the Jury table.\n"];
+      TTable = juryTableMMA[coeffs, nOrder];
+      printJuryTableMMA[TTable, nOrder];
+      Print["\t\tAdditional condition to test = " <> ToString[nOrder - 2] <> " \n"];
+      stabilityFlag = addTestMMA[TTable, nOrder];
+      If[stabilityFlag,
+        Print["\nThe system is stable. The roots are:\n"];
+      ,
+        Print["\n*** The system IS NOT STABLE ***. \n\nThe roots are:\n"];
+      ];
+    ,
+      Print["\n*** The system IS NOT STABLE because the necessary conditions are not met***. \n\nThe roots are:\n"];
+    ];
+  ];
+
+  printRootsMMA[coeffs];
+  Return[TTable];
+]
+
+(* Test cases *)
+Print["--- Test Case 1 ---"];
+juryC[{1, 3.3, 4, 0.8}];
+
+Print["\n--- Test Case 2 ---"];
+juryC[{1, 1.4, 0.71, 0.154, 0.012}];
+
+Print["\n--- printPolyMMA Test Cases ---"];
+printPolyMMA[{1., 0., -2., 0., 5.}];
+printPolyMMA[{1., 1., 1.}];
+printPolyMMA[{-1., 2.5, -3.}];
+printPolyMMA[{0., 0., 1., 2., 0.}];
+printPolyMMA[{5.}];
+printPolyMMA[{0.}];
+printPolyMMA[{0., 0., 0.}];

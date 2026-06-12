@@ -1,0 +1,1 @@
+print $*PROGRAM.slurp

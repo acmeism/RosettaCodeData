@@ -1,0 +1,150 @@
+DECLARE FUNCTION PadLeft$ (s AS STRING, length AS INTEGER)
+DECLARE FUNCTION LunarAdd$ (a AS STRING, b AS STRING)
+DECLARE FUNCTION LunarMultiply$ (a AS STRING, b AS STRING)
+DECLARE FUNCTION isUnique% (value AS STRING, arr$(), cnt AS INTEGER)
+
+PRINT "     Lunar add: 976 + 348 = "; LunarAdd$("976", "348")
+PRINT "Lunar multiply: 976 x 348 = "; LunarMultiply$("976", "348")
+PRINT
+
+PRINT "     Lunar add: 23 + 321 = "; LunarAdd$("23", "321")
+PRINT "Lunar multiply: 23 x 321 = "; LunarMultiply$("23", "321")
+PRINT
+
+PRINT "     Lunar add: 232 + 35 = "; LunarAdd$("232", "35")
+PRINT "Lunar multiply: 232 x 35 = "; LunarMultiply$("232", "35")
+PRINT
+
+PRINT "     Lunar add: 123 + 32192 + 415 + 8 = "; LunarAdd$(LunarAdd$(LunarAdd$("123", "32192"), "415"), "8")
+PRINT "Lunar multiply: 123 x 32192 x 415 x 8 = "; LunarMultiply$(LunarMultiply$(LunarMultiply$("123", "32192"), "415"), "8")
+PRINT
+
+PRINT "First 20 distinct lunar even numbers:"
+DIM evenNums$(1000)
+DIM cnt AS INTEGER, n AS INTEGER, i AS INTEGER
+DO WHILE cnt < 20
+    DIM result AS STRING
+    result = LunarMultiply$(STR$(n), "2")
+    IF isUnique%(result, evenNums$(), cnt) THEN
+        evenNums$(cnt) = result
+        PRINT result; " ";
+        cnt = cnt + 1
+    END IF
+    n = n + 1
+LOOP
+
+PRINT
+PRINT
+PRINT "First 20 lunar square numbers:"
+FOR i = 0 TO 19
+    PRINT LunarMultiply$(STR$(i), STR$(i)); " ";
+NEXT i
+
+PRINT
+PRINT
+PRINT "First 20 lunar factorial numbers:"
+DIM factorial AS STRING
+factorial = "1"
+PRINT factorial;
+
+FOR i = 2 TO 20
+    factorial = LunarMultiply$(factorial, STR$(i))
+    PRINT " "; factorial;
+NEXT i
+
+PRINT
+PRINT
+
+DIM prevSquare AS STRING, currSquare AS STRING
+DIM j AS LONG
+j = 1
+
+DO
+    currSquare = LunarMultiply$(STR$(j), STR$(j))
+
+    IF prevSquare <> "" AND VAL(currSquare) < VAL(prevSquare) THEN
+        PRINT "First number whose lunar square is smaller than the previous:"; j
+        EXIT DO
+    END IF
+
+    prevSquare = currSquare
+    j = j + 1
+LOOP
+END
+
+
+FUNCTION isUnique% (value AS STRING, arr$(), cnt AS INTEGER)
+    DIM i AS INTEGER
+    FOR i = 0 TO cnt - 1
+        IF arr$(i) = value THEN
+            isUnique% = 0
+            EXIT FUNCTION
+        END IF
+    NEXT i
+    isUnique% = -1
+END FUNCTION
+
+FUNCTION LunarAdd$ (a AS STRING, b AS STRING)
+    DIM result AS STRING
+    DIM maxLen AS INTEGER, i AS INTEGER
+    DIM digitA AS INTEGER, digitB AS INTEGER, digit AS INTEGER
+    IF LEN(a) > LEN(b) THEN maxLen = LEN(a) ELSE maxLen = LEN(b)
+
+    a = PadLeft$(a, maxLen)
+    b = PadLeft$(b, maxLen)
+
+    FOR i = 1 TO maxLen
+        digitA = VAL(MID$(a, i, 1))
+        digitB = VAL(MID$(b, i, 1))
+        IF digitA > digitB THEN digit = digitA ELSE digit = digitB
+        result = result + CHR$(ASC("0") + digit)
+    NEXT i
+
+    WHILE LEFT$(result, 1) = "0" AND LEN(result) > 1
+        result = RIGHT$(result, LEN(result) - 1)
+    WEND
+
+    LunarAdd$ = result
+END FUNCTION
+
+FUNCTION LunarMultiply$ (a AS STRING, b AS STRING)
+    IF a = "0" OR b = "0" THEN
+        LunarMultiply$ = "0"
+        EXIT FUNCTION
+    END IF
+
+    DIM result AS STRING, tmp AS STRING
+    result = "0"
+    DIM i AS INTEGER, j AS INTEGER
+    DIM bDigit AS INTEGER, aDigit AS INTEGER
+    FOR i = LEN(b) TO 1 STEP -1
+        tmp = ""
+        bDigit = VAL(MID$(b, i, 1))
+
+        FOR j = 1 TO LEN(a)
+            aDigit = VAL(MID$(a, j, 1))
+            IF aDigit < bDigit THEN
+                tmp = tmp + CHR$(ASC("0") + aDigit)
+            ELSE
+                tmp = tmp + CHR$(ASC("0") + bDigit)
+            END IF
+        NEXT j
+
+        tmp = tmp + STRING$(LEN(b) - i, "0")
+        result = LunarAdd$(result, tmp)
+    NEXT i
+
+    WHILE LEFT$(result, 1) = "0" AND LEN(result) > 1
+        result = RIGHT$(result, LEN(result) - 1)
+    WEND
+
+    LunarMultiply$ = result
+END FUNCTION
+
+FUNCTION PadLeft$ (s AS STRING, length AS INTEGER)
+    IF LEN(s) >= length THEN
+        PadLeft$ = s
+    ELSE
+        PadLeft$ = STRING$(length - LEN(s), "0") + s
+    END IF
+END FUNCTION

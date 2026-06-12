@@ -1,0 +1,29 @@
+DIM SHARED lista(1 TO 9)
+DATA 1,2,3,4,5,6,7,8,9
+FOR i = 1 TO 9
+    READ lista(i)
+NEXT i
+
+SUB shiftLeft (lista())
+    lo = LBOUND(lista)
+    hi = UBOUND(lista)
+    first = lista(lo)
+    FOR i = lo TO hi
+	lista(i) = lista(i + 1)
+    NEXT i
+    lista(hi) = first
+END SUB
+
+SUB shiftLeftN (lista(), n)
+    FOR i = 1 TO n
+	CALL shiftLeft(lista())
+	NEXT i
+END SUB
+
+CALL shiftLeftN(lista(), 3)
+
+FOR i = 1 TO 9
+    PRINT lista(i);
+    IF i < 9 THEN PRINT ", ";
+NEXT i
+END

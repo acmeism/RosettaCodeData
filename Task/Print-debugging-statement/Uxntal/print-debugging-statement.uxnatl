@@ -1,0 +1,139 @@
+( ascii codes )
+%\e { 1b }
+%\s { 20 }
+%\n { 0a }
+%\0 { 00 }
+
+( ansi codes )
+%\default { \e "[0;m   }
+%\red     { \e "[0;31m }
+%\cyan    { \e "[0;36m }
+%\yellow  { \e "[0;33m }
+
+%DBG     { [ LIT2 -True -System/debug  ] DEO }
+%newline { [ LIT2 \n    -Console/write ] DEO }
+%space   { [ LIT2 \s    -Console/write ] DEO }
+%bar     { [ LIT2 "|    -Console/write ] DEO }
+%l-paren { [ LIT2 28    -Console/write ] DEO }
+%r-paren { [ LIT2 29    -Console/write ] DEO }
+
+|1 @True
+|0 @False
+
+|0e @System/debug  $1
+|18 @Console/write $1 &error $1
+
+( dynamically change debug logging level )
+|0 @DEBUG $1
+
+|100
+
+( set debug to true )
+.True .DEBUG STZ
+( print string with debug enabled )
+;msgs/hello print/string
+
+( set debug to false )
+.False .DEBUG STZ
+( print string with debug disabled )
+;msgs/hello print/string newline
+
+( pass false debug flag to routine )
+.False test newline
+
+( pass true debug flag to routine )
+.True test newline
+
+( dump one 256 page to stdout )
+#0100 print/memory
+
+BRK
+
+@test ( debug? -- )
+	;msgs/test print/string
+	;msgs/test print/info
+
+	.True NEQ ?{
+		;msgs/test print/warning
+		;msgs/test print/error
+		DBG }
+
+	JMP2r
+
+( print string to stdout )
+@print/string ( str* -- )
+	LDAk .DEBUG LDZ .True NEQ ?{ newline DBG }
+	.Console/write DEO
+	INC2 LDAk ?/string
+	POP2 JMP2r
+
+( print info to stdout )
+@print/info ( str* -- )
+	;msgs/info    /info-body	
+	( str* )      /info-body
+	;msgs/default !/info-body
+
+	&info-body ( str* -- )
+		LDAk .Console/write DEO
+		INC2 LDAk ?/info-body
+		POP2 JMP2r
+
+( print warning to stderr )
+@print/warning ( str* -- )
+	;msgs/warning /warning-body
+	( str* )      /warning-body
+	;msgs/default !/warning-body
+	
+	&warning-body ( str* -- )
+		LDAk .Console/error DEO
+		INC2 LDAk ?/warning-body
+		POP2 JMP2r
+				
+( print error to stderr )
+@print/error ( str* -- )
+	;msgs/error   /error-body
+	( str* )      /error-body
+	;msgs/default !/error-body
+
+	&error-body ( str* -- )
+		LDAk .Console/error DEO
+		INC2 LDAk ?/error-body
+		POP2 JMP2r
+
+@print/short ( short* -- )
+	SWP /byte
+	( >> )
+
+@print/byte ( byte -- )
+	DUP #04 SFT /nibble
+	( >> )
+
+@print/nibble ( byte -: )
+	#0f AND DUP #09 GTH #27 MUL ADD [ LIT "0 ] ADD .Console/write DEO
+	JMP2r
+
+@print/memory ( address* -- )
+	bar STH2k DUP2 /short space space #0000
+	&memory/loop-bytes ( addr* i* | addr* -- )
+		ADD2k LDA /byte
+		DUP #0f AND DUP #07 NEQ ?{ space }
+		#0f NEQ ?{
+			space space l-paren space
+			ADD2k DUP2 INC2 SWP2 #000f SUB2
+			&memory/loop-chars
+				LDAk DUPk [ LIT \s ] GTH SWP #7f LTH AND ?{
+					POP [ LIT ". ] }
+				.Console/write DEO INC2 GTH2k ?/memory/loop-chars
+			POP2 POP2
+			space r-paren newline DUP2 INC2 STH2kr ADD2
+			bar /short space }
+		space INC NEQk ?/memory/loop-bytes
+	POP2 POP2 POP2r newline JMP2r
+
+@msgs [
+	&hello   "hello \n \0
+	&test    "Check \s "this \s "out! \n \0
+	&error   \red     "Error:   \s \0
+	&info    \cyan    "Info:    \s \0
+	&warning \yellow  "Warning: \s \0
+	&default \default \0 ]

@@ -1,0 +1,80 @@
+MODULE NKTgEarthOrbit; (* NKTg Law in Earth orbit - translation of Rust via Pluto *)
+    IMPORT Out;
+
+    CONST  dmDt       = -1.8;  (* kg/s *)
+
+    TYPE Date        = ARRAY 12 OF CHAR;
+         OrbitalData = RECORD date : Date; x, v, m : REAL END;
+         Observation = RECORD date : Date; v : REAL END;
+
+    PROCEDURE outResult( date : ARRAY OF CHAR; p, nktg1, nktg2, vSim, vNasa, err : REAL );
+        BEGIN
+            Out.String( date     );Out.String( "   " );
+            Out.Real(      p, 14 );Out.String( " " );
+            Out.Real(  nktg1, 14 );Out.String( " " );
+            Out.Real(  nktg2, 14 );Out.String( " " );
+            Out.Real(   vSim, 14 );Out.String( " " );
+            Out.Real(  vNasa, 14 );Out.String( " " );
+            Out.Real(    err, 14 );Out.String( "%" );
+        END outResult;
+
+    PROCEDURE setOrbitalData( VAR data : OrbitalData; date : ARRAY OF CHAR; x, v, m : REAL );
+        BEGIN
+            data.date := date; data.x := x; data.v := v; data.m := m
+        END setOrbitalData;
+
+    PROCEDURE momentum( m, v : REAL ) : REAL; BEGIN RETURN m * v END momentum;
+    PROCEDURE nktg1   ( x, p : REAL ) : REAL; BEGIN RETURN x * p END nktg1;
+    PROCEDURE nktg2   (    p : REAL ) : REAL; BEGIN RETURN dmDt * p END nktg2;
+    PROCEDURE relativeError( sim, nasa : REAL ) : REAL;
+        BEGIN RETURN ( sim - nasa ) / nasa * 100.0 END relativeError;
+
+    PROCEDURE Earth2025;
+        VAR   sim2025                           : ARRAY 5 OF OrbitalData;
+              nasa2025                          : ARRAY 5 OF Observation;
+              data                              : OrbitalData;
+              i                                 : INTEGER;
+              p, n1, n2, vSim, vNasa, err : REAL;
+
+        BEGIN
+
+            (* Simulated NKTg 2025 dataset. *)
+            setOrbitalData( sim2025[ 0 ], "01/01/2025", 1.471012E11, 3.0276E4, 5.97219E24 );
+            setOrbitalData( sim2025[ 1 ], "04/01/2025", 1.494953E11, 2.9791E4, 5.97218999999998E24 );
+            setOrbitalData( sim2025[ 2 ], "07/01/2025", 1.520965E11, 2.9282E4, 5.97218999999997E24 );
+            setOrbitalData( sim2025[ 3 ], "10/01/2025", 1.496328E11, 2.9764E4, 5.97218999999995E24 );
+            setOrbitalData( sim2025[ 4 ], "12/31/2025", 1.471025E11, 3.0276E4, 5.97218999999994E24 );
+
+            (* NASA observed velocities. *)
+            nasa2025[ 0 ].date := "01/01/2025"; nasa2025[ 0 ].v := 3.0287E4;
+            nasa2025[ 1 ].date := "04/01/2025"; nasa2025[ 1 ].v := 2.9791E4;
+            nasa2025[ 2 ].date := "07/01/2025"; nasa2025[ 2 ].v := 2.9291E4;
+            nasa2025[ 3 ].date := "10/01/2025"; nasa2025[ 3 ].v := 2.9778E4;
+            nasa2025[ 4 ].date := "12/31/2025"; nasa2025[ 4 ].v := 3.0286E4;
+
+            Out.Ln;Out.String( "Experimental Verification of NKTg Law (Earth 2025)" );Out.Ln;Out.Ln;
+            Out.String( "Date            Momentum(p)          NKTg1          NKTg2" );
+            Out.String( "          v_sim         v_NASA          Error" );Out.Ln;
+            FOR i := 1 TO 103 DO Out.Char( "-" ); END;Out.Ln;
+
+            FOR i := 0 TO LEN( sim2025 ) - 1 DO
+                data  := sim2025[ i ];
+                IF data.date # nasa2025[ i ].date THEN
+                    Out.String( "**** Date mismatch on observation/simulation " );Out.Int( i, 0 )
+                ELSE
+                    p     := momentum( data.m, data.v );
+                    n1    := nktg1( data.x, p );
+                    n2    := nktg2( p );
+                    vSim  := data.v;
+                    vNasa := nasa2025[ i ].v;
+                    err   := relativeError( data.v, vNasa );
+                    outResult( data.date, p, n1, n2, vSim, vNasa, err )
+                END;
+                Out.Ln
+            END
+
+        END Earth2025;
+
+BEGIN
+    Earth2025
+END NKTgEarthOrbit.

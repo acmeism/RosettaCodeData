@@ -1,0 +1,87 @@
+' version 13-04-2023
+' compile with: fbc -s console
+
+#Include "gmp.bi"
+#Define sieve_max 21000000
+
+Dim As Mpz_ptr n2 = Allocate (Len(__mpz_struct))
+Dim As Mpz_ptr n3 = Allocate (Len(__mpz_struct))
+Dim As Mpz_ptr n4 = Allocate (Len(__mpz_struct))
+Mpz_init(n2) : Mpz_init(n3) : Mpz_init(n4)
+
+Dim As ULongInt i, j
+ReDim As boolean sieve(sieve_max)
+
+' default value on initialization is FALSE
+sieve(2) = TRUE
+' set all odd numbers to TRUE
+For i = 3 To sieve_max Step 2
+    sieve(i) = TRUE
+Next
+For i = 3 To Sqr(sieve_max) Step 2
+    If sieve(i) = TRUE Then
+        For j = i * i To sieve_max Step i * 2
+            sieve(j) = FALSE
+        Next
+    End If
+Next
+
+Dim As LongInt n = -1, count, k
+Dim As LongInt si = 15
+
+Print "The first thirty penta-power prime seeds are:"
+While count < 30
+    n += 2
+    k = n +1
+    ' n ^ 0 = 1
+    If sieve(1 + k) And sieve(n + k) Then  ' skip if 1 + k or n + k is not prime
+        Mpz_ui_pow_ui(n4, n , 4)
+        Mpz_add_ui(n4, n4, k)
+        If Mpz_probab_prime_p(n4, si) < 1 Then Continue While ' skip if not prime
+        Mpz_ui_pow_ui(n3, n, 3)
+        Mpz_add_ui(n3, n3, k)
+        If Mpz_probab_prime_p(n3, si) < 1 Then Continue While ' skip if not prime
+        Mpz_ui_pow_ui(n2, n, 2)
+        Mpz_add_ui(n2, n2, k)
+        If Mpz_probab_prime_p(n2, si) >= 1 Then ' if prime then print n
+            Print Using "##########"; n;
+            count += 1
+            If (count Mod 10) = 0  Then Print
+        End If
+    End If
+Wend
+
+Dim As ULongInt m = 1, million = 1000000
+n = -1 : count = 0
+Print !"\n\nFirst penta-power prime seed greater than:"
+While m < 11
+    n += 2
+    k = n +1
+    If sieve(1 + k) And sieve(n + k) Then  ' skip if 1 + k or n + k is not prime
+        Mpz_ui_pow_ui(n4, n , 4)
+        Mpz_add_ui(n4, n4, k)
+        If Mpz_probab_prime_p(n4, si) < 1 Then Continue While ' skip if not prime
+        Mpz_ui_pow_ui(n3, n, 3)
+        Mpz_add_ui(n3, n3, k)
+        If Mpz_probab_prime_p(n3, si) < 1 Then Continue While ' skip if not prime
+        Mpz_ui_pow_ui(n2, n, 2)
+        Mpz_add_ui(n2, n2, k)
+        If Mpz_probab_prime_p(n2, si) >= 1 Then
+            count += 1
+            If n > million Then
+                Print Using " ## million is #########, at index ### "; m; n; count
+                m += 1
+                million = m * 1000000
+            End If
+        End If
+    End If
+Wend
+
+Mpz_clear(n4) : Mpz_clear(n3) : Mpz_clear(n2)
+
+
+' empty keyboard buffer
+While InKey <> "" : Wend
+Print : Print "hit any key to end program"
+Sleep
+End

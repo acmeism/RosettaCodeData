@@ -1,0 +1,16 @@
+(define (root a b)
+  (define // quotient)
+  (define (y a a1 b c d e)
+    (if (or (= c d) (= c e))
+      (min d e)
+      (y a a1 b d e (// (+ (* a1 e) (// b (expt e a1))) a))))
+  (if (< b 2)
+    b
+    (let* ((a1 (- a 1))
+           (c 1)
+           (d (// (+ (* a1 c) (// b (expt c a1))) a))
+           (e (// (+ (* a1 d) (// b (expt d a1))) a)))
+      (y a a1 b c d e))))
+
+(display "First 2,001 digits of the cube root of two:\n")
+(display (root 3 (* 2 (expt 1000 2000))))

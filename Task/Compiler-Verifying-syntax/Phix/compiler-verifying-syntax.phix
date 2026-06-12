@@ -1,0 +1,192 @@
+-- demo\rosetta\Compiler\Verify_Syntax.exw
+with javascript_semantics
+string src
+integer ch, sdx
+
+procedure skip_spaces()
+    while 1 do
+        if sdx>length(src) then exit end if
+        ch = src[sdx]
+        if not find(ch,{' ','\t','\r','\n'}) then exit end if
+        sdx += 1
+    end while
+end procedure
+
+enum SYMBOL, INTEGER, IDENT, ERROR, EOF
+constant toktypes = {"SYMBOL","INTEGER","IDENT","ERROR","EOF"}
+sequence tok
+
+function sprintok(string fmt)
+    tok[1] = toktypes[tok[1]]
+    return sprintf(fmt,{tok})
+end function
+
+procedure next_token()
+-- yeilds one of:
+--  {SYMBOL,ch} where ch is one of "()+-/*=&<", or
+--  {INTEGER,n}, or
+--  {IDENT,string}, or
+--  {ERROR,msg}, or
+--  {EOF}
+    skip_spaces()
+    integer tokstart = sdx
+    if tok[1]=ERROR then
+        ?{"erm, tok is",tok} -- looping??
+    elsif sdx>length(src) then
+        tok = {EOF}
+    elsif find(ch,"()+-/*=&<") then
+        sdx += 1
+        tok = {SYMBOL,ch&""}
+    elsif (ch>='0' and ch<='9') then
+        integer n = ch-'0'
+        while true do
+            sdx += 1
+            if sdx>length(src) then exit end if
+            ch = src[sdx]
+            if ch<'0' or ch>'9' then exit end if
+            n = n*10 + ch-'0'
+        end while
+        tok = {INTEGER,n}
+    elsif (ch>='a' and ch<='z')
+       or (ch>='A' and ch<='Z') then
+        while true do
+            sdx += 1
+            if sdx>length(src) then exit end if
+            ch = src[sdx]
+            if ch!='_'
+            and (ch<'a' or ch>'z')
+            and (ch<'A' or ch>'Z')
+            and (ch<'0' or ch>'9') then
+                exit
+            end if
+        end while
+        tok = {IDENT,src[tokstart..sdx-1]}
+    elsif ch='_' then
+        tok = {ERROR,"identifiers may not start with _"}
+        sdx += 1
+    else
+        tok = {ERROR,sprintf("illegal char (%c/%d)",ch)}
+        sdx += 1
+    end if
+end procedure
+
+forward procedure or_expr()
+
+procedure primary()
+    integer tt = tok[1]
+    if tt=IDENT
+    or tt=INTEGER then
+        next_token()
+    elsif tok={SYMBOL,"("} then
+        next_token()
+        or_expr()
+        if tok!={SYMBOL,")"} then
+            tok = {ERROR,") expected"}
+        else
+            next_token()
+        end if
+    else
+        tok = {ERROR,sprintok("invalid [%v]")}
+    end if
+end procedure
+
+procedure mul_expr()
+    while true do
+        primary()
+        if not find(tok,{{SYMBOL,"*"},{SYMBOL,"/"}}) then exit end if
+        next_token()
+    end while
+end procedure
+
+procedure sum_expr()
+    while true do
+        mul_expr()
+        if not find(tok,{{SYMBOL,"+"},{SYMBOL,"-"}}) then exit end if
+        next_token()
+    end while
+end procedure
+
+procedure cmp_expr()
+    if tok=={IDENT,"not"} then next_token() end if
+--  while true do
+--      sum_expr()
+--      if not find(tok,{{SYMBOL,"="},{SYMBOL,"<"}}) then exit end if
+--      next_token()
+--  end while
+    sum_expr()
+    if find(tok,{{SYMBOL,"="},{SYMBOL,"<"}}) then
+        next_token()
+        sum_expr()
+    end if
+end procedure
+
+procedure and_expr()
+    while true do
+        cmp_expr()
+        if tok!={IDENT,"and"} then exit end if
+        next_token()
+    end while
+end procedure
+
+procedure or_expr()
+    while true do
+        and_expr()
+        if tok!={IDENT,"or"} then exit end if
+        next_token()
+    end while
+end procedure
+
+procedure statement()
+    or_expr()
+end procedure
+
+procedure verify_syntax(string source)
+    src = source
+    sdx = 1
+    tok = {0} -- ("not error"/invalid-ish)
+    next_token()
+    statement()
+    printf(1,"%30s  ==>  %s\n",{source,iff(tok[1]=EOF?"true":sprintok("false [tok=%v]"))})
+end procedure
+
+constant tests = {
+        "$",
+        "one",
+        "either or both",
+        "a + 1",
+        "a + b < c",
+        "a = b",
+        "a or b = c",
+        "3 + not 5",
+        "3 + (not 5)",
+        "(42 + 3",
+        "(42 + 3)",
+        " not 3 < 4 or (true or 3 /  4 + 8 *  5 - 5 * 2 < 56) and 4 * 3  < 12 or not true",
+        " and 3 < 2",
+        "not 7 < 2",
+        "2 < 3 < 4",
+        "2 < (3 < 4)",
+        "2 < foobar - 3 < 4",
+        "2 < foobar and 3 < 4",
+        "4 * (32 - 16) + 9 = 73",
+        "235 76 + 1",
+        "true or false = not true",
+        "true or false = (not true)",
+        "not true or false = false",
+        "not true = false",
+        "a + b = not c and false",
+        "a + b = (not c) and false",
+        "a + b = (not c and false)",
+        "ab_c / bd2 or < e_f7",
+        "g not = h",
+        "i++",
+        "j & k",
+        "l or _m"}
+
+printf(1,"Verify Syntax:\n")
+for i=1 to length(tests) do
+    verify_syntax(tests[i])
+end for
+
+?"done"
+{} = wait_key()

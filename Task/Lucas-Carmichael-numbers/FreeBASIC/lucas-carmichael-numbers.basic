@@ -1,0 +1,148 @@
+#include "isprime.bas"
+
+Function GCD(n As Ulongint, d As Ulongint) As Ulongint
+    Return Iif(d = 0, n, GCD(d, n Mod d))
+End Function
+
+Function lcm(r As Ulongint, s As Ulongint) As Ulongint
+    Return (r * s) \ GCD(r, s)
+End Function
+
+Function divCeil(x As Ulongint, y As Ulongint) As Ulongint
+    Return (x + y - 1) \ y
+End Function
+
+Function primorial(n As Integer) As Ulongint
+    Dim As Ulongint result = 1
+    For i As Integer = 2 To n
+        If isPrime(i) Then result *= i
+    Next
+    Return result
+End Function
+
+Function invMod(a As Longint, m As Longint) As Longint
+    Dim As Longint m0 = m, t, q
+    Dim As Longint x0 = 0, x1 = 1
+
+    If m = 1 Then Return 0
+
+    While a > 1
+        q = a \ m
+        t = m
+        m = a Mod m
+        a = t
+        t = x0
+        x0 = x1 - q * x0
+        x1 = t
+    Wend
+
+    If x1 < 0 Then x1 += m0
+    Return x1
+End Function
+
+Function rootN(n As Longint, k As Integer) As Longint
+    If n = 0 Then Return 0
+
+    Dim As Ulongint prev, x = n
+    Do
+        prev = x
+        x = ((k - 1) * x + n \ (x ^ (k - 1))) \ k
+    Loop While x < prev
+
+    Return x
+End Function
+
+Sub processLevel(m As Longint, L As Longint, lo As Longint, k As Integer, _
+    A As Longint, B As Longint, max_p As Longint, LC() As Longint, Byref cnt As Integer)
+
+    Dim As Longint hi, t, p, n
+
+    hi = rootN(B \ m, k)
+    If lo > hi Then Exit Sub
+
+    If k = 1 Then
+        hi = Iif(hi > max_p, max_p, hi)
+        lo = Iif(lo < divCeil(A, m), divCeil(A, m), lo)
+        If lo > hi Then Exit Sub
+
+        t = L - invMod(m, L)
+        While t < lo: t += L: Wend
+
+        For p = t To hi Step L
+            If isPrime(p) Then
+                n = m * p
+                If (n + 1) Mod (p + 1) = 0 Then
+                    If cnt >= Ubound(LC) Then Redim Preserve LC(0 To cnt + 100)
+                    LC(cnt) = n
+                    cnt += 1
+                End If
+            End If
+        Next
+    Else
+        For p = lo To hi
+            If isPrime(p) Andalso GCD(m, p + 1) = 1 Then
+                processLevel(m * p, LCM(L, p + 1), p + 1, k - 1, A, B, max_p, LC(), cnt)
+            End If
+        Next
+    End If
+End Sub
+
+Sub LC_in_range(A As Longint, B As Longint, k As Integer, LC() As Longint, Byref cnt As Integer)
+    Dim As Longint max_p = Sqr(B + 1) - 1
+    A = Iif(primorial(k + 1) \ 2 > A, primorial(k + 1) \ 2, A)
+    processLevel(1, 1, 3, k, A, B, max_p, LC(), cnt)
+End Sub
+
+Function LC_cnt(A As Ulongint, B As Ulongint) As Integer
+    Redim As Ulongint LC(100)
+    Dim As Integer cnt = 0, k = 3
+
+    While k <= 8
+        If primorial(k + 1) \ 2 > B Then Exit While
+
+        Dim As Integer localCnt = 0
+        LC_in_range(A, B, k, LC(), localCnt)
+        cnt += localCnt
+        k += 1
+    Wend
+
+    Return cnt
+End Function
+
+Function LC_with_n_primes(n As Integer) As Longint
+    If n < 3 Then Return 0
+
+    Dim As Longint x = primorial(n + 1) \ 2
+    Dim As Longint y = 2 * x
+    Dim As Longint minLC = 0
+
+    Do
+        Dim As Longint LC()
+        Dim As Integer cnt = 0
+        LC_in_range(x, y, n, LC(), cnt)
+
+        For i As Integer = 0 To cnt - 1
+            If minLC = 0 Orelse (LC(i) < minLC) Then minLC = LC(i)
+        Next
+
+        If minLC > 0 Then Return minLC
+
+        x = y + 1
+        y = 2 * x
+    Loop
+End Function
+
+' Main program
+Print "Least Lucas-Carmichael number with n prime factors:"
+For n As Integer = 3 To 12
+    Print Using "##: #,###,###,###,###,###,###"; n; LC_with_n_primes(n)
+Next
+
+Print !"\nNumber of Lucas-Carmichael numbers less than 10^n:"
+Dim As Integer acc = 0
+For n As Integer = 1 To 10
+    acc += LC_cnt(10ULL ^ (n - 1), 10ULL ^ n)
+    Print Using "##: #,###"; n; acc
+Next
+
+Sleep

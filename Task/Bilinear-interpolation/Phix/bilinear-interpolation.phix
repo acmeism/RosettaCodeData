@@ -1,0 +1,124 @@
+-- demo\rosetta\Bilinear_interpolation.exw
+include pGUI.e
+
+function interpolate(atom s, e, f)
+--
+-- s,e are the start and end values (one original pixel apart),
+-- f is a fraction of some point between them, 0(==s)..1(==e).
+-- eg s=91 (f=0.2) e=101, we want 0.8 of the 91 + 0.2 of 101,
+-- aka if f is 4 times closer to s than e, we want 4 times as
+-- much of s as we want of e, with sum(fractions_taken)==1.
+--
+    return s + (e-s)*f  -- aka s*(1-f) + e*f
+end function
+
+function bilinear(integer c00, c10, c01, c11, atom fx, fy)
+--
+-- for some output pixel, we have calculated the exact point
+-- on the original, and extracted the four pixels surrounding
+-- that, with fx,fy as the fractional x,y part of the 1x1 box.
+-- Like a capital H, we want some fraction on the left and the
+-- same on the right, then some fraction along the horizontal.
+-- It would be equivalent to do top/bottom then the vertical,
+-- which is handy since I am no longer certain which of those
+-- the following actually does, especially since we got the
+-- pixels from original[y,x] rather than original[x,y], and
+-- imImage and IupImage have {0,0} in different corners - but
+-- the output looks pretty good, and I think you would easily
+-- notice were this even slightly wrong, and in fact an early
+-- accidental typo of r10/r01 indeed proved very evident.
+--
+    atom left = interpolate(c00,c10,fx),
+         right = interpolate(c01,c11,fx)
+    return floor(interpolate(left,right,fy))
+end function
+
+function scale_image(imImage img, atom scaleX, scaleY)
+integer width = im_width(img),
+        height = im_height(img),
+        new_width = floor(width * scaleX)-1,
+        new_height = floor(height * scaleY)-1
+atom mx = (width-1)/new_width,
+     my = (height-1)/new_height
+sequence original = repeat(repeat(0,width),height)
+sequence new_image = repeat(repeat(0,new_width),new_height)
+
+    -- Extract the original pixels from the image [about
+    -- twice as fast as 4*im_pixel() in the main loop.]
+    for y=height-1 to 0 by -1 do
+        for x=0 to width-1 do
+            original[height-y,x+1] = im_pixel(img, x, y)
+        end for
+    end for
+
+    for x=0 to new_width-1 do
+        for y=0 to new_height-1 do
+            atom ax = x*mx,         -- map onto original
+                 ay = y*my
+            integer ix = floor(ax), -- top left
+                    iy = floor(ay)
+            ax -= ix                -- fraction of the 1x1 box
+            ay -= iy
+            integer {r00,g00,b00} = original[iy+1,ix+1],
+                    {r10,g10,b10} = original[iy+1,ix+2],
+                    {r01,g01,b01} = original[iy+2,ix+1],
+                    {r11,g11,b11} = original[iy+2,ix+2],
+                    r = bilinear(r00,r10,r01,r11,ax,ay),
+                    g = bilinear(g00,g10,g01,g11,ax,ay),
+                    b = bilinear(b00,b10,b01,b11,ax,ay)
+            new_image[y+1,x+1] = {r,g,b}
+        end for
+    end for
+    new_image = flatten(new_image) -- (as needed by IupImageRGB)
+    Ihandle new_img = IupImageRGB(new_width, new_height, new_image)
+    return new_img
+end function
+
+IupOpen()
+
+constant w = machine_word()
+atom pError = allocate(w)
+imImage im1 = imFileImageLoadBitmap("Lena.ppm",0,pError)
+if im1=NULL then
+    ?{"error opening image",peekNS(pError,w,1)}
+    {} = wait_key()
+    abort(0)
+end if
+
+Ihandle dlg,
+        scale = IupValuator(NULL,"MIN=2,MAX=200,VALUE=160"),
+        redraw = IupButton("redraw (160%)")
+
+Ihandln image1 = IupImageFromImImage(im1),
+        image2 = scale_image(im1,1.6,1.6),
+        label1 = IupLabel(),
+        label2 = IupLabel()
+IupSetAttributeHandle(label1, "IMAGE", image1)
+IupSetAttributeHandle(label2, "IMAGE", image2)
+
+function valuechanged_cb(Ihandle /*scale*/)
+    atom v = IupGetDouble(scale,"VALUE")
+    IupSetStrAttribute(redraw,"TITLE","redraw (%d%%)",{v})
+    return IUP_DEFAULT
+end function
+IupSetCallback(scale,"VALUECHANGED_CB",Icallback("valuechanged_cb"))
+
+function redraw_cb(Ihandle /*redraw*/)
+    IupSetAttributeHandle(label2, "IMAGE", NULL)
+    image2 = IupDestroy(image2)
+    atom v = IupGetDouble(scale,"VALUE")/100
+    image2 = scale_image(im1,v,v)
+    IupSetAttributeHandle(label2, "IMAGE", image2)
+    IupSetAttribute(dlg,"SIZE",NULL)
+    IupRefresh(dlg)
+    return IUP_DEFAULT
+end function
+IupSetCallback(redraw,"ACTION",Icallback("redraw_cb"))
+
+dlg = IupDialog(IupVbox({IupHbox({scale, redraw}),
+                         IupHbox({label1, label2})}))
+IupSetAttribute(dlg, "TITLE", "Bilinear interpolation")
+IupShow(dlg)
+
+IupMainLoop()
+IupClose()

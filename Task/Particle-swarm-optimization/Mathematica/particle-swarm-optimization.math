@@ -1,0 +1,178 @@
+(* Particle Swarm Optimization in Mathematica *)
+
+(* Constants *)
+INFINITY = 10^100;
+MAXINT = 2^31;
+
+(* Parameters structure *)
+Parameters[omega_, phip_, phig_] := <|
+  "omega" -> omega,
+  "phip" -> phip,
+  "phig" -> phig
+|>;
+
+(* State structure *)
+State[iter_, gbpos_, gbval_, min_, max_, parameters_, pos_, vel_, bpos_, bval_, nParticles_, nDims_] := <|
+  "iter" -> iter,
+  "gbpos" -> gbpos,
+  "gbval" -> gbval,
+  "min" -> min,
+  "max" -> max,
+  "parameters" -> parameters,
+  "pos" -> pos,
+  "vel" -> vel,
+  "bpos" -> bpos,
+  "bval" -> bval,
+  "nParticles" -> nParticles,
+  "nDims" -> nDims
+|>;
+
+(* Report function *)
+report[state_, testfunc_] := (
+  Print["Test Function : ", testfunc];
+  Print["Iterations    : ", state["iter"]];
+  Print["Global Best Position : ", state["gbpos"]];
+  Print["Global Best Value    : ", NumberForm[state["gbval"], 16]];
+);
+
+(* Random number generator (0 to 1) *)
+uniform01[] := RandomReal[];
+
+(* PSO initialization *)
+psoInit[min_, max_, parameters_, nParticles_] := Module[
+  {nDims, pos, vel, bpos, bval, iter, gbpos, gbval},
+
+  nDims = Length[min];
+  pos = Table[min, {nParticles}];
+  vel = Table[ConstantArray[0.0, nDims], {nParticles}];
+  bpos = Table[min, {nParticles}];
+  bval = ConstantArray[INFINITY, nParticles];
+  iter = 0;
+  gbpos = ConstantArray[INFINITY, nDims];
+  gbval = INFINITY;
+
+  State[iter, gbpos, gbval, min, max, parameters, pos, vel, bpos, bval, nParticles, nDims]
+];
+
+(* Main PSO algorithm *)
+pso[fn_, y_] := Module[
+  {p, v, bpos, bval, gbpos, gbval, rg, pos, vel, j, k, rp, ok},
+
+  p = y["parameters"];
+  v = ConstantArray[0.0, y["nParticles"]];
+  bpos = Table[y["min"], {y["nParticles"]}];
+  bval = ConstantArray[0.0, y["nParticles"]];
+  gbpos = ConstantArray[0.0, y["nDims"]];
+  gbval = INFINITY;
+
+  (* Evaluate and update best positions *)
+  For[j = 1, j <= y["nParticles"], j++,
+    (* Evaluate *)
+    v[[j]] = fn[y["pos"][[j]]];
+
+    (* Update personal best *)
+    If[v[[j]] < y["bval"][[j]],
+      bpos[[j]] = y["pos"][[j]];
+      bval[[j]] = v[[j]],
+      bpos[[j]] = y["bpos"][[j]];
+      bval[[j]] = y["bval"][[j]]
+    ];
+
+    (* Update global best *)
+    If[bval[[j]] < gbval,
+      gbval = bval[[j]];
+      gbpos = bpos[[j]]
+    ];
+  ];
+
+  rg = uniform01[];
+  pos = Table[ConstantArray[0.0, y["nDims"]], {y["nParticles"]}];
+  vel = Table[ConstantArray[0.0, y["nDims"]], {y["nParticles"]}];
+
+  (* Update velocities and positions *)
+  For[j = 1, j <= y["nParticles"], j++,
+    rp = uniform01[];
+    ok = True;
+
+    For[k = 1, k <= y["nDims"], k++,
+      vel[[j, k]] = p["omega"] * y["vel"][[j, k]] +
+                    p["phip"] * rp * (bpos[[j, k]] - y["pos"][[j, k]]) +
+                    p["phig"] * rg * (gbpos[[k]] - y["pos"][[j, k]]);
+      pos[[j, k]] = y["pos"][[j, k]] + vel[[j, k]];
+      ok = ok && y["min"][[k]] < pos[[j, k]] && y["max"][[k]] > pos[[j, k]];
+    ];
+
+    (* Reset position if out of bounds *)
+    If[!ok,
+      For[k = 1, k <= y["nDims"], k++,
+        pos[[j, k]] = y["min"][[k]] + (y["max"][[k]] - y["min"][[k]]) * uniform01[];
+      ];
+    ];
+  ];
+
+  iter = 1 + y["iter"];
+  State[iter, gbpos, gbval, y["min"], y["max"], y["parameters"], pos, vel, bpos, bval, y["nParticles"], y["nDims"]]
+];
+
+(* Iteration function *)
+iterate[fn_, n_, y_] := Module[
+  {r, old},
+
+  r = y;
+  old = y;
+
+  If[n == MAXINT,
+    (* Iterate until convergence *)
+    While[True,
+      r = pso[fn, r];
+      If[r === old, Break[]];
+      old = r;
+    ],
+    (* Fixed number of iterations *)
+    For[i = 1, i <= n, i++,
+      r = pso[fn, r];
+    ];
+  ];
+
+  r
+];
+
+(* Test functions *)
+mccormick[x_] := Module[{a, b},
+  {a, b} = x;
+  Sin[a + b] + (a - b)^2 + 1.0 + 2.5 b - 1.5 a
+];
+
+michalewicz[x_] := Module[{m, d, sum, i, j, k},
+  m = 10;
+  d = Length[x];
+  sum = 0.0;
+
+  For[i = 1, i <= d, i++,
+    j = x[[i]];
+    k = Sin[i * j^2 / Pi];
+    sum += Sin[j] * k^(2.0 * m);
+  ];
+
+  -sum
+];
+
+(* Main execution *)
+main[] := (
+  (* Test McCormick function *)
+  state = psoInit[{-1.5, -3.0}, {4.0, 4.0}, Parameters[0.0, 0.6, 0.3], 100];
+  state = iterate[mccormick, 40, state];
+  report[state, "McCormick"];
+  Print["f(-.54719, -1.54719) : ", NumberForm[mccormick[{-0.54719, -1.54719}], 16]];
+
+  Print[];
+
+  (* Test Michalewicz function *)
+  state = psoInit[{0.0, 0.0}, {Pi, Pi}, Parameters[0.3, 0.3, 0.3], 1000];
+  state = iterate[michalewicz, 30, state];
+  report[state, "Michalewicz (2D)"];
+  Print["f(2.20, 1.57)        : ", NumberForm[michalewicz[{2.2, 1.57}], 16]];
+);
+
+(* Run the main function *)
+main[]

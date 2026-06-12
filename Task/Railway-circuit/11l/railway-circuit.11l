@@ -1,0 +1,113 @@
+-V
+   RIGHT = 1
+   LEFT = -1
+   STRAIGHT = 0
+
+F normalize(tracks)
+   V a = tracks.map(tr -> ‘abc’[tr + 1]).join(‘’)
+
+   V norm = a
+   L 0 .< tracks.len
+      I a < norm
+         norm = a
+      a = a[1..]‘’a[0]
+
+   R norm
+
+F full_circle_straight(tracks, nStraight)
+   I nStraight == 0
+      R 1B
+
+   I sum(tracks.map(i -> Int(i == :STRAIGHT))) != nStraight
+      R 0B
+
+   V straight = [0] * 12
+   V i = 0
+   V idx = 0
+   L i < tracks.len & idx >= 0
+      I tracks[i] == :STRAIGHT
+         straight[idx % 12]++
+      idx += tracks[i]
+      i++
+
+   R !(any((0.<6).map(i -> @straight[i] != @straight[i + 6]))
+     & any((0.<8).map(i -> @straight[i] != @straight[i + 4])))
+
+F full_circle_right(tracks)
+   I sum(tracks) * 30 % 360 != 0
+      R 0B
+
+   V rTurns = [0] * 12
+   V i = 0
+   V idx = 0
+   L i < tracks.len & idx >= 0
+      I tracks[i] == :RIGHT
+         rTurns[idx % 12]++
+      idx += tracks[i]
+      i++
+
+   R !(any((0.<6).map(i -> @rTurns[i] != @rTurns[i + 6]))
+     & any((0.<8).map(i -> @rTurns[i] != @rTurns[i + 4])))
+
+T PermutationsGen
+   [Int] indices, choices
+   carry = 0
+
+   F (numPositions, choices)
+      .indices = [0] * numPositions
+      .choices = copy(choices)
+
+   F next()
+      .carry = 1
+
+      V i = 1
+      L i < .indices.len & .carry > 0
+         .indices[i] += .carry
+         .carry = 0
+         I .indices[i] == .choices.len
+            .carry = 1
+            .indices[i] = 0
+         i++
+
+      R .indices.map(i -> @.choices[i])
+
+   F has_next()
+      R .carry != 1
+
+F get_permutations_gen(nCurved, nStraight)
+   assert((nCurved + nStraight - 12) % 4 == 0, ‘input must be 12 + k * 4’)
+
+   V trackTypes = [:RIGHT, :LEFT]
+   I nStraight != 0
+      I nCurved == 12
+         trackTypes = [:RIGHT, :STRAIGHT]
+      E
+         trackTypes = [:RIGHT, :LEFT, :STRAIGHT]
+
+   R PermutationsGen(nCurved + nStraight, trackTypes)
+
+F report(sol, numC, numS)
+   print("\n#. solution(s) for C#.,#. ".format(sol.len, numC, numS))
+   I numC <= 20
+      L(tracks) sorted(sol.values())
+         L(track) tracks
+            print(‘#2 ’.format(track), end' ‘’)
+         print()
+
+F circuits(nCurved, nStraight)
+   [String = [Int]] solutions
+
+   V gen = get_permutations_gen(nCurved, nStraight)
+   L gen.has_next()
+      V tracks = gen.next()
+      I !full_circle_straight(tracks, nStraight)
+         L.continue
+      I !full_circle_right(tracks)
+         L.continue
+      solutions[normalize(tracks)] = tracks
+
+   report(solutions, nCurved, nStraight)
+
+L(n) (12..24).step(4)
+   circuits(n, 0)
+circuits(12, 4)

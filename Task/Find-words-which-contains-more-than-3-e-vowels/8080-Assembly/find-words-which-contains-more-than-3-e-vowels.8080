@@ -1,0 +1,64 @@
+puts:	equ	9	; CP/M syscall to print a string
+fopen:	equ	15	; Open file
+fread:	equ	20	; Read block
+FCB1:	equ	5Ch	; File given on command line
+dma:	equ	80h
+	org	100h
+	lxi	d,FCB1	; Try to open file
+	mvi	c,fopen
+	call	5
+	inr	a	; A=FF = error
+	jz	err
+	lxi	h,word 	; Word buffer
+block:	push	h
+	lxi	d,FCB1	; Read 128-byte block
+	mvi	c,fread
+	call	5
+	pop	h	; Restore word buffer pointer
+	lxi	d,dma	; Start of block
+	dcr	a	; If A=1, we're done
+	rz
+	inr	a	; Otherwise, if A<>0, error
+	jnz	err
+char:	ldax	d	; Get character from block
+	mov	m,a	; Copy into word buffer
+	inx	h
+	cpi	10	; End of line?
+	cz	line	; Then test this line
+	inr	e	; Next character in block
+	jnz	char	; If rollover, read next block
+	jmp	block
+line:	mvi	m,'$'	; CP/M string terminator
+	lxi	h,word	; Start at beginning
+	mvi	c,0	; 'E' counter
+letter:	mov	a,m	; Get letter from word
+	inx	h
+	cpi	'$'	; End of string?
+	jz	done
+	cpi	'a'	; A / I / O / U = not valid
+	jz	no
+	cpi	'i'
+	jz	no
+	cpi	'o'
+	jz	no
+	cpi	'u'
+	jz	no
+	cpi	'e'	; E?
+	jnz	letter	; If not, try next letter
+	inr	c	; If so, count the E
+	jmp	letter
+done:	mvi	a,3	; More than 3 Es?
+	cmp	c
+	jnc	no	; If not, then don't print
+	push	d	; Keep buffer pointer
+	lxi	d,word	; Print word
+	mvi	c,puts
+	call	5
+	pop	d	; Restore buffer pointer
+no:	lxi	h,word	; Start reading at begin of word buffer
+	ret
+err:	lxi	d,emsg	; Print error
+	mvi	c,puts
+	jmp	5
+emsg:	db	'Error$'
+word:	equ	$

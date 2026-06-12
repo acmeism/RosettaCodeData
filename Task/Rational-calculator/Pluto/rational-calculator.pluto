@@ -1,0 +1,131 @@
+require "io2"
+require "bignum"
+require "table2"
+
+local zero = bigrat.int(0)
+
+-- If string is empty, return zero.
+local function to_bigrat_or_zero(s)
+    return s != "" ? bigrat.decimal(s) : zero
+end
+
+local function multiply(s)
+    local b = s:split("*"):map(|c| -> to_bigrat_or_zero(c))
+    return (b[1] * b[2]):todecimal(100, false)
+end
+
+local function divide(s)
+    local b = s:split("/"):map(|c| -> to_bigrat_or_zero(c))
+    if b[2] == zero then
+        local res = b[1] == zero ? "not a number" : "infinite"
+        print($"{res}, treating denominator as 1 instead")
+        b[2] = bigrat.int(1)
+    end
+    return (b[1] / b[2]):todecimal(100, false)
+end
+
+local function add(s)
+    local t = s:gsub("^%+", ""):gsub("%++", "+")
+    local b = t:split("+"):map(|c| -> to_bigrat_or_zero(c))
+    return (b[1] + b[2]):todecimal(100, false)
+end
+
+local function subtract(s)
+    local t = s:gsub("(%+%-|%-%+)", "-")
+    if "--" in t then  return add(t:replace("--", "+")) end
+    local b = t:split("-"):map(|c| -> to_bigrat_or_zero(c))
+    return (#b == 3 ? -b[2] - b[3] : b[1] - b[2]):todecimal(100, false)
+end
+
+local function eval_exp(s)
+    s = s:replace("abs-", ""):replace("abs+", ""):replace("abs", "")
+    s = s:replace("*+", "*"):replace("/+", "/")
+
+    local t = s:gsub("[()]", "")
+    local pmd = "%d+%.?%d*%s*[*/]%s*[+-]?%d+%.?%d*"
+    local pm  = "%*"
+    local pas = "%-?%d+%.?%d*%s*[+-]%s*[+-]?%d+%.?%d*"
+    local pa  = "%d%+"
+
+    while true do
+        local exp = t:match(pmd)
+        if !exp then break end
+        local exp2 = exp:match(pm)
+        if exp2 then
+            t = t:replace(exp, multiply(exp))
+        else
+            t = t:replace(exp, divide(exp))
+        end
+    end
+
+    while true do
+        local exp = t:match(pas)
+        if !exp then break end
+        local exp2 = exp:match(pa)
+        if exp2 then
+             t = t:replace(exp, add(exp))
+        else
+             t = t:replace(exp, subtract(exp))
+        end
+    end
+    return t:gsub("^%-%-", "")
+end
+
+local function eval_arithmetic_exp(s)
+    local t = s:gsub("%s", ""):gsub("^%+", "")
+    local ppara = "%([^()]*%)"
+    while true do
+        local exp = t:match(ppara)
+        if !exp then break end
+        t = t:replace(exp, eval_exp(exp))
+    end
+    local res = eval_exp(t)
+    if !res:split(""):checkall(|c| -> c in "0123456789.-+") then res = "0" end
+    return res
+end
+
+local function check_for_repeats(s)
+    local d = s:split(".")
+    if #d == 1 or #d[2] < 100 then return s end
+    local t = d[2]:split("")
+    local index = 0
+    local res = s
+    while #s > 1 do
+        index += 1
+        for i = 1, math.ceil(#s / 2) do
+            local c = t:chunk(i)
+            local f = c[1]
+            for j = 2, #c - 1 do
+                if !table.same(f, c[j]) then continue 2 end
+            end
+            if !table.same(f:slice(1, #c:back()), c:back()) then break end
+            if index < 100 then
+                res = d[1] .. "." .. d[2]:sub(1, index - 1) .. "(" .. f:concat() .. ")"
+                if res:endswith(".(9)") then
+                    res = (bigint.new(d[1]) + 1):tostring()
+                end
+            end
+            break 2
+        end
+        t = t:slice(2)
+    end
+    return res
+end
+
+local last = ""
+
+while true do
+    local s = io.readStr("> ")
+    if s == "" then break end
+    s = s:replace("@", last)
+    last = eval_arithmetic_exp(s)
+    if !("." in last) then
+        print(last)
+        continue
+    end
+    local display = check_for_repeats(last)
+    if !(")" in display) and ("." in display) then
+        display = bigrat.decimal(last):round(50):todecimal(50)
+    end
+    print(display)
+end

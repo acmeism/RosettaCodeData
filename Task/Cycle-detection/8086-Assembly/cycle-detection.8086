@@ -1,0 +1,107 @@
+	cpu	8086
+	org	100h
+section	.text
+	mov	ax,3	; Print the first 20 values in the sequence
+	mov	bx,f
+	xor	cx,cx
+	mov	dx,20
+	call	seq
+	mov	ax,3	; Use Brent's algorithm to find the cycle
+	mov	bx,f
+	call	brent
+	mov	bp,ax	; BP = start of cycle
+	mov	di,dx	; DI = length of cycle
+	mov	dx,nl	; Print a newline
+	call	prstr
+	mov	dx,len	; Print "Length: "
+	call	prstr
+	mov	ax,di	; Print the length
+	call	prnum
+	mov	dx,ix	; Print "Index: "
+	call	prstr
+	mov	ax,bp	; Print the index
+	call	prnum
+	mov	dx,nl	; Print another newline
+	call	prstr
+	mov	ax,3	; Print the cycle
+	mov	bx,f
+	mov	cx,bp
+	mov	dx,di
+	jmp	seq
+	;;;	Brent's algorithm
+	;;;	Input: AX = x0, BX = address of function
+	;;;	Output: AX = mu, DX = lambda, CX, SI, BP destroyed
+	;;;	The routine in BX must preserve BX, CX, DX, SI, BP
+brent:	mov	bp,ax	; BP = x0
+	mov	cx,ax	; CX = tortoise
+	xor	dx,dx	; DX = lambda
+	mov	si,1	; SI = power
+.lam:	call	bx	; Apply function (AX = hare)
+	inc	dx	; Lambda += 1
+	cmp	ax,cx	; Done yet?
+	je	.mu
+	cmp	dx,si	; Time to start a new power of two?
+	jne	.lam
+	mov	cx,ax	; Tortoise = hare
+	shl	si,1	; power *= 2
+	xor	dx,dx	; lambda = 0
+	jmp	.lam
+.mu:	mov	ax,bp	; Find position of first repetition
+	mov	cx,dx	; CX = lambda
+.apply:	call	bx
+	loop 	.apply
+	mov	cx,bp	; CX = tortoise
+	xor	si,si	; SI = mu
+.lmu:	cmp	ax,cx	; Done yet?
+	je	.done
+	call	bx	; hare = f(hare)
+	xchg	ax,cx	; tortoise = f(tortoise)
+	call	bx
+	xchg	ax,cx
+	inc	si
+	jmp	.lmu
+.done:	mov	ax,si
+	ret
+	;;;	Function to use
+	;;;	AX = (AX*AX+1) mod 255
+f:	mul	al	; AX = AL*AL (we know anything mod 255 is <256)
+	inc	ax	; + 1
+	div	byte [fdsor]	; This is faster than freeing up a byte register
+	xchg	al,ah	; Remainder into AL
+	xor	ah,ah	; Pad to 16 bits
+	ret
+	;;;	-- Utility routines --
+	;;;	Print decimal value of AL. Destroys AX, DX.
+prnum:	mov	dx,nbuf	; Number output buffer
+	xchg	bx,dx
+.dgt:	aam		; Extract digit
+	add	al,'0'	; Make ASCII digit
+	dec	bx
+	mov	[bx],al	; Store in buffer
+	xchg	ah,al	; Continue with rest of digits
+	test 	al,al	; As long as there are digits
+	jnz	.dgt
+	xchg	bx,dx	; Put buffer pointer back in DX
+prstr:	mov	ah,9	; Print using MS-DOS call.
+	int	21h
+	ret
+	;;;	Print DX values in sequence x, f(x), f(f(x))... starting at CX.
+	;;;	AX = x0, BX = function. AX, CX, DX, SI destroyed.
+seq:	test	cx,cx	; CX = 0?
+	jz	.print
+.skip:	call	bx	; Otherwise skip CX numbers
+	loop 	.skip
+.print:	mov	cx,dx	; Amount of numbers to print
+.loop:	mov	si,ax	; Keep a copy of AX (print routine trashes it)
+	call	prnum
+	mov	ax,si	; Restore x
+	call	bx	; Find the next value
+	loop	.loop
+	ret
+section	.data
+fdsor:	db	255	; This 255 is used for the modulus calculation
+	db	'...'	; Buffer for byte-sized numeric output
+nbuf:	db	' $'
+ix:	db	'Index: $'
+len:	db	'Length: $'
+nl:	db	13,10,'$'

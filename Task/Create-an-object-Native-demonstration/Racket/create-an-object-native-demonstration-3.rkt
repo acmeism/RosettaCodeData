@@ -1,0 +1,13 @@
+(define d (fenced-hash "a" 1 "b" 2))
+
+(displayln d)
+(fenced-hash-set! d "a" 55)
+(fenced-hash-set! d "b" 66)
+(displayln d)
+(fenced-hash-clear! d)
+(displayln d)
+(fenced-hash-set! d "a" 55)
+(fenced-hash-set! d "b" 66)
+(displayln d)
+(fenced-hash-remove! d "a")
+(displayln d)

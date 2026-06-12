@@ -1,0 +1,248 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program hexadump64.s   */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ NBCARLIBEL, 45
+
+/*******************************************/
+/*   Macros                              */
+/*******************************************/
+//.include "../../ficmacros64.inc"            @ for developer debugging
+
+/*******************************************/
+/* Initialized data */
+/*******************************************/
+.data
+szMessDebutPgm:    .asciz "Program 64 bits start. \n"
+szCarriageReturn:  .asciz "\n"
+szMessFinOK:       .asciz "Program normal end. \n"
+szTitre1:          .asciz "Dump memory 1"
+szTitre2:          .asciz "Dump memory main"
+
+                   // title info line display
+szTitleDump:       .ascii "Memory dump"
+sadx1:             .ascii " : "
+sBlockAddress:     .fill 17, 1, ' '
+sTitleDisp:        .fill NBCARLIBEL,1,' '
+                   .asciz "\n"
+                  // block datas line display
+sAreaBlockAddress: .fill 13, 1, ' '
+                   .ascii " "
+sAreaHexaChar:     .fill 47, 1, ' '
+                   .ascii " "
+sAreaCharAscii:    .fill 16, 1, ' '
+s3mem:             .asciz "\n"
+
+
+/*******************************************/
+/* UnInitialized data */
+/*******************************************/
+.bss
+.align 4
+szZoneConv:           .skip 24
+/*******************************************/
+/*  code section */
+/*******************************************/
+.text
+.global main
+main:
+    ldr x0,qAdrszMessDebutPgm
+    bl affichageMess
+    ldr x0,qAdrszMessDebutPgm
+    mov x1,#4                   // display 4 blocks
+    ldr x2,qAdrszTitre1
+    bl hexaDump
+
+    adr x0,main
+    add x0,x0,#5                // for no block address
+    mov x1,#2                   // display 2 blocks
+    ldr x2,qAdrszTitre2
+    bl hexaDump
+
+    ldr x0,qAdrszMessFinOK
+    bl affichageMess
+
+100:                              // standard end of the program
+    mov x0, #0                    // return code
+    mov x8,EXIT
+    svc 0                         // perform system call
+qAdrszMessDebutPgm:       .quad szMessDebutPgm
+qAdrszMessFinOK:          .quad szMessFinOK
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrszTitre1:             .quad szTitre1
+qAdrszTitre2:             .quad szTitre2
+
+/*******************************************/	
+/* display memory area                  */
+/*******************************************/	
+/*  r0  address memoire  r1 nombre de bloc r2 titre */
+hexaDump:                 //
+    stp x1,lr,[sp,-16]!       // save registers
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    stp x8,x9,[sp,-16]!
+    mov x4,x0
+    mov x6,x1                  // number of blocks
+    ldr x1,qAdrsBlockAddress  // result address
+    bl conversion16
+    mov x7,#0
+    ldr x5,qAdrsTitleDisp      //
+1:                             // title copy loop
+    ldrb w3,[x2,x7]
+    cmp x3,#0
+    beq 2f
+    strb w3,[x5,x7]
+    add x7,x7,#1
+    b 1b
+2:
+    mov x3,#' '
+3:
+    cmp x7,#NBCARLIBEL
+    bge 4f
+    strb w3,[x5,x7]
+    add x7,x7,#1
+    b 3b
+4:
+    mov x2,x4                  // memory address begin
+    ldr x0,qAdrszTitleDump     // display dump title
+    bl affichageMess
+
+    mov x1, x2, ASR #4         // compute block 16 bytes begin
+    mov x1, x1, LSL #4         // divide by 16 and  mult by 16
+    mov x8,#3                  // 3 charaters by byte displayed
+    sub x0,x2,x1               // memory offset in block
+    mul x5,x0,x8               // character display offset
+    ldr x0,qAdrsAreaHexaChar       // store address
+    add x7,x0,x5               // compute position
+    sub x7,x7,#1               // in front of the character display
+    mov x0,#'*'                // store star of memory address begin
+    strb w0,[x7]
+5:                             // loop display block
+    mov x4,x1                  // display block address
+    mov x0,x1
+   // ldr x1,qAdrsAreaBlockAddress   // area block address
+    ldr x1,qAdrszZoneConv
+    bl prepRegistre16          // conversion hexa
+                                 // recopie de 12 caractères de l'adresse
+    mov x8,#3                       // pour supprimer les 4 premiers zeros
+    mov x0,#0
+    ldr x1,qAdrszZoneConv
+    ldr x2,qAdrsAreaBlockAddress     // et mettre le résultat dans la zone d'affichage
+6:
+    ldrb w5,[x1,x8]
+    strb w5,[x2,x0]
+    add x0,x0,#1
+    add x8,x8,#1
+    cmp x8,#15                     // arrêt au 15ième caractère
+    ble 6b
+
+    mov x1,x4                   // restaur block address
+    mov x8,#3
+    mov x2,#0
+7:                              // begin loop display 16 byte in hexa
+    ldrb w4,[x1,x2]             // load byte
+    ldr x0,qAdrsAreaHexaChar    //
+    mul x5,x2,x8                // compute store offset
+    add x0,x0,x5
+    mov x3, x4, ASR #4          // conversion byte in two hexa characters
+    cmp x3,#9       // < 10
+    add x9,x3,#48               // number
+    //addle x5,x3,#48             // number
+    add x5,x3,#55             // letter A-F
+    csel x5,x9,x5,le
+    strb w5,[x0]                // store result
+    add x0,x0,#1                   // second character
+    mov x5,x3,LSL #4            //
+    sub x3,x4,x5                // compute remander divsion by 10
+    cmp x3,#9                   // < 10
+    add x9,x3,#48               // number
+    //addle x5,x3,#48             // number
+    add x5,x3,#55               // letter A-F
+    csel x5,x9,x5,le
+    strb w5,[x0]                // store second character
+    add x2,x2,#1                // increment byte indice
+    cmp x2,#16                  // block 16 bytes end ?
+    blt 7b                      // no -> loop
+                                // display in characters ascii
+    mov x2,#0                   // byte indice
+8:                              // begin loop ascii display
+    ldrb w4,[x1,x2]             // load byte
+    cmp x4,#31                  // character ascii ?
+    ble 9f                      // no
+    cmp x4,#125                 // character ascii ?
+    bgt 9f                      // no
+    b 10f
+9:
+    mov x4,#46                  // character ascii
+10:
+    ldr x0,qAdrsAreaCharAscii   //
+    add x0,x0,x2
+    strb w4,[x0]
+    add x2,x2,#1
+    cmp x2,#16                  // block end ?
+    blt 8b                      // no ->loop
+    ldr x0,qAdrsAreaBlockAddress   // begin block address
+    bl affichageMess
+    mov x0,#' '
+    strb w0,[x7]                // raz star address for other line
+    add x1,x1,#16               // next block
+    subs x6,x6,#1                  // decrement block number
+    bgt 5b                      // and loop if not zero
+
+100:
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+
+qAdrszTitleDump:       .quad szTitleDump
+qAdrsBlockAddress:     .quad sBlockAddress
+qAdrsTitleDisp:        .quad sTitleDisp
+qAdrsAreaHexaChar:     .quad sAreaHexaChar
+qAdrsAreaBlockAddress: .quad sAreaBlockAddress
+qAdrsAreaCharAscii:    .quad sAreaCharAscii
+qAdrszZoneConv:        .quad szZoneConv
+/******************************************************************/
+/*     conversion d'un registre en hexadecimal                     */
+/******************************************************************/
+/* x0 contient N° registre and x1 adresse zone receptrice   */
+prepRegistre16:
+    stp x0,lr,[sp,-48]!        // save  registres
+    stp x1,x2,[sp,32]          // save  registres
+    stp x3,x4,[sp,16]          // save  registres
+    mov x2,#60                 // start bit position
+    mov x4,#0xF000000000000000         // masque
+    mov x3,x0                  // save entry value
+1:                             // start loop
+    and x0,x3,x4               // valeur du registre and du masque
+    lsr x0,x0,x2               // deplacement droite
+    cmp x0,#10                 // >= 10 ?
+    bge 2f                     // oui
+    add x0,x0,#48              // non c'est un chiffre
+    b 3f
+2:
+    add x0,x0,#55              // sinon c'est une lettre A-F
+3:
+    strb w0,[x1],#1            // stocke le chiffre  et + 1 dans la pointeur
+    lsr x4,x4,#4               // deplace le masque de  4 positions
+    subs x2,x2,#4              // decrement compteur de 4 bits <= zero  ?
+    bge 1b                     // non -> boucle
+
+100:                           // fin standard de la fonction
+    ldp x3,x4,[sp,16]          // restaur des  2 registres
+    ldp x1,x2,[sp,32]          // restaur des  2 registres
+    ldp x0,lr,[sp],48          // restaur des  2 registres
+    ret
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"
+

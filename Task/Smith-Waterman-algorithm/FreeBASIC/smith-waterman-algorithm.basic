@@ -1,0 +1,273 @@
+' Make the BLOSUM matrix into a class for easier retrieval
+Type BLOSUM62
+    scoring_matrix As String Ptr
+    matrix_size As Integer
+
+    Declare Constructor()
+    Declare Destructor()
+    Declare Function getItem(aa1 As String, aa2 As String) As Integer
+    Declare Sub loadMatrix()
+End Type
+
+Constructor BLOSUM62()
+    matrix_size = 0
+    scoring_matrix = 0
+    loadMatrix()
+End Constructor
+
+Destructor BLOSUM62()
+    If scoring_matrix <> 0 Then Deallocate scoring_matrix
+End Destructor
+
+Sub BLOSUM62.loadMatrix()
+    Dim As Integer ff = Freefile()
+    Dim As String line_text, key
+    Dim As String parts(100)
+    Dim As Integer part_cnt, score
+
+    If Open("BLOSUM62.txt" For Input As #ff) <> 0 Then
+        Print "Error: Could not open BLOSUM62.txt"
+        Return
+    End If
+
+    While Not Eof(ff)
+        Line Input #ff, line_text
+        line_text = Trim(line_text)
+        If Len(line_text) > 0 Then matrix_size += 1
+    Wend
+    Close #ff
+
+    scoring_matrix = Allocate(matrix_size * Sizeof(String))
+
+    Open "BLOSUM62.txt" For Input As #ff
+    Dim As Integer idx = 0
+
+    While Not Eof(ff) And idx < matrix_size
+        Line Input #ff, line_text
+        line_text = Trim(line_text)
+
+        If Len(line_text) > 0 Then
+            part_cnt = 0
+            Dim As Integer posic = 1, next_pos
+
+            Do
+                next_pos = Instr(posic, line_text, " ")
+                If next_pos = 0 Then next_pos = Instr(posic, line_text, Chr(9))
+
+                If next_pos > 0 Then
+                    parts(part_cnt) = Trim(Mid(line_text, posic, next_pos - posic))
+                    posic = next_pos + 1
+                    ' Saltar espacios adicionales
+                    While posic <= Len(line_text) And (Mid(line_text, posic, 1) = " " Or Mid(line_text, posic, 1) = Chr(9))
+                        posic += 1
+                    Wend
+                Else
+                    parts(part_cnt) = Trim(Mid(line_text, posic))
+                    Exit Do
+                End If
+                part_cnt += 1
+            Loop While posic <= Len(line_text) And part_cnt < 100
+
+            If part_cnt >= 2 Then
+                key = parts(0) & "," & parts(1)
+                scoring_matrix[idx] = key & ":" & parts(2)
+                idx += 1
+            End If
+        End If
+    Wend
+
+    Close #ff
+    matrix_size = idx
+End Sub
+
+Function BLOSUM62.getItem(aa1 As String, aa2 As String) As Integer
+    Dim As String search_key1 = aa1 & "," & aa2
+    Dim As String search_key2 = aa2 & "," & aa1
+    Dim As Integer i, colon_pos
+
+    For i = 0 To matrix_size - 1
+        colon_pos = Instr(scoring_matrix[i], ":")
+        If colon_pos > 0 Then
+            Dim As String key = Left(scoring_matrix[i], colon_pos - 1)
+            If key = search_key1 Or key = search_key2 Then
+                Return Val(Mid(scoring_matrix[i], colon_pos + 1))
+            End If
+        End If
+    Next
+
+    Return 0
+End Function
+
+Function max_of_array(arr() As Integer, cnt As Integer) As Integer
+    Dim As Integer max_val = arr(0)
+    For i As Integer = 1 To cnt - 1
+        If arr(i) > max_val Then max_val = arr(i)
+    Next
+    Return max_val
+End Function
+
+Function index_of_max(arr() As Integer, cnt As Integer, value As Integer) As Integer
+    For i As Integer = 0 To cnt - 1
+        If arr(i) = value Then Return i
+    Next
+    Return 0
+End Function
+
+Sub local_alignment(v As String, w As String, scoring_matrix As BLOSUM62, gap_start As Integer, gap_extend As Integer, Byref result_score As String, Byref v_aligned As String, Byref w_aligned As String)
+    Dim As Integer v_len = Len(v), w_len = Len(w), i, j
+
+    ' Initialize the 3 matrices
+    Dim As Integer Ptr Ptr M = Allocate((v_len + 1) * Sizeof(Integer Ptr))
+    Dim As Integer Ptr Ptr X = Allocate((v_len + 1) * Sizeof(Integer Ptr))
+    Dim As Integer Ptr Ptr Y = Allocate((v_len + 1) * Sizeof(Integer Ptr))
+    Dim As Integer Ptr Ptr back_track = Allocate((v_len + 1) * Sizeof(Integer Ptr))
+
+    For i = 0 To v_len
+        M[i] = Allocate((w_len + 1) * Sizeof(Integer))
+        X[i] = Allocate((w_len + 1) * Sizeof(Integer))
+        Y[i] = Allocate((w_len + 1) * Sizeof(Integer))
+        back_track[i] = Allocate((w_len + 1) * Sizeof(Integer))
+
+        For j = 0 To w_len
+            M[i][j] = 0
+            X[i][j] = 0
+            Y[i][j] = 0
+            back_track[i][j] = 0
+        Next
+    Next
+
+    ' Initialize the maximum scores
+    Dim As Integer max_score = -1
+    Dim As Integer max_i = 0, max_j = 0
+
+    ' Populate all three matrices
+    For i = 1 To v_len
+        For j = 1 To w_len
+            Dim As Integer y_val1 = Y[i-1][j] - gap_extend
+            Dim As Integer y_val2 = M[i-1][j] - gap_start
+            Y[i][j] = Iif(y_val1 > y_val2, y_val1, y_val2)
+
+            Dim As Integer x_val1 = X[i][j-1] - gap_extend
+            Dim As Integer x_val2 = M[i][j-1] - gap_start
+            X[i][j] = Iif(x_val1 > x_val2, x_val1, x_val2)
+
+            Dim As Integer cur_scores(3)
+            cur_scores(0) = Y[i][j]
+            cur_scores(1) = M[i-1][j-1] + scoring_matrix.getItem(Mid(v, i, 1), Mid(w, j, 1))
+            cur_scores(2) = X[i][j]
+            cur_scores(3) = 0
+
+            M[i][j] = max_of_array(cur_scores(), 4)
+            back_track[i][j] = index_of_max(cur_scores(), 4, M[i][j])
+
+            If M[i][j] > max_score Then
+                max_score = M[i][j]
+                max_i = i
+                max_j = j
+            End If
+        Next
+    Next
+
+    Print "Finished making the matrix"
+
+    ' Initialize the indices to start at the position of the high score
+    i = max_i
+    j = max_j
+
+    ' Initialize the aligned strings as the input strings up to the position of the high score
+    v_aligned = Left(v, i)
+    w_aligned = Left(w, j)
+
+    ' Backtrack to start of the local alignment starting at the highest scoring cell
+    While back_track[i][j] <> 3 And i * j <> 0 And i >= j
+        If back_track[i][j] = 0 Then
+            i -= 1
+        Elseif back_track[i][j] = 1 Then
+            i -= 1
+            j -= 1
+        Elseif back_track[i][j] = 2 Then
+            j -= 1
+        End If
+    Wend
+
+    Print "Finished backtracking"
+
+    ' Cut the strings at the ending point of the backtrack
+    v_aligned = Mid(v_aligned, i + 1)
+    w_aligned = Mid(w_aligned, j + 1)
+
+    result_score = Str(max_score)
+
+    ' Free memory
+    For i = 0 To v_len
+        Deallocate M[i]
+        Deallocate X[i]
+        Deallocate Y[i]
+        Deallocate back_track[i]
+    Next
+    Deallocate M
+    Deallocate X
+    Deallocate Y
+    Deallocate back_track
+End Sub
+
+' Read the input file
+Dim As Integer ff = Freefile()
+Dim As String line_text, word1, word2
+Dim As String chunk = ""
+Dim As Integer linenum = 0
+Dim As Boolean reading_first = True
+
+If Open("rosalind_laff.txt" For Input As #ff) <> 0 Then
+    Print "Error: Could not open rosalind_laff.txt"
+    Sleep: End
+End If
+
+While Not Eof(ff)
+    Line Input #ff, line_text
+    line_text = Trim(line_text)
+    linenum += 1
+
+    If Len(line_text) = 0 Then Continue While
+
+    If Left(line_text, 1) = ">" Then
+        If linenum = 1 Then
+            chunk = ""
+        Elseif reading_first Then
+            word1 = chunk
+            chunk = ""
+            reading_first = False
+        End If
+    Else
+        chunk &= line_text
+    End If
+Wend
+
+word2 = chunk
+Close #ff
+
+Print "Sequence 1 length: " & Len(word1)
+Print "Sequence 2 length: " & Len(word2)
+
+' Get the local alignment (given sigma = 11, epsilon = 1 in problem statement)
+Dim As BLOSUM62 blosum
+Dim As String result_score, v_aligned, w_aligned
+
+local_alignment(word1, word2, blosum, 11, 1, result_score, v_aligned, w_aligned)
+
+' Print and save the answer
+Print result_score
+Print v_aligned
+Print w_aligned
+
+' Save results
+ff = Freefile()
+Open "out_localali_test.txt" For Output As #ff
+Print #ff, result_score
+Print #ff, v_aligned
+Print #ff, w_aligned
+Close #ff
+
+Print "Results saved to out_localali_test.txt"
+
+Sleep

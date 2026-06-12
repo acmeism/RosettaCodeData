@@ -1,0 +1,342 @@
+#
+# The Rosetta Code simulated annealing task, in Ratfor 77.
+#
+# This implementation uses the RANDOM_NUMBER intrinsic and therefore
+# will not work with f2c. It will work with gfortran. (One could
+# substitute a random number generator from the Fullerton Function
+# Library, or from elsewhere.)
+#
+
+function rndint (imin, imax)
+  implicit none
+
+  integer imin, imax, rndint
+
+  real rndnum
+
+  call random_number (rndnum)
+  rndint = imin + floor ((imax - imin + 1) * rndnum)
+end
+
+function icoord (loc)
+  implicit none
+
+  integer loc, icoord
+
+  icoord = loc / 10
+end
+
+function jcoord (loc)
+  implicit none
+
+  integer loc, jcoord
+
+  jcoord = mod (loc, 10)
+end
+
+function locatn (i, j)          # Location.
+  implicit none
+
+  integer i, j, locatn
+
+  locatn = (10 * i) + j
+end
+
+subroutine rndpth (path)        # Randomize a path.
+  implicit none
+
+  integer path(0:99)
+
+  integer rndint
+
+  integer i, j, xi, xj
+
+  for (i = 0; i <= 99; i = i + 1)
+    path(i) = i
+
+  # Fisher-Yates shuffle of elements 1 .. 99.
+  for (i = 1; i <= 98; i = i + 1)
+    {
+      j = rndint (i + 1, 99)
+      xi = path(i)
+      xj = path(j)
+      path(i) = xj
+      path(j) = xi
+    }
+end
+
+function dstnce (loc1, loc2)    # Distance.
+  implicit none
+
+  integer loc1, loc2
+  real dstnce
+
+  integer icoord, jcoord
+
+  integer i1, j1
+  integer i2, j2
+  integer di, dj
+
+  i1 = icoord (loc1)
+  j1 = jcoord (loc1)
+  i2 = icoord (loc2)
+  j2 = jcoord (loc2)
+  di = i1 - i2
+  dj = j1 - j2
+  dstnce = sqrt (real ((di * di) + (dj * dj)))
+end
+
+function pthlen (path)          # Path length.
+  implicit none
+
+  integer path(0:99)
+  real pthlen
+
+  real dstnce
+
+  real len
+  integer i
+
+  len = dstnce (path(0), path(99))
+  for (i = 0; i <= 98; i = i + 1)
+    len = len + dstnce (path(i), path(i + 1))
+  pthlen = len
+end
+
+subroutine addnbr (nbrs, numnbr, nbr) # Add neighbor.
+  implicit none
+
+  integer nbrs(1:8)
+  integer numnbr
+  integer nbr
+
+  if (nbr != 0)
+    {
+      numnbr = numnbr + 1
+      nbrs(numnbr) = nbr
+    }
+end
+
+subroutine fndnbr (loc, nbrs, numnbr) # Find neighbors.
+  implicit none
+
+  integer loc
+  integer nbrs(1:8)
+  integer numnbr
+
+  integer icoord, jcoord
+  integer locatn
+
+  integer i, j
+  integer c1, c2, c3, c4, c5, c6, c7, c8
+
+  c1 = 0
+  c2 = 0
+  c3 = 0
+  c4 = 0
+  c5 = 0
+  c6 = 0
+  c7 = 0
+  c8 = 0
+
+  i = icoord (loc)
+  j = jcoord (loc)
+
+  if (i < 9)
+    {
+      c1 = locatn (i + 1, j)
+      if (j < 9)
+        c2 = locatn (i + 1, j + 1)
+      if (0 < j)
+        c3 = locatn (i + 1, j - 1)
+    }
+  if (0 < i)
+    {
+      c4 = locatn (i - 1, j)
+      if (j < 9)
+        c5 = locatn (i - 1, j + 1)
+      if (0 < j)
+        c6 = locatn (i - 1, j - 1)
+    }
+  if (j < 9)
+    c7 = locatn (i, j + 1)
+  if (0 < j)
+    c8 = locatn (i, j - 1)
+
+  numnbr = 0
+  call addnbr (nbrs, numnbr, c1)
+  call addnbr (nbrs, numnbr, c2)
+  call addnbr (nbrs, numnbr, c3)
+  call addnbr (nbrs, numnbr, c4)
+  call addnbr (nbrs, numnbr, c5)
+  call addnbr (nbrs, numnbr, c6)
+  call addnbr (nbrs, numnbr, c7)
+  call addnbr (nbrs, numnbr, c8)
+end
+
+subroutine nbrpth (path, nbrp) # Make a neighbor path.
+  implicit none
+
+  integer path(0:99), nbrp(0:99)
+
+  integer rndint
+
+  integer u, v
+  integer nbrs(1:8)
+  integer numnbr
+  integer j, iu, iv
+
+  for (j = 0; j <= 99; j = j + 1)
+    nbrp(j) = path(j)
+
+  u = rndint (1, 99)
+  call fndnbr (u, nbrs, numnbr)
+  v = nbrs(rndint (1, numnbr))
+
+  j = 1
+  iu = 0
+  iv = 0
+  while (iu == 0 || iv == 0)
+    {
+      if (nbrp(j) == u)
+        iu = j
+      else if (nbrp(j) == v)
+        iv = j
+      j = j + 1
+    }
+  nbrp(iu) = v
+  nbrp(iv) = u
+end
+
+function temp (kT, kmax, k)     # Temperature.
+  implicit none
+
+  real kT
+  integer kmax, k
+  real temp
+
+  real kf, kmaxf
+
+  kf = real (k)
+  kmaxf = real (kmax)
+  temp = kT * (1.0 - (kf / kmaxf))
+end
+
+function prob (deltaE, T)      # Probability.
+  implicit none
+
+  real deltaE, T, prob
+  real x
+
+  if (T == 0.0)
+    prob = 0.0
+  else
+    {
+      x = -(deltaE / T)
+      if (x < -80)
+        prob = 0                # Avoid underflow.
+      else
+        prob = exp (-(deltaE / T))
+    }
+end
+
+subroutine show (k, T, E)
+  implicit none
+
+  integer k
+  real T, E
+
+10  format (1X, I7, 1X, F7.1, 1X, F10.2)
+
+  write (*, 10) k, T, E
+end
+
+subroutine dsplay (path)
+  implicit none
+
+  integer path(0:99)
+
+100 format (8(I2, ' -> '))
+
+  write (*, 100) path
+end
+
+subroutine sa (kT, kmax, path)
+  implicit none
+
+  real kT
+  integer kmax
+  integer path(0:99)
+
+  real pthlen
+  real temp, prob
+
+  integer kshow
+  integer k
+  integer j
+  real E, Etrial, T
+  integer trial(0:99)
+  real rndnum
+
+  kshow = kmax / 10
+
+  E = pthlen (path)
+  for (k = 0; k <= kmax; k = k + 1)
+    {
+      T = temp (kT, kmax, k)
+      if (mod (k, kshow) == 0)
+        call show (k, T, E)
+      call nbrpth (path, trial)
+      Etrial = pthlen (trial)
+      if (Etrial <= E)
+        {
+          for (j = 0; j <= 99; j = j + 1)
+            path(j) = trial(j)
+          E = Etrial
+        }
+      else
+        {
+          call random_number (rndnum)
+          if (rndnum <= prob (Etrial - E, T))
+            {
+              for (j = 0; j <= 99; j = j + 1)
+                path(j) = trial(j)
+              E = Etrial
+            }
+        }
+    }
+end
+
+program simanl
+  implicit none
+
+  real pthlen
+
+  integer path(0:99)
+  real kT
+  integer kmax
+
+  kT = 1.0
+  kmax = 1000000
+
+10 format ()
+20 format ('   kT:   ', F0.2)
+30 format ('   kmax: ', I0)
+40 format ('       k       T       E(s)')
+50 format (' --------------------------')
+60 format ('Final E(s): ', F0.2)
+
+  write (*, 10)
+  write (*, 20) kT
+  write (*, 30) kmax
+  write (*, 10)
+  write (*, 40)
+  write (*, 50)
+  call rndpth (path)
+  call sa (kT, kmax, path)
+  write (*, 10)
+  call dsplay (path)
+  write (*, 10)
+  write (*, 60) pthlen (path)
+  write (*, 10)
+end

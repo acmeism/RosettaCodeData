@@ -1,0 +1,137 @@
+with javascript_semantics
+enum OMEGA, PHIP, PHIG
+enum ITER, GBPOS, GBVAL, MIN, MAX, PARAMS,
+     POS, VEL, BPOS, BVAL, NPARTICLES, NDIMS
+
+constant inf = 1e308*1e308
+
+constant fmt = """
+Test Function        : %s
+Iterations           : %d
+Global Best Position : %s
+Global Best Value    : %f
+"""
+
+procedure report(sequence state, string testfunc)
+    printf(1,fmt,{testfunc,state[ITER],sprint(state[GBPOS]),state[GBVAL]})
+end procedure
+
+function psoInit(sequence mins, maxs, params, integer nParticles)
+    integer nDims = length(mins), iter=0
+    atom gbval = inf
+    sequence gbpos = repeat(inf,nDims),
+             pos = repeat(mins,nParticles),
+             vel = repeat(repeat(0,nDims),nParticles),
+             bpos = repeat(mins,nParticles),
+             bval = repeat(inf,nParticles)
+    return {iter,gbpos,gbval,mins,maxs,params,pos,vel,bpos,bval,nParticles,nDims}
+end function
+
+function pso(integer fn, sequence state)
+    integer particles = state[NPARTICLES],
+            dims = state[NDIMS]
+    sequence p = state[PARAMS],
+             v = repeat(0,particles),
+             bpos = repeat(state[MIN],particles),
+             bval = repeat(0,particles),
+             gbpos = repeat(0,dims)
+    atom gbval = inf
+    for j=1 to particles do
+        -- evaluate
+        v[j] = fn(state[POS][j])
+        -- update
+        if v[j] < state[BVAL][j] then
+            bpos[j] = state[POS][j]
+            bval[j] = v[j]
+        else
+            bpos[j] = state[BPOS][j]
+            bval[j] = state[BVAL][j]
+        end if
+        if bval[j] < gbval then
+            gbval = bval[j]
+            gbpos = bpos[j]
+        end if
+    end for
+    atom rg = rnd()
+    sequence pos = repeat(repeat(0,dims),particles),
+             vel = repeat(repeat(0,dims),particles)
+    for j=1 to particles do
+        -- migrate
+        atom rp = rnd()
+        bool ok = true
+        vel[j] = repeat(0,dims)
+        pos[j] = repeat(0,dims)
+        for k=1 to dims do
+            vel[j][k] = p[OMEGA] * state[VEL][j][k] +
+                        p[PHIP] * rp * (bpos[j][k] - state[POS][j][k]) +
+                        p[PHIG] * rg * (gbpos[k] - state[POS][j][k])
+            pos[j][k] = state[POS][j][k] + vel[j][k]
+            ok = ok and state[MIN][k] < pos[j][k] and state[MAX][k] > pos[j][k]
+        end for
+        if not ok then
+            for k=1 to dims do
+                pos[j][k]= state[MIN][k] + (state[MAX][k] - state[MIN][k]) * rnd()
+            end for
+        end if
+    end for
+    integer iter = 1 + state[ITER]
+    return {iter, gbpos, gbval, state[MIN], state[MAX], state[PARAMS],
+            pos, vel, bpos, bval, particles, dims}
+end function
+
+function iterate(integer fn, n, sequence state)
+    sequence r = state,
+             old = state
+    if n=-1 then
+        while true do
+            r = pso(fn, r)
+            if (r == old) then exit end if
+            old = r
+        end while
+    else
+        for i=1 to n do
+            r = pso(fn, r)
+        end for
+    end if
+    return r
+end function
+
+function mccormick(sequence x)
+    atom {a, b} = x
+    return sin(a + b) + (a - b) * (a - b) + 1.0 + 2.5 * b - 1.5 * a
+end function
+
+function michalewicz(sequence x)
+    integer m = 10,
+            d = length(x)
+    atom total = 0.0
+    for i=1 to d do
+        atom j = x[i],
+             k = sin(i * j * j / PI)
+        total += sin(j) * power(k, 2.0 * m)
+    end for
+    return -total
+end function
+
+procedure main()
+    sequence mins = {-1.5, -3.0},
+             maxs = {4.0, 4.0},
+             params = {0.0, 0.6, 0.3}
+    integer nParticles = 100
+    sequence state = psoInit(mins,maxs,params,nParticles)
+    state = iterate(mccormick, 40, state)
+    report(state,"McCormick")
+    atom {x,y} = state[GBPOS]
+    printf(1,"f(%.4f, %.4f)  : %f\n\n",{x,y,mccormick({x,y})})
+
+    mins = {0.0, 0.0}
+    maxs = {PI, PI}
+    params = {0.3, 0.3, 0.3}
+    nParticles = 1000
+    state = psoInit(mins,maxs,params,nParticles)
+    state = iterate(michalewicz, 30, state)
+    report(state,"Michalewicz (2D)")
+    {x,y} = state[GBPOS]
+    printf(1,"f(%.5f, %.5f)  : %f\n\n",{x,y,michalewicz({x,y})})
+end procedure
+main()

@@ -1,0 +1,300 @@
+%%% -*- mode: mercury; prolog-indent-width: 2; -*-
+
+:- module continued_fraction.
+:- interface.
+:- import_module int.
+:- import_module integer.
+:- import_module lazy.
+:- import_module rational.
+
+%% A continued fraction is a kind of lazy list. The list is always
+%% infinitely long. However, you need not consider terms that come
+%% after an infinite term.
+:- type continued_fraction
+   ---> continued_fraction(lazy(node)).
+:- type node
+   ---> cons(term, continued_fraction).
+:- type term
+   ---> infinite_term
+   ;    integer_term(integer).
+
+%% ng8 = {A12, A1, A2, A, B12, B1, B2, B}.
+:- type ng8 == {integer, integer, integer, integer,
+                integer, integer, integer, integer}.
+
+%% Get a human-readable string. The second form takes a "MaxTerms"
+%% argument. The first form uses a default value for MaxTerms.
+:- func to_string(continued_fraction) = string.
+:- func to_string(int, continued_fraction) = string.
+
+%% Make a term from a regular int.
+:- func int_term(int) = term.
+
+%% A "continued fraction" with only infinite terms.
+:- func infinite_continued_fraction = continued_fraction.
+
+%% A continued fraction whose term repeats infinitely.
+:- func repeating_term(term) = continued_fraction.
+
+%% A continued fraction representing an integer.
+:- func from_integer(integer) = continued_fraction.
+:- func from_int(int) = continued_fraction.
+
+%% A continued fraction representing a rational number.
+:- func from_rational(rational) = continued_fraction.
+
+%% A continued fraction that is a bihomographic function of two other
+%% continued fractions.
+:- func apply_ng8(ng8, continued_fraction,
+                  continued_fraction) = continued_fraction.
+:- func '+'(continued_fraction,
+            continued_fraction) = continued_fraction.
+:- func '-'(continued_fraction,
+            continued_fraction) = continued_fraction.
+:- func '*'(continued_fraction,
+            continued_fraction) = continued_fraction.
+:- func '/'(continued_fraction,
+            continued_fraction) = continued_fraction.
+
+%% Miscellaneous continued fractions.
+:- func zero = continued_fraction.
+:- func one = continued_fraction.
+:- func two = continued_fraction.
+:- func three = continued_fraction.
+:- func four = continued_fraction.
+%%
+:- func one_fourth = continued_fraction.
+:- func one_third = continued_fraction.
+:- func one_half = continued_fraction.
+:- func two_thirds = continued_fraction.
+:- func three_fourths = continued_fraction.
+%%
+:- func golden_ratio = continued_fraction. % (1 + sqrt(5))/2
+:- func silver_ratio = continued_fraction. % (1 + sqrt(2))
+:- func sqrt2 = continued_fraction.        % The square root of two.
+:- func sqrt5 = continued_fraction.        % The square root of five.
+
+:- implementation.
+:- import_module string.
+
+%%--------------------------------------------------------------------
+
+to_string(CF) = to_string(20, CF).
+
+to_string(MaxTerms, CF) = S :-
+  to_string(MaxTerms, CF, 0, "[", S).
+
+:- pred to_string(int::in, continued_fraction::in, int::in,
+                  string::in, string::out) is det.
+to_string(MaxTerms, CF, I, S0, S) :-
+  CF = continued_fraction(Node),
+  force(Node) = cons(Term, CF1),
+  (if (Term = integer_term(N))
+   then (if (I = MaxTerms) then (S = S0 ++ ",...]")
+         else (TermStr = (integer.to_string(N)),
+               Separator = (if (I = 0) then ""
+                            else if (I = 1) then ";"
+                            else ","),
+               to_string(MaxTerms, CF1, I + 1,
+                         S0 ++ Separator ++ TermStr, S)))
+   else (S = S0 ++ "]")).
+
+%%--------------------------------------------------------------------
+
+int_term(I) = integer_term(integer(I)).
+
+infinite_continued_fraction = CF :-
+  CF = repeating_term(infinite_term).
+
+repeating_term(T) = CF :-
+  CF = continued_fraction(Node),
+  Node = delay((func) = cons(T, repeating_term(T))).
+
+from_integer(I) = CF :-
+  CF = continued_fraction(Node),
+  Node = delay((func) = cons(integer_term(I), infinite_continued_fraction)).
+from_int(I) = from_integer(integer(I)).
+
+from_rational(R) = CF :-
+  N = numer(R),
+  D = denom(R),
+  CF = from_rational_integers(N, D).
+
+:- func from_rational_integers(integer, integer) = continued_fraction.
+from_rational_integers(N, D) = CF :-
+  if (D = zero) then (CF = infinite_continued_fraction)
+  else (divide_with_rem(N, D, Q, R),
+        CF = continued_fraction(
+               delay((func) = cons(integer_term(Q),
+                                   from_rational_integers(D, R)))
+             )).
+
+%%--------------------------------------------------------------------
+
+(X : continued_fraction) + (Y : continued_fraction) = (
+  apply_ng8({zero, one, one, zero, zero, zero, zero, one}, X, Y)
+).
+
+(X : continued_fraction) - (Y : continued_fraction) = (
+  apply_ng8({zero, one, negative_one, zero, zero, zero, zero, one}, X, Y)
+).
+
+(X : continued_fraction) * (Y : continued_fraction) = (
+  apply_ng8({one, zero, zero, zero, zero, zero, zero, one}, X, Y)
+).
+
+(X : continued_fraction) / (Y : continued_fraction) = (
+  apply_ng8({zero, one, zero, zero, zero, zero, one, zero}, X, Y)
+).
+
+apply_ng8(NG, X, Y) = CF :-
+  NG = {A12, A1, A2, A, B12, B1, B2, B},
+  (if iseqz(B12, B1, B2, B) then (
+     %% There are no more finite terms to output.
+     CF = infinite_continued_fraction
+   )
+   else if iseqz(B2, B) then (
+     absorb_x_term(NG, NG1, X, X1, Y, Y1),
+     CF = apply_ng8(NG1, X1, Y1)
+   )
+   else if at_least_one_iseqz(B2, B) then (
+     absorb_y_term(NG, NG1, X, X1, Y, Y1),
+     CF = apply_ng8(NG1, X1, Y1)
+   )
+   else if iseqz(B1) then (
+     absorb_x_term(NG, NG1, X, X1, Y, Y1),
+     CF = apply_ng8(NG1, X1, Y1)
+   )
+   else (
+     maybe_divide(A12, B12, Q12, R12),
+     maybe_divide(A1, B1, Q1, R1),
+     maybe_divide(A2, B2, Q2, R2),
+     maybe_divide(A, B, Q, R),
+     (if (not (iseqz(B12)), Q = Q12, Q = Q1, Q = Q2)
+      then (
+        %% Output a term.
+        if (integer_exceeds_infinitizing_threshold(Q))
+        then (CF = infinite_continued_fraction)
+        else (NG1 = {B12, B1, B2, B, R12, R1, R2, R},
+              CF = continued_fraction(
+               delay((func) = cons(integer_term(Q),
+                                   apply_ng8(NG1, X, Y)))
+                   ))
+      )
+      else (
+        %% Put A1, A2, and A over a common denominator and compare some
+        %% magnitudes.
+        N1 = A1 * B2 * B,
+        N2 = A2 * B1 * B,
+        N = A * B1 * B2,
+        (if (abs(N1 - N) > abs(N2 - N))
+         then (absorb_x_term(NG, NG1, X, X1, Y, Y1),
+               CF = apply_ng8(NG1, X1, Y1))
+         else (absorb_y_term(NG, NG1, X, X1, Y, Y1),
+               CF = apply_ng8(NG1, X1, Y1)))
+      ))
+   )).
+
+:- pred absorb_x_term(ng8::in, ng8::out,
+                      continued_fraction::in, continued_fraction::out,
+                      continued_fraction::in, continued_fraction::out)
+   is det.
+absorb_x_term(!NG, !X, !Y) :-
+  (!.NG) = {A12, A1, A2, A, B12, B1, B2, B},
+  (!.X) = continued_fraction(XNode),
+  force(XNode) = cons(XTerm, X1),
+  (if (XTerm = integer_term(N))
+   then (New_NG = {A2 + (A12 * N), A + (A1 * N), A12, A1,
+                   B2 + (B12 * N), B + (B1 * N), B12, B1},
+         (if (ng8_exceeds_processing_threshold(New_NG))
+          then (
+            %% Pretend we have reached an infinite term.
+            !:NG = {A12, A1, A12, A1, B12, B1, B12, B1},
+            !:X = infinite_continued_fraction
+          )
+          else (!:NG = New_NG, !:X = X1)))
+   else (!:NG = {A12, A1, A12, A1, B12, B1, B12, B1},
+         !:X = infinite_continued_fraction)).
+
+:- pred absorb_y_term(ng8::in, ng8::out,
+                      continued_fraction::in, continued_fraction::out,
+                      continued_fraction::in, continued_fraction::out)
+   is det.
+absorb_y_term(!NG, !X, !Y) :-
+  (!.NG) = {A12, A1, A2, A, B12, B1, B2, B},
+  (!.Y) = continued_fraction(YNode),
+  force(YNode) = cons(YTerm, Y1),
+  (if (YTerm = integer_term(N))
+   then (New_NG = {A1 + (A12 * N), A12, A + (A2 * N), A2,
+                   B1 + (B12 * N), B12, B + (B2 * N), B2},
+         (if (ng8_exceeds_processing_threshold(New_NG))
+          then (
+            %% Pretend we have reached an infinite term.
+            !:NG = {A12, A12, A2, A2, B12, B12, B2, B2},
+            !:Y = infinite_continued_fraction
+          )
+          else (!:NG = New_NG, !:Y = Y1)))
+   else (!:NG = {A12, A12, A2, A2, B12, B12, B2, B2},
+         !:Y = infinite_continued_fraction)).
+
+:- pred ng8_exceeds_processing_threshold(ng8::in) is semidet.
+:- pred integer_exceeds_processing_threshold(integer::in) is semidet.
+ng8_exceeds_processing_threshold({A12, A1, A2, A,
+                                  B12, B1, B2, B}) :-
+  (integer_exceeds_processing_threshold(A12) ;
+   integer_exceeds_processing_threshold(A1)  ;
+   integer_exceeds_processing_threshold(A2)  ;
+   integer_exceeds_processing_threshold(A)   ;
+   integer_exceeds_processing_threshold(B12) ;
+   integer_exceeds_processing_threshold(B1)  ;
+   integer_exceeds_processing_threshold(B2)  ;
+   integer_exceeds_processing_threshold(B)).
+integer_exceeds_processing_threshold(Integer) :-
+  abs(Integer) >= pow(two, integer(512)).
+
+:- pred integer_exceeds_infinitizing_threshold(integer::in) is semidet.
+integer_exceeds_infinitizing_threshold(Integer) :-
+  abs(Integer) >= pow(two, integer(64)).
+
+:- pred maybe_divide(integer::in, integer::in,
+                     integer::out, integer::out) is det.
+maybe_divide(N, D, Q, R) :-
+  if iseqz(D) then (Q = zero, R = zero)
+  else divide_with_rem(N, D, Q, R).
+
+:- pred iseqz(integer::in) is semidet.
+:- pred iseqz(integer::in, integer::in) is semidet.
+:- pred iseqz(integer::in, integer::in,
+              integer::in, integer::in) is semidet.
+iseqz(Integer) :- Integer = zero.
+iseqz(A, B) :- iseqz(A), iseqz(B).
+iseqz(A, B, C, D) :- iseqz(A), iseqz(B), iseqz(C), iseqz(D).
+
+:- pred at_least_one_iseqz(integer::in, integer::in) is semidet.
+at_least_one_iseqz(A, B) :- (A = zero; B = zero).
+
+%%--------------------------------------------------------------------
+
+:- func two_plus_sqrt5 = continued_fraction.
+two_plus_sqrt5 = repeating_term(int_term(4)).
+
+zero = from_int(0).
+one = from_int(1).
+two = from_int(2).
+three = from_int(3).
+four = from_int(4).
+
+one_fourth = from_rational(rational(1, 4)).
+one_third = from_rational(rational(1, 3)).
+one_half = from_rational(rational(1, 2)).
+two_thirds = from_rational(rational(2, 3)).
+three_fourths = from_rational(rational(3, 4)).
+
+golden_ratio = repeating_term(int_term(1)).
+silver_ratio = repeating_term(int_term(2)).
+sqrt2 = continued_fraction(delay((func) = cons(int_term(1), silver_ratio))).
+sqrt5 = continued_fraction(delay((func) = cons(int_term(2), two_plus_sqrt5))).
+
+%%--------------------------------------------------------------------
+
+:- end_module continued_fraction.

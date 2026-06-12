@@ -1,0 +1,124 @@
+scale=30
+
+/* Computing pi with arbitrary precision. */
+m_pi =  16.0 * a(0.2) - 4.0 * a(1.0 / 239.0)
+
+/* The classic CIE ΔE2000 implementation, which operates on two L*a*b* colors, and returns their difference.
+"l" ranges from 0 to 100, while "a" and "b" are unbounded and commonly clamped to the range of -128 to 127. */
+define ciede_2000(l_1, a_1, b_1, l_2, a_2, b_2) {
+	/* Michel Leonard uses Basic Calculator with the CIEDE2000 color-difference formula.
+	k_l, k_c, k_h are parametric factors to be adjusted according to
+	different viewing parameters such as textures, backgrounds... */
+	k_l = 1.0
+	k_c = 1.0
+	k_h = 1.0
+	n = (sqrt(a_1 * a_1 + b_1 * b_1) + sqrt(a_2 * a_2 + b_2 * b_2)) * 0.5
+	n = n * n * n * n * n * n * n
+	/* A factor involving chroma raised to the power of 7 designed to make
+	the influence of chroma on the total color difference more accurate. */
+	n = 1.0 + 0.5 * (1.0 - sqrt(n / (n + 6103515625.0)))
+	/* Since hypot is not available, sqrt is used here to calculate the
+	Euclidean distance, without avoiding overflow/underflow. */
+	c_1 = sqrt(a_1 * a_1 * n * n + b_1 * b_1)
+	c_2 = sqrt(a_2 * a_2 * n * n + b_2 * b_2)
+	/* Using 30 lines to simulate atan2, as bc does not have this built-in. */
+	c = a_1 * n
+	if (0.0 < c) {
+		h_1 = a(b_1 / c)
+	} else if (c < 0.0 && b_1 >= 0.0) {
+		h_1 = a(b_1 / c) + m_pi
+	} else if (c < 0.0 && b_1 < 0.0) {
+		h_1 = a(b_1 / c) - m_pi
+	} else if (c == 0.0 && 0.0 < b_1) {
+		h_1 = m_pi * 0.5
+	} else if (c == 0.0 && b_1 < 0.0) {
+		h_1 = -m_pi * 0.5
+	} else {
+		h_1 = 0.0
+	}
+	c = a_2 * n
+	if (0.0 < c) {
+		h_2 = a(b_2 / c)
+	} else if (c < 0.0 && b_2 >= 0.0) {
+		h_2 = a(b_2 / c) + m_pi
+	} else if (c < 0.0 && b_2 < 0.0) {
+		h_2 = a(b_2 / c) - m_pi
+	} else if (c == 0.0 && 0.0 < b_2) {
+		h_2 = m_pi * 0.5
+	} else if (c == 0.0 && b_2 < 0.0) {
+		h_2 = -m_pi * 0.5
+	} else {
+		h_2 = 0.0
+	}
+	/* The atan2 polyfill is complete. */
+	if (h_1 < 0.0) {
+		h_1 = h_1 + 2.0 * m_pi
+	}
+	if (h_2 < 0.0) {
+		h_2 = h_2 + 2.0 * m_pi
+	}
+	if (h_2 < h_1) {
+		n = h_1 - h_2
+	} else {
+		n = h_2 - h_1
+	}
+	/* Cross-implementation consistent rounding. */
+	if (m_pi - 0.00000000000001 < n && n < m_pi + 0.00000000000001) {
+		n = m_pi
+	}
+	/* When the hue angles lie in different quadrants, the straightforward
+	average can produce a mean that incorrectly suggests a hue angle in
+	the wrong quadrant, the next lines handle this issue. */
+	h_m = (h_1 + h_2) * 0.5
+	h_d = (h_2 - h_1) * 0.5
+	/* GitHub Project : https://github.com/michel-leonard/ciede2000-color-matching */
+	if (m_pi < n) {
+		if (0.0 < h_d) {
+			h_d = h_d - m_pi
+		} else {
+			h_d = h_d + m_pi
+		}
+		h_m = h_m + m_pi
+	}
+	p = 36.0 * h_m - 55.0 * m_pi
+	n = (c_1 + c_2) * 0.5
+	n = n * n * n * n * n * n * n
+	/* The hue rotation correction term is designed to account for the
+	non-linear behavior of hue differences in the blue region. */
+	r_t = -2.0 * sqrt(n / (n + 6103515625.0)) \
+			* s(m_pi / 3.0 * e(p * p / (-25.0 * m_pi * m_pi)))
+	n = (l_1 + l_2) * 0.5
+	n = (n - 50.0) * (n - 50.0)
+	/* Lightness. */
+	l = (l_2 - l_1) / (k_l * (1.0 + 0.015 * n / sqrt(20.0 + n)))
+	/* These coefficients adjust the impact of different harmonic
+	components on the hue difference calculation. */
+	t = 1.0 	+ 0.24 * s(2.0 * h_m + m_pi / 2.0) \
+			+ 0.32 * s(3.0 * h_m + 8.0 * m_pi / 15.0) \
+			- 0.17 * s(h_m + m_pi / 3.0) \
+			- 0.20 * s(4.0 * h_m + 3.0 * m_pi / 20.0)
+	n = c_1 + c_2
+	/* Hue. */
+	h = 2.0 * sqrt(c_1 * c_2) * s(h_d) / (k_h * (1.0 + 0.0075 * n * t))
+	/* Chroma. */
+	c = (c_2 - c_1) / (k_c * (1.0 + 0.0225 * n))
+	/* Returns the square root so that the Delta E 2000 reflects the actual geometric
+	distance within the color space, which ranges from 0 to approximately 185. */
+	return sqrt(l * l + h * h + c * c + c * h * r_t)
+}
+
+ciede_2000(73.0, 49.0, 39.4, 73.0, 49.0, 39.4)
+ciede_2000(30.0, -41.0, -119.1, 30.0, -41.0, -119.0)
+ciede_2000(79.0, -117.0, -100.4, 79.5, -117.0, -100.0)
+ciede_2000(15.0, -55.0, 6.7, 14.0, -55.0, 7.0)
+ciede_2000(83.0, 98.0, -59.5, 85.2, 98.0, -59.5)
+ciede_2000(59.0, -11.0, -95.0, 56.3, -11.0, -95.0)
+ciede_2000(74.0, -1.0, 68.6, 81.0, -1.0, 69.0)
+ciede_2000(46.4, 125.0, 6.0, 40.0, 125.0, 6.0)
+ciede_2000(18.0, -5.0, 68.0, 20.0, 5.0, 82.0)
+ciede_2000(35.5, -99.0, 109.0, 25.0, -99.0, 109.0)
+ciede_2000(59.0, 77.0, 41.5, 63.3, 77.0, 12.4)
+ciede_2000(40.0, -92.0, 7.7, 58.0, -92.0, -8.0)
+ciede_2000(49.0, -9.0, -74.5, 51.1, 31.0, 16.0)
+ciede_2000(88.0, -124.0, 56.0, 97.0, 62.0, -28.0)
+ciede_2000(98.0, 75.7, 11.0, 3.0, -62.0, 11.0)

@@ -1,0 +1,110 @@
+' Function to get all files in the current directory
+Function GetFiles() As String
+    Dim As String filename, files = ""
+    Dim As Integer filenum = 1
+
+    filename = Dir("*")
+    While Len(filename) > 0
+        files += filenum & " " & filename & !"\n"
+        filenum += 1
+        filename = Dir()
+    Wend
+
+    Return files
+End Function
+
+' Function to write files to a temporary file
+Sub WriteToFile(files As String)
+    Dim As Integer ff = Freefile
+    Open "temp_vidir.txt" For Output As #ff
+    Print #ff, files
+    Close #ff
+End Sub
+
+' Function to read the edited file
+Function ReadEditedFile() As String
+    Dim As Integer ff = Freefile
+    Dim As String linea, content = ""
+
+    Open "temp_vidir.txt" For Input As #ff
+    While Not Eof(ff)
+        Line Input #ff, linea
+        content += linea & !"\n"
+    Wend
+    Close #ff
+
+    Return content
+End Function
+
+' Function to apply changes
+Sub ApplyChanges(oldFiles As String, newFiles As String)
+    Dim As String oldLine, newLine, oldFilename, newFilename
+    Dim As Integer oldFilenum, newFilenum, oldNextPos, newNextPos
+    Dim As Integer oldPos = 1, newPos = 1
+
+    ' Procesar cada línea
+    While oldPos <= Len(oldFiles) And newPos <= Len(newFiles)
+        ' Obtener la siguiente línea de oldFiles
+        oldNextPos = Instr(oldPos, oldFiles, !"\n")
+        If oldNextPos = 0 Then oldNextPos = Len(oldFiles) + 1
+        oldLine = Mid(oldFiles, oldPos, oldNextPos - oldPos)
+        oldPos = oldNextPos + 1
+
+        ' Obtener la siguiente línea de newFiles
+        newNextPos = Instr(newPos, newFiles, !"\n")
+        If newNextPos = 0 Then newNextPos = Len(newFiles) + 1
+        newLine = Mid(newFiles, newPos, newNextPos - newPos)
+        newPos = newNextPos + 1
+
+        If Len(Trim(oldLine)) > 0 And Len(Trim(newLine)) > 0 Then
+            ' Extraer números y nombres de archivos
+            oldFilenum = Valint(Left(oldLine, Instr(oldLine, " ") - 1))
+            oldFilename = Mid(oldLine, Instr(oldLine, " ") + 1)
+            newFilenum = Valint(Left(newLine, Instr(newLine, " ") - 1))
+            newFilename = Mid(newLine, Instr(newLine, " ") + 1)
+
+            ' Comprobar si el archivo fue renombrado
+            If oldFilename <> newFilename Then
+                Name oldFilename As newFilename
+                Print "Renamed: " & oldFilename & " -> " & newFilename
+            End If
+        Elseif Len(Trim(oldLine)) > 0 And Len(Trim(newLine)) = 0 Then
+            ' El archivo fue eliminado
+            oldFilenum = Valint(Left(oldLine, Instr(oldLine, " ") - 1))
+            oldFilename = Mid(oldLine, Instr(oldLine, " ") + 1)
+            Kill oldFilename
+            Print "Deleted: " & oldFilename
+        End If
+    Wend
+End Sub
+
+' Main program
+Dim As String files, editedFiles
+Dim As String editor
+#ifdef __FB_LINUX__
+    editor = "gedit"
+#else
+    editor = "notepad"
+#endif
+
+' Get current files
+files = GetFiles()
+
+' Write to temporary file
+WriteToFile(files)
+
+' Open editor
+Shell editor & " temp_vidir.txt"
+
+' Read edited file
+editedFiles = ReadEditedFile()
+
+' Apply changes
+ApplyChanges(files, editedFiles)
+
+' Clean up
+Kill "temp_vidir.txt"
+
+Print "Changes applied successfully."
+
+Sleep

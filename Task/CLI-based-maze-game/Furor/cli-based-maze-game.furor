@@ -1,0 +1,622 @@
+###sysinclude terminal.uh
+###sysinclude into.uh
+###sysinclude math.uh
+
+###define VÁRAKOZIK 40000
+// Minél nagyobb a fenti szám, annál lassabban mozognak a szörnyek.
+###define MERETX 69
+// A labirintus oszlopainak számozása 0 és MERETX-1 közt történik.
+// MERETX muszáj hogy páratlan szám legyen.
+###define MERETY 31
+// A labirintus sorainak számozása 0 és MERETY-1 közt történik.
+// MERETY muszáj hogy páratlan szám legyen.
+###define TREASURE '$
+###define TREASUREDB 3
+// A treasuredb jelenti, hány $ jel lesz elhelyezve
+###define WAY 32
+###define FAL 'X
+###define wayszín 0
+###define wayháttérszín 0
+// Az alábbi doors az ajtók számát jelzi a labirintus falaiban.
+###define doors 20
+###define AJTÓKÖZEPE 'o
+###define AJTÓSZÁRNYFÜGGŐLEGES '|
+###define AJTÓSZÁRNYVÍZSZINTES '-
+###define AJTÓszín $e
+###define AJTÓháttérszín 0
+###define FALszín $1b
+###define FALháttérszín FALszín
+###define HŐS '@
+###define HALOTTHŐS '+
+###define HŐSszín 9
+###define HŐSháttérszín 0
+###define kincsszín $b
+###define kincsháttérszín 0
+// Ennyi bombát lehet találni a labirintusban:
+###define bombákszáma 5
+###define bomba 'b
+###define bombaszín $a6
+###define bombaháttérszín 0
+
+###define szörnyekszáma 20
+###define szörny '*
+###define szörnyszín $d
+###define szörnyháttérszín 0
+###define gyengeszörny '.
+###define gyengeszörnyszín $cd
+###define gyengeszörnyháttérszín 0
+###define szörnygyengülvalószínűség 25
+// A fenti szám minél magasabb, annál kisebb az esélye hogy egy erős szörny gyengévé válik.
+###define szörnyerősödikvalószínűség 5
+// A fenti szám minél magasabb, annál kisebb az esélye annak, hogy egy gyenge szörny megerősödik.
+
+argc 2 > {
+."Labirintusjáték. Készítette: Viola Zoltán alias Harold King alias Fossil Codger.\n"
+."(fossilcodger@gmail.com)\n"
+."A program a Furor programnyelven íródott, azt a programnyelvet is én, Viola Zoltán írtam.\n"
+."A játék célja: az összes kincs megszerzése. A kincs jelképe a $ jel.\n"
+."Kilépés: az Esc 2-szer lenyomva, vagy a q.\n"
+."A b lenyomásával robbanthatsz, de csak amíg maradt bombád.\n"
+."Egy bomba minden falat lerombol a játékos körül (a labirintus legszélső, keretező"
+." falait kivéve), de a szörnyeket nem öli meg.\n"
+."A bomba átlósan se rombol, csak függőlegesen és vízszintesen!\n"
+."A bomba nem pusztítja el az ajtókat, és a kincset se.\n"
+."Bombákat találhatsz is a labirintusban, ezeket a b betű jelképezi. Ha rájuk lépsz,\n"
+."azzal megszerezted a bombát, azaz a bombáid száma növekszik, később ezeket\n"
+."felhasználhatod.\n"
+."A játék akkor ér véget, ha az összes kincset megszerezted.\n"
+."A labirintusban nem csak falak, de forgóajtók is vannak.\n"
+."A forgóajtó ha vízszintes, így néz ki: -o-\n"
+."Ha meg függőleges akkor így:\n"
+."|\n"
+."o\n"
+."|\n"
+."A forgóajtó közepét az o karakter, a szárnyait a vonal jelképezi.\n"
+."A forgóajtó elfordítható, ha a szárnyának a megfelelő irányból nekimész a karaktereddel,\n"
+."és ha semmi se áll az elforgatás útjában.\n"
+."A játékost a @ jelképezi a játékban, s kiindulási helye mindig a bal alsó sarokban van.\n"
+."Van a játékban kis csalásra is lehetőség: a B (nagy bé betű) minden lenyomása eggyel\n"
+."megnöveli a bombáid mennyiségét.\n"
+
+end
+}
+
+3 sto bombs // A bombák száma.
+randinit // A véletlenszámgenerátor inicializálása
+pálya MERETY MERETX createsharedscreen
+100 shared sto messagestring // kommunikációs terület a forkolt programrészeknek
+szörnyekszáma shared sto sxkoord
+szörnyekszáma shared sto sykoord
+üres() // Ez elkészíti az üres területet, falakkal körülhatárolva
+generatemaze() // Ez legenerálja véletlenszerűen a labirintust
+// ********************************************************
+//
+// Ki- és bejáratok generálása, ha szükséges:
+//
+MERETY 2 - dup sto y sto newy 0 dup sto x sto newx
+pálya @y @x HŐS [[^]] // A hős karakterének letevése
+// ********************************************************
+
+cursoroff
+cls
+§kirajzol fork sto kirajzoló
+§szörnymozgat fork sto szörnymozgató
+
+kirajzolni:
+@newy sto y @newx sto x
+kirajzol2:
+@messagestring 6 [] then §meghaltahős
+@messagestring 1 @bombs [^]
+@messagestring 2 @kincsszámláló [^]
+@kincsszámláló TREASUREDB #g == {
+100000 usleep
+@messagestring 5 1 [^] // Üzenetküldés a szörnymozgatás leállítására
+@messagestring 0 1 [^] // üzenetküldés a kirajzolónak hogy álljon le
+@szörnymozgató wait
+@kirajzoló wait
+."YOU WON! Congratulations!\n"
+goto §vége
+}
+pálya @y @x [[]] HALOTTHŐS == {
+100000 usleep
+meghaltahős:
+@messagestring 5 1 [^] // Üzenetküldés a szörnymozgatás leállítására
+@messagestring 0 1 [^] // üzenetküldés a kirajzolónak hogy álljon le
+@szörnymozgató wait
+@kirajzoló wait
+."YOU PERISHED! :(\n"
+goto §vége
+}
+// Billentyűzetinput
+newinputchar: #g 11 into sto kar
+@kar $ffffffffffffffff == then §kirajzol2
+@kar 128 < { @kar 27 == then §vége2
+@kar 'q == then §vége2
+@kar 'B == { inc bombs goto §kirajzol2 }
+@kar 'b == { @bombs else §newinputchar // Ha elfogyott a bomba, hiába minden...
+dec bombs
+@x 1          > {      pálya @y @x -- [[]] FAL == { pálya @y @x -- WAY [[^]] } }
+@y 1          > { @x { pálya @y -- @x [[]] FAL == { pálya @y -- @x WAY [[^]] } } }
+@x MERETX 2 - < {      pálya @y @x ++ [[]] FAL == { pálya @y @x ++ WAY [[^]] } }
+@y MERETY 2 - < { @x { pálya @y ++ @x [[]] FAL == { pálya @y ++ @x WAY [[^]] } } }
+goto §kirajzol2
+}
+goto §newinputchar }
+@kar $ff & sto k
+@x sto newx @y sto newy
+@k 1 == { // kurzorfel
+dec newy @newy else §newinputchar
+@x else §lépés
+@y 1 == §newinputchar
+//  -o-
+//  @
+pálya @newy @newx        [[]] AJTÓSZÁRNYVÍZSZINTES ==
+pálya @newy @newx ++     [[]] AJTÓKÖZEPE ==
+pálya @newy -- @newx     [[]] WAY ==
+pálya @newy -- @newx ++  [[]] WAY ==
+pálya @newy ++ @newx 2 + [[]] WAY ==
+pálya @newy ++ @newx ++  [[]] WAY ==
+& & & & & {
+pálya @newy @newx     WAY [[^]]
+pálya @newy @newx 2 + WAY [[^]]
+pálya @newy -- @newx ++ AJTÓSZÁRNYFÜGGŐLEGES [[^]]
+pálya @newy ++ @newx ++ AJTÓSZÁRNYFÜGGŐLEGES [[^]]
+goto §lépés
+}
+//  -o-
+//    @
+pálya @newy    @newx     [[]] AJTÓSZÁRNYVÍZSZINTES ==
+pálya @newy    @newx --  [[]] AJTÓKÖZEPE ==
+pálya @newy -- @newx     [[]] WAY ==
+pálya @newy -- @newx --  [[]] WAY ==
+pálya @newy ++ @newx 2 - [[]] WAY ==
+pálya @newy ++ @newx --  [[]] WAY ==
+& & & & & {
+pálya @newy    @newx     WAY [[^]]
+pálya @newy    @newx 2 - WAY [[^]]
+pálya @newy -- @newx -- AJTÓSZÁRNYFÜGGŐLEGES [[^]]
+pálya @newy ++ @newx -- AJTÓSZÁRNYFÜGGŐLEGES [[^]]
+goto §lépés
+}
+goto §lépés
+} // kurzorfel vége
+@k 2 == { // kurzorle
+inc newy @newy MERETY -- >= then §newinputchar
+@x else §lépés
+//  @
+//  -o-
+pálya @newy    @newx     [[]] AJTÓSZÁRNYVÍZSZINTES ==
+pálya @newy    @newx ++  [[]] AJTÓKÖZEPE ==
+pálya @newy ++ @newx     [[]] WAY ==
+pálya @newy ++ @newx ++  [[]] WAY ==
+pálya @newy -- @newx 2 + [[]] WAY ==
+pálya @newy -- @newx ++  [[]] WAY ==
+& & & & & {
+pálya @newy    @newx     WAY [[^]]
+pálya @newy    @newx 2 + WAY [[^]]
+pálya @newy -- @newx ++ AJTÓSZÁRNYFÜGGŐLEGES [[^]]
+pálya @newy ++ @newx ++ AJTÓSZÁRNYFÜGGŐLEGES [[^]]
+goto §lépés
+}
+//    @
+//  -o-
+pálya @newy    @newx     [[]] AJTÓSZÁRNYVÍZSZINTES ==
+pálya @newy    @newx --  [[]] AJTÓKÖZEPE ==
+pálya @newy ++ @newx     [[]] WAY ==
+pálya @newy ++ @newx --  [[]] WAY ==
+pálya @newy -- @newx 2 - [[]] WAY ==
+pálya @newy -- @newx --  [[]] WAY ==
+& & & & & {
+pálya @newy    @newx     WAY [[^]]
+pálya @newy    @newx 2 - WAY [[^]]
+pálya @newy -- @newx -- AJTÓSZÁRNYFÜGGŐLEGES [[^]]
+pálya @newy ++ @newx -- AJTÓSZÁRNYFÜGGŐLEGES [[^]]
+goto §lépés
+}
+goto §lépés
+} // kurzorle vége
+@k 3 == { // kurzorjobbra
+inc newx @newx MERETX >= then §newinputchar
+@x MERETX -- == then §newinputchar
+@x else §lépés
+//  @|
+//   o
+//   |
+//@newy 2 + MERETY >= then §lépés
+pálya @newy     @newx    [[]] AJTÓSZÁRNYFÜGGŐLEGES ==
+pálya @newy ++  @newx    [[]] AJTÓKÖZEPE == & else §jobbra2
+pálya @newy     @newx ++ [[]] WAY ==
+pálya @newy ++  @newx ++ [[]] WAY ==
+pálya @newy ++  @newx -- [[]] WAY ==
+pálya @newy 2 + @newx -- [[]] WAY ==
+& & & {
+pálya @newy     @newx WAY [[^]]
+pálya @newy 2 + @newx WAY [[^]]
+pálya @newy ++  @newx -- AJTÓSZÁRNYVÍZSZINTES [[^]]
+pálya @newy ++  @newx ++ AJTÓSZÁRNYVÍZSZINTES [[^]]
+goto §lépés
+}
+//   |
+//   o
+//  @|
+jobbra2:
+@newy -- else §lépés
+pálya @newy     @newx    [[]] AJTÓSZÁRNYFÜGGŐLEGES ==
+pálya @newy --  @newx    [[]] AJTÓKÖZEPE ==
+pálya @newy     @newx ++ [[]] WAY ==
+pálya @newy --  @newx ++ [[]] WAY ==
+pálya @newy --  @newx -- [[]] WAY ==
+pálya @newy 2 - @newx -- [[]] WAY ==
+& & & & & {
+pálya @newy     @newx WAY [[^]]
+pálya @newy 2 - @newx WAY [[^]]
+pálya @newy --  @newx -- AJTÓSZÁRNYVÍZSZINTES [[^]]
+pálya @newy --  @newx ++ AJTÓSZÁRNYVÍZSZINTES [[^]]
+goto §lépés
+}
+goto §lépés
+} // kurzorjobbra vége
+@k 4 == { // kurzorbalra
+@x else §newinputchar
+dec newx @newx else §newinputchar
+//   |@
+//   o
+//   |
+//@newy 2 + MERETY >= then §lépés
+pálya @newy     @newx    [[]] AJTÓSZÁRNYFÜGGŐLEGES ==
+pálya @newy ++  @newx    [[]] AJTÓKÖZEPE == & else §balra2
+pálya @newy     @newx -- [[]] WAY ==
+pálya @newy ++  @newx -- [[]] WAY ==
+pálya @newy ++  @newx ++ [[]] WAY ==
+pálya @newy 2 + @newx ++ [[]] WAY ==
+& & & {
+pálya @newy     @newx WAY [[^]]
+pálya @newy 2 + @newx WAY [[^]]
+pálya @newy ++  @newx -- AJTÓSZÁRNYVÍZSZINTES [[^]]
+pálya @newy ++  @newx ++ AJTÓSZÁRNYVÍZSZINTES [[^]]
+goto §lépés
+}
+//   |
+//   o
+//   |@
+balra2:
+//@newy -- else §lépés
+pálya @newy     @newx    [[]] AJTÓSZÁRNYFÜGGŐLEGES ==
+pálya @newy --  @newx    [[]] AJTÓKÖZEPE == & else §lépés
+pálya @newy     @newx -- [[]] WAY ==
+pálya @newy --  @newx ++ [[]] WAY ==
+pálya @newy --  @newx -- [[]] WAY ==
+pálya @newy 2 - @newx ++ [[]] WAY ==
+& & & {
+pálya @newy     @newx WAY [[^]]
+pálya @newy 2 - @newx WAY [[^]]
+pálya @newy --  @newx -- AJTÓSZÁRNYVÍZSZINTES [[^]]
+pálya @newy --  @newx ++ AJTÓSZÁRNYVÍZSZINTES [[^]]
+goto §lépés
+}
+goto §lépés
+
+} // kurzorbalra vége
+goto §newinputchar
+// =========================================================
+// =========================================================
+lépés:
+pálya @newy @newx [[]] FAL        == then §newinputchar
+pálya @newy @newx [[]] AJTÓKÖZEPE == then §newinputchar
+pálya @newy @newx [[]] AJTÓSZÁRNYVÍZSZINTES == then §newinputchar
+pálya @newy @newx [[]] AJTÓSZÁRNYFÜGGŐLEGES == then §newinputchar
+pálya @newy @newx [[]] TREASURE == { inc kincsszámláló }
+pálya @newy @newx [[]] bomba    == { inc bombs }
+pálya @newy @newx [[]] szörny   == { pálya @y @x WAY [[^]]
+pálya @newy @newx HALOTTHŐS [[^]]
+goto §kirajzolni }
+pálya @y @x WAY [[^]]
+pálya @newy @newx HŐS [[^]]
+goto §kirajzolni
+
+// *******************************************************
+vége2:
+// üzenetküldés a child processeknek hogy álljanak le
+@messagestring 0 1 [^]
+@messagestring 5 1 [^]
+// Várakozás a child processek befejeződésére:
+@szörnymozgató wait
+@kirajzoló     wait
+vége:
+@messagestring free
+@sxkoord free
+@sykoord free
+pálya eraseshared
+,,, cursoron
+end
+// ********************************************************
+
+kirajzol:
+closestdin // Nem várunk semmi billentyűzetinputot
+{... // végtelenciklus
+// .......................................................
+@messagestring 0 [] { end } // Parancs érkezett szeppuku elkövetésére...
+// .......................................................
+topleft
+#k MERETY yloop: {| MERETX {|
+pálya {}§yloop {} [[]] WAY == { wayszín tint wayháttérszín !tint pálya {}§yloop {} [[]] print {<}  }
+pálya {}§yloop {} [[]] FAL == { FALszín tint FALháttérszín !tint pálya {}§yloop {} [[]] print {<}  }
+pálya {}§yloop {} [[]] AJTÓSZÁRNYFÜGGŐLEGES == { AJTÓszín  tint AJTÓháttérszín  !tint pálya {}§yloop {} [[]] print {<} }
+pálya {}§yloop {} [[]] AJTÓSZÁRNYVÍZSZINTES == { AJTÓszín  tint AJTÓháttérszín  !tint pálya {}§yloop {} [[]] print {<} }
+pálya {}§yloop {} [[]] AJTÓKÖZEPE           == { AJTÓszín  tint AJTÓháttérszín  !tint pálya {}§yloop {} [[]] print {<} }
+pálya {}§yloop {} [[]] bomba                == { bombaszín tint bombaháttérszín !tint pálya {}§yloop {} [[]] print {<} }
+pálya {}§yloop {} [[]] szörny               == { szörnyszín tint szörnyháttérszín !tint pálya {}§yloop {} [[]] print {<} }
+pálya {}§yloop {} [[]] gyengeszörny         == {
+gyengeszörnyszín tint gyengeszörnyháttérszín !tint pálya {}§yloop {} [[]] print {<} }
+pálya {}§yloop {} [[]] HŐS           == { HŐSszín tint HŐSháttérszín !tint pálya {}§yloop {} [[]] print {<} }
+pálya {}§yloop {} [[]] HALOTTHŐS     == { HŐSszín tint HŐSháttérszín !tint pálya {}§yloop {} [[]] print {<} }
+pálya {}§yloop {} [[]] 'a >= pálya {}§yloop {} [[]] 'z <= &
+{ kincsszín tint kincsháttérszín !tint pálya {}§yloop {} [[]] print {<} }
+,,, pálya {}§yloop {} [[]] print
+|} ,,, NL |} NL
+."Collected treasure = " #g @messagestring 2 [] print ."    Bombs = " @messagestring 1 [] printnl
+VÁRAKOZIK usleep
+...}
+// ********************************************************
+szörnymozgat:
+closestdin closestdout closestderr // Nem várunk semmi billentyűzetinputot és nem is írunk sehova
+randinit
+{... // végtelenciklus
+6000 usleep
+// .......................................................
+@messagestring 5 [] { end } // Parancs érkezett szeppuku elkövetésére...
+// .......................................................
+szörnyekszáma random sto akts
+@sxkoord @akts [] sto! sx @sykoord @akts [] sto! sy #g | !{ {.<.} }
+pálya @sy @sx [[]] szörny == {
+szörnygyengülvalószínűség random 1 == { pálya @sy @sx gyengeszörny [[^]] {.<.} }
+sbr §szörnylépéskeres
+#g
+@szörnyy @szörnyx | !{ {.<.} } // Ha nem talált helyet ahova mozoghatna
+pálya @szörnyy @szörnyx [[]] HŐS == { pálya @szörnyy @szörnyx HALOTTHŐS [[^]] @messagestring 6 1 [^] 1000 usleep {.<.} }
+pálya @sy @sx WAY [[^]] pálya @szörnyy @szörnyx szörny [[^]]
+@sxkoord @akts @szörnyx [^] @sykoord @akts @szörnyy [^]
+{.<.}
+}
+pálya @sy @sx [[]] gyengeszörny == {
+szörnyerősödikvalószínűség random 1 == { pálya @sy @sx szörny [[^]] {.<.} }
+sbr §szörnylépéskeres
+#g
+@szörnyy @szörnyx | !{ {.<.} } // Ha nem talált helyet ahova mozoghatna
+pálya @sy @sx WAY [[^]]
+pálya @szörnyy @szörnyx [[]] HŐS != { // Ha gyenge szörny találkozik a hőssel, a szörnynek vége, nem rajzoljuk ki
+pálya @szörnyy @szörnyx gyengeszörny [[^]]
+}{ zero szörnyx zero szörnyy }
+@sxkoord @akts @szörnyx [^] @sykoord @akts @szörnyy [^]
+{.<.}
+}
+
+...}
+// .......................................................
+szörnylépéskeres:
+zero szörnyy zero szörnyx
+24 random sto kvartett // Választunk egy iránykvartettet
+#g 4 {|
+@kvartett 4 * {} + §irányok[] sto sirány
+@sirány 0 == { // fel
+@sy !{ {<} }
+pálya @sy -- @sx [[]] WAY ==
+pálya @sy -- @sx [[]] HŐS == | { @sy -- sto szörnyy @sx sto szörnyx rts }
+{<}
+} // fel vége
+@sirány 1 == { // le
+@sy ++ MERETY -- >= { {<} }
+pálya @sy ++ @sx [[]] WAY ==
+pálya @sy ++ @sx [[]] HŐS == | { @sy ++ sto szörnyy @sx sto szörnyx rts }
+{<}
+} // le vége
+@sirány 2 == { // balra
+@sx !{ {<} }
+pálya @sy @sx -- [[]] WAY ==
+pálya @sy @sx -- [[]] HŐS == | { @sy sto szörnyy @sx -- sto szörnyx rts }
+{<}
+} // balra vége
+@sirány 3 == { // jobbra
+@sx ++ MERETX -- >= { {<} }
+pálya @sy @sx ++ [[]] WAY ==
+pálya @sy @sx ++ [[]] HŐS == | { @sy sto szörnyy @sx ++ sto szörnyx rts }
+{<}
+} // jobbra vége
+|}
+rts
+irányok:
+0 1 2 3  0 1 3 2  0 2 1 3  0 2 3 1  0 3 1 2  0 3 2 1
+1 0 2 3  1 0 3 2  1 2 0 3  1 2 3 0  1 3 0 2  1 3 2 0
+2 1 0 3  2 1 3 0  2 0 1 3  2 0 3 1  2 3 1 0  2 3 0 1
+3 1 2 0  3 1 0 2  3 2 1 0  3 2 0 1  3 0 1 2  3 0 2 1
+// ********************************************************************
+{ „k” }
+{ „x” }
+{ „y” }
+{ „sx” }
+{ „sy” }
+{ „kar” }
+{ „newx” }
+{ „newy” }
+{ „akts” }
+{ „bombs” }
+{ „pálya” }
+{ „sirány” }
+{ „sxkoord” }
+{ „sykoord” }
+{ „szörnyx” }
+{ „szörnyy” }
+{ „kvartett” }
+{ „kirajzoló” }
+{ „messagestring” }
+{ „szörnymozgató” }
+{ „kincsszámláló” }
+{ „myerrorhandler” // A hibakezelő rutin. Igazság szerint abszolút nincs szükség rá,
+// de itt illik legyen a helye ha egy komolyabb progi része lenne
+// ez a labirintusrajzoló.
+#g sto hibakód sto hívórutin sto hívóneve
+."Hiba történt ebben a névtérben: " @hívóneve sprintnl
+."Ezt a hibakódot kaptam: " @hibakód printnl
+end
+{ „hibakód” }
+{ „hívórutin” }
+{ „hívóneve” }
+}
+// ---------------------------------------------
+{ „üres” __usebigbossnamespace
+// Kitölti úttal az egész pályát, de a széleit falakkal
+MERETY yciklus: {| MERETX {|
+pálya {}§yciklus {} WAY [[^]]
+|} |}
+MERETY {| pálya {} 0 FAL [[^]] pálya {} MERETX -- FAL [[^]] |}
+MERETX {| pálya 0 {} FAL [[^]] pálya MERETY -- {} FAL [[^]] |}
+end
+}
+// ---------------------------------------------
+{ „generatemaze” __usebigbossnamespace
+###sysinclude math.uh
+// Az alábbi sorban beállítjuk az errorhandler függvényt a megfelelőképpen:
+@initflag !{ one initflag myerrorhandler §myerrorhandlerlabel set errorhandler }
+
+#g // Végig egész számokkal dolgozunk
+// Az alábbi 2 sorban memóriát foglalunk 2 stringnek, amik
+// segédváltozókként funkcionálnak majd, flagek tárolását végzik:
+MERETX mem !maximize sto oszlopflag
+MERETY mem !maximize sto sorflag
+// ***********************************************************
+// Az oszlopok és sorok első és utolsó pozícióit bejelöljük,
+// mondván hogy ott már van fal.
+//
+@oszlopflag 0 1 [^]
+@oszlopflag @oszlopflag~ -- 1 [^]
+@sorflag    0 1 [^]
+@sorflag    @sorflag~    -- 1 [^]
+// ***********************************************************
+// Az alábbi 2 ciklusban az oszlopok és sorok flagjait tároló
+// stringek minden páratlanadik pozícióját bejelöljük, ez jelzi
+// később, hogy azokkal a sorokkal illetve oszlopokkal nem kell
+// törődnie. Fal ugyanis csak páros indexű helyeken építhető.
+//
+MERETX -- {| {} 2 !/ then{<} @oszlopflag {+} 1 [^] |}
+MERETY -- {| {} 2 !/ then{<} @sorflag    {+} 1 [^] |}
+// ***********************************************************
+nextrandom:
+// ...............................................
+// E két ciklus csekkolja le, van-e még olyan
+// sor illetve oszlop, amit nem vizsgáltunk végig.
+@oszlopflag {~ @@ !{ goto §kell } |}
+@sorflag    {~ @@ !{ goto §kell } |}
+// ...............................................
+// Elhelyezzük a forgóajtókat:
+
+doors {|
+newrandomneed:
+MERETX random sto x
+MERETY random sto y pálya @y @x [[]] WAY == then §newrandomneed
+// Most már biztos hogy itt fal van.
+@x        2   < then §newrandomneed @y        2   < then §newrandomneed
+@x MERETX 3 - > then §newrandomneed @y MERETY 3 - > then §newrandomneed
+// Megnézzük, függőleges ajtót betehetünk-e.
+pálya @y -- @x [[]] FAL == // Ha az aktuális pozíció fölött is fal van
+pálya @y ++ @x [[]] FAL == // Ha az aktuális pozíció alatt  is fal van
+pálya @y -- @x -- [[]] WAY == // balfelső  sarok szabad
+pálya @y -- @x ++ [[]] WAY == // jobbfelső sarok szabad
+pálya @y ++ @x -- [[]] WAY == // balalsó   sarok szabad
+pálya @y ++ @x ++ [[]] WAY == // jobbalsó  sarok szabad
+pálya @y    @x -- [[]] WAY == // bal  szomszéd   szabad
+pálya @y    @x ++ [[]] WAY == // jobb szomszéd   szabad
+& & & & & & & else §vízszintesteszt
+pálya @y @x AJTÓKÖZEPE [[^]]
+pálya @y -- @x AJTÓSZÁRNYFÜGGŐLEGES [[^]]
+pálya @y ++ @x AJTÓSZÁRNYFÜGGŐLEGES [[^]]
+{<}
+vízszintesteszt:
+// Megnézzük, vízszintes ajtót betehetünk-e.
+pálya @y @x -- [[]] FAL == // Ha az aktuális pozíció mellett balra  is fal van
+pálya @y @x ++ [[]] FAL == // Ha az aktuális pozíció mellett jobbra is fal van
+pálya @y -- @x -- [[]] WAY == // balfelső  sarok szabad
+pálya @y -- @x ++ [[]] WAY == // jobbfelső sarok szabad
+pálya @y ++ @x -- [[]] WAY == // balalsó   sarok szabad
+pálya @y ++ @x ++ [[]] WAY == // jobbalsó  sarok szabad
+pálya @y ++ @x    [[]] WAY == // fent szabad
+pálya @y -- @x    [[]] WAY == // lent szabad
+& & & & & & & else §newrandomneed
+pálya @y @x AJTÓKÖZEPE [[^]]
+pálya @y @x -- AJTÓSZÁRNYVÍZSZINTES [[^]]
+pálya @y @x ++ AJTÓSZÁRNYVÍZSZINTES [[^]]
+|}
+// Elhelyezzük a kincseket.
+TREASUREDB {| sbr §newrandomnumber pálya @y @x TREASURE [[^]] |}
+// Elhelyezzük a bombákat.
+bombákszáma {| sbr §newrandomnumber pálya @y @x bomba [[^]] |}
+// Elhelyezzük a szörnyeket. Kezdetben mind gyengék.
+szörnyekszáma {| sbr §newrandomnumber pálya @y @x gyengeszörny [[^]]
+@sxkoord {} @x [^] @sykoord {} @y [^]
+|}
+// ...............................................
+@oszlopflag free @sorflag free // Az ideiglenes változók
+// memóriaterületének felszabadítása
+end
+kell:
+4 random                // Választunk egy irányt véletlenszerűen
+§jumpingtable[] [goto]  // és elugrunk a megfelelő rutinra
+bal: // balról jobbra
+MERETY random 2 / 2 * sto aktrand // így biztos páros szám
+@sorflag @aktrand [] !{
+MERETX -- {|
+pálya @aktrand {}  [[]] FAL == { {<} }
+pálya @aktrand {+} [[]] FAL == { {<} }
+pálya @aktrand {} FAL [[^]]
+|}
+@sorflag @aktrand 1 [^]
+}
+goto §nextrandom
+
+jobb: // jobbról balra
+MERETY random 2 / 2 * sto aktrand
+@sorflag @aktrand [] !{
+MERETX -- {|
+pálya @aktrand {-}  [[]] FAL == { {<} }
+pálya @aktrand {--} [[]] FAL == { {<} }
+pálya @aktrand {-}  FAL [[^]]
+|}
+@sorflag @aktrand 1 [^]
+}
+goto §nextrandom
+
+lent: // Lentről fel
+MERETX random 2 / 2 * sto aktrand
+@oszlopflag @aktrand [] !{
+MERETY -- {|
+pálya {-}  @aktrand [[]] FAL == { {<} }
+pálya {--} @aktrand [[]] FAL == { {<} }
+pálya {-}  @aktrand  FAL [[^]]
+|}
+@oszlopflag @aktrand 1 [^]
+}
+goto §nextrandom
+
+fent: // Fentről le
+MERETX random 2 / 2 * sto aktrand
+@oszlopflag @aktrand [] !{
+MERETY -- {|
+pálya {}  @aktrand [[]] FAL == { {<} }
+pálya {+} @aktrand [[]] FAL == { {<} }
+pálya {}  @aktrand  FAL [[^]]
+|}
+@oszlopflag @aktrand 1 [^]
+}
+goto §nextrandom
+newrandomnumber:
+MERETX random sto x MERETY random sto y pálya @y @x [[]] WAY != then §newrandomnumber
+rts
+// ..........................................................
+myerrorhandlerlabel: fail
+{ „x” } { „y” }
+{ „initflag” }
+{ „oszlopflag” }
+{ „sorflag” }
+{ „aktrand” }
+jumpingtable: §bal §jobb §lent §fent
+}
+// ---------------------------------------------------------

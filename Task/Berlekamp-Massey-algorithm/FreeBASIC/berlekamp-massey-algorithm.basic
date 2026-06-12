@@ -1,0 +1,233 @@
+Const As Integer MDL = 2
+
+Function fp(a As Integer, k As Integer) As Integer
+    Dim As Integer result = 1
+    Dim As Integer bbase = a Mod MDL
+    Dim As Integer expo = k
+
+    While expo > 0
+        If (expo And 1) Then result = (result * bbase) Mod MDL
+        bbase = (bbase * bbase) Mod MDL
+        expo \= 2
+    Wend
+
+    Return result
+End Function
+
+Sub Berlekamp_Massey(a() As Integer, ans_coef() As Integer)
+    Dim As Integer n = Ubound(a)
+    Dim As Integer lst_size = 0
+    Dim As Integer w = 0
+    Dim As Integer delta = 0
+    Dim As Integer i, j, tmp, idx
+
+    Redim ans_coef(-1)
+    Dim As Integer lst()
+    Redim lst(-1)
+
+    For i = 1 To n
+        tmp = 0
+        Dim As Integer ans_len = Ubound(ans_coef)
+        For j = 0 To ans_len
+            If i - 1 - j >= 1 Then
+                tmp = (tmp + a(i - 1 - j) * ans_coef(j)) Mod MDL
+            End If
+        Next j
+
+        Dim As Integer discrepancy = (a(i) - tmp + MDL) Mod MDL
+
+        If discrepancy = 0 Then Continue For
+
+        If w = 0 Then
+            Redim ans_coef(i - 1)
+            For j = 0 To i - 1
+                ans_coef(j) = 0
+            Next j
+
+            w = i
+            delta = discrepancy
+            Continue For
+        End If
+
+        Dim As Integer Ahora(Ubound(ans_coef))
+        For j = 0 To Ubound(ans_coef)
+            Ahora(j) = ans_coef(j)
+        Next j
+
+        Dim As Integer inv_delta = fp(delta, MDL - 2)
+        Dim As Integer mul = (discrepancy * inv_delta) Mod MDL
+        Dim As Integer needed_len = lst_size + i - w
+
+        If Ubound(ans_coef) + 1 < needed_len Then
+            Redim Preserve ans_coef(needed_len - 1)
+            For j = Ubound(Ahora) + 1 To Ubound(ans_coef)
+                ans_coef(j) = 0
+            Next j
+        End If
+
+        If i - w - 1 >= 0 Then
+            ans_coef(i - w - 1) = (ans_coef(i - w - 1) + mul) Mod MDL
+        End If
+
+        For j = 0 To lst_size - 1
+            idx = i - w + j
+            If idx < Ubound(ans_coef) + 1 Then
+                Dim As Integer term_to_subtract = (mul * lst(j)) Mod MDL
+                ans_coef(idx) = (ans_coef(idx) - term_to_subtract + MDL) Mod MDL
+            End If
+        Next j
+
+        If Ubound(ans_coef) + 1 > Ubound(Ahora) + 1 Then
+            Redim lst(Ubound(Ahora))
+            For j = 0 To Ubound(Ahora)
+                lst(j) = Ahora(j)
+            Next j
+            lst_size = Ubound(Ahora) + 1
+
+            w = i
+            delta = discrepancy
+        End If
+    Next i
+
+    For i = 0 To Ubound(ans_coef)
+        ans_coef(i) = (ans_coef(i) + MDL) Mod MDL
+    Next i
+End Sub
+
+Function calculate_term(m As Integer, coef() As Integer, h() As Integer) As Integer
+    Dim As Integer i, j, k
+
+    If m <= Ubound(h) Then Return (h(m) + MDL) Mod MDL
+    k = Ubound(coef) + 1
+    If k = 0 Then Return 0
+
+    Dim As Integer p_coeffs(k)
+    p_coeffs(0) = (MDL - 1) Mod MDL
+    For i = 0 To k - 1
+        p_coeffs(i + 1) = coef(i)
+    Next i
+
+    Dim As Integer degree_k = k
+    Dim As Integer f(degree_k - 1), g(degree_k - 1)
+
+    f(0) = 1
+    For i = 1 To degree_k - 1
+        f(i) = 0
+    Next i
+
+    If k = 1 Then
+        g(0) = p_coeffs(1)
+        For i = 1 To degree_k - 1
+            g(i) = 0
+        Next i
+    Else
+        g(0) = 0
+        g(1) = 1
+        For i = 2 To degree_k - 1
+            g(i) = 0
+        Next i
+    End If
+
+    Dim As Integer power = m
+    Dim As Integer tmp(2 * degree_k - 1)
+    Dim As Integer term, idx
+
+    While power > 0
+        If (power And 1) Then
+            For i = 0 To 2 * degree_k - 1
+                tmp(i) = 0
+            Next i
+
+            For i = 0 To degree_k - 1
+                If f(i) = 0 Then Continue For
+                For j = 0 To degree_k - 1
+                    tmp(i + j) = (tmp(i + j) + f(i) * g(j)) Mod MDL
+                Next j
+            Next i
+
+            For i = 2 * degree_k - 1 To degree_k Step -1
+                If tmp(i) = 0 Then Continue For
+                term = tmp(i)
+                tmp(i) = 0
+                For j = 0 To k
+                    idx = i - j
+                    If idx >= 0 Then
+                        tmp(idx) = (tmp(idx) + term * p_coeffs(j)) Mod MDL
+                    End If
+                Next j
+            Next i
+
+            For i = 0 To degree_k - 1
+                f(i) = tmp(i)
+            Next i
+        End If
+
+        For i = 0 To 2 * degree_k - 1
+            tmp(i) = 0
+        Next i
+
+        For i = 0 To degree_k - 1
+            If g(i) = 0 Then Continue For
+            For j = 0 To degree_k - 1
+                tmp(i + j) = (tmp(i + j) + g(i) * g(j)) Mod MDL
+            Next j
+        Next i
+
+        For i = 2 * degree_k - 1 To degree_k Step -1
+            If tmp(i) = 0 Then Continue For
+            term = tmp(i)
+            tmp(i) = 0
+            For j = 0 To k
+                idx = i - j
+                If idx >= 0 Then
+                    tmp(idx) = (tmp(idx) + term * p_coeffs(j)) Mod MDL
+                End If
+            Next j
+        Next i
+
+        For i = 0 To degree_k - 1
+            g(i) = tmp(i)
+        Next i
+
+        power \= 2
+    Wend
+
+    Dim As Integer final_ans = 0
+    For i = 0 To degree_k - 1
+        If i + 1 <= Ubound(h) Then
+            final_ans = (final_ans + h(i + 1) * f(i)) Mod MDL
+        End If
+    Next i
+
+    Return (final_ans + MDL) Mod MDL
+End Function
+
+Sub Solve()
+    Dim As Integer h_input(6) = {0, 0, 1, 1, 0, 1 ,0}
+    Dim As Integer i, n
+    n = Ubound(h_input) + 1
+
+    Dim As Integer h(n)
+    h(0) = 0
+    For i = 0 To n - 1
+        h(i + 1) = h_input(i)
+    Next i
+
+    Dim As Integer ans_coef()
+    Berlekamp_Massey(h(), ans_coef())
+
+    Print "Coefficients:";
+    For i = 0 To Ubound(ans_coef)
+        Print " " & ((ans_coef(i) + MDL) Mod MDL);
+    Next i
+    Print
+
+    ' Uncomment to calculate a specific term
+    ' Dim As Integer m = 10
+    ' Dim As Integer result = calculate_term(m, ans_coef(), h())
+    ' Print "Term " & m & ": " & ((result + MDL) Mod MDL)
+End Sub
+
+Solve()
+
+Sleep

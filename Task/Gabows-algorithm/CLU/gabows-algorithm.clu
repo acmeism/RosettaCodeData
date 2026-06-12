@@ -1,0 +1,226 @@
+#extend
+
+edge = struct[from: int, to: int]
+
+digraph = cluster is create, cons2, get_vertex_count, get_edge_count,
+                     add_edge, adjacency_list, vertices
+    rep = record[
+        vertex_count: int,
+        edge_count: int,
+        adjacency_lists: array[array[int]]
+    ]
+
+    create = proc (vertex_count: int) returns (cvt)
+        return(down(cons2(vertex_count, sequence[edge]$[])))
+    end create
+
+    cons2 = proc (vertex_count: int, edges: sequence[edge])
+            returns (cvt) signals (bad_vertex)
+        dg: rep := rep${
+            vertex_count: vertex_count,
+            edge_count: 0,
+            adjacency_lists:
+                array[array[int]]$fill_copy(0, vertex_count, array[int]$[])
+        }
+
+        for e: edge in sequence[edge]$elements(edges) do
+            add_edge(up(dg), e) resignal bad_vertex
+        end
+
+        return(dg)
+    end cons2
+
+    vertices = iter (dg: cvt) yields (int)
+        for v: int in int$from_to(0, dg.vertex_count-1) do
+            yield(v)
+        end
+    end vertices
+
+    validate_vertex = proc (dg: cvt, vertex: int) signals (bad_vertex)
+        if vertex < 0 cor vertex >= dg.vertex_count then
+            signal bad_vertex
+        end
+    end validate_vertex
+
+    add_edge = proc (dg: cvt, e: edge) signals (bad_vertex)
+        validate_vertex(up(dg), e.from) resignal bad_vertex
+        validate_vertex(up(dg), e.to) resignal bad_vertex
+        array[int]$addh(dg.adjacency_lists[e.from], e.to)
+        dg.edge_count := dg.edge_count + 1
+    end add_edge
+
+    get_vertex_count = proc (dg: cvt) returns (int)
+        return(dg.vertex_count)
+    end get_vertex_count
+
+    get_edge_count = proc (dg: cvt) returns (int)
+        return(dg.edge_count)
+    end get_edge_count
+
+    adjacency_list = proc (dg: cvt, vertex: int)
+                     returns (sequence[int]) signals (bad_vertex)
+        validate_vertex(up(dg), vertex) resignal bad_vertex
+        return(sequence[int]$a2s(dg.adjacency_lists[vertex]))
+    end adjacency_list
+end digraph
+
+gabow_ssc = cluster is create, components, get_scc_count,
+                    is_strongly_connected, component_id
+    undefined = -1
+    rep = record[
+        visited: array[bool],
+        component_ids: array[int],
+        preorders: array[int],
+        scc_count: int,
+        preorder_count: int,
+        visited_vertices_stack: array[int],
+        aux_stack: array[int]
+    ]
+
+    create = proc (dg: digraph) returns (cvt)
+        gs: rep := rep${
+            visited: array[bool]$fill(0, dg.vertex_count, false),
+            component_ids: array[int]$fill(0, dg.vertex_count, undefined),
+            preorders: array[int]$fill(0, dg.vertex_count, undefined),
+            scc_count: 0,
+            preorder_count: 0,
+            visited_vertices_stack: array[int]$[],
+            aux_stack: array[int]$[]
+        }
+
+        for vertex: int in digraph$vertices(dg) do
+            if ~gs.visited[vertex] then
+                dfs(gs, dg, vertex)
+            end
+        end
+
+        return(gs)
+    end create
+
+    components = iter (gs: cvt) yields (sequence[int])
+        cs: array[array[int]] :=
+            array[array[int]]$fill_copy(0, gs.scc_count, array[int]$[])
+
+        for vertex: int in array[bool]$indexes(gs.visited) do
+            id: int := component_id(up(gs), vertex)
+            array[int]$addh(cs[id], vertex)
+        end
+
+        for component: array[int] in array[array[int]]$elements(cs) do
+            yield(sequence[int]$a2s(component))
+        end
+    end components
+
+    get_scc_count = proc (gs: cvt) returns (int)
+        return(gs.scc_count)
+    end get_scc_count
+
+    component_id = proc (gs: cvt, vertex: int) returns (int) signals (bad_vertex)
+        validate_vertex(gs, vertex) resignal bad_vertex
+        return(gs.component_ids[vertex])
+    end component_id
+
+    is_strongly_connected = proc (gs: cvt, v, w: int) returns (bool) signals (bad_vertex)
+        validate_vertex(gs, v) resignal bad_vertex
+        validate_vertex(gs, w) resignal bad_vertex
+        return(gs.component_ids[v] ~= undefined cand
+            gs.component_ids[v] = gs.component_ids[w]);
+    end is_strongly_connected
+
+    dfs = proc (gs: rep, dg: digraph, vertex: int)
+        gs.visited[vertex] := true
+        gs.preorders[vertex] := gs.preorder_count
+        gs.preorder_count := gs.preorder_count + 1
+        array[int]$addh(gs.visited_vertices_stack, vertex)
+        array[int]$addh(gs.aux_stack, vertex)
+
+        for adjacent: int in sequence[int]$elements(digraph$adjacency_list(dg, vertex)) do
+            if ~gs.visited[adjacent] then
+                dfs(gs, dg, adjacent)
+            elseif gs.component_ids[adjacent] = undefined then
+                while ~array[int]$empty(gs.aux_stack)
+                      cand gs.preorders[array[int]$top(gs.aux_stack)] > gs.preorders[adjacent]
+                do
+                    array[int]$remh(gs.aux_stack)
+                end
+            end
+        end
+
+        if ~array[int]$empty(gs.aux_stack)
+                cand array[int]$top(gs.aux_stack) = vertex then
+            array[int]$remh(gs.aux_stack)
+            while ~array[int]$empty(gs.visited_vertices_stack) do
+                adjacent: int := array[int]$remh(gs.visited_vertices_stack)
+                gs.component_ids[adjacent] := gs.scc_count
+                if adjacent = vertex then break end
+            end
+            gs.scc_count := gs.scc_count + 1
+        end
+    end dfs
+
+    validate_vertex = proc (gs: rep, vertex: int) signals (bad_vertex)
+        if vertex < 0 cor vertex >= array[bool]$size(gs.visited) then
+            signal bad_vertex
+        end
+    end validate_vertex
+end gabow_ssc
+
+start_up = proc ()
+    po: stream := stream$primary_output()
+
+    dg: digraph := digraph$[13:
+        edge${from:  4, to:  2}, edge${from:  2, to:  3}, edge${from:  3, to:  2},
+        edge${from:  6, to:  0}, edge${from:  0, to:  1}, edge${from:  2, to:  0},
+        edge${from: 11, to: 12}, edge${from: 12, to:  9}, edge${from:  9, to: 10},
+        edge${from:  9, to: 11}, edge${from:  8, to:  9}, edge${from: 10, to: 12},
+        edge${from:  0, to:  5}, edge${from:  5, to:  4}, edge${from:  3, to:  5},
+        edge${from:  6, to:  4}, edge${from:  6, to:  9}, edge${from:  7, to:  6},
+        edge${from:  7, to:  8}, edge${from:  8, to:  7}, edge${from:  5, to:  3},
+        edge${from:  0, to:  6}
+    ]
+
+    stream$putl(po, "Digraph has " || int$unparse(dg.vertex_count) ||
+                    " vertices and " || int$unparse(dg.edge_count) ||
+                    " edges.")
+
+    stream$putl(po, "Adjacency lists: ")
+    for v: int in digraph$vertices(dg) do
+        stream$putright(po, int$unparse(v) || ":", 3)
+        for w: int in sequence[int]$elements(digraph$adjacency_list(dg, v)) do
+            stream$puts(po, " " || int$unparse(w))
+        end
+        stream$putl(po, "")
+    end
+
+    stream$putl(po, "")
+
+    gs: gabow_ssc := gabow_ssc$create(dg)
+    stream$putl(po, "It has " || int$unparse(gs.scc_count) ||
+                    " strongly connected components:")
+
+    for c: sequence[int] in gabow_ssc$components(gs) do
+        stream$puts(po, "*")
+        for v: int in sequence[int]$elements(c) do
+            stream$puts(po, " " || int$unparse(v))
+        end
+        stream$putl(po, "")
+    end
+
+    stream$putl(po, "")
+    stream$putl(po, "Example connectivity checks:")
+    for e: edge in sequence[edge]$elements(sequence[edge]$[
+        edge${from: 0, to: 3}, edge${from: 0, to: 7}, edge${from: 9, to: 12}]) do
+        stream$puts(po, "Vertices " || int$unparse(e.from) || " and " ||
+                        int$unparse(e.to) || " strongly connected? ")
+        if gabow_ssc$is_strongly_connected(gs, e.from, e.to) then
+            stream$putl(po, "yes")
+        else
+            stream$putl(po, "no")
+        end
+    end
+
+    stream$putl(po, "Component ID of vertex 5: " ||
+                    int$unparse(gabow_ssc$component_id(gs, 5)))
+    stream$putl(po, "Component ID of vertex 8: " ||
+                    int$unparse(gabow_ssc$component_id(gs, 8)))
+end start_up

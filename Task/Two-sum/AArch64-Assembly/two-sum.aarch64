@@ -1,0 +1,158 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program twosum64.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../includeConstantesARM64.inc"
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessResult:         .asciz "Result : ["
+szMessResult1:        .asciz ","
+szMessResult2:        .asciz "]\n"
+szMessStart:          .asciz "Program 64 bits start.\n"
+szCarriageReturn:     .asciz "\n"
+szMessErreur:         .asciz "No soluce ! \n"
+
+tabArray:       .quad 0, 2, 11, 19, 90
+.equ TABARRAYSIZE,    (. - tabArray) / 8
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:             .skip 24
+sZoneConv1:            .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                            // entry of program
+    ldr x0,qAdrszMessStart
+    bl affichageMess
+    ldr x0,qAdrtabArray
+    mov x1,#21
+    bl rechTwoNumbers
+    cmp x0,#-1                   // no soluce
+    beq 100f
+    mov x2,x1
+    ldr x1,qAdrsZoneConv
+    bl conversion10              // decimal conversion
+    strb wzr,[x1,x0]
+    mov x0,x2
+    ldr x1,qAdrsZoneConv1
+    bl conversion10              // decimal conversion
+    strb wzr,[x1,x0]
+    mov x0,#5                   // number string to display
+    ldr x1,qAdrszMessResult
+    ldr x2,qAdrsZoneConv         // insert conversion in message
+    ldr x3,qAdrszMessResult1
+    ldr x4,qAdrsZoneConv1
+    ldr x5,qAdrszMessResult2
+    stp x5,x4,[sp,-16]!         // save  registers
+    bl displayStrings            // display message
+    add sp,sp,#16
+100:                              // standard end of the program
+    mov x0, #0                    // return code
+    mov x8,EXIT
+    svc #0                        // perform the system call
+qAdrszCarriageReturn:        .quad szCarriageReturn
+qAdrsZoneConv:               .quad sZoneConv
+qAdrsZoneConv1:               .quad sZoneConv1
+qAdrszMessResult:            .quad szMessResult
+qAdrszMessResult1:           .quad szMessResult1
+qAdrszMessResult2:           .quad szMessResult2
+qAdrszMessErreur:            .quad szMessErreur
+qAdrszMessStart:             .quad szMessStart
+qAdrtabArray:                .quad tabArray
+/******************************************************************/
+/*     search two numbers to sum                                  */
+/******************************************************************/
+/*  x0  array addressr */
+/*  x1  sum  */
+/*  x0 return first index  */
+/*  x1 return second index  */
+rechTwoNumbers:
+    stp x2,lr,[sp,-16]!        // save  registers
+    stp x3,x4,[sp,-16]!        // save  registers
+    stp x5,x6,[sp,-16]!        // save  registers
+    stp x7,x8,[sp,-16]!        // save  registers
+    mov x3,#0                  // init result
+ 1:                            // loop
+    ldr x4,[x0,x3,lsl #3]      // load first number
+    mov x5,x3                  // indice2
+ 2:
+    ldr x6,[x0,x5,lsl #3]      // load 2th number
+    add x7,x6,x4               // add the two numbers
+    cmp x7,x1                  // equal to origin
+    beq 3f                     // yes -> ok
+    add x5,x5,#1               // increment indice2
+    cmp x5,#TABARRAYSIZE       // end ?
+    blt 2b                     // no -> loop
+    add x3,x3,#1               // increment indice1
+    cmp x3,#TABARRAYSIZE - 1   // end ?
+    blt 1b                     // no loop
+                               // not found
+    ldr x0,qAdrszMessErreur
+    bl affichageMess
+    mov x0,#-1
+    mov x1,#-1
+    b 100f                     // end
+ 3:
+    mov x0,x3                  // return results
+    mov x1,x5
+ 100:
+    ldp x7,x8,[sp],16        // restaur  registers
+    ldp x5,x6,[sp],16        // restaur  registers
+    ldp x3,x4,[sp],16        // restaur  registers
+    ldp x2,lr,[sp],16        // restaur  registers
+    ret
+/***************************************************/
+/*   display multi strings                    */
+/***************************************************/
+/* x0  contains number strings address */
+/* x1 address string1 */
+/* x2 address string2 */
+/* x3 address string3 */
+/* other address on the stack */
+/* thinck to add  number other address * 4 to add to the stack */
+displayStrings:            // INFO:  displayStrings
+    stp x1,lr,[sp,-16]!    // save  registers
+    stp x2,x3,[sp,-16]!    // save  registers
+    stp x4,x5,[sp,-16]!    // save  registers
+    add fp,sp,#48          // save paraméters address (6 registers saved * 8 bytes)
+    mov x4,x0              // save strings number
+    cmp x4,#0              // 0 string -> end
+    ble 100f
+    mov x0,x1              // string 1
+    bl affichageMess
+    cmp x4,#1              // number > 1
+    ble 100f
+    mov x0,x2
+    bl affichageMess
+    cmp x4,#2
+    ble 100f
+    mov x0,x3
+    bl affichageMess
+    cmp x4,#3
+    ble 100f
+    mov x3,#3
+    sub x2,x4,#4
+1:                         // loop extract address string on stack
+    ldr x0,[fp,x2,lsl #3]
+    bl affichageMess
+    subs x2,x2,#1
+    bge 1b
+100:
+    ldp x4,x5,[sp],16        // restaur  registers
+    ldp x2,x3,[sp],16        // restaur  registers
+    ldp x1,lr,[sp],16        // restaur  registers
+    ret
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../includeARM64.inc"

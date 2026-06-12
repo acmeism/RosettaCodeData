@@ -1,0 +1,115 @@
+putc    equ     2       ; CP/M BDOS functions
+puts    equ     9
+        org     100h
+        jmp     demo
+
+        ; Find longest common prefix of $-terminated strings
+        ; Input: HL = pointer to input string pointers, terminated with NULL
+        ;        BC = pointer to output buffer
+lcp:    mvi     a,'$'   ; Base case 1, empty string
+        stax    b
+        call    nexptr  ; Get first string
+        rz              ; Empty array => empty string
+        push    b       ; Copy first string into output buffer
+        xchg
+lcopy:  mov     a,m
+        stax    b
+        inx     h
+        inx     b
+        cpi     '$'
+        jnz     lcopy
+lstr:   pop     b       ; Back to beginning of output buffer
+        xchg
+        call    nexptr  ; Get next string
+        rz              ; NULL => done
+        push    b
+        xchg
+lcomp:  ldax    b       ; Compare to current output
+        cmp     m
+        jnz     lcut    ; Mismatch
+        inx     h
+        inx     b
+        cpi     '$'
+        jnz     lcomp
+        jmp     lstr
+lcut:   mvi     a,'$'   ; Shorten string
+        stax    b
+        jmp     lstr
+
+        ; Load next pointer from HL into DE, set Z if end
+nexptr: mov     e,m
+        inx     h
+        mov     d,m
+        inx     h
+        mov     a,d
+        ora     e
+        ret
+
+        ; Demo code
+demo:   lxi     h,tests
+dotest: call    nexptr          ; Get test case
+        rz
+        push    h
+        xchg
+        push    h
+        call    dsparr          ; Display test case
+        lxi     d,arrow
+        mvi     c,puts
+        call    5
+        pop     h
+        lxi     b,buf           ; Find longest common prefix
+        call    lcp
+        lxi     d,buf           ; Print result
+        call    dspstr
+        lxi     d,newlin
+        mvi     c,puts
+        call    5
+        pop     h
+        jmp     dotest
+arrow:  db      '=> $'
+newlin: db      13,10,'$'
+
+tests:  dw      t1, t2, t3, t4, t5, t6, t7, t8, t9, 0
+t1:     dw      inter1, inter2, inter3, 0
+t2:     dw      throne, throne, 0
+t3:     dw      throne, dungeo, 0
+t4:     dw      throne, empty, dungeo, 0
+t5:     dw      cheese, 0
+t6:     dw      empty, 0
+t7:     dw      0
+t8:     dw      prefix, suffix, 0
+t9:     dw      foo, foobar, 0
+
+inter1: db      'interspecies$'
+inter2: db      'interstellar$'
+inter3: db      'interstate$'
+throne: db      'throne$'
+dungeo: db      'dungeon$'
+empty:  db      '$'
+cheese: db      'cheese$'
+prefix: db      'prefix$'
+suffix: db      'suffix$'
+foo:    db      'foo$'
+foobar: db      'foobar$'
+
+        ; Print each string in an array of strings
+dsparr: call    nexptr  ; Get next string
+        rz              ; NULL = stop
+        push    h
+        call    dspstr
+        pop     h
+        jmp     dsparr
+
+        ; Print string in DE surrounded by quotes
+dspstr: push    d
+        mvi     e,'"'
+        mvi     c,putc
+        call    5
+        pop     d
+        mvi     c,puts
+        call    5
+        lxi     d,qspc
+        mvi     c,puts
+        jmp     5
+qspc:   db      '" $'
+buf     equ     $

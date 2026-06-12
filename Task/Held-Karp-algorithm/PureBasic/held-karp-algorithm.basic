@@ -1,0 +1,115 @@
+Procedure.d HeldKarp(*distMatrix.Double, n.i, *resultPath.Integer)
+  ; n = number of cities
+  Define numMask.i = 1 << n
+
+  Define INF.d = 1.7976931348623157e+308 ; Maximum value for a double
+
+  ; Allocate memory for dp array: dp[mask][j] = minimum cost to reach subset 'mask' and end at node j
+  Dim dp.d(numMask-1, n-1)
+
+  ; Allocate memory for parent array: parent[mask][j] = previous node before j in optimal path for (mask, j)
+  Dim parent.i(numMask-1, n-1)
+
+  ; Initialize dp with infinity and parent with -1
+  For mask = 0 To numMask-1
+    For j = 0 To n-1
+      dp(mask, j) = INF
+      parent(mask, j) = -1
+    Next j
+  Next mask
+
+  ; Base case: start at node 0, mask = 1<<0
+  dp(1, 0) = 0
+
+  ; Iterate over all subsets that include node 0
+  For mask = 1 To numMask-1
+    If (mask & 1) = 0 : Continue : EndIf ; We always require the tour to start at node 0
+
+    For j = 1 To n-1
+      If ((mask ! (1 << j)) = 0) : Continue : EndIf ; j not in subset
+
+      prevMask = mask ! (1 << j)
+
+      ; Try all possibilities of coming to j from some k in prevMask
+      For k = 0 To n-1
+        If ((prevMask & (1 << k)) <> 0)
+          ; Get the distance from k to j from the distance matrix
+          distKJ.d = PeekD(*distMatrix + (k * n + j) * SizeOf(Double))
+          cost.d = dp(prevMask, k) + distKJ
+
+          If cost < dp(mask, j)
+            dp(mask, j) = cost
+            parent(mask, j) = k
+          EndIf
+        EndIf
+      Next k
+    Next j
+  Next mask
+
+  ; Close the tour: return to node 0
+  fullMask = (1 << n) - 1
+  minCost.d = INF
+  last = -1
+
+  For j = 1 To n-1
+    ; Get the distance from j to 0 from the distance matrix
+    distJ0.d = PeekD(*distMatrix + (j * n + 0) * SizeOf(Double))
+    cost.d = dp(fullMask, j) + distJ0
+
+    If cost < minCost
+      minCost = cost
+      last = j
+    EndIf
+  Next j
+
+  ; Reconstruct path
+  pathIndex = n
+  PokeI(*resultPath + pathIndex * SizeOf(Integer), 0) ; End at node 0
+  pathIndex - 1
+
+  mask = fullMask
+  curr = last
+
+  While curr <> -1 And curr <> 0
+    PokeI(*resultPath + pathIndex * SizeOf(Integer), curr)
+    pathIndex - 1
+
+    prev = parent(mask, curr)
+    mask = mask ! (1 << curr)
+    curr = prev
+  Wend
+
+  PokeI(*resultPath + pathIndex * SizeOf(Integer), 0) ; Start at node 0
+
+  ProcedureReturn minCost
+EndProcedure
+
+OpenConsole()
+; Example test case: 4 cities, symmetric distance matrix
+n = 4
+
+; Create and initialize the distance matrix directly
+Dim distMatrix.d(n-1, n-1)
+distMatrix(0, 0) = 0  : distMatrix(0, 1) = 2  : distMatrix(0, 2) = 9  : distMatrix(0, 3) = 10
+distMatrix(1, 0) = 1  : distMatrix(1, 1) = 0  : distMatrix(1, 2) = 6  : distMatrix(1, 3) = 4
+distMatrix(2, 0) = 15 : distMatrix(2, 1) = 7  : distMatrix(2, 2) = 0  : distMatrix(2, 3) = 8
+distMatrix(3, 0) = 6  : distMatrix(3, 1) = 3  : distMatrix(3, 2) = 12 : distMatrix(3, 3) = 0
+
+; Allocate memory for the path
+Dim path.i(n) ; For a 4-city problem, the path has 5 elements (including return to start)
+
+; Call the Held-Karp algorithm
+minCost.d = HeldKarp(@distMatrix(0, 0), n, @path(0))
+
+PrintN("Minimum tour cost: " + StrD(minCost))
+Print("Tour: ")
+
+For i = 0 To n
+  Print(Str(path(i)))
+  If i < n
+    Print(" -> ")
+  EndIf
+Next
+
+Input()
+CloseConsole()

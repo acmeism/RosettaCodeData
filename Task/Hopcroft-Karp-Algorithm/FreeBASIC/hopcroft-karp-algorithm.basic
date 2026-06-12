@@ -1,0 +1,385 @@
+' Constants
+Const NULL As Any Ptr = 0
+Const NIL As Integer = 0
+Const INF As Double = 1e308 ' Equivalent to float('inf') in Python
+Dim Shared success As Integer = 0
+
+Type HKGraph
+    m As Integer ' Number of vertices in left partition (U)
+    n As Integer ' Number of vertices in right partition (V)
+
+    ' Adjacency list: adj[u] contains list of neighbors of u in V
+    ' We'll use dynamic arrays to simulate the Python lists
+    adj As Integer Ptr Ptr
+    adj_size As Integer Ptr ' Size of each adjacency list
+    adj_capacity As Integer Ptr ' Capacity of each adjacency list
+
+    ' Matching pairs
+    pair_u As Integer Ptr ' pair_u[u] stores the vertex v in V matched with u in U
+    pair_v As Integer Ptr ' pair_v[v] stores the vertex u in U matched with v in V
+
+    ' Distance array for BFS
+    dist As Double Ptr ' dist[u] stores the distance of vertex u in U during BFS
+
+    Declare Constructor(m As Integer, n As Integer)
+    Declare Destructor()
+    Declare Sub add_edge(u As Integer, v As Integer)
+    Declare Function bfs() As Boolean
+    Declare Function dfs(u As Integer) As Boolean
+    Declare Function hopcroft_karp_algorithm() As Integer
+End Type
+
+' Queue implementation for BFS
+Type Queue
+    dato As Integer Ptr
+    front As Integer
+    rear As Integer
+    capacity As Integer
+    size As Integer
+
+    Declare Constructor()
+    Declare Destructor()
+    Declare Sub enqueue(item As Integer)
+    Declare Function dequeue() As Integer
+    Declare Function isEmpty() As Boolean
+End Type
+
+Constructor Queue()
+    capacity = 1000 ' Initial capacity
+    dato = Allocate(capacity * Sizeof(Integer))
+    front = 0
+    rear = -1
+    size = 0
+End Constructor
+
+Destructor Queue()
+    If dato <> NULL Then Deallocate(dato)
+End Destructor
+
+Sub Queue.enqueue(item As Integer)
+    If size = capacity Then
+        ' Resize the queue if needed
+        capacity *= 2
+        dato = Reallocate(dato, capacity * Sizeof(Integer))
+    End If
+
+    rear = (rear + 1) Mod capacity
+    dato[rear] = item
+    size += 1
+End Sub
+
+Function Queue.dequeue() As Integer
+    If isEmpty() Then Return -1 ' Error: queue is empty
+
+    Dim item As Integer = dato[front]
+    front = (front + 1) Mod capacity
+    size -= 1
+    Return item
+End Function
+
+Function Queue.isEmpty() As Boolean
+    Return (size = 0)
+End Function
+
+' HKGraph implementation
+Constructor HKGraph(m As Integer, n As Integer)
+    This.m = m
+    This.n = n
+
+    Dim As Integer i
+    ' Initialize adjacency lists
+    adj = Allocate((m + 1) * Sizeof(Integer Ptr))
+    adj_size = Allocate((m + 1) * Sizeof(Integer))
+    adj_capacity = Allocate((m + 1) * Sizeof(Integer))
+
+    For i = 0 To m
+        adj_size[i] = 0
+        adj_capacity[i] = 10 ' Initial capacity
+        adj[i] = Allocate(adj_capacity[i] * Sizeof(Integer))
+    Next
+
+    ' Initialize matching pairs
+    pair_u = Allocate((m + 1) * Sizeof(Integer))
+    pair_v = Allocate((n + 1) * Sizeof(Integer))
+
+    ' Initialize distance array
+    dist = Allocate((m + 1) * Sizeof(Double))
+
+    ' Set initial values
+    For i = 0 To m
+        pair_u[i] = NIL
+    Next
+
+    For i = 0 To n
+        pair_v[i] = NIL
+    Next
+End Constructor
+
+Destructor HKGraph()
+    ' Free all allocated memory
+    For i As Integer = 0 To m
+        If adj[i] <> NULL Then Deallocate(adj[i])
+    Next
+
+    If adj <> NULL Then Deallocate(adj)
+
+    If adj_size <> NULL Then Deallocate(adj_size)
+
+    If adj_capacity <> NULL Then Deallocate(adj_capacity)
+
+    If pair_u <> NULL Then Deallocate(pair_u)
+
+    If pair_v <> NULL Then Deallocate(pair_v)
+
+    If dist <> NULL Then Deallocate(dist)
+End Destructor
+
+Sub HKGraph.add_edge(u As Integer, v As Integer)
+    ' Ensure vertices are within the valid range
+    If u >= 1 Andalso u <= m Andalso v >= 1 Andalso v <= n Then
+        ' Check if we need to resize the adjacency list
+        If adj_size[u] = adj_capacity[u] Then
+            adj_capacity[u] *= 2
+            adj[u] = Reallocate(adj[u], adj_capacity[u] * Sizeof(Integer))
+        End If
+
+        ' Add v to u's adjacency list
+        adj[u][adj_size[u]] = v
+        adj_size[u] += 1
+    End If
+End Sub
+
+Function HKGraph.bfs() As Boolean
+    Dim queue As Queue
+    Dim As Integer u, i, v
+
+    ' Initialize distances for vertices in U
+    For u = 1 To m
+        If pair_u[u] = NIL Then
+            ' If u is a free vertex, its distance is 0, add to queue
+            dist[u] = 0
+            queue.enqueue(u)
+        Else
+            ' Otherwise, set distance to infinity initially
+            dist[u] = INF
+        End If
+    Next
+
+    ' Distance to the NIL node represents the length of the shortest augmenting path
+    dist[NIL] = INF
+
+    While Not queue.isEmpty()
+        u = queue.dequeue()
+
+        ' If the path through u can potentially lead to a shorter augmenting path
+        If dist[u] < dist[NIL] Then
+            ' Explore neighbors v of u in V
+            For i = 0 To adj_size[u] - 1
+                v = adj[u][i]
+                Dim matched_u As Integer = pair_v[v] ' Get the vertex u' matched with v
+
+                ' If the matched vertex u' hasn't been visited yet (its distance is INF)
+                If dist[matched_u] = INF Then
+                    ' Set the distance of u' based on u
+                    dist[matched_u] = dist[u] + 1
+                    ' Enqueue u' to explore further
+                    queue.enqueue(matched_u)
+                End If
+            Next
+        End If
+    Wend
+
+    ' If dist[NIL] is still INF, no augmenting path was found
+    Return dist[NIL] <> INF
+End Function
+
+Function HKGraph.dfs(u As Integer) As Boolean
+    If u <> NIL Then
+        ' Explore neighbors v of u in V
+        For i As Integer = 0 To adj_size[u] - 1
+            Dim v As Integer = adj[u][i]
+            Dim matched_u As Integer = pair_v[v] ' Get the vertex u' matched with v
+
+            ' Check if the edge (u, v) leads to a vertex u'
+            ' such that the path u -> v -> u' is part of a shortest augmenting path
+            If dist[matched_u] = dist[u] + 1 Then
+                ' Recursively call DFS on u'
+                If dfs(matched_u) Then
+                    ' If an augmenting path is found starting from u',
+                    ' update the matching: match v with u, and u with v
+                    pair_v[v] = u
+                    pair_u[u] = v
+                    Return True ' Augmentation successful
+                End If
+            End If
+        Next
+
+        ' If no augmenting path was found starting from u through any neighbor v,
+        ' mark u as visited in this DFS phase by setting its distance to INF
+        dist[u] = INF
+        Return False ' Augmentation failed for this path
+    End If
+
+    ' Base case: If u is NIL, it means we have reached the end of an alternating path
+    Return True
+End Function
+
+Function HKGraph.hopcroft_karp_algorithm() As Integer
+    Dim As Integer i
+    ' Initialize matching pairs to NIL (unmatched)
+    For i = 0 To m
+        pair_u[i] = NIL
+    Next
+
+    For i = 0 To n
+        pair_v[i] = NIL
+    Next
+
+    Dim matching_size As Integer = 0 ' Initialize the size of the matching
+
+    ' Keep finding augmenting paths using BFS and DFS until no more exist
+    While bfs()
+        ' For every free vertex u in U
+        For i = 1 To m
+            ' If i is free and an augmenting path starting from i is found via DFS
+            If pair_u[i] = NIL Andalso dfs(i) Then matching_size += 1 ' Increment the matching size
+        Next
+    Wend
+
+    Return matching_size
+End Function
+
+' --- Testing ---
+Sub runTests()
+    ' Runs test cases for the Hopcroft-Karp implementation.
+    Print "Running tests..."
+
+    Dim As Integer result, expected, i, j
+
+    ' Test Case 1: Simple graph with one edge
+    ' m=3, n=5, edges = [(1, 4)] - Expected matching size = 1
+    Print "Test 1: ";
+    Dim g1 As HKGraph = HKGraph(3, 5)
+    g1.add_edge(1, 4)
+
+    result = g1.hopcroft_karp_algorithm()
+    expected = 1
+
+    Print "Result=" & result; ", Expected=" & expected
+    'Print "Test 1"; Iif(result = expected, "Passed", "Failed")
+    If result = expected Then
+        'Print "Test 1 Passed"
+        success = success + 1
+    Else
+        Print "Test 1 Failed"
+    End If
+
+    ' Test Case 2: Graph with multiple edges
+    ' m=6, n=6, edges = [(1,4), (1,5), (5,1)]
+    ' Expected matching size = 2 (e.g., (1,4), (5,1) or (1,5), (5,1))
+
+    Print "Test 2: ";
+    Dim g2 As HKGraph = HKGraph(6, 6)
+    g2.add_edge(1, 4)
+    g2.add_edge(1, 5)
+    g2.add_edge(5, 1)
+
+    result = g2.hopcroft_karp_algorithm()
+    expected = 2
+
+    Print "Result=" & result; ", Expected=" & expected
+    If result = expected Then
+        'Print "Test 2 Passed"
+        success = success + 1
+    Else
+        Print "Test 2 Failed"
+    End If
+
+    ' Test Case 3: Complete Bipartite Graph K_{3,3}
+    ' m=3, n=3, all possible edges. Expected matching size = 3
+    Print "Test 3: ";
+    Dim g3 As HKGraph = HKGraph(3, 3)
+
+    For i = 1 To 3
+        For j = 1 To 3
+            g3.add_edge(i, j)
+        Next
+    Next
+
+    result = g3.hopcroft_karp_algorithm()
+    expected = 3
+
+    Print "Result=" & result; ", Expected=" & expected
+    If result = expected Then
+        'Print "Test 3 Passed"
+        success = success + 1
+    Else
+        Print "Test 3 Failed"
+    End If
+
+    ' Test Case 4: No edges
+    ' m=2, n=2, no edges. Expected matching size = 0
+    Print "Test 4: ";
+    Dim g4 As HKGraph = HKGraph(2, 2)
+
+    result = g4.hopcroft_karp_algorithm()
+    expected = 0
+
+    Print "Result=" & result; ", Expected=" & expected
+    If result = expected Then
+        'Print "Test 4 Passed"
+        success = success + 1
+    Else
+        Print "Test 4 Failed"
+    End If
+
+    If success = 4 Then Print "All tests completed!"
+End Sub
+
+Sub main()
+    ' Run self-tests first
+    runTests()
+
+    Print !"\n--- Running main execution with hard-coded input ---"
+
+    ' --- Hard-coded input data ---
+    Dim v1 As Integer = 4 ' Number of vertices in left partition (m)
+    Dim v2 As Integer = 4 ' Number of vertices in right partition (n)
+
+    ' Create the graph object
+    Dim g As HKGraph = HKGraph(v1, v2)
+
+    ' Hard-coded edges
+    Dim edges(5, 1) As Integer = { {1, 1}, {1, 3}, {2, 3}, {3, 4}, {4, 3}, {4, 2} }
+
+    Dim e As Integer = 6 ' Number of edges
+
+    Print "Hard-coded graph dimensions: m=" & v1 & ", n=" & v2 & ", edges=" & e
+    Print "Adding hard-coded edges:"
+
+    ' Add edges from the hard-coded list
+    For i As Integer = 0 To e - 1
+        Dim u As Integer = edges(i, 0)
+        Dim v As Integer = edges(i, 1)
+
+        Print "  Adding edge: (" & u & ", " & v & ")"
+
+        ' Add edge only if vertices are within valid 1-based range
+        If u >= 1 Andalso u <= v1 Andalso v >= 1 Andalso v <= v2 Then
+            g.add_edge(u, v)
+        Else
+            ' This warning is important if hardcoded data might be invalid
+            Print "Warning: Skipping invalid hard-coded edge (" & u & ", " & v & ") - indices out of range [1.." & v1 & "] or [1.." & v2 & "]"
+        End If
+    Next
+
+    ' Run the Hopcroft-Karp algorithm
+    Dim max_matching_size As Integer = g.hopcroft_karp_algorithm()
+
+    ' Print the result
+    Print !"\nMaximum matching size is"; max_matching_size
+End Sub
+
+main()
+
+Sleep

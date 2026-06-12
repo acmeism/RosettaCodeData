@@ -1,0 +1,165 @@
+Type Vector
+    x As Double
+    y As Double
+    z As Double
+End Type
+
+Type Body
+    mass As Double
+    position As Vector
+    velocity As Vector
+    acceleration As Vector
+End Type
+
+Dim Shared As Integer bodies
+Dim Shared As Integer timeSteps
+Dim Shared As Double gc
+Dim Shared As Body sistema()
+
+' Vector operations
+Function VectorAdd(v1 As Vector, v2 As Vector) As Vector
+    Dim As Vector result
+    result.x = v1.x + v2.x
+    result.y = v1.y + v2.y
+    result.z = v1.z + v2.z
+    Return result
+End Function
+
+Function VectorSub(v1 As Vector, v2 As Vector) As Vector
+    Dim As Vector result
+    result.x = v1.x - v2.x
+    result.y = v1.y - v2.y
+    result.z = v1.z - v2.z
+    Return result
+End Function
+
+Function VectorScale(v As Vector, m As Double) As Vector
+    Dim As Vector result
+    result.x = v.x * m
+    result.y = v.y * m
+    result.z = v.z * m
+    Return result
+End Function
+
+Function VectorMod(v As Vector) As Double
+    Return Sqr(v.x * v.x + v.y * v.y + v.z * v.z)
+End Function
+
+Function VectorEqual(v1 As Vector, v2 As Vector) As Boolean
+    Return (v1.x = v2.x And v1.y = v2.y And v1.z = v2.z)
+End Function
+
+Sub InitiateSystem(useDefault As Boolean = False)
+    If useDefault Then
+        bodies = 3
+        timeSteps = 20
+        gc = 0.1
+        Redim sistema(0 To bodies-1)
+
+        ' Body 1
+        sistema(0).mass = 1
+        sistema(0).position = Type<Vector>(0, 0, 0)
+        sistema(0).velocity = Type<Vector>(0.01, 0, 0)
+
+        ' Body 2
+        sistema(1).mass = 0.1
+        sistema(1).position = Type<Vector>(1, 1, 0)
+        sistema(1).velocity = Type<Vector>(0, 0, 0.02)
+
+        ' Body 3
+        sistema(2).mass = 0.001
+        sistema(2).position = Type<Vector>(0, 1, 1)
+        sistema(2).velocity = Type<Vector>(0.01, -0.01, -0.01)
+
+    Else
+        Dim As String filename = Command(1)
+        Dim As Integer i, ff
+        ff = Freefile
+        Open filename For Input As #ff
+
+        Input #ff, gc, bodies, timeSteps
+        Redim sistema(0 To bodies-1)
+
+        For i = 0 To bodies-1
+            Input #ff, sistema(i).mass
+            Input #ff, sistema(i).position.x, sistema(i).position.y, sistema(i).position.z
+            Input #ff, sistema(i).velocity.x, sistema(i).velocity.y, sistema(i).velocity.z
+        Next
+
+        Close #ff
+    End If
+End Sub
+
+Sub ResolveCollisions()
+    Dim As Integer i, j
+    For i = 0 To bodies-2
+        For j = i+1 To bodies-1
+            If VectorEqual(sistema(i).position, sistema(j).position) Then
+                Dim As Vector tempVel = sistema(i).velocity
+                sistema(i).velocity = sistema(j).velocity
+                sistema(j).velocity = tempVel
+            End If
+        Next
+    Next
+End Sub
+
+Sub ComputeAccelerations()
+    Dim As Integer i, j
+    For i = 0 To bodies-1
+        sistema(i).acceleration = Type(0, 0, 0)
+        For j = 0 To bodies-1
+            If i <> j Then
+                Dim As Vector diff = VectorSub(sistema(j).position, sistema(i).position)
+                Dim As Double temp = gc * sistema(j).mass / (VectorMod(diff) ^ 3)
+                sistema(i).acceleration = VectorAdd(sistema(i).acceleration, VectorScale(diff, temp))
+            End If
+        Next
+    Next
+End Sub
+
+Sub ComputeVelocities()
+    For i As Integer = 0 To bodies-1
+        sistema(i).velocity = VectorAdd(sistema(i).velocity, sistema(i).acceleration)
+    Next
+End Sub
+
+Sub ComputePositions()
+    For i As Integer = 0 To bodies-1
+        Dim As Vector halfAcc = VectorScale(sistema(i).acceleration, 0.5)
+        Dim As Vector velPlusHalfAcc = VectorAdd(sistema(i).velocity, halfAcc)
+        sistema(i).position = VectorAdd(sistema(i).position, velPlusHalfAcc)
+    Next
+End Sub
+
+Sub Simulate()
+    ComputeAccelerations()
+    ComputePositions()
+    ComputeVelocities()
+    ResolveCollisions()
+End Sub
+
+Sub PrintResults()
+    For i As Integer = 0 To bodies-1
+        Print Using "Body ## : ##.######  ##.######  ##.###### |  ##.######  ##.######  ##.######"; _
+        i+1; _
+        sistema(i).position.x; sistema(i).position.y; sistema(i).position.z; _
+        sistema(i).velocity.x; sistema(i).velocity.y; sistema(i).velocity.z
+    Next
+End Sub
+
+' Main program
+If Command(1) = "" Then
+    InitiateSystem(True)  ' Use default values
+Else
+    InitiateSystem(False) ' Use file input
+End If
+
+Print "Body    :      x          y          z    |      vx         vy         vz"
+For i As Integer = 1 To timeSteps
+    Print
+    Print "Cycle "; i
+    Simulate()
+    PrintResults()
+Next
+
+Sleep

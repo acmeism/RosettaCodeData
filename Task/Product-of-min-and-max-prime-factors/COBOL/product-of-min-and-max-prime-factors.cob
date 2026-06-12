@@ -1,0 +1,86 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. MIN-MAX-PRIME-FACTOR-PRODUCT.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01 SIEVE-DATA.
+          03 FLAG-DATA          PIC X(100) VALUE SPACES.
+          03 FLAGS              REDEFINES FLAG-DATA,
+                                PIC X OCCURS 100 TIMES.
+             88 PRIME           VALUE SPACE.
+          03 CUR-PRIME          PIC 9(3).
+          03 CUR-PRIME-SQ       PIC 9(6) VALUE ZERO.
+          03 CUR-COMP           PIC 9(3).
+
+       01 MAIN-VARS.
+          03 CUR                PIC 9(3).
+          03 STEP               PIC S9.
+          03 LOW-FACTOR         PIC 9(3).
+          03 HIGH-FACTOR        PIC 9(3).
+          03 PRODUCT            PIC 9(6).
+          03 CUR-FACTOR         PIC 9(3).
+          03 FACTOR-TEST        PIC 9(3)V9(3) VALUE 0.1.
+          03 FILLER             REDEFINES FACTOR-TEST.
+             05 FILLER          PIC 9(3).
+             05 FILLER          PIC 9(3).
+                88 FACTOR       VALUE ZERO.
+
+       01 OUT-VARS.
+          03 PRODUCT-FMT        PIC Z(5)9.
+          03 TABLE-LINE         PIC X(60) VALUE SPACES.
+          03 TABLE-POS          PIC 99 VALUE 1.
+
+       PROCEDURE DIVISION.
+       BEGIN.
+           PERFORM SIEVE.
+           PERFORM FACTORS-PRODUCT VARYING CUR FROM 1 BY 1
+           UNTIL CUR IS NOT LESS THAN 100.
+
+       FACTORS-PRODUCT.
+           IF CUR IS EQUAL TO 1,
+               MOVE 1 TO LOW-FACTOR, HIGH-FACTOR,
+           ELSE
+               PERFORM FIND-LOW-FACTOR,
+               PERFORM FIND-HIGH-FACTOR.
+           MULTIPLY LOW-FACTOR BY HIGH-FACTOR GIVING PRODUCT.
+           PERFORM WRITE-PRODUCT.
+
+       FIND-LOW-FACTOR.
+           MOVE 2 TO CUR-FACTOR.
+           MOVE 1 TO STEP.
+           PERFORM FIND-FACTOR.
+           MOVE CUR-FACTOR TO LOW-FACTOR.
+
+       FIND-HIGH-FACTOR.
+           MOVE CUR TO CUR-FACTOR.
+           MOVE -1 TO STEP.
+           PERFORM FIND-FACTOR.
+           MOVE CUR-FACTOR TO HIGH-FACTOR.
+
+       FIND-FACTOR.
+           DIVIDE CUR BY CUR-FACTOR GIVING FACTOR-TEST.
+           IF NOT (PRIME(CUR-FACTOR) AND FACTOR),
+               ADD STEP TO CUR-FACTOR,
+               GO TO FIND-FACTOR.
+
+       WRITE-PRODUCT.
+           MOVE PRODUCT TO PRODUCT-FMT.
+           STRING PRODUCT-FMT DELIMITED BY SIZE INTO TABLE-LINE
+           WITH POINTER TABLE-POS.
+           IF TABLE-POS IS GREATER THAN 60,
+               DISPLAY TABLE-LINE,
+               MOVE 1 TO TABLE-POS.
+
+       SIEVE.
+           MOVE 'C' TO FLAGS(1).
+           PERFORM MARK-COMPOSITES VARYING CUR-PRIME FROM 2 BY 1
+           UNTIL CUR-PRIME-SQ IS GREATER THAN 100.
+
+       MARK-COMPOSITES.
+           MULTIPLY CUR-PRIME BY CUR-PRIME GIVING CUR-PRIME-SQ.
+           PERFORM MARK-COMPOSITE
+           VARYING CUR-COMP FROM CUR-PRIME-SQ BY CUR-PRIME
+           UNTIL CUR-COMP IS GREATER THAN 100.
+
+       MARK-COMPOSITE.
+           MOVE 'C' TO FLAGS(CUR-COMP).

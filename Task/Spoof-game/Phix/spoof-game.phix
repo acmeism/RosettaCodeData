@@ -1,0 +1,72 @@
+function get_number(string prompt, integer lo, hi, pot, bool show=false)
+    if show then prompt &= sprintf(" from %d to %d",{lo,hi}) end if
+    printf(1,prompt&" : ")
+    integer n = -1
+    while n<lo or n>hi do
+        n = wait_key()-'0'
+        if n='!'-'0' and not show then
+            printf(1,"\rYou have %d coins in your hand, max guess is %d\r",{lo,hi})
+            sleep(2)
+            printf(1,"                                                 \r")
+            printf(1,prompt&" : ")
+        end if
+    end while
+    if n=pot then
+        printf(1,"**\n")
+    else
+        printf(1,"%d\n",n)
+    end if
+    return n
+end function
+
+constant help = """
+Guess the total number of coins in everybody's hands.
+Inputs/guesses between 1 and 9 can be entered using the keys 1 to 9, but
+just to make life a little more interesting, guesses of 10 .. 54 must be
+entered using :;<=>?@AB ... XYZ[\]^_`abcdef (no return key required).
+Use ! to see your hand, obviously only when no-one else is looking.
+You may not guess less than the number of coins in your hand, or more
+than that plus (players-1)*maxcoins, or any already known wrong guess.
+
+"""
+
+procedure main()
+    printf(1,help)
+    integer players = get_number("Number of players", 2, 9, -1, show:=true),
+            maxcoins = get_number("Max coins per player", 3, 6, -1, show:=true),
+            first = rand(players), next = first
+    printf(1,"player%d goes first\n",first)
+    sequence hands = sq_sub(sq_rand(repeat(maxcoins+1,players)),1),
+             remaining = tagset(players),
+             game_log = repeat("",players),
+             guessed = {}
+    for i=1 to players do
+        game_log[i] = sprintf("player%d:%s",{i,iff(i<first?" -":"")})
+    end for
+    integer pot = sum(hands),
+            rm1 = (players-1)*maxcoins
+    while length(remaining)>1 do
+        integer player = remaining[next],
+                hp = hands[player],
+                guess = get_number(sprintf("player%d guess",player),hp,hp+rm1,pot)
+        if find(guess,guessed) then
+            printf(1,"Already guessed by another player, try again\n");
+        else
+            game_log[player] &= sprintf(" %d",guess)
+            if guess==pot then
+                printf(1,"player%d guessed correctly and is eliminated!\n",player)
+                remaining[next..next] = {}
+            else
+                guessed &= guess
+                next += 1
+            end if
+            if next>length(remaining) then next = 1 end if
+        end if
+    end while
+    printf(1,"hands: %s\n",{sprint(hands)})
+    printf(1,"Game log:\n")
+    pp(game_log,{pp_Nest,1})
+    printf(1,"pot:%d, player%d buys the drinks!\n",{pot,remaining[1]})
+    {} = wait_key()
+end procedure
+main()

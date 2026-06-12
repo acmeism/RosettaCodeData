@@ -1,0 +1,138 @@
+Module FSM {
+	flush
+	Function Logging(New t as string, NewLine as boolean=true, terminal as boolean=true) {
+		' this called only using Call Local (like it is part of the calling module)
+		If terminal Then If NewLine then Print t else Print t;
+		If F>0 then
+			if NewLine then Print #F, t else Print #F, t;
+		end if
+	}
+	CLASS FSM {
+	Events "log"
+	Private:
+		String ResetState
+		StateList=List
+		TransitionList=List
+	Public:
+		Property CurState {
+			value
+		}=""
+		Module AddState (State as string) {
+			State=filter$(State, ";")
+			If not Exist(.StateList, State) then Append .StateList, State
+		}
+		Module AddTransition (State as string, Transition as string, StateTo as string) {
+			State=filter$(State, ";")
+			StateTo=filter$(StateTo, ";")
+			Transition=filter$(Transition, ";")
+			If State="" or StateTo="" then Error "Need State from -> State to"
+			If not Exist(.StateList, State) Then Error "State (from) ";State;" not defined"
+			If not Exist(.StateList, StateTo) Then Error "State (to) ";StateTo;" not defined"
+			If not Exist(.TransitionList, State+";"+Transition) then
+			 	Append .TransitionList, State+";"+Transition:=StateTo
+			else
+				Error "Transtition can't changed"
+			End if
+		}
+		Module SetResetState  (State as string){
+			State=filter$(State, ";")
+			If not Exist(.StateList, State) then Error "State not defined yet"
+			.ResetState<=State
+		}
+		Module Reset {
+			Call Event "Log", "Machine Up"
+			.[CurState]<=.ResetState
+		}
+		Module ShowState {
+			Call Event "Log" "State: "+.[CurState]
+		}
+		Function Action(Transition as string) {
+			Transition=filter$(Transition, ";")
+			=false
+			If Exist(.TransitionList, .[CurState]+";"+Transition) then
+				=True
+				do
+		 			.[CurState]<=Eval$(.TransitionList)
+		 			.ShowState
+				when Exist(.TransitionList, .[CurState]+";")
+			End if		
+		}
+	}
+	
+	Group WithEvents Model=FSM()
+	Function Model_Log (new that) {
+		Call Local Logging(that)
+	}
+	Long i, F
+	Open "Output.txt" for wide output as #F	
+	Call Local Logging("FINITE STATE MASCHINE")
+	Gosub GetData
+	do
+		read thisstate
+		if thisstate="" then exit
+		Model.AddState thisstate
+	always
+	Choice=list
+	N=1
+	do
+		read st1, tr1, st2
+		if st1="" then exit
+		pen 11 {Display(1)}
+		Model.AddTransition st1, tr1, st2
+		If tr1<>"" Then if not exist(Choice, tr1) then Append Choice, N:=tr1:N++
+	always
+	Model.SetResetState   ' value is on stack of values already
+	Model.Reset
+	Model.ShowState
+	Options()
+	do
+		Call Local Logging("Choose :", false)
+		Input "", I
+		Call Local Logging(""+I, ,false)
+		If I<0 or I>Len(Choice) then continue
+		if I=0 then
+			Options()
+		else.if Model.Action(Choice(I)) else
+			Call Local Logging("Bad choice "+I)
+			print "Cheat Mode:"
+			Gosub GetData2
+			do
+				read st1, tr1, st2
+				if st1=Model.CurState and tr1<>"" then
+					pen 15 {Display(0)}
+				end if
+			Until st1=""
+			flush
+			i=0
+			Model.ShowState
+		end if
+	Until I=2
+	Close #f
+	Win "Notepad", dir$+"Output.txt"
+	End
+	Sub Display(how)
+		local b=if$(tr1=""->"to an implicit transition", tr1)
+		Print Part st1;" → ";b;" → ";st2
+		if how=1 then Print Under else Print
+	End Sub
+	Sub Options()
+		local one =each(Choice)
+		while one
+			Call Local Logging("  "+eval$(one!)+"."+eval$(one))
+		end while
+	End Sub
+GetData:
+	Flush
+	Data "ready", "waiting", "exit","dispense","refunding", ""
+GetData2:	
+	Data "ready" , "deposit","waiting"
+	Data "ready", "quit", "exit"
+	Data "waiting","select","dispense"
+	Data "waiting","refund","refunding"
+	Data "dispense", "remove", "ready"
+	Data "refunding","","ready"
+	data "","",""
+	data "ready"
+	Return
+}
+FSM

@@ -1,0 +1,100 @@
+include "cowgol.coh";
+include "strings.coh";
+
+record Ngram is
+    ptr: [uint8];
+    size: intptr;
+    count: intptr;
+end record;
+
+sub PrintNgram(ngram: [Ngram]) is
+    print_char('\'');
+    var ptr := ngram.ptr;
+    var n := ngram.size;
+    while n > 0 loop
+        print_char([ptr]);
+        ptr := @next ptr;
+        n := n - 1;
+    end loop;
+    print("' - ");
+    print_i32(ngram.count as uint32);
+end sub;
+
+sub MemCmp(n: intptr, a: [uint8], b: [uint8]): (eq: uint8) is
+    eq := 1;
+    while n>0 loop
+        if [a] != [b] then
+            eq := 0;
+            return;
+        end if;
+        a := @next a;
+        b := @next b;
+        n := n - 1;
+    end loop;
+end sub;
+
+sub FindNgrams(n: intptr, str: [uint8], result: [Ngram]): (amount: intptr) is
+    var nextres := result;
+    amount := 0;
+
+    sub NewNgram(pos: [uint8]) is
+        nextres.ptr := pos;
+        nextres.size := n;
+        nextres.count := 1;
+        nextres := @next nextres;
+        amount := amount + 1;
+    end sub;
+
+    sub IncNgram(pos: [uint8]) is
+        if amount == 0 then
+            NewNgram(pos);
+            return;
+        end if;
+
+        var curres := result;
+        var left := amount;
+        while left > 0 loop
+            if MemCmp(n, pos, curres.ptr) != 0 then
+                curres.count := curres.count + 1;
+                return;
+            end if;
+            left := left - 1;
+            curres := @next curres;
+        end loop;
+        NewNgram(pos);
+    end sub;
+
+    var charsleft := StrLen(str) - n + 1;
+    while charsleft > 0 loop
+        IncNgram(str);
+        str := @next str;
+        charsleft := charsleft - 1;
+    end loop;
+end sub;
+
+sub ShowNgrams(n: intptr, str: [uint8]) is
+    var ngrams: Ngram[128];
+
+    print_i32(n as uint32);
+    print("-grams of '");
+    print(str);
+    print("':\n");
+
+    var amount := FindNgrams(n, str, &ngrams[0]) as @indexof ngrams;
+    var i: @indexof ngrams := 0;
+    while i < amount loop
+        PrintNgram(&ngrams[i]);
+        if i % 5 == 4
+            then print_nl();
+            else print_char('\t');
+        end if;
+        i := i + 1;
+    end loop;
+    print_nl();
+    print_nl();
+end sub;
+
+var str := "LIVE AND LET LIVE";
+ShowNgrams(2, str);
+ShowNgrams(3, str);
+ShowNgrams(4, str);

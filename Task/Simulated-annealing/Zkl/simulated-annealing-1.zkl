@@ -1,0 +1,59 @@
+var [const] _dists=(0d10_000).pump(List,fcn(abcd){ // two points (a,b) & (c,d), calc distance
+   ab,cd,a,b,c,d:=abcd/100, abcd%100, ab/10,ab%10, cd/10,cd%10;
+   (a-c).toFloat().hypot(b-d)
+});
+fcn dist(ci,cj){ _dists[cj*100 + ci] }  // index into lookup table of floats
+
+fcn Es(path)   // E(s) = length(path): E(a,b,c)--> dist(a,b) + dist(b,c)
+   { d:=Ref(0.0); path.reduce('wrap(a,b){ d.apply('+,dist(a,b)); b }); d.value }
+
+// temperature() function
+fcn T(k,kmax,kT){ (1.0 - k.toFloat()/kmax)*kT }
+
+// deltaE = Es_new - Es_old >  0
+// probability to move if deltaE > 0, -->0 when T --> 0 (frozen state)
+fcn P(deltaE,k,kmax,kT){ (-deltaE/T(k,kmax,kT)).exp() }  //-->Float
+
+//  deltaE from path ( .. a u b .. c v d ..) to (.. a v b ... c u d ..)
+//  deltaE before swapping (u,v)
+fcn dE(s,u,v){ su,sv:=s[u],s[v];  //-->Float
+   // old
+   a,b,c,d:=dist(s[u-1],su), dist(s[u+1],su), dist(s[v-1],sv), dist(s[v+1],sv);
+   // new
+   na,nb,nc,nd:=dist(s[u-1],sv), dist(s[u+1],sv), dist(s[v-1],su), dist(s[v+1],su);
+
+   if     (v==u+1) (na+nd) - (a+d);
+   else if(u==v+1) (nc+nb) - (c+b);
+   else            (na+nb+nc+nd) - (a+b+c+d);
+}
+
+// all 8 neighbours
+var [const] dirs=ROList(1, -1, 10, -10, 9, 11, -11, -9),
+    fmt="k:%10,d T: %8.4f Es: %8.4f".fmt;  // since we use it twice
+
+fcn sa(kmax,kT=10){
+   s:=List(0, [1..99].walk().shuffle().xplode(), 0);  // random path from 0 to 0
+   println("E(s0) %f".fmt(Es(s))); // random starter
+   Emin:=Es(s);		// E0
+
+   foreach k in (kmax){
+      if(0==k%(kmax/10)) println(fmt(k,T(k,kmax,kT),Es(s)));
+      u:=(1).random(100);		// city index 1 99
+      cv:=s[u] + dirs[(0).random(8)];	// city number
+      if(not (0<cv<100))  continue;	// bogus city
+      if(dist(s[u],cv)>5) continue;	// check true neighbour (eg 0 9)
+      v:=s.index(cv,1);			// city index
+
+      deltae:=dE(s,u,v);
+      if(deltae<0 or	// always move if negative
+	    P(deltae,k,kmax,kT)>=(0.0).random(1)){
+	 s.swap(u,v);
+	 Emin+=deltae;
+      }
+      // (assert  (= (round Emin) (round (Es s))))
+   }//foreach
+
+   println(fmt(kmax,T(kmax-1,kmax,kT),Es(s)));
+   println("E(s_final) %f".fmt(Emin));
+   println("Path: ",s.toString(*));
+}

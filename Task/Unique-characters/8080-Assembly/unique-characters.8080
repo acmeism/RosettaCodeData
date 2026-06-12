@@ -1,0 +1,57 @@
+puts:	equ	9		; CP/M print syscall
+TERM:	equ	'$'		; CP/M string terminator	
+	org	100h
+	jmp	demo
+	;;;	Given a list of strings, find characters appearing only
+	;;;	in one string and once only.
+	;;;	Input: DE = list of strings, BC = start of output
+unique:	xra	a		; Zero out the workspace
+	mvi	h,upage
+	mov	l,a
+uzbuf:	mov	m,a
+	inr	l
+	jnz	uzbuf
+	push	d
+ustr:	pop 	h
+	mov	e,m		; Load next string pointer
+	inx	h
+	mov 	d,m
+	inx	h
+	mov	a,d		; End of list?
+	ora	e
+	jz	uclat		; Then go find the uniques
+	push	h		; Otherwise, keep list pointer
+	mvi	h,upage
+uchar:	ldax	d		; Get character
+	cpi	TERM		; Done?
+	jz	ustr		; Then do next string
+	mov	l,a		; Otherwise, count the character
+	inr	m
+	inx	d		; Next character
+	jmp 	uchar
+uclat:	lxi	h,upage*256	; Start of page
+utst:	dcr	m		; Is this character included?
+	jnz	uskip
+	mov	a,l		; If so add it to the output
+	stax	b
+	inx	b
+uskip:	inr	l		; Try next character
+	jnz	utst
+	mvi	a,TERM		; CP/M string terminator
+	stax	b
+	ret
+	;;;	Demo code
+demo:	lxi 	b,outbuf	; Set BC to location of output buffe
+	lxi	d,list		; Set DE to the list of strings
+	call	unique		; Call the code
+	mvi	c,puts		; Print the result
+	lxi	d,outbuf
+	jmp	5
+	;;;	List of strings
+list:	dw	str1, str2, str3, 0
+str1:	db	'133252abcdeeffd', TERM
+str2:	db	'a6789798st', TERM
+str3:	db	'yxcdfgxcyz', TERM
+	;;;	Memory
+upage:	equ	($/256)+1	; Workspace for 'unique'
+outbuf:	equ	(upage+1)*256	; Output

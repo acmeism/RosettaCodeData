@@ -1,0 +1,11 @@
+dim as integer list1(1 to 9) = {1,2,3,4,5,6,7,8,9}
+dim as integer list2(1 to 9) = {10,11,12,13,14,15,16,17,18}
+dim as integer list3(1 to 9) = {19,20,21,22,23,24,25,26,27}
+dim as integer catlist(1 to 9)
+dim as string temp
+
+for i as uinteger = 1 to 9
+    temp = str(list1(i)) + str(list2(i)) + str(list3(i))
+    catlist(i) = val(temp)
+    print catlist(i);" ";
+next i

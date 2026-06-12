@@ -1,0 +1,52 @@
+without js -- no mpfr_zeta[_ui]() in mpfr.js, as yet, or mpfr_log() or mpfr_const_euler(), for that matter
+include mpfr.e
+function moebius(integer n)
+    if n=1 then return 1 end if
+    sequence f = prime_factors(n,true)
+    for i=2 to length(f) do
+        if f[i] = f[i-1] then return 0 end if
+    end for
+    return iff(odd(length(f))?-1:+1)
+end function
+
+function Meissel_Mertens(integer d)
+    mpfr_set_default_precision(-d) -- (d decimal places)
+    mpfr {res,rp,z,y,q} = mpfr_inits(5)
+    for p in {2,3,5,7} do
+        -- z += log(1-1/p)+1/p
+        mpfr_set_si(rp,1)
+        mpfr_div_si(rp,rp,p)
+        mpfr_add(z,z,rp)
+        mpfr_si_sub(rp,1,rp)
+        mpfr_log(rp,rp)
+        mpfr_add(z,z,rp)
+    end for
+    for k=2 to d do -- (see note)
+        integer m = moebius(k)
+        if m then
+            mpfr_set_si(q,1)
+            for p in {2,3,5,7} do
+                -- q *= 1-power(p,-k)
+                mpfr_set_si(rp,p)
+                mpfr_pow_si(rp,rp,-k)
+                mpfr_si_sub(rp,1,rp)
+                mpfr_mul(q,q,rp)
+            end for
+            -- y += moebius(k)*log(zeta(k)*q)/k
+            mpfr_zeta_ui(rp,k)
+            mpfr_mul(rp,rp,q)
+            mpfr_log(rp,rp)
+            mpfr_div_si(rp,rp,k)
+            mpfr_mul_si(rp,rp,m)
+            mpfr_add(y,y,rp)
+        end if
+    end for
+    -- res := EULER+z+y
+    mpfr_const_euler(res)
+    mpfr_add(z,z,y)
+    mpfr_add(res,res,z)
+    return res
+end function
+
+mpfr m = Meissel_Mertens(1001)
+?shorten(mpfr_get_str(m,10,1001))

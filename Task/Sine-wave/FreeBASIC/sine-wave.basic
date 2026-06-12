@@ -1,0 +1,117 @@
+Enum FLAGS
+    _ASYNC       = &h000001
+    _NODEFAULT   = &h000002
+    _MEMORY      = &h000004
+    _LOOP        = &h000008
+    _NOSTOP      = &h000010
+    _PURGE       = &h000040
+    _APPLICATION = &h000080
+    _NOWAIT      = &h002000
+    _ALIAS       = &h010000
+    _FILENAME    = &h020000
+    _RESOURCE    = &h040000 Or _MEMORY
+    _ALIAS_ID    = &h100000 Or _ALIAS
+End Enum
+
+#define    PLAYFLAG _NOWAIT Or _NOSTOP Or _MEMORY Or _ASYNC
+#define SNDPLAYFLAG            _NOSTOP Or _MEMORY Or _ASYNC
+#define FCC(c) *(cptr(Uinteger Ptr,@##c))
+Declare Function    PlayMemory Alias "PlaySoundA"    (Byval As Any Ptr, Byval hModule As Any Ptr = 0, Byval flag As Integer = PLAYFLAG) As Integer
+Declare Function sndPlayMemory Alias "sndPlaySoundA" (Byval As Any Ptr, Byval flag As Uinteger = SNDPLAYFLAG) As Integer
+#inclib "winmm"
+
+Sub PrepareBuffer(Byval lpBuffer As Any Ptr, _
+    Byval nSamples  As Uinteger, _
+    Byval nRate     As Uinteger = 44100, _
+    Byval nBits     As Uinteger = 16, _
+    Byval nChannels As Uinteger = 2)
+
+    Dim As Uinteger Ptr h = lpBuffer
+    Dim As Uinteger BlkAlign = (nBits\8) * nChannels
+    Dim As Uinteger DataSize = BlkAlign * nSamples
+    h[ 0]=FCC("RIFF")                   ' RIFF chunk
+    h[ 1]=36 + DataSize                 ' size of WAVE chunk + data size
+    h[ 2]=FCC("WAVE")                   ' WAVE chunk
+    h[ 3]=FCC("fmt ")                   ' fmt chunk
+    h[ 4]=16                            ' size of fmt chunk
+    h[ 5]=(nChannels Shl 16) Or 1       ' channels + PCM_FORMAT flag
+    h[ 6]=nRate                         ' playback rate
+    h[ 7]=BlkAlign*nRate                ' bytes per sec.
+    h[ 8]=(nBits Shl 16) Or BlkAlign    ' bits per sample + blockalign
+    h[ 9]=FCC("data")                   ' data chunk
+    h[10]=DataSize                      ' size of data chunk
+End Sub
+
+Type PCM_SAMPLE Field = 2
+    As Short l, r                       ' left and right channel
+End Type
+
+Sub Sound (Frequency As Double, Duration As Single, MaxVol As Integer = 128,_
+    ca As Single = 0, cd As Single = 0, csl As Single = 1, cr As Single = 0,_
+    MFrequency As Double = 0, ModStart As Double = 0, MaxModulator As Double = 0,_
+    ma As Single = 0, md As Single = 0, msl As Single = 1, mr As Single = 0)
+
+    Const nBuffers = 2
+    Var nSamples = 44100*Int(Duration/18.2) ' seconds
+    Var CS = 1 - CA - CD - CR
+    Var MS = 1 - MA - MD - MR
+
+    Dim As Double CEnvelopeInc, CEnvelopeDecD, CEnvelopeDecR
+    CEnvelopeInc  = 100 * MaxVol / (nSamples * CA + 1)
+    CEnvelopeDecD = 100 * MaxVol * (1 - CSL) / (nSamples * CD + 1)
+    CEnvelopeDecR = 100 * MaxVol * CSL / (nSamples * CR + 1)
+
+    CD = CD + CA : CS = CS + CD : CR = CR + CS
+
+    Dim As Double MEnvelopeInc, MEnvelopeDecD, MEnvelopeDecR
+    MEnvelopeInc  = MaxModulator / (nSamples * MA + 1)
+    MEnvelopeDecD = MaxModulator * (1 - MSL) / (nSamples * MD + 1)
+    MEnvelopeDecR = MaxModulator * MSL / (nSamples * MR + 1)
+
+    MD = MD + MA : MS = MS + MD : MR = MR + MS
+
+    Dim As PCM_SAMPLE PlayBuffers(nBuffers-1, -22 To nSamples-1)
+    For i As Integer = 0 To nBuffers-1
+        PrepareBuffer(@PlayBuffers(i,-22), nSamples)
+    Next
+
+    Dim Waveform As Single
+    Dim Modulator As Single
+    Dim As Integer buffer,ret
+    Dim Volume As Double = 0
+    Dim MAmp As Double = 0
+
+    ' fill the first buffer with sine wave
+    For i As Integer = 0 To nSamples-1
+
+        If i <= CA * nSamples Then
+            Volume = Volume + CEnvelopeInc
+        Elseif i < CD * nSamples Then
+            Volume = Volume - CEnvelopeDecD
+        Elseif i < CS * nSamples Then
+        Elseif i < CR * nSamples Then
+            Volume = Volume - CEnvelopeDecR
+        End If
+
+        If i <= MA * nSamples Then
+            Mamp = Mamp + MEnvelopeInc
+        Elseif i < MD * nSamples Then
+            Mamp = Mamp - MEnvelopeDecD
+        Elseif i < MS * nSamples Then
+        Elseif i < MR * nSamples Then
+            Mamp = Mamp - MEnvelopeDecR
+        End If
+
+        Modulator = Cos(6.28/44100 * i * MFrequency + ModStart) * MAmp
+        Waveform  = Sin(6.28/44100 * i * Frequency + Modulator) * Volume
+        PlayBuffers(buffer,i).l = Waveform
+        PlayBuffers(buffer,i).r = Waveform
+    Next
+
+    ret = PlayMemory(@PlayBuffers(buffer, -22))
+End Sub
+
+
+Sound 440, 5000
+'This is the base syntax, works exactly like in QB
+'Sound Frequency, Duration , Volume, A, D, S, R, ModFreq, ModStart, ModAmplitude, MA, MD, MS, MR

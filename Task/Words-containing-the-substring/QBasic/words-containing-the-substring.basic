@@ -1,0 +1,7 @@
+OPEN "unixdict.txt" FOR INPUT AS #1
+WHILE NOT EOF(1)
+  LINE INPUT #1, W$
+  IF LEN(W$) > 11 AND INSTR(W$, "the") THEN PRINT W$
+WEND
+CLOSE #1
+END

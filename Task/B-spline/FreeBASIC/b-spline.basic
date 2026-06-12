@@ -1,0 +1,114 @@
+Type Point2D
+    x As Integer
+    y As Integer
+End Type
+
+Type BSpline
+    controlPoints(Any) As Point2D
+    n As Integer
+    k As Integer
+    t(Any) As Integer
+End Type
+
+Function CreateRange(fromVal As Integer, toVal As Integer) As Integer Ptr
+    Dim As Integer Ptr range = CAllocate((toVal - fromVal + 1) * SizeOf(Integer))
+    For i As Integer = 0 To toVal - fromVal
+        range[i] = fromVal + i
+    Next
+    Return range
+End Function
+
+Function CreateBspline(controlPoints() As Point2D, k As Integer) As BSpline
+    Dim bs As BSpline
+
+    nn = UBound(controlPoints)
+    kk = k
+
+    ReDim bs.controlPoints(nn)
+    For i As Integer = 0 To nn
+        bs.controlPoints(i) = controlPoints(i)
+    Next
+
+    ReDim bs.t(nn + k)
+    For i As Integer = 0 To nn + k
+        bs.t(i) = i + 1
+    Next
+
+    Return bs
+End Function
+
+Function Helper(bs As BSpline, i As Integer, k As Integer, x As Single) As Single
+    If bs.t(i + k) <> bs.t(i) Then Return (x - bs.t(i)) / (bs.t(i + k) - bs.t(i))
+    Return 0
+End Function
+
+Function CalculateBspline(bs As BSpline, i As Integer, k As Integer, x As Single) As Single
+    If k = 1 Then
+        If bs.t(i) <= x AndAlso x < bs.t(i + 1) Then Return 1
+        Return 0
+    End If
+
+    Return Helper(bs, i, k-1, x) * CalculateBspline(bs, i, k-1, x) + _
+           (1 - Helper(bs, i+1, k-1, x)) * CalculateBspline(bs, i+1, k-1, x)
+End Function
+
+Sub PlotBspline(bs As BSpline)
+    If kk > nn OrElse kk < 1 Then
+        Print "k (= " & kk & ") can't be more than " & nn & " or less than 1."
+        Exit Sub
+    End If
+
+    Dim As Integer lastX, lastY
+    Dim As Boolean firstPoint = True
+
+    ScreenRes 400, 400, 32
+    WindowTitle "B-spline curve"
+    Cls
+
+    ' Draw control points
+    For i As Integer = 0 To nn
+        Circle (bs.controlPoints(i).x, bs.controlPoints(i).y), 3, RGB(255,0,0)
+    Next
+
+    ' Calculate and draw B-spline points
+    For x As Single = bs.t(kk-1) To bs.t(nn + 1) Step 0.1
+        Dim As Single sumX = 0, sumY = 0
+
+        For i As Integer = 0 To nn
+            Dim As Single f = CalculateBspline(bs, i, kk, x)
+            sumX += f * bs.controlPoints(i).x
+            sumY += f * bs.controlPoints(i).y
+        Next
+
+        If firstPoint Then
+            lastX = CInt(sumX)
+            lastY = CInt(sumY)
+            firstPoint = False
+        Else
+            Line (lastX, lastY)-(CInt(sumX), CInt(sumY)), RGB(255,255,255)
+            lastX = CInt(sumX)
+            lastY = CInt(sumY)
+        End If
+    Next
+End Sub
+
+' Main program
+Dim controlPoints(11) As Point2D
+controlPoints(0) = Type<Point2D>(171, 171)
+controlPoints(1) = Type<Point2D>(185, 111)
+controlPoints(2) = Type<Point2D>(202, 109)
+controlPoints(3) = Type<Point2D>(202, 189)
+controlPoints(4) = Type<Point2D>(328, 160)
+controlPoints(5) = Type<Point2D>(208, 254)
+controlPoints(6) = Type<Point2D>(241, 330)
+controlPoints(7) = Type<Point2D>(164, 252)
+controlPoints(8) = Type<Point2D>(69, 278)
+controlPoints(9) = Type<Point2D>(139, 208)
+controlPoints(10) = Type<Point2D>(72, 148)
+controlPoints(11) = Type<Point2D>(168, 172)
+
+Dim bs As BSpline = CreateBspline(controlPoints(), 4)
+PlotBspline(bs)
+Bsave "B-spline_FreeBASIC.bmp", 0
+
+Sleep

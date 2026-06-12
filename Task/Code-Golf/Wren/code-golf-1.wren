@@ -1,0 +1,1 @@
+System.write("Code Golf")

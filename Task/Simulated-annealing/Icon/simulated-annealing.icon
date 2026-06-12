@@ -1,0 +1,179 @@
+link printf
+link random
+
+procedure main ()
+  local initial_path
+  local final_path
+  local kT, kmax
+
+  randomize()
+
+  kT := 1.0
+  kmax := 1000000
+
+  write()
+  write("   kT:   ", kT)
+  write("   kmax: ", kmax)
+  write()
+  write("       k       T       E(s)")
+  write(" --------------------------")
+  initial_path := randomize_path_vector()
+  final_path := simulate_annealing (kT, kmax, initial_path)
+  write()
+  display_path (final_path)
+  write()
+  write()
+  printf("Final E(s): %.2r\n", path_length(final_path))
+  write()
+end
+
+procedure randomize_path_vector ()
+  local path
+  local i, j
+
+  path := []
+  every put (path, 0 to 99)
+
+  # Shuffle elements 2 to 0.
+  every i := 1 to 98 do {
+    j := ?(99 - i) + i + 1
+    path[i + 1] :=: path[j + 1]
+  }
+
+  return path
+end
+
+procedure distance (loc1, loc2)
+  local i1, j1
+  local i2, j2
+  local di, dj
+
+  i1 := loc1 / 10
+  j1 := loc1 % 10
+  i2 := loc2 / 10
+  j2 := loc2 % 10
+  di := i1 - i2
+  dj := j1 - j2
+  return sqrt ((di * di) + (dj * dj))
+end
+
+procedure path_length (path)
+  local i
+  local len
+
+  len := distance(path[1], path[100])
+  every i := 1 to 99 do len +:= distance(path[i], path[i + 1])
+  return len
+end
+
+procedure find_neighbors (loc)
+  local c1, c2, c3, c4, c5, c6, c7, c8
+  local i, j
+  local neighbors
+
+  c1 := c2 := c3 := c4 := c5 := c6 := c7 := c8 := 0
+
+  i := loc / 10
+  j := loc % 10
+
+  if (i < 9) then {
+    c1 := (10 * (i + 1)) + j
+    if (j < 9) then c2 := (10 * (i + 1)) + (j + 1)
+    if (0 < j) then c3 := (10 * (i + 1)) + (j - 1)
+  }
+  if (0 < i) then {
+    c4 := (10 * (i - 1)) + j
+    if (j < 9) then c5 := (10 * (i - 1)) + (j + 1)
+    if (0 < j) then c6 := (10 * (i - 1)) + (j - 1)
+  }
+  if (j < 9) then c7 := (10 * i) + (j + 1)
+  if (0 < j) then c8 := (10 * i) + (j - 1)
+
+  neighbors := []
+  every put(neighbors, 0 ~= (c1 | c2 | c3 | c4 | c5 | c6 | c7 | c8))
+  return neighbors
+end
+
+procedure make_neighbor_path (path)
+  local neighbor_path
+  local u, v, iu, iv, j
+  local neighbors
+
+  neighbor_path := copy(path)
+
+  u := ?99
+  neighbors := find_neighbors(u)
+  v := neighbors[?(*neighbors)]
+
+  j := 2
+  iu := 0
+  iv := 0
+  while iu = 0 | iv = 0 do {
+    if neighbor_path[j] = u then {
+      iu := j
+    } else if neighbor_path[j] = v then {
+      iv := j
+    }
+    j +:= 1
+  }
+  neighbor_path[iu] := v
+  neighbor_path[iv] := u
+
+  return neighbor_path
+end
+
+procedure temperature (kT, kmax, k)
+  return kT * (1.0 - (real(k) / real(kmax)))
+end
+
+procedure my_exp (x)
+  # Icon's exp() might bail out with an underflow error, if we are not
+  # careful.
+  return (if x < -50 then 0.0 else exp(x))
+end
+
+procedure probability (delta_E, T)
+  return (if T = 0.0 then 0.0 else my_exp(-(delta_E / T)))
+end
+
+procedure show (k, T, E)
+  printf(" %7d %7.1r %10.2r\n", k, T, E)
+  return
+end
+
+procedure display_path (path)
+  local i
+
+  every i := 1 to 100 do {
+    printf("%2d ->", path[i])
+    if ((i - 1) % 8) = 7 then {
+      write()
+    } else {
+      writes(" ")
+    }
+  }
+  printf("%2d", path[1])
+  return
+end
+
+procedure simulate_annealing (kT, kmax, path)
+  local kshow
+  local k
+  local E, E_trial, T
+  local trial
+
+  kshow := kmax / 10
+
+  E := path_length(path)
+  every k := 0 to kmax do {
+    T := temperature(kT, kmax, k)
+    if (k % kshow) = 0 then show(k, T, E)
+    trial := make_neighbor_path(path)
+    E_trial := path_length(trial)
+    if E_trial <= E | ?0 <= probability (E_trial - E, T) then {
+      path := trial
+      E := E_trial
+    }
+  }
+  return path
+end

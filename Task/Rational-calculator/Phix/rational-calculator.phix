@@ -1,0 +1,65 @@
+with javascript_semantics
+requires("1.0.6") -- mpq_mul_si
+include mpfr.e
+
+mpq last
+function evaluate(sequence s)
+    mpq res = mpq_init()
+    if string(s) then
+        if s="@" then
+            mpq_set(res,last)
+        else
+            mpq_set_str(res,s)
+        end if
+    else
+        {string op, object lhs, object rhs} = s
+        if sequence(lhs) then lhs = evaluate(lhs) end if
+        if sequence(rhs) then rhs = evaluate(rhs) end if
+        if op="+" then  mpq_add(res,lhs,rhs)
+        elsif op="-" then mpq_sub(res,lhs,rhs)
+        elsif op="*" then mpq_mul(res,lhs,rhs)
+        elsif op="/" then mpq_div(res,lhs,rhs)
+        else ?9/0 end if
+    end if
+    return res
+end function
+
+procedure test(sequence ast)
+    mpq q = evaluate(ast)
+    last = mpq_init_set(q)
+    string rational = mpq_get_str(q)
+    integer d = floor(mpq_get_d(q))
+    string decimal = sprintf("%d",d)
+    mpq_sub_si(q,q,d)
+    if mpq_cmp_si(q,0) then
+        decimal &= '.'
+        sequence seen = {}
+        do
+            seen &= {{mpq_init_set(q),length(decimal)}}
+            mpq_mul_si(q,q,10)
+            d = floor(mpq_get_d(q))
+            mpq_sub_si(q,q,d)
+            decimal &= sprintf("%d",d)
+            bool done = false
+            for s in seen do
+                done = mpq_cmp(q,s[1])=0
+                if done then
+                    decimal[s[2]+1..s[2]] = "("
+                    decimal &= ")"
+                    exit
+                end if
+            end for
+        until done or mpq_cmp_si(q,0)=0 or length(decimal)>50
+        printf(1,"%v = %s = %s\n",{ast,rational,decimal})
+    else
+        printf(1,"%v = %s\n",{ast,rational})
+    end if
+end procedure
+test({"/","4","8"})
+test({"/","4","7"})
+test({"/","1","3"})
+test({"/","1","25"})
+test({"+","7",{"/","9","@"}})
+test({"/","20","92"})
+test({"/","435","92"})
+test({"*","@","92"})

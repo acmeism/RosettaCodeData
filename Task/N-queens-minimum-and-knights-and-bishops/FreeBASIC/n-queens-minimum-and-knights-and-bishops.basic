@@ -1,0 +1,163 @@
+Const MAX_N = 10
+Const MAX_DIAG = 2 * MAX_N - 1
+
+Dim Shared As Boolean board(MAX_N - 1, MAX_N - 1)
+Dim Shared As Integer diag1(MAX_N - 1, MAX_N - 1), diag2(MAX_N - 1, MAX_N - 1)
+Dim Shared As Boolean diag1Lookup(MAX_DIAG - 1), diag2Lookup(MAX_DIAG - 1)
+Dim Shared As Integer n, minCount
+Dim Shared As String layout
+
+Function isAttacked(piece As String, row As Integer, col As Integer) As Boolean
+    If piece = "Q" Then
+        For i As Integer = 0 To n - 1
+            If board(i, col) Or board(row, i) Then Return True
+        Next i
+        If diag1Lookup(diag1(row, col)) Or diag2Lookup(diag2(row, col)) Then Return True
+    Elseif piece = "B" Then
+        If diag1Lookup(diag1(row, col)) Or diag2Lookup(diag2(row, col)) Then Return True
+    Else ' piece = "K"
+        If board(row, col) Then Return True
+        If row + 2 <  n And col - 1 >= 0 And board(row + 2, col - 1) Then Return True
+        If row - 2 >= 0 And col - 1 >= 0 And board(row - 2, col - 1) Then Return True
+        If row + 2 <  n And col + 1 <  n And board(row + 2, col + 1) Then Return True
+        If row - 2 >= 0 And col + 1 <  n And board(row - 2, col + 1) Then Return True
+        If row + 1 <  n And col + 2 <  n And board(row + 1, col + 2) Then Return True
+        If row - 1 >= 0 And col + 2 <  n And board(row - 1, col + 2) Then Return True
+        If row + 1 <  n And col - 2 >= 0 And board(row + 1, col - 2) Then Return True
+        If row - 1 >= 0 And col - 2 >= 0 And board(row - 1, col - 2) Then Return True
+    End If
+    Return False
+End Function
+
+Function attacks(piece As String, row As Integer, col As Integer, trow As Integer, tcol As Integer) As Boolean
+    If piece = "Q" Then
+        Return row = trow Or col = tcol Or Abs(row - trow) = Abs(col - tcol)
+    Elseif piece = "B" Then
+        Return Abs(row - trow) = Abs(col - tcol)
+    Else ' piece = "K"
+        Dim As Integer rd = Abs(trow - row)
+        Dim As Integer cd = Abs(tcol - col)
+        Return (rd = 1 And cd = 2) Or (rd = 2 And cd = 1)
+    End If
+End Function
+
+Sub storeLayout(piece As String)
+    Dim sb As String = ""
+    For row As Integer = 0 To n - 1
+        For col As Integer = 0 To n - 1
+            sb &= Iif(board(row, col), piece & " ", ". ")
+        Next
+        sb &= Chr(10)
+    Next
+    layout = sb
+End Sub
+
+Sub placePiece(piece As String, countSoFar As Integer, maxCount As Integer)
+    If countSoFar >= minCount Then Exit Sub
+
+    Dim As Integer i, j, ti, tj, si, sj
+    Dim As Boolean allAttacked = True
+
+    For i = 0 To n - 1
+        For j = 0 To n - 1
+            If Not isAttacked(piece, i, j) Then
+                allAttacked = False
+                ti = i
+                tj = j
+                Exit For
+            End If
+        Next j
+        If Not allAttacked Then Exit For
+    Next i
+
+    If allAttacked Then
+        minCount = countSoFar
+        storeLayout(piece)
+        Exit Sub
+    End If
+
+    If countSoFar <= maxCount Then
+        si = ti
+        sj = tj
+        If piece = "K" Then
+            si = si - 2
+            sj = sj - 2
+            If si < 0 Then si = 0
+            If sj < 0 Then sj = 0
+        End If
+        For i = si To n - 1
+            For j = sj To n - 1
+                If Not isAttacked(piece, i, j) Then
+                    If (i = ti And j = tj) Or attacks(piece, i, j, ti, tj) Then
+                        board(i, j) = True
+                        If piece <> "K" Then
+                            diag1Lookup(diag1(i, j)) = True
+                            diag2Lookup(diag2(i, j)) = True
+                        End If
+                        placePiece(piece, countSoFar + 1, maxCount)
+                        board(i, j) = False
+                        If piece <> "K" Then
+                            diag1Lookup(diag1(i, j)) = False
+                            diag2Lookup(diag2(i, j)) = False
+                        End If
+                    End If
+                End If
+            Next j
+        Next i
+    End If
+End Sub
+
+Sub main()
+    Dim As Double t0 = Timer
+    Dim As String pieces(2) = {"Q", "B", "K"}
+    Dim As Integer limits(2) = {10, 10, 10}
+    Dim As String names(2) = {"Queens", "Bishops", "Knights"}
+    Dim As Integer p, i, j, maxCount
+
+    For p = 0 To 2
+        Print names(p)
+        Print !"=======\n"
+
+        For n = 1 To MAX_N
+            For i = 0 To n - 1
+                For j = 0 To n - 1
+                    board(i, j) = False
+                    If pieces(p) <> "K" Then
+                        diag1(i, j) = i + j
+                        diag2(i, j) = i - j + n - 1
+                    End If
+                Next j
+            Next i
+
+            If pieces(p) <> "K" Then
+                For i = 0 To 2 * n - 2
+                    diag1Lookup(i) = False
+                    diag2Lookup(i) = False
+                Next i
+            End If
+
+            minCount = &H7FFFFFFF
+            layout = ""
+
+            For maxCount = 1 To n * n
+                placePiece(pieces(p), 0, maxCount)
+                If minCount <= n * n Then Exit For
+            Next maxCount
+
+            Print Using "## x ##: ##"; n; n; minCount
+
+            If n = limits(p) Then
+                Print
+                Print names(p) & " on a " & Str(n) & " x " & Str(n) & !" board:\n"
+                Print layout
+                Exit For
+            End If
+        Next n
+    Next p
+
+    Print Using !"\nTook ###.### seconds on i5 @ 3.20 GHz"; Timer - t0
+End Sub
+
+main()
+
+Sleep

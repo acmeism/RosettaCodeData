@@ -1,0 +1,69 @@
+string  0;              \use zero-terminated strings
+int     Dict(26000);    \pointers to words (enough for unixdict.txt)
+int     DictSize;       \actual number of pointers in Dict
+
+func    StrCmp(A, B);   \Compare string A to B
+char    A, B;           \Returns: >0 if A>B, =0 if A=B, and <0 if A<B
+int     I;
+[for I:= 0 to -1>>1 do
+        [if A(I) # B(I) then return A(I) - B(I);
+         if A(I) = 0 then return 0;
+        ];
+];      \StrCmp
+
+func    LookUp(Word);   \Return 'true' if Word is in Dict
+char    Word;
+int     Lo, Hi, I, Cmp;
+[Lo:= 0;  Hi:= DictSize-1;
+loop    [I:= (Lo+Hi) / 2; \binary search
+        Cmp:= StrCmp(Word, Dict(I));
+        if Cmp < 0 then Hi:= I-1 else Lo:= I+1;
+        if Cmp = 0 then return true;
+        if Lo > Hi then return false;
+        ];
+];      \LookUp
+
+int     I, DI, Ch, HasE;
+char    Word, AltWord(25);      \(longest word in unixdict is 22 chars)
+def     LF=$0A, CR=$0D, EOF=$1A;
+
+[FSet(FOpen("unixdict.txt", 0), ^I); \load dictionary into Dict
+OpenI(3);                        \assume alphabetical order and all lowercase
+DI:= 0;                          \ignore non-alpha characters: 0..9, ' and &
+repeat  Dict(DI):= Reserve(0);   \get pointer to memory used to store Word
+        Word:= Dict(DI);
+        I:= 0;
+        loop    [repeat Ch:= ChIn(3) until Ch # CR;     \remove possible CR
+                if Ch=LF or Ch=EOF then quit;
+                Word(I):= Ch;
+                I:= I+1;
+                ];
+        Word(I):= 0;            \terminate Word string
+        I:= Reserve(I+1);       \reserve memory used for Word
+        DI:= DI+1;              \next dictionary entry
+until   Ch = EOF;
+DictSize:= DI;
+
+DI:= 0;
+repeat  Word:= Dict(DI);
+        I:= 0;  HasE:= false;
+        loop    [Ch:= Word(I);
+                AltWord(I):= Ch;
+                if Ch = 0 then quit;
+                if Ch = ^e then
+                        [HasE:= true;
+                        AltWord(I):= ^i;
+                        ];
+                I:= I+1;
+                ];
+        if HasE & I>5 then              \Word must be greater than 5 chars
+                [if LookUp(AltWord) then
+                        [Text(0, Word);
+                        Text(0, " -> ");
+                        Text(0, AltWord);
+                        CrLf(0);
+                        ];
+                ];
+        DI:= DI+1;
+until   DI >= DictSize;
+]

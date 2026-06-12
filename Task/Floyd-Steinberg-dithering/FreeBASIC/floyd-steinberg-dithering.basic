@@ -1,0 +1,124 @@
+#include "fbgfx.bi"
+
+Type C3
+    r As Integer
+    g As Integer
+    b As Integer
+End Type
+
+Function clamp(c As Integer) As Integer
+    If c < 0 Then Return 0
+    If c > 255 Then Return 255
+    Return c
+End Function
+
+Function diff_c3(c1 As C3, c2 As C3) As Integer
+    Dim As Integer rd = c2.r - c1.r
+    Dim As Integer gd = c2.g - c1.g
+    Dim As Integer bd = c2.b - c1.b
+    Return rd*rd + gd*gd + bd*bd
+End Function
+
+Function findClosestPaletaColor(c As C3, paleta() As C3) As C3
+    Dim As Integer closest_idx = 0
+    For i As Integer = 1 To 7
+        If diff_c3(paleta(i), c) < diff_c3(paleta(closest_idx), c) Then
+            closest_idx = i
+        End If
+    Next
+    Return paleta(closest_idx)
+End Function
+
+Function add_c3(c1 As C3, c2 As C3) As C3
+    Return Type<C3>(c1.r + c2.r, c1.g + c2.g, c1.b + c2.b)
+End Function
+
+Function sub_c3(c1 As C3, c2 As C3) As C3
+    Return Type<C3>(c1.r - c2.r, c1.g - c2.g, c1.b - c2.b)
+End Function
+
+Function mul_c3(c As C3, factor As Double) As C3
+    Return Type<C3>(Cint(factor * c.r), Cint(factor * c.g), Cint(factor * c.b))
+End Function
+
+Sub getPixelColor(image As FB.IMAGE Ptr, x As Integer, y As Integer, Byref col As C3)
+    Dim As Uinteger px = Point(x, y, image)
+    col.r = (px Shr 16) And &hff
+    col.g = (px Shr 8) And &hff
+    col.b = px And &hff
+End Sub
+
+Sub setPixelColor(image As FB.IMAGE Ptr, x As Integer, y As Integer, col As C3)
+    Dim As Uinteger pixcolor = Rgb(clamp(col.r), clamp(col.g), clamp(col.b))
+    Pset image, (x, y), pixcolor
+End Sub
+
+Function floydSteinbergDithering(Byval img As FB.IMAGE Ptr) As FB.IMAGE Ptr
+    Dim As Integer ancho = img->width
+    Dim As Integer alto  = img->height
+    Dim As Integer x, y
+
+    Dim As C3 paleta(0 To 7)
+    paleta(0) = Type(  0,   0,   0)  ' black
+    paleta(1) = Type(  0,   0, 255)  ' green
+    paleta(2) = Type(  0, 255,   0)  ' blue
+    paleta(3) = Type(  0, 255, 255)  ' cyan
+    paleta(4) = Type(255,   0,   0)  ' red
+    paleta(5) = Type(255,   0, 255)  ' purple
+    paleta(6) = Type(255, 255,   0)  ' yellow
+    paleta(7) = Type(255, 255, 255)  ' white
+
+    Dim As C3 d(0 To alto-1, 0 To ancho-1)
+    For y = 0 To alto-1
+        For x = 0 To ancho-1
+            getPixelColor img, x, y, d(y,x)
+        Next
+    Next
+
+    For y = 0 To alto-1
+        For x = 0 To ancho-1
+            Dim As C3 oldColor = d(y,x)
+            Dim As C3 newColor = findClosestPaletaColor(oldColor, paleta())
+            setPixelColor(img, x, y, newColor)
+
+            Dim As C3 eror = sub_c3(oldColor, newColor)
+
+            If x + 1 < ancho Then d(y, x+1) = add_c3(d(y, x+1), mul_c3(eror, 7/16.0))
+            If y + 1 < alto Then
+                If x - 1 >= 0 Then d(y+1, x-1) = add_c3(d(y+1, x-1), mul_c3(eror, 3/16.0))
+                d(y+1, x) = add_c3(d(y+1, x), mul_c3(eror, 5/16.0))
+                If x + 1 < ancho Then d(y+1, x+1) = add_c3(d(y+1, x+1), mul_c3(eror, 1/16.0))
+            End If
+        Next
+    Next
+
+    Return img
+End Function
+
+' Main program
+Windowtitle "Floyd-Steinberg dithering"
+Screenres 910, 500, 32
+
+Dim As FB.IMAGE Ptr img_normal, img_dith
+
+'Only BMP works natively in FreeBASIC
+img_normal = Imagecreate(440, 440, Rgb(128,128,128)) ' gray background
+Bload "Lenna.bmp", img_normal
+
+img_dith = Imagecreate(440, 440)
+Put img_dith, (0,0), img_normal, Pset
+
+floydSteinbergDithering(img_dith)
+
+Do
+    Screenlock
+    Cls
+    Put (10, 10), img_normal, Pset
+    Put (460, 10), img_dith, Pset
+    Draw String (20, 470), "Original (left) - Dithered Floyd-Steinberg 8-color (right)", Rgb(255,255,255)
+    Screenunlock
+    Sleep 50
+Loop Until Len(Inkey)
+
+Imagedestroy img_normal
+Imagedestroy img_dith

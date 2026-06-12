@@ -1,0 +1,162 @@
+class UnescapeError extends Error {
+  constructor(message, index) {
+    super(message);
+    this.name = "UnescapeError";
+    this.index = index;
+    this.message = `${message}, at index ${index}`;
+  }
+}
+
+function unescapeString(value) {
+  const rv = [];
+  const length = value.length;
+  let index = 0;
+  let startIndex = 0;
+  let codepoint;
+
+  while (index < length) {
+    const ch = value[index];
+    if (ch === "\\") {
+      index += 1; // Move past '\'
+
+      switch (value[index]) {
+        case '"':
+          rv.push('"');
+          break;
+        case "\\":
+          rv.push("\\");
+          break;
+        case "/":
+          rv.push("/");
+          break;
+        case "b":
+          rv.push("\x08");
+          break;
+        case "f":
+          rv.push("\x0C");
+          break;
+        case "n":
+          rv.push("\n");
+          break;
+        case "r":
+          rv.push("\r");
+          break;
+        case "t":
+          rv.push("\t");
+          break;
+        case "u":
+          startIndex = index - 1;
+          [codepoint, index] = decodeHexChar(value, index);
+          rv.push(stringFromCodePoint(codepoint, startIndex));
+          break;
+        default:
+          throw new UnescapeError(`unknown escape sequence`, index - 1);
+      }
+    } else {
+      rv.push(ch);
+    }
+
+    index += 1;
+  }
+
+  return rv.join("");
+}
+
+function decodeHexChar(value, index) {
+  const length = value.length;
+
+  if (index + 4 >= length) {
+    throw new UnescapeError(`incomplete escape sequence`, index - 1);
+  }
+
+  index += 1; // Move past 'u'
+  let codepoint = parseHexDigits(value.slice(index, index + 4), index - 2);
+
+  if (isLowSurrogate(codepoint)) {
+    throw new UnescapeError(`unexpected low surrogate code point`, index - 2);
+  }
+
+  if (isHighSurrogate(codepoint)) {
+    if (!(index + 9 < length && value[index + 4] === "\\" && value[index + 5] === "u")) {
+      throw new UnescapeError(`incomplete escape sequence`, index - 2);
+    }
+
+    const lowSurrogate = parseHexDigits(value.slice(index + 6, index + 10), index + 4);
+
+    if (!isLowSurrogate(lowSurrogate)) {
+      throw new UnescapeError(`unexpected code point`, index + 4);
+    }
+
+    codepoint = 0x10000 + (((codepoint & 0x03ff) << 10) | (lowSurrogate & 0x03ff));
+
+    return [codepoint, index + 9];
+  }
+
+  return [codepoint, index + 3];
+}
+
+function parseHexDigits(digits, index) {
+  let codepoint = 0;
+  for (const digit of digits) {
+    codepoint <<= 4;
+    if (digit >= '0' && digit <= '9') {
+      codepoint |= digit.charCodeAt(0) - '0'.charCodeAt(0);
+    } else if (digit >= 'A' && digit <= 'F') {
+      codepoint |= digit.charCodeAt(0) - 'A'.charCodeAt(0) + 10;
+    } else if (digit >= 'a' && digit <= 'f') {
+      codepoint |= digit.charCodeAt(0) - 'a'.charCodeAt(0) + 10;
+    } else {
+      throw new UnescapeError("invalid \\uXXXX escape sequence", index);
+    }
+  }
+  return codepoint;
+}
+
+function stringFromCodePoint(codepoint, index) {
+  if (codepoint === undefined || codepoint <= 0x1f) {
+    throw new UnescapeError("invalid character", index);
+  }
+
+  try {
+    return String.fromCodePoint(codepoint);
+  } catch {
+    throw new UnescapeError("invalid escape sequence", index);
+  }
+}
+
+function isHighSurrogate(codepoint) {
+  return codepoint >= 0xd800 && codepoint <= 0xdbff;
+}
+
+function isLowSurrogate(codepoint) {
+  return codepoint >= 0xdc00 && codepoint <= 0xdfff;
+}
+
+const testCases = [
+  "abc",
+  "a?c",
+  'a\\"c',
+  "\\u0061\\u0062\\u0063",
+  "a\\\\c",
+  "a\\u263Ac",
+  "a\\\\u263Ac",
+  "a\\uD834\\uDD1Ec",
+  "a\\ud834\\udd1ec",
+  "a\\u263",
+  "a\\u263Xc",
+  "a\\uDD1Ec",
+  "a\\uD834c",
+  "a\\uD834\\u263Ac",
+];
+
+for (const s of testCases) {
+  try {
+    console.log(`${s} -> ${unescapeString(s)}`);
+  } catch (err) {
+    if (err instanceof UnescapeError) {
+      console.log(`${s} -> ${err.message}`);
+    } else {
+      throw err;
+    }
+  }
+}

@@ -1,0 +1,90 @@
+	;;;	Print positive integers whose base-2 representation
+	;;;	is the concatenation of two identical binary strings,
+	;;;	for 1 < n < 1000
+puts:	equ	9	; CP/M syscall to print a string
+	org	100h
+	lxi	b,1	; Counter
+loop:	mov	h,b	; HL = counter
+	mov	l,c
+	call	concat	; Get current concatenated number
+	lxi	d,1000	; Reached the end yet?
+	call	cmp16
+	rnc		; Stop when >1000
+	push	b	; Keep the counter
+	push	h	; And the concatenated number
+	call 	hldec	; Print decimal value
+	pop	h	; Restore number
+	call	hlbin	; Print binary value
+	lxi	d,nl	; Print newline
+	mvi	c,puts
+	call	5
+	pop	b	; Restore counter
+	inx	b	; Increment counter
+	jmp 	loop
+	;;;	16-bit compare HL to DE
+cmp16:	mov	a,h
+	cmp	d
+	rnz
+	mov	a,l
+	cmp	e
+	ret
+	;;;	Concatenate HL with itself
+concat:	push	h	; Keep a copy of HL on the stack
+	mov	d,h	; DE = copy of HL
+	mov	e,l
+ctloop:	mov	a,d	; When DE=0, we are done
+	ora	e
+	jz	ctdone
+	mov	a,d	; Rotate DE left
+	rar
+	mov	d,a
+	mov	a,e
+	rar	
+	mov	e,a
+	dad	h	; And rotate HL right (add to itself)
+	jmp	ctloop
+ctdone:	pop	d	; Retrieve old HL
+	dad	d	; Add to shifted version (same as OR)
+	ret
+	;;;	Print HL as a decimal value
+hldec:	lxi	d,outbuf
+	push	d	; Output pointer on the stack
+	lxi	b,-10	; Divisor
+decdgt:	lxi	d,-1	; Quotient
+div10:	inx	d	; Divide HL by 10 using trial subtraction
+	dad	b
+	jc	div10
+	mvi	a,'0'+10
+	add	l	; L contains remainder - 10
+	pop	h		; Retrieve output pointer
+	dcx	h	; Store digit
+	mov	m,a
+	push	h
+	xchg		; Continue with quotient
+	mov	a,h	; If any digits left
+	ora	l
+	jnz	decdgt	; Find the next digits
+	pop	d	; Otherwise, retrieve pointer
+	mvi	c,puts	; And print result using CP/M
+	jmp	5
+	;;;	Print HL as a binary value
+hlbin:	lxi	d,outbuf
+	ora	a	; Zero the carry flag
+bindgt:	mov	a,h	; Rotate HL right
+	rar
+	mov	h,a
+	mov	a,l
+	rar
+	mov	l,a
+	mvi	a,0	; A = '0' + carry flag (i.e. lowest bit)
+	aci	'0'
+	dcx	d	; Store digit
+	stax	d
+	mov	a,h	; Any more digits?
+	ora	l
+	jnz	bindgt	; If so, find next digits
+	mvi	c,puts	; Otherwise, print the result
+	jmp	5
+	db	'***********'
+outbuf:	db	9,'$'
+nl:	db	13,10,'$'

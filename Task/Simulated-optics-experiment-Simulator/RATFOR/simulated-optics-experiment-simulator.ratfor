@@ -1,0 +1,188 @@
+# -*- mode: indented-text; tab-width: 2; -*-
+
+# Reference:
+#
+#  A. F. Kracklauer, ‘EPR-B correlations: non-locality or geometry?’,
+#  J. Nonlinear Math. Phys. 11 (Supp.) 104–109 (2004).
+#  https://doi.org/10.2991/jnmp.2004.11.s1.13 (Open access, CC BY-NC)
+
+# Standard FORTRAN 77 provides no way to allocate space at runtime.
+# One would have to make a call to C, or do some such thing, or simply
+# recompile if you need a bigger array. However, it is not
+# necessary. This program writes results to output as they are
+# calculated.
+
+# Random numbers are obtained from the DLARAN function of LAPACK,
+# translated below into Ratfor. This is a multiplicative congruential
+# generator, and so not especially good for doing
+# simulations. Substitute something else if you plan to use this
+# program for serious work :)
+
+define(numlines, 100000)
+
+define(angleL1, 0.0D0)          # 'D' for double precision.
+define(angleL2, 45.0D0)
+define(angleR1, 22.5D0)
+define(angleR2, 67.5D0)
+
+function dlaran (iseed)
+  #
+  # DLARAN returns a random real number from a uniform (0,1)
+  # distribution. See
+  # https://netlib.org/lapack/explore-html/d4/dff/dlaran_8f_source.html
+  # for full details.
+  #
+  double precision dlaran
+  integer iseed(1:4)
+  integer m1, m2, m3, m4
+  parameter (m1 = 494, m2 = 322, m3 = 2508, m4 = 2549)
+  double precision one
+  parameter (one = 1.0d+0)
+  integer ipw2
+  double precision r
+  parameter (ipw2 = 4096, r = one / ipw2)
+  integer it1, it2, it3, it4
+  double precision rndout
+  intrinsic dble, mod
+10 continue
+  #
+  # multiply the seed by the multiplier modulo 2**48
+  #
+  it4 = iseed( 4 )*m4
+  it3 = it4 / ipw2
+  it4 = it4 - ipw2*it3
+  it3 = it3 + iseed( 3 )*m4 + iseed( 4 )*m3
+  it2 = it3 / ipw2
+  it3 = it3 - ipw2*it2
+  it2 = it2 + iseed( 2 )*m4 + iseed( 3 )*m3 + iseed( 4 )*m2
+  it1 = it2 / ipw2
+  it2 = it2 - ipw2*it1
+  it1 = it1 + iseed( 1 )*m4 + iseed( 2 )*m3 + iseed( 3 )*m2 _
+            + iseed( 4 )*m1
+  it1 = mod( it1, ipw2 )
+  #
+  # return updated seed
+  #
+  iseed(1) = it1
+  iseed(2) = it2
+  iseed(3) = it3
+  iseed(4) = it4
+  #
+  # convert 48-bit integer to a real number in the interval (0,1)
+  #
+  rndout = r*( dble( it1 )+r*( dble( it2 )+r*( dble( it3 ) _
+                +r*( dble( it4 ) ) ) ) )
+  if (rndout == 1.0d+0)
+    {
+      # If a real number has n bits of precision, and the first n bits
+      # of the 48-bit integer above happen to be all 1 (which will
+      # occur about once every 2**n calls), then DLARAN will be
+      # rounded to exactly 1.0. Since DLARAN is not supposed to return
+      # exactly 0.0 or 1.0 (and some callers of DLARAN, such as
+      # CLARND, depend on that), the statistically correct thing to do
+      # in this situation is simply to iterate again. N.B. the case
+      # DLARAN = 0.0 should not be possible.
+      goto 10
+    }
+  #
+  dlaran = rndout
+end
+
+function rndnum ()   # Random in (0,1). (Neither 0 nor 1 is returned.)
+  implicit none
+  double precision rndnum
+  double precision dlaran
+  integer iseed(1:4)
+  save iseed
+  data iseed / 1, 1, 1, 1 /
+  rndnum = dlaran (iseed)
+end
+
+subroutine ltsrc (logval, thetaL, thetaR) # Light source.
+  implicit none
+  integer logval
+  double precision thetaL, thetaR
+  double precision rndnum
+  continue
+  if (rndnum () < 0.5D0)
+    {
+      logval = 0
+      thetaL = 0.0D0
+      thetaR = 90.0D0
+    }
+  else
+    {
+      logval = 1
+      thetaL = 90.0D0
+      thetaR = 0.0D0
+    }
+end
+
+subroutine pbs (logval, theta, phi1, phi2, _
+                outC, outS)     # Polarizing beam splitter.
+  implicit none
+  integer logval
+  double precision theta, phi1, phi2, outC, outS
+  double precision rndnum
+  double precision piv180
+  continue
+  piv180 = datan (1.0D0) / 45
+  #
+  # The sine might be negative, but we will be squaring it, anyway.
+  #
+  if (rndnum () < 0.5D0)
+    {
+      logval = 0
+      outC = dcos (piv180 * (theta - phi1))
+      outS = dsin (piv180 * (theta - phi1))
+    }
+  else
+    {
+      logval = 1
+      outC = dcos (piv180 * (theta - phi2))
+      outS = dsin (piv180 * (theta - phi2))
+    }
+end
+
+subroutine detec (inp, outp)    # Light detector.
+  implicit none
+  double precision inp
+  integer outp
+  double precision rndnum
+  continue
+  if (rndnum () <= inp * inp)
+    outp = 1
+  else
+    outp = 0
+end
+
+subroutine event ()
+  implicit none
+  integer logS, logL, logR
+  integer pingL1, pingL2, pingR1, pingR2
+  double precision thetaL, thetaR
+  double precision valL1, valL2, valR1, valR2
+  continue
+  call ltsrc (logS, thetaL, thetaR)
+  call pbs (logL, thetaL, angleL1, angleL2, valL1, valL2)
+  call pbs (logR, thetaR, angleR1, angleR2, valR1, valR2)
+  call detec (valL1, pingL1)
+  call detec (valL2, pingL2)
+  call detec (valR1, pingR1)
+  call detec (valR2, pingR2)
+  write (*,'(I1, 6(X, I1))') logS, logL, logR, _
+    pingL1, pingL2, pingR1, pingR2
+end
+
+program OpSimS
+  implicit none
+  integer i
+  continue
+  #
+  # '(I0)' will not work in f2c, but I do not feel like writing out
+  # code for f2c that avoids printing leading spaces.
+  #
+  write (*,'(I0)') numlines
+  for (i = 0; i != numlines; i = i + 1)
+    call event ()
+end

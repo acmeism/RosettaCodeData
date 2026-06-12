@@ -1,0 +1,776 @@
+Const NULL As Any Ptr = 0
+
+Type Punto
+    x As Integer
+    y As Integer
+
+    Declare Constructor(x As Integer, y As Integer)
+    Declare Function toString() As String
+    Declare Function equals(other As Punto Ptr) As Boolean
+End Type
+
+Constructor Punto(x As Integer, y As Integer)
+    This.x = x
+    This.y = y
+End Constructor
+
+Function Punto.toString() As String
+    Return "(" & This.x & ", " & This.y & ")"
+End Function
+
+Function Punto.equals(other As Punto Ptr) As Boolean
+    Return (This.x = other->x) And (This.y = other->y)
+End Function
+
+
+Type Segmento
+    iniPto As Punto Ptr
+    finPto As Punto Ptr
+
+    Declare Constructor(iniPto As Punto Ptr, finPto As Punto Ptr)
+End Type
+
+Constructor Segmento(iniPto As Punto Ptr, finPto As Punto Ptr)
+    This.iniPto = iniPto
+    This.finPto = finPto
+End Constructor
+
+
+Type Poligono
+    points As Punto Ptr Ptr
+    pointCnt As Integer
+
+    Declare Constructor(points() As Punto Ptr, cnt As Integer)
+    Declare Destructor()
+    Declare Function copy() As Poligono Ptr
+End Type
+
+Constructor Poligono(points() As Punto Ptr, cnt As Integer)
+    This.pointCnt = cnt
+    This.points = Allocate(cnt * SizeOf(Punto Ptr))
+    For i As Integer = 0 To cnt - 1
+        This.points[i] = points(i)
+    Next
+End Constructor
+
+Destructor Poligono()
+    If This.points Then Deallocate(This.points)
+End Destructor
+
+Function Poligono.copy() As Poligono Ptr
+    Dim newPuntos(This.pointCnt - 1) As Punto Ptr
+    For i As Integer = 0 To This.pointCnt - 1
+        newPuntos(i) = This.points[i]
+    Next
+    Return New Poligono(newPuntos(), This.pointCnt)
+End Function
+
+
+Enum InterVertexType
+    insideVertex
+    outsideVertex
+    inIntersection
+    outIntersection
+End Enum
+
+Type InterVertex
+    vertexType As InterVertexType
+    pt As Punto Ptr
+
+    Declare Constructor(vType As InterVertexType, p As Punto Ptr)
+End Type
+
+Constructor InterVertex(vType As InterVertexType, p As Punto Ptr)
+    This.vertexType = vType
+    This.pt = p
+End Constructor
+
+
+Enum PolyListOptionType
+    list
+    insidePoly
+    none
+End Enum
+
+Type PolyListOption
+    optionType As PolyListOptionType
+    interVertexList As InterVertex Ptr Ptr
+    interVertexCnt As Integer
+    points As Punto Ptr Ptr
+    pointCnt As Integer
+
+    Declare Constructor(optType As PolyListOptionType, vertexList() As InterVertex Ptr, vertexCnt As Integer, pts() As Punto Ptr, ptsCnt As Integer)
+    Declare Destructor()
+End Type
+
+Constructor PolyListOption(optType As PolyListOptionType, vertexList() As InterVertex Ptr, vertexCnt As Integer, pts() As Punto Ptr, ptsCnt As Integer)
+    This.optionType = optType
+    This.interVertexCnt = vertexCnt
+    This.pointCnt = ptsCnt
+
+    If vertexCnt > 0 Then
+        This.interVertexList = Allocate(vertexCnt * SizeOf(InterVertex Ptr))
+        For i As Integer = 0 To vertexCnt - 1
+            This.interVertexList[i] = vertexList(i)
+        Next
+    Else
+        This.interVertexList = NULL
+    End If
+
+    If ptsCnt > 0 Then
+        This.points = Allocate(ptsCnt * SizeOf(Punto Ptr))
+        For i As Integer = 0 To ptsCnt - 1
+            This.points[i] = pts(i)
+        Next
+    Else
+        This.points = NULL
+    End If
+End Constructor
+
+Destructor PolyListOption()
+    If This.interVertexList Then Deallocate(This.interVertexList)
+    If This.points Then Deallocate(This.points)
+End Destructor
+
+
+' Helper functions
+Function isInPolygon(p As Punto Ptr, poly As Poligono Ptr) As Boolean
+    Dim inside As Boolean = False
+    Dim j As Integer = poly->pointCnt - 1
+
+    For i As Integer = 0 To poly->pointCnt - 1
+        Dim xi As Integer = poly->points[i]->x
+        Dim yi As Integer = poly->points[i]->y
+        Dim xj As Integer = poly->points[j]->x
+        Dim yj As Integer = poly->points[j]->y
+
+        Dim intersect As Boolean = ((yi > p->y) <> (yj > p->y)) And (p->x < (xj - xi) * (p->y - yi) / (yj - yi) + xi)
+        If intersect Then inside = Not inside
+
+        j = i
+    Next
+
+    Return inside
+End Function
+
+Function isInLineSegment(p As Punto Ptr, lineSeg As Segmento Ptr) As Boolean
+    Dim dxc As Integer = p->x - lineSeg->iniPto->x
+    Dim dyc As Integer = p->y - lineSeg->iniPto->y
+    Dim dxl As Integer = lineSeg->finPto->x - lineSeg->iniPto->x
+    Dim dyl As Integer = lineSeg->finPto->y - lineSeg->iniPto->y
+    Dim cross As Integer = dxc * dyl - dyc * dxl
+
+    If cross <> 0 Then Return False
+
+    If Abs(dxl) >= Abs(dyl) Then
+        If dxl > 0 Then
+            Return lineSeg->iniPto->x <= p->x And p->x <= lineSeg->finPto->x
+        Else
+            Return lineSeg->finPto->x <= p->x And p->x <= lineSeg->iniPto->x
+        End If
+    Else
+        If dyl > 0 Then
+            Return lineSeg->iniPto->y <= p->y And p->y <= lineSeg->finPto->y
+        Else
+            Return lineSeg->finPto->y <= p->y And p->y <= lineSeg->iniPto->y
+        End If
+    End If
+End Function
+
+Function getIntersection(self As Segmento Ptr, lineSeg As Segmento Ptr) As Punto Ptr
+    Dim line1Ini As Punto Ptr = self->iniPto
+    Dim line1Fin As Punto Ptr = self->finPto
+    Dim line2Ini As Punto Ptr = lineSeg->iniPto
+    Dim line2Fin As Punto Ptr = lineSeg->finPto
+
+    Dim den As Double = (line2Fin->y - line2Ini->y) * (line1Fin->x - line1Ini->x) - _
+                         (line2Fin->x - line2Ini->x) * (line1Fin->y - line1Ini->y)
+
+    If den = 0 Then Return NULL
+
+    Dim a As Double = line1Ini->y - line2Ini->y
+    Dim b As Double = line1Ini->x - line2Ini->x
+    Dim num1 As Double = (line2Fin->x - line2Ini->x) * a - (line2Fin->y - line2Ini->y) * b
+    Dim num2 As Double = (line1Fin->x - line1Ini->x) * a - (line1Fin->y - line1Ini->y) * b
+
+    Dim af As Double = num1 / den
+    Dim bf As Double = num2 / den
+
+    If af < 0 Or af > 1 Or bf < 0 Or bf > 1 Then Return NULL
+
+    Return New Punto( _
+        line1Ini->x + Int(af * (line1Fin->x - line1Ini->x) + 0.5), _
+        line1Ini->y + Int(af * (line1Fin->y - line1Ini->y) + 0.5) )
+End Function
+
+Function isClockwise(poly As Poligono Ptr) As Boolean
+    Dim sum As Integer = 0
+
+    For i As Integer = 0 To poly->pointCnt - 1
+        Dim j As Integer = IIf(i <> poly->pointCnt - 1, i + 1, 0)
+        sum += (poly->points[j]->x - poly->points[i]->x) * (poly->points[j]->y + poly->points[i]->y)
+    Next
+
+    Return sum < 0
+End Function
+
+Function getReversed(poly As Poligono Ptr) As Poligono Ptr
+    Dim newPuntos(poly->pointCnt - 1) As Punto Ptr
+
+    For i As Integer = 0 To poly->pointCnt - 1
+        newPuntos(i) = poly->points[poly->pointCnt - 1 - i]
+    Next
+
+    Return New Poligono(newPuntos(), poly->pointCnt)
+End Function
+
+Function getFirstOutsideVertexIdx(subject As Poligono Ptr, poly As Poligono Ptr) As Integer
+    For i As Integer = 0 To subject->pointCnt - 1
+        If Not isInPolygon(subject->points[i], poly) Then Return i
+    Next
+
+    Return -1
+End Function
+
+Function getFirstInsideVertexIdx(subject As Poligono Ptr, poly As Poligono Ptr) As Integer
+    For i As Integer = 0 To subject->pointCnt - 1
+        If isInPolygon(subject->points[i], poly) Then Return i
+    Next
+
+    Return -1
+End Function
+
+Function getFirstInIntersection(list() As InterVertex Ptr, ByRef cnt As Integer) As Punto Ptr
+    Dim found As Integer = -1
+    Dim result As Punto Ptr = NULL
+
+    For i As Integer = 0 To cnt - 1
+        If list(i)->vertexType = InterVertexType.inIntersection Then
+            found = i
+            result = list(i)->pt
+            Exit For
+        End If
+    Next
+
+    If found > 0 Then
+        ' Remove elements before found
+        For j As Integer = 0 To cnt - found - 1
+            list(j) = list(j + found)
+        Next
+        cnt -= found
+    End If
+
+    Return result
+End Function
+
+Sub sortPointsByDistance(points() As Punto Ptr, cnt As Integer, reference As Punto Ptr)
+    ' Simple bubble sort
+    For i As Integer = 0 To cnt - 2
+        For j As Integer = 0 To cnt - i - 2
+            Dim dist1 As Integer = Abs(reference->x - points(j)->x) + Abs(reference->y - points(j)->y)
+            Dim dist2 As Integer = Abs(reference->x - points(j+1)->x) + Abs(reference->y - points(j+1)->y)
+
+            If dist1 > dist2 Then Swap points(j), points(j + 1)
+        Next
+    Next
+End Sub
+
+Function getIntersectionsWithLine(poly As Poligono Ptr, lineSeg As Segmento Ptr, ByRef cursorInside As Boolean) As InterVertex Ptr Ptr
+    Dim interseccions(99) As Punto Ptr ' Assuming max 100 interseccions
+    Dim interseccionCnt As Integer = 0
+
+    For i As Integer = 0 To poly->pointCnt - 1
+        Dim start As Punto Ptr = poly->points[i]
+        Dim sgteI As Integer = IIf(i = poly->pointCnt - 1, 0, i + 1)
+        Dim finPto As Punto Ptr = poly->points[sgteI]
+        Dim l As Segmento Ptr = New Segmento(start, finPto)
+
+        Dim interseccion As Punto Ptr = getIntersection(l, lineSeg)
+        If interseccion <> NULL AndAlso _
+           Not interseccion->equals(lineSeg->iniPto) AndAlso _
+           Not interseccion->equals(lineSeg->finPto) AndAlso _
+           Not interseccion->equals(start) AndAlso _
+           Not interseccion->equals(finPto) Then
+
+            interseccions(interseccionCnt) = interseccion
+            interseccionCnt += 1
+        End If
+
+        Delete l
+    Next
+
+    sortPointsByDistance(interseccions(), interseccionCnt, lineSeg->iniPto)
+
+    Dim result As InterVertex Ptr Ptr = Allocate((interseccionCnt + 1) * SizeOf(InterVertex Ptr))
+    Dim resultCnt As Integer = 0
+
+    ' Create InterVertex objects
+    For i As Integer = 0 To interseccionCnt - 1
+        If cursorInside Then
+            cursorInside = Not cursorInside
+            result[resultCnt] = New InterVertex(InterVertexType.outIntersection, interseccions(i))
+        Else
+            cursorInside = Not cursorInside
+            result[resultCnt] = New InterVertex(InterVertexType.inIntersection, interseccions(i))
+        End If
+        resultCnt += 1
+    Next
+
+    result[resultCnt] = NULL
+
+    Return result
+End Function
+
+Function getInterVertexList(subject As Poligono Ptr, poly As Poligono Ptr) As PolyListOption Ptr
+    Dim subjectCopy As Poligono Ptr = subject->copy()
+
+    If Not isClockwise(subjectCopy) Then
+        Dim reversed As Poligono Ptr = getReversed(subjectCopy)
+        Delete subjectCopy
+        subjectCopy = reversed
+    End If
+
+    Dim cursorInside As Boolean = False
+    Dim iniIdxOpt As Integer = getFirstOutsideVertexIdx(subjectCopy, poly)
+    Dim As Integer i, j
+
+    If iniIdxOpt >= 0 Then
+        Dim iniIdx As Integer = iniIdxOpt
+
+        If getFirstInsideVertexIdx(subjectCopy, poly) = 0 Then
+            Dim allInside As Boolean = True
+
+            For i = 0 To poly->pointCnt - 1
+                If Not isInPolygon(poly->points[i], subjectCopy) Then
+                    allInside = False
+                    Exit For
+                End If
+            Next
+
+            If allInside Then
+                Dim resultPuntos(poly->pointCnt - 1) As Punto Ptr
+                For i = 0 To poly->pointCnt - 1
+                    resultPuntos(i) = poly->points[i]
+                Next
+
+                Dim emptyList(0) As InterVertex Ptr
+                Delete subjectCopy
+                Return New PolyListOption(PolyListOptionType.insidePoly, emptyList(), 0, resultPuntos(), poly->pointCnt)
+            End If
+        End If
+
+        Dim result(subjectCopy->pointCnt * 3) As InterVertex Ptr ' Allocate extra space for interseccions
+        Dim resultCnt As Integer = 0
+
+        For iOffset As Integer = 0 To subjectCopy->pointCnt - 1
+            i = (iniIdx + iOffset) Mod subjectCopy->pointCnt
+            Dim ini As Punto Ptr = subjectCopy->points[i]
+
+            ' Check vertex
+            If i <> iniIdx AndAlso isInPolygon(ini, poly) Then
+                result(resultCnt) = New InterVertex(InterVertexType.insideVertex, ini)
+            Else
+                result(resultCnt) = New InterVertex(InterVertexType.outsideVertex, ini)
+            End If
+            resultCnt += 1
+
+            ' Check interseccion
+            Dim sgteI As Integer = IIf(i = subjectCopy->pointCnt - 1, 0, i + 1)
+            Dim finPto As Punto Ptr = subjectCopy->points[sgteI]
+            Dim lineSeg As Segmento Ptr = New Segmento(ini, finPto)
+
+            Dim interseccions As InterVertex Ptr Ptr = getIntersectionsWithLine(poly, lineSeg, cursorInside)
+
+            ' Count interseccions
+            Dim interseccionsCnt As Integer = 0
+            Dim tmpPtr As InterVertex Ptr Ptr = interseccions
+            While *tmpPtr <> NULL
+                interseccionsCnt += 1
+                tmpPtr += 1
+            Wend
+
+            ' Add interseccions to result
+            For j = 0 To interseccionsCnt - 1
+                result(resultCnt) = interseccions[j]
+                resultCnt += 1
+            Next
+
+            Deallocate(interseccions)
+            Delete lineSeg
+        Next
+
+        ' Check if there are any interseccions
+        Dim hasIntersections As Boolean = False
+        For i = 0 To resultCnt - 1
+            If result(i)->vertexType = InterVertexType.inIntersection OrElse _
+               result(i)->vertexType = InterVertexType.outIntersection Then
+                hasIntersections = True
+                Exit For
+            End If
+        Next
+
+        If Not hasIntersections Then
+            Dim emptyPuntos(0) As Punto Ptr
+            Delete subjectCopy
+            Return New PolyListOption(PolyListOptionType.none, result(), resultCnt, emptyPuntos(), 0)
+        Else
+            Dim emptyPuntos(0) As Punto Ptr
+            Delete subjectCopy
+            Return New PolyListOption(PolyListOptionType.list, result(), resultCnt, emptyPuntos(), 0)
+        End If
+    Else
+        Dim resultPuntos(subjectCopy->pointCnt - 1) As Punto Ptr
+        For i = 0 To subjectCopy->pointCnt - 1
+            resultPuntos(i) = subjectCopy->points[i]
+        Next
+
+        Dim emptyList(0) As InterVertex Ptr
+        Delete subjectCopy
+        Return New PolyListOption(PolyListOptionType.insidePoly, emptyList(), 0, resultPuntos(), subjectCopy->pointCnt)
+    End If
+End Function
+
+Function collectFromList(list() As InterVertex Ptr, cnt As Integer, iniPunto As Punto Ptr, ByRef newCnt As Integer) As Punto Ptr Ptr
+    Dim initialVertexNotFound As Boolean = True
+    Dim lastPunto As Punto Ptr = NULL
+    Dim dontSkip As Boolean = list(0)->pt->equals(iniPunto)
+    Dim points(cnt) As Punto Ptr
+    Dim As Integer iniI = 0, finI = 0, i = 0
+    Dim pointCnt As Integer = 0
+
+    ' Skip until inIntersection occurs, but include the inIntersection
+    While i < cnt AndAlso initialVertexNotFound AndAlso Not dontSkip
+        Dim sgte As Integer = IIf(i = cnt - 1, 0, i + 1)
+        Dim sgtePunto As InterVertex Ptr = list(sgte)
+
+        If sgtePunto->vertexType = InterVertexType.inIntersection OrElse _
+           sgtePunto->vertexType = InterVertexType.outIntersection Then
+            If sgtePunto->pt->equals(iniPunto) Then
+                iniI = sgte
+                initialVertexNotFound = False
+                Exit While
+            End If
+        End If
+
+        i += 1
+    Wend
+
+    ' Collect points
+    If Not initialVertexNotFound OrElse dontSkip Then
+        i = iniI
+        Dim continueCollecting As Boolean = True
+
+        While continueCollecting AndAlso i < cnt
+            Dim vertex As InterVertex Ptr = list(i)
+
+            If vertex->vertexType = InterVertexType.outIntersection Then
+                finI = i
+                lastPunto = vertex->pt
+                continueCollecting = False
+            Else
+                points(pointCnt) = vertex->pt
+                pointCnt += 1
+            End If
+
+            i += 1
+        Wend
+    End If
+
+    Dim amount As Integer = finI - iniI + 1
+    If finI >= iniI AndAlso iniI + amount <= cnt Then
+        ' Remove elements from list
+        For j As Integer = 0 To cnt - iniI - amount - 1
+            list(iniI + j) = list(iniI + amount + j)
+        Next
+        newCnt = cnt - amount
+    Else
+        newCnt = cnt
+    End If
+
+    If pointCnt > 0 AndAlso lastPunto <> NULL Then
+        Dim result As Punto Ptr Ptr = Allocate((pointCnt + 2) * SizeOf(Punto Ptr))
+        For i As Integer = 0 To pointCnt - 1
+            result[i] = points(i)
+        Next
+        result[pointCnt] = lastPunto
+        result[pointCnt + 1] = NULL ' Null terminate
+
+        Return result
+    Else
+        Return NULL
+    End If
+End Function
+
+Function prunePoints(points As Punto Ptr Ptr) As Punto Ptr Ptr
+    Dim cnt As Integer = 0
+    Dim tmpPtr As Punto Ptr Ptr = points
+    While *tmpPtr <> NULL
+        cnt += 1
+        tmpPtr += 1
+    Wend
+
+    If cnt <= 1 Then Return points
+
+    Dim newPuntos(cnt - 1) As Punto Ptr
+    newPuntos(0) = points[0]
+    Dim newCnt As Integer = 1
+    Dim i As Integer
+
+    For i = 1 To cnt - 1
+        If Not points[i]->equals(newPuntos(newCnt - 1)) Then
+            newPuntos(newCnt) = points[i]
+            newCnt += 1
+        End If
+    Next
+
+    Dim result As Punto Ptr Ptr = Allocate((newCnt + 1) * SizeOf(Punto Ptr))
+    For i = 0 To newCnt - 1
+        result[i] = newPuntos(i)
+    Next
+    result[newCnt] = NULL ' Null terminate
+
+    Deallocate(points)
+
+    Return result
+End Function
+
+Function getClipPolygon(subject() As InterVertex Ptr, subjectCnt As Integer, clip() As InterVertex Ptr, clipCnt As Integer, initial As Punto Ptr) As Punto Ptr Ptr
+    Dim result(subjectCnt + clipCnt) As Punto Ptr
+    Dim resultCnt As Integer = 0
+    Dim subjectAsList As Boolean = True
+    Dim iniPunto As Punto Ptr = initial
+    Dim finPunto As Punto Ptr = subject(subjectCnt - 1)->pt
+
+    While Not initial->equals(finPunto)
+        Dim newCnt As Integer
+        Dim values As Punto Ptr Ptr
+
+        If subjectAsList Then
+            values = collectFromList(subject(), subjectCnt, iniPunto, newCnt)
+            subjectCnt = newCnt
+        Else
+            values = collectFromList(clip(), clipCnt, iniPunto, newCnt)
+            clipCnt = newCnt
+        End If
+
+        If values <> NULL Then
+            Dim valuesCnt As Integer = 0
+            Dim tmpPtr As Punto Ptr Ptr = values
+            While *tmpPtr <> NULL
+                valuesCnt += 1
+                tmpPtr += 1
+            Wend
+
+            Dim finPto As Punto Ptr = values[valuesCnt - 1]
+
+            ' Add edges to result
+            For i As Integer = 0 To valuesCnt - 2
+                result(resultCnt) = values[i]
+                resultCnt += 1
+            Next
+
+            finPunto = finPto
+            iniPunto = finPto
+            subjectAsList = Not subjectAsList
+
+            Deallocate(values)
+        Else
+            Return NULL
+        End If
+    Wend
+
+    If resultCnt > 0 Then
+        Dim finalResult As Punto Ptr Ptr = Allocate((resultCnt + 1) * SizeOf(Punto Ptr))
+        For i As Integer = 0 To resultCnt - 1
+            finalResult[i] = result(i)
+        Next
+        finalResult[resultCnt] = NULL ' Null terminate
+
+        ' Prune consecutive duplicate points
+        Return prunePoints(finalResult)
+    Else
+        Return NULL
+    End If
+End Function
+
+Function getClipPolygons(subject() As InterVertex Ptr, subjectCnt As Integer, clip() As InterVertex Ptr, clipCnt As Integer) As Punto Ptr Ptr Ptr
+    Dim result(99) As Punto Ptr Ptr ' Assuming max 100 polygons
+    Dim resultCnt As Integer = 0
+    Dim newSubjectCnt As Integer = subjectCnt
+
+    Do
+        Dim iniPuntoOpt As Punto Ptr = getFirstInIntersection(subject(), newSubjectCnt)
+        If iniPuntoOpt = NULL Then Exit Do
+
+        Dim poly As Punto Ptr Ptr = getClipPolygon(subject(), newSubjectCnt, clip(), clipCnt, iniPuntoOpt)
+        If poly <> NULL Then
+            result(resultCnt) = poly
+            resultCnt += 1
+        Else
+            Exit Do
+        End If
+    Loop
+
+    If resultCnt > 0 Then
+        ' Create result array
+        Dim finalResult As Punto Ptr Ptr Ptr = Allocate((resultCnt + 1) * SizeOf(Punto Ptr Ptr))
+        For i As Integer = 0 To resultCnt - 1
+            finalResult[i] = result(i)
+        Next
+        finalResult[resultCnt] = NULL ' Null terminate
+        Return finalResult
+    Else
+        Return NULL
+    End If
+End Function
+
+Function clipPolygons(self As Poligono Ptr, other As Poligono Ptr) As Punto Ptr Ptr Ptr
+    Dim opcion As PolyListOption Ptr = getInterVertexList(self, other)
+    Dim otherOption As PolyListOption Ptr = getInterVertexList(other, self)
+    Dim i As Integer
+
+    If opcion->optionType = PolyListOptionType.list Then
+        Dim subjectList(opcion->interVertexCnt - 1) As InterVertex Ptr
+        For i = 0 To opcion->interVertexCnt - 1
+            subjectList(i) = opcion->interVertexList[i]
+        Next
+
+        If otherOption->optionType = PolyListOptionType.list Then
+            Dim clipList(otherOption->interVertexCnt - 1) As InterVertex Ptr
+            For i = 0 To otherOption->interVertexCnt - 1
+                clipList(i) = otherOption->interVertexList[i]
+            Next
+
+            Return getClipPolygons(subjectList(), opcion->interVertexCnt, clipList(), otherOption->interVertexCnt)
+        ElseIf otherOption->optionType = PolyListOptionType.insidePoly Then
+            ' Create result array with one polygon
+            Dim result As Punto Ptr Ptr Ptr = Allocate(2 * SizeOf(Punto Ptr Ptr))
+
+            ' Create polygon points array
+            Dim polyPuntos As Punto Ptr Ptr = Allocate((otherOption->pointCnt + 1) * SizeOf(Punto Ptr))
+            For i = 0 To otherOption->pointCnt - 1
+                polyPuntos[i] = otherOption->points[i]
+            Next
+            polyPuntos[otherOption->pointCnt] = NULL ' Null terminate
+
+            result[0] = polyPuntos
+            result[1] = NULL ' Null terminate
+            Return result
+        Else ' None
+            Return NULL
+        End If
+    ElseIf opcion->optionType = PolyListOptionType.insidePoly Then
+        ' Create result array with one polygon
+        Dim result As Punto Ptr Ptr Ptr = Allocate(2 * SizeOf(Punto Ptr Ptr))
+
+        ' Create polygon points array
+        Dim polyPuntos As Punto Ptr Ptr = Allocate((opcion->pointCnt + 1) * SizeOf(Punto Ptr))
+        For i = 0 To opcion->pointCnt - 1
+            polyPuntos[i] = opcion->points[i]
+        Next
+        polyPuntos[opcion->pointCnt] = NULL ' Null terminate
+
+        result[0] = polyPuntos
+        result[1] = NULL ' Null terminate
+        Return result
+    Else ' None
+        Return NULL
+    End If
+End Function
+
+' Testing function
+Sub runTests()
+    Dim i As Integer
+    ' Test isInLine
+    Dim p As Punto Ptr = New Punto(5, 10)
+    Dim lineIni As Punto Ptr = New Punto(5, 5)
+    Dim lineFin As Punto Ptr = New Punto(5, 20)
+    Dim lineSeg As Segmento Ptr = New Segmento(lineIni, lineFin)
+
+    Dim result As Boolean = isInLineSegment(p, lineSeg)
+    Print "isInLineSegment test 1: "; IIf(result, "PASS", "FAIL")
+
+    Dim pf As Punto Ptr = New Punto(3, 4)
+    Dim resultf As Boolean = isInLineSegment(pf, lineSeg)
+    Print "isInLineSegment test 2: "; IIf(Not resultf, "PASS", "FAIL")
+
+    ' Define first polygon - rectangle with a notch
+    Dim polyPuntos(5) As Punto Ptr
+    polyPuntos(0) = New Punto(180, 420)
+    polyPuntos(1) = New Punto(180, 120)
+    polyPuntos(2) = New Punto(520, 120)
+    polyPuntos(3) = New Punto(520, 420)
+    polyPuntos(4) = New Punto(420, 420)
+    polyPuntos(5) = New Punto(320, 220)
+
+    Dim poly As Poligono Ptr = New Poligono(polyPuntos(), 6)
+
+    ' Define second polygon - pentagon that intersects the first
+    Dim interPolyPuntos(4) As Punto Ptr
+    interPolyPuntos(0) = New Punto(60, 220)
+    interPolyPuntos(1) = New Punto(330, 120)
+    interPolyPuntos(2) = New Punto(410, 290)
+    interPolyPuntos(3) = New Punto(80, 480)
+    interPolyPuntos(4) = New Punto(280, 280)
+
+    Dim interPoly As Poligono Ptr = New Poligono(interPolyPuntos(), 5)
+
+    Dim polygons As Punto Ptr Ptr Ptr = clipPolygons(poly, interPoly)
+
+    If polygons <> NULL Then
+        Dim polygonCnt As Integer = 0
+        Dim tmpPtr As Punto Ptr Ptr Ptr = polygons
+        While *tmpPtr <> NULL
+            polygonCnt += 1
+            tmpPtr += 1
+        Wend
+
+        Print "clip test: PASS - Found "; polygonCnt; " polygons"
+
+        ' Print first polygon points
+        If polygonCnt > 0 Then
+            Dim pointCnt As Integer = 0
+            Dim pointsPtr As Punto Ptr Ptr = polygons[0]
+            While *pointsPtr <> NULL
+                pointCnt += 1
+                pointsPtr += 1
+            Wend
+
+            If pointCnt > 0 Then
+                Print "First polygon points:"
+                For i = 0 To pointCnt - 1
+                    Print "  Point: "; polygons[0][i]->toString()
+                Next
+            End If
+        End If
+
+        For i = 0 To polygonCnt - 1
+            ' We don't delete the points as they might be shared
+            Deallocate(polygons[i])
+        Next
+        Deallocate(polygons)
+    Else
+        Print "  clip test: FAIL - No polygons found"
+    End If
+
+    ' Clean up
+    Delete p
+    Delete pf
+    Delete lineIni
+    Delete lineFin
+    Delete lineSeg
+
+    For i = 0 To 5
+        Delete polyPuntos(i)
+    Next
+    Delete poly
+
+    For i = 0 To 4
+        Delete interPolyPuntos(i)
+    Next
+    Delete interPoly
+End Sub
+
+runTests()
+
+Sleep

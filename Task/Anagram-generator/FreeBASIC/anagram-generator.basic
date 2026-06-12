@@ -1,0 +1,125 @@
+Type WordGroup
+    As String sorted
+    As String words(100)
+    As Integer count
+End Type
+
+Type WordMap
+    As WordGroup groups(50000)
+    As Integer count
+End Type
+
+Dim Shared As WordMap dictionary
+
+Function sortWord(word As String) As String
+    Dim As String result = Lcase(word)
+    Dim As Integer length = Len(result)
+
+    For i As Integer = 1 To length - 1
+        For j As Integer = i + 1 To length
+            If Mid(result, i, 1) > Mid(result, j, 1) Then
+                Dim As String tmp = Mid(result, i, 1)
+                Mid(result, i, 1) = Mid(result, j, 1)
+                Mid(result, j, 1) = tmp
+            End If
+        Next
+    Next
+
+    Return result
+End Function
+
+Sub loadDictionary(map As WordMap, filename As String)
+    Dim As Integer ff = Freefile
+    Open filename For Input As #ff
+    Dim As String word, sorted
+
+    Do Until Eof(ff)
+        Line Input #ff, word
+        word = Trim(word)
+        If Len(word) = 0 Then Continue Do
+
+        sorted = sortWord(word)
+
+        Dim As Integer i, found = -1
+        For i = 0 To map.count - 1
+            If map.groups(i).sorted = sorted Then
+                found = i
+                Exit For
+            End If
+        Next
+
+        If found = -1 Then
+            found = map.count
+            map.count += 1
+            map.groups(found).sorted = sorted
+            map.groups(found).count = 0
+        End If
+
+        With map.groups(found)
+            .words(.count) = word
+            .count += 1
+        End With
+    Loop
+    Close #ff
+End Sub
+
+Function removeNonLetters(text As String) As String
+    Dim As String result = ""
+    For i As Integer = 1 To Len(text)
+        Dim As String c = Mid(text, i, 1)
+        If (c >= "A" And c <= "Z") Or (c >= "a" And c <= "z") Then result &= Lcase(c)
+    Next
+    Return result
+End Function
+
+Sub findWordCombinations(map As WordMap, letters As String)
+    Dim As Integer length = Len(letters)
+    If length < 2 Then Exit Sub
+
+    Dim As Integer halfLen, sameLength
+    Dim As Integer n, i, g1, g2, w1, w2
+    Dim As String part1, part2
+
+    halfLen = length \ 2
+    For n = halfLen To 1 Step -1
+        sameLength = (length = 2 * n)
+
+        For i = 1 To length - n + 1
+            part1 = Mid(letters, i, n)
+            part2 = Left(letters, i - 1) & Mid(letters, i + n)
+
+            part1 = sortWord(Mid(letters, i, n))
+            part2 = sortWord(Left(letters, i - 1) & Mid(letters, i + n))
+
+            For g1 = 0 To map.count - 1
+                If map.groups(g1).sorted = part1 Then
+                    For g2 = 0 To map.count - 1
+                        If map.groups(g2).sorted = part2 Then
+                            For w1 = 0 To map.groups(g1).count - 1
+                                For w2 = 0 To map.groups(g2).count - 1
+                                    Print "  " & map.groups(g1).words(w1) & " " & map.groups(g2).words(w2)
+                                Next
+                            Next
+                        End If
+                    Next
+                End If
+            Next
+        Next
+    Next
+End Sub
+
+Sub generateAnagrams(map As WordMap, text As String)
+    Dim As String cleanText = removeNonLetters(text)
+    findWordCombinations(map, cleanText)
+End Sub
+
+loadDictionary(dictionary, "i:\unixdict.txt")
+
+Dim tests(5) As String = {"Rosettacode", "PureFox", "Petelomax", "Wherrera", "Thundergnat", "ClintEastwood"}
+
+For i As Integer = 0 To Ubound(tests)
+    Print !"\n" & tests(i) & ":"
+    generateAnagrams(dictionary, tests(i))
+Next
+
+Sleep

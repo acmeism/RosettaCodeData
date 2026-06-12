@@ -1,0 +1,1 @@
+•Out"Code Golf"

@@ -1,0 +1,57 @@
+import ballerina/io;
+
+// constants
+const RE  = 6371000f; // radius of earth in meters
+const DD  = 0.001;    // integrate in this fraction of the distance already covered
+const FIN = 1e7;      // integrate only to a height of 10000km, effectively infinity
+
+function rho(float a) returns float {
+    return (-a / 8500.0).exp();
+}
+
+function radians(float degrees) returns float {
+    return degrees * float:PI / 180.0;
+}
+
+// a = altitude of observer
+// z = zenith angle (in degrees)
+// d = distance along line of sight
+function height(float a, float z, float d) returns float {
+    float aa = RE + a;
+    float hh = (aa * aa + d * d - 2.0 * d * aa * radians(180-z).cos()).sqrt();
+    return hh - RE;
+}
+
+// Integrates density along the line of sight.
+function columnDensity(float a, float z) returns float {
+    float sum = 0;
+    float d = 0;
+    while d < FIN {
+        float delta = DD.max(DD * d);  // adaptive step size to avoid it taking forever
+        sum += rho(height(a, z, d + 0.5 * delta)) * delta;
+        d += delta;
+    }
+    return sum;
+}
+
+function airmass(float a, float z) returns float {
+    return columnDensity(a, z) / columnDensity(a, 0);
+}
+
+function F(float f, int size, int prec) returns string {
+    string s = f.toFixedString(prec);
+    return size >= 0 ? s.padStart(size) : s.padEnd(size);
+}
+
+public function main() {
+    io:println("Angle     0 m              13700 m");
+    io:println("------------------------------------");
+    float z = 0.0;
+    while z <= 90.0 {
+        string s1 = F(z, 2, 0);
+        string s2 = F(airmass(0, z), 11, 8);
+        string s3 = F(airmass(13700, z), 11, 8);
+        io:println(`${s1}      ${s2}      ${s3}`);
+        z += 5.0;
+    }
+}

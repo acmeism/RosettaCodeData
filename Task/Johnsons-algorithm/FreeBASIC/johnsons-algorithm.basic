@@ -1,0 +1,153 @@
+Const INF As Integer = &H7FFFFFFF
+
+Type Edge
+    u As Integer
+    v As Integer
+    w As Integer
+End Type
+
+Function BellmanFord(num_vertices As Integer, edges() As Edge, source As Integer, dist() As Integer) As Boolean
+    Dim As Integer i, j, updated
+
+    For i = 0 To num_vertices - 1
+        dist(i) = INF
+    Next
+    dist(source) = 0
+
+    ' Relax edges V-1 times
+    For i = 1 To num_vertices - 1
+        updated = 0
+        For j = 0 To Ubound(edges)
+            With edges(j)
+                If dist(.u) <> INF Andalso dist(.u) + .w < dist(.v) Then
+                    dist(.v) = dist(.u) + .w
+                    updated = 1
+                End If
+            End With
+        Next
+        ' If no update in a full pass, we can stop early
+        If updated = 0 Then Exit For
+    Next
+
+    ' Check for negative cycles
+    For j = 0 To Ubound(edges)
+        With edges(j)
+            If dist(.u) <> INF Andalso dist(.u) + .w < dist(.v) Then
+                Print "Graph contains a negative weight cycle"
+                Return False
+            End If
+        End With
+    Next
+    Return True
+End Function
+
+Sub Dijkstra(num_vertices As Integer, adj() As Edge, source As Integer, h() As Integer, result() As Integer, row As Integer)
+    Dim As Integer visited(num_vertices - 1), dist(num_vertices - 1)
+    Dim As Integer i, min_dist, u, cnt
+
+    For i = 0 To num_vertices - 1
+        dist(i) = INF
+        visited(i) = 0
+    Next
+    dist(source) = 0
+
+    For cnt = 0 To num_vertices - 1
+        min_dist = INF
+        For i = 0 To num_vertices - 1
+            If visited(i) = 0 Andalso dist(i) < min_dist Then
+                min_dist = dist(i)
+                u = i
+            End If
+        Next
+
+        If min_dist = INF Then Exit For
+        visited(u) = 1
+
+        For i = 0 To Ubound(adj)
+            With adj(i)
+                If .u = u Then
+                    If dist(u) <> INF Andalso dist(u) + .w < dist(.v) Then dist(.v) = dist(u) + .w
+                End If
+            End With
+        Next
+    Next
+
+    For i = 0 To num_vertices - 1
+        result(row, i) = Iif(dist(i) <> INF, dist(i) - h(source) + h(i), INF)
+    Next
+End Sub
+
+Sub JohnsonsAlgorithm(graph() As Integer, result() As Integer)
+    Dim As Integer V = Ubound(graph, 1) + 1
+    Dim As Edge edges(), augmented_edges()
+    Dim As Integer h(V)
+    Dim As Integer i, j, k
+
+    ' --- Step 0: Handle Input and Build Edge List for Original Graph ---
+    k = 0
+    Redim edges(-1)
+    For i = 0 To V - 1
+        For j = 0 To V - 1
+            If i <> j Andalso graph(i, j) <> 0 Then
+                Redim Preserve edges(k)
+                edges(k).u = i
+                edges(k).v = j
+                edges(k).w = graph(i, j)
+                k += 1
+            End If
+        Next
+    Next
+
+    ' --- Step 1: Form the augmented graph G' ---
+    Redim augmented_edges(Ubound(edges) + V)
+    For i = 0 To Ubound(edges)
+        augmented_edges(i) = edges(i)
+    Next
+    For i = 0 To V - 1
+        augmented_edges(Ubound(edges) + 1 + i).u = V
+        augmented_edges(Ubound(edges) + 1 + i).v = i
+        augmented_edges(Ubound(edges) + 1 + i).w = 0
+    Next
+
+    ' --- Step 2: Run Bellman-Ford from the new source 's' ---
+    If Not BellmanFord(V + 1, augmented_edges(), V, h()) Then
+        Print "Negative cycle detected in the graph."
+        Exit Sub
+    End If
+
+    ' --- Step 3: Reweight the edges ---
+    For i = 0 To Ubound(edges)
+        edges(i).w += h(edges(i).u) - h(edges(i).v)
+    Next
+
+    ' --- Step 4: Run Dijkstra from each vertex on the reweighted graph ---
+    Redim result(V - 1, V - 1)
+    For i = 0 To V - 1
+        Dijkstra(V, edges(), i, h(), result(), i)
+    Next
+End Sub
+
+' --- Test Case ---
+Dim graph(3, 3) As Integer = { _
+{0, -5,  2,  3}, _
+{0,  0,  4,  0}, _ ' Assuming 0 means no edge from 1->0 and 1->3
+{0,  0,  0,  1}, _ ' Assuming 0 means no edge from 2->0 and 2->1
+{0,  0,  0,  0} }  ' Assuming 0 means no edge from 3->0, 3->1, 3->2
+
+Dim As Integer result(3, 3)
+
+JohnsonsAlgorithm(graph(), result())
+
+Print "All-pairs shortest paths:"
+For i As Integer = 0 To 3
+    For j As Integer = 0 To 3
+        If result(i, j) = INF Then
+            Print "INF ";
+        Else
+            Print Using "##  "; result(i, j);
+        End If
+    Next
+    Print
+Next
+
+Sleep

@@ -1,0 +1,538 @@
+Randomize Timer
+
+Const KeyUp = 259
+Const KeyDown = 258
+Const KeyLeft = 260
+Const KeyRight = 261
+
+Const Mx = 69 ' No of columns
+Const My = 31 ' No of rows
+Const Treasure = Asc("$")
+Const TreasureDb = 3 ' How many $ signs will be placed.
+Const Way = Asc(" ")
+Const Wall = Asc("X")
+Const Doors = 20 ' No of doors.
+Const DoorCenter = Asc("o")
+Const DoorWingVertical = Asc("|")
+Const DoorWingHorizontal = Asc("-")
+Const Hero = Asc("@")
+Const DeadHero = Asc("+")
+Const NumberOfBombs = 5
+Const Bomb = Asc("b")
+Const NumberOfMonsters = 20
+Const SterkMonster = Asc("*")
+Const WeakMonster = Asc(".")
+Const MonsterWeaknessProbability = 25
+Const MonsterIntensifiesProbability = 5
+
+Const HelpText = "Maze game." & Chr(10) & Chr(10) & _
+"The object of the game is to get all the treasures. " & Chr(10) & _
+"The symbol of the treasure is the $ sign." & Chr(10) & _
+"Help (display this text): press ? or h" & Chr(10) & _
+"Exit: press Esc or q" & Chr(10) & _
+"You can detonate a bomb by pressing b, but only as long as your " & Chr(10) & _
+"bomb remains." & Chr(10) & _
+"A bomb destroys every wall around the player (the outermost, " & Chr(10) & _
+"framing of the maze except for its walls), but it won't kill " & Chr(10) & _
+"monsters." & Chr(10) & _
+"The bomb does not destroy diagonally, only vertically and horizontally." & Chr(10) & _
+"The bomb will not destroy the doors or the treasure." & Chr(10) & _
+"You can also find bombs in the maze, represented by the letter b. " & Chr(10) & _
+"If you step on them, you got the bomb with it, that is, the number" & Chr(10) & _
+"of your bombs increases, for later use." & Chr(10) & _
+"The game ends when you have acquired all the treasures." & Chr(10) & _
+"The maze has not only walls but also revolving doors." & Chr(10) & _
+"The revolving door, if horizontal, looks like this: -o-" & Chr(10) & _
+"If vertical, like this:" & Chr(10) & _
+" |" & Chr(10) & _
+" o" & Chr(10) & _
+" |" & Chr(10) & _
+"The center of the revolving door is represented by the character o, " & Chr(10) & _
+"the wings by the line." & Chr(10) & _
+"The revolving door can be rotated if you take your wing in the right" & Chr(10) & _
+"direction with your character, and if nothing stands in the way of " & Chr(10) & _
+"rotation." & Chr(10) & _
+"The player is represented by @ in the game, and his starting point " & Chr(10) & _
+"is always in the lower left corner." & Chr(10) & _
+"There is a possibility of a little cheating in the game: each press " & Chr(10) & _
+"of the letter c is one increases the amount of your bombs."
+
+Type Position
+    As Integer x
+    As Integer y
+End Type
+
+Type Game
+    As Ubyte grid(1 To My, 1 To Mx)
+    As Position scoords(1 To NumberOfMonsters)
+    As Boolean showHelp
+    As Boolean terminate
+    As Integer treasureCounter
+    As Integer bombs
+    As Integer x
+    As Integer y
+End Type
+
+Dim Shared As Integer DeltaY(3) = {-1, 1, 0, 0}
+Dim Shared As Integer DeltaX(3) = {0, 0, -1, 1}
+Dim Shared As Position lastHeroPos, lastMonsterPos(1 To NumberOfMonsters)
+
+Function AnyTrue(arr() As Boolean) As Boolean
+    For i As Integer = Lbound(arr) To Ubound(arr)
+        If arr(i) Then Return True
+    Next i
+    Return False
+End Function
+
+Sub initPositions(Byref game As Game)
+    lastHeroPos.x = game.x
+    lastHeroPos.y = game.y
+    For i As Integer = 1 To NumberOfMonsters
+        lastMonsterPos(i) = game.scoords(i)
+    Next i
+End Sub
+
+Sub drawCell(x As Integer, y As Integer, cellType As Ubyte)
+    Locate y, x
+    Select Case cellType
+    Case Hero
+        Print Chr(Hero);
+    Case SterkMonster
+        Print Chr(SterkMonster);
+    Case WeakMonster
+        Print Chr(WeakMonster);
+    Case Bomb
+        Print Chr(Bomb);
+    Case Treasure
+        Print Chr(Treasure);
+    Case DoorCenter
+        Print Chr(DoorCenter);
+    Case DoorWingVertical
+        Print Chr(DoorWingVertical);
+    Case DoorWingHorizontal
+        Print Chr(DoorWingHorizontal);
+    Case Else
+        Print Chr(cellType);
+    End Select
+End Sub
+
+Sub updateScreen(Byref game As Game)
+    ' Update hero position if it has changed
+    If game.x <> lastHeroPos.x Or game.y <> lastHeroPos.y Then
+        drawCell(lastHeroPos.x, lastHeroPos.y, game.grid(lastHeroPos.y, lastHeroPos.x))
+        drawCell(game.x, game.y, Hero)
+        lastHeroPos.x = game.x
+        lastHeroPos.y = game.y
+    End If
+
+    ' Update monster positions if they have changed
+    For i As Integer = 1 To NumberOfMonsters
+        If game.scoords(i).x <> lastMonsterPos(i).x Or game.scoords(i).y <> lastMonsterPos(i).y Then
+            drawCell(lastMonsterPos(i).x, lastMonsterPos(i).y, game.grid(lastMonsterPos(i).y, lastMonsterPos(i).x))
+            drawCell(game.scoords(i).x, game.scoords(i).y, game.grid(game.scoords(i).y, game.scoords(i).x))
+            lastMonsterPos(i) = game.scoords(i)
+        End If
+    Next i
+
+    ' Update treasure and bomb counter
+    Locate My + 2, 1
+    Print "Collected treasures = " & game.treasureCounter & "     Bombs = " & game.bombs & "    "
+End Sub
+
+Sub initialDraw(Byref game As Game)
+    Cls
+    For y As Integer = 1 To My
+        For x As Integer = 1 To Mx
+            drawCell(x, y, game.grid(y, x))
+        Next x
+    Next y
+    updateScreen(game)
+End Sub
+
+Sub initGame(Byref game As Game)
+    Dim As Integer x, y, i, j
+    Dim As Boolean colFlags(1 To Mx), rowFlags(1 To My)
+
+    ' Initialize game properties
+    game.bombs = 3
+    game.treasureCounter = 0
+    game.terminate = False
+    game.showHelp = False
+
+    ' Initialize grid with walls
+    For x = 1 To Mx
+        game.grid(1, x) = Wall
+        game.grid(My, x) = Wall
+    Next x
+    For y = 2 To My - 1
+        game.grid(y, 1) = Wall
+        For x = 2 To Mx - 1
+            game.grid(y, x) = Way
+        Next x
+        game.grid(y, Mx) = Wall
+    Next y
+
+    ' Generate flags for maze creation
+    For i = 1 To Mx Step 2
+        colFlags(i) = True
+    Next i
+    For i = 1 To My Step 2
+        rowFlags(i) = True
+    Next i
+
+    ' Create maze
+    Dim As Integer iterations = 0
+    Dim As Integer maxIterations = Mx * My ' Limit iterations to avoid infinite loop
+
+    Do While AnyTrue(colFlags()) Or AnyTrue(rowFlags())
+        Dim As Integer direction  = Int(Rnd * 4)
+        j = Iif(direction <= 1, (Int(Rnd * ((My - 1) \ 2)) * 2), (Int(Rnd * ((Mx - 1) \ 2)) * 2)) + 1
+
+        Select Case direction
+        Case 0 ' Left
+            If rowFlags(j) Then
+                For x = 2 To Mx - 1
+                    If game.grid(j, x) <> Wall And game.grid(j, x + 1) <> Wall Then
+                        game.grid(j, x) = Wall
+                    End If
+                Next x
+                rowFlags(j) = False
+            End If
+        Case 1 ' Right
+            If rowFlags(j) Then
+                For x = Mx - 1 To 2 Step -1
+                    If game.grid(j, x) <> Wall And game.grid(j, x - 1) <> Wall Then
+                        game.grid(j, x) = Wall
+                    End If
+                Next x
+                rowFlags(j) = False
+            End If
+        Case 2 ' Up
+            If colFlags(j) Then
+                For y = 2 To My - 1
+                    If game.grid(y, j) <> Wall And game.grid(y + 1, j) <> Wall Then
+                        game.grid(y, j) = Wall
+                    End If
+                Next y
+                colFlags(j) = False
+            End If
+        Case 3 ' Down
+            If colFlags(j) Then
+                For y = My - 1 To 2 Step -1
+                    If game.grid(y, j) <> Wall And game.grid(y - 1, j) <> Wall Then
+                        game.grid(y, j) = Wall
+                    End If
+                Next y
+                colFlags(j) = False
+            End If
+        End Select
+
+        iterations += 1
+        If iterations >= maxIterations Then Exit Do
+    Loop
+
+    ' Place doors
+    Dim As Integer doorsPlaced = 0
+    Do While doorsPlaced < Doors
+        x = Int(Rnd * (Mx - 4)) + 3
+        y = Int(Rnd * (My - 4)) + 3
+        If game.grid(y, x) <> Way And _
+            game.grid(y - 1, x - 1) = Way And game.grid(y - 1, x + 1) = Way And _
+            game.grid(y + 1, x - 1) = Way And game.grid(y + 1, x + 1) = Way Then
+            ' Check for vertical door
+            If game.grid(y - 1, x) = Wall And game.grid(y - 2, x) = Wall And _
+            game.grid(y + 1, x) = Wall And game.grid(y + 2, x) = Wall And _
+            game.grid(y, x - 1) = Way And game.grid(y, x + 1) = Way Then
+            game.grid(y, x) = DoorCenter
+            game.grid(y - 1, x) = DoorWingVertical
+            game.grid(y + 1, x) = DoorWingVertical
+            doorsPlaced += 1
+            ' Check for horizontal door
+            Elseif game.grid(y, x - 1) = Wall And game.grid(y, x - 2) = Wall And _
+            game.grid(y, x + 1) = Wall And game.grid(y, x + 2) = Wall And _
+            game.grid(y + 1, x) = Way And game.grid(y - 1, x) = Way Then
+            game.grid(y, x) = DoorCenter
+            game.grid(y, x - 1) = DoorWingHorizontal
+            game.grid(y, x + 1) = DoorWingHorizontal
+            doorsPlaced += 1
+        End If
+    End If
+    Loop
+
+    ' Place treasures, bombs, and monsters
+    Dim As Integer items(1 To 3, 1 To 2) = { _
+    {TreasureDb, Treasure}, _
+    {NumberOfBombs, Bomb}, _
+    {NumberOfMonsters, WeakMonster} }
+
+    For i = 1 To 3
+        Dim As Integer n = items(i, 1)
+        Dim As Integer what = items(i, 2)
+        Dim As Integer iter = 1
+        Do While n > 0 And iter <= 10000
+            x = Int(Rnd * Mx) + 1
+            y = Int(Rnd * My) + 1
+            If game.grid(y, x) = Way Then
+                game.grid(y, x) = what
+                If what = WeakMonster Then
+                    game.scoords(n).x = x
+                    game.scoords(n).y = y
+                End If
+                n -= 1
+            End If
+            iter += 1
+        Loop
+    Next i
+
+    ' Place hero
+    game.x = 1
+    game.y = My - 2
+    game.grid(My - 2, 1) = Hero
+End Sub
+
+Function monsterStepFinder(Byref game As Game, sx As Integer, sy As Integer) As Position
+    Dim As Position result = Type(0, 0)
+    Dim As Integer m(3) = {0, 1, 2, 3}
+    Dim As Integer i, j, nx, ny
+
+    ' Shuffle m array
+    For i = 3 To 1 Step -1
+        j = Int(Rnd * (i + 1))
+        Swap m(i), m(j)
+    Next i
+
+    For i = 0 To 3
+        nx = sx + DeltaX(m(i))
+        ny = sy + DeltaY(m(i))
+        If ny >= 1 Andalso ny <= My Andalso nx >= 1 Andalso nx <= Mx Then
+            If game.grid(ny, nx) = Way Orelse game.grid(ny, nx) = Hero Then
+                result.x = nx
+                result.y = ny
+                Return result
+            End If
+        End If
+    Next i
+
+    Return result
+End Function
+
+Sub monsterMove(Byref game As Game)
+    Dim As Integer active = Int(Rnd * NumberOfMonsters) + 1
+    Dim As Integer sx = game.scoords(active).x
+    Dim As Integer sy = game.scoords(active).y
+
+    If sx <> 0 Then
+        Dim As Ubyte ch = game.grid(sy, sx)
+
+        If ch = SterkMonster Then
+            If Int(Rnd * MonsterWeaknessProbability) + 1 = 1 Then
+                game.grid(sy, sx) = WeakMonster
+            Else
+                Dim monster As Position = monsterStepFinder(game, sx, sy)
+                If monster.x <> 0 Or monster.y <> 0 Then
+                    If game.grid(monster.y, monster.x) = Hero Then
+                        game.grid(monster.y, monster.x) = DeadHero
+                        game.terminate = True
+                    Else
+                        game.grid(sy, sx) = Way
+                        game.grid(monster.y, monster.x) = SterkMonster
+                        game.scoords(active) = monster
+                    End If
+                End If
+            End If
+        Elseif ch = WeakMonster Then
+            If Int(Rnd * MonsterIntensifiesProbability) + 1 = 1 Then
+                game.grid(sy, sx) = SterkMonster
+            Else
+                Dim monster As Position = monsterStepFinder(game, sx, sy)
+                If monster.x <> 0 Or monster.y <> 0 Then
+                    game.grid(sy, sx) = Way
+                    If game.grid(monster.y, monster.x) <> Hero Then
+                        game.grid(monster.y, monster.x) = WeakMonster
+                        game.scoords(active) = monster
+                    Else
+                        game.scoords(active).x = 0
+                        game.scoords(active).y = 0
+                    End If
+                End If
+            End If
+        End If
+    End If
+End Sub
+
+Sub rotateDoor(Byref game As Game, nx As Integer, ny As Integer)
+    Dim As Integer i, x, y, wy, wx, cy, cx, py, px
+    Dim As Ubyte door, flipDoor
+    Dim As Boolean doorRotated = False
+    Dim As Integer doorCenterX, doorCenterY
+
+    For i = 0 To 3
+        wy = DeltaY(i)
+        wx = DeltaX(i)
+        cy = ny + wy
+        cx = nx + wx
+
+        If game.grid(cy, cx) = DoorCenter Then
+            doorCenterX = cx
+            doorCenterY = cy
+            py = DeltaY((i + 2) Mod 4)
+            px = DeltaX((i + 2) Mod 4)
+
+            If game.grid(cy+py, cx+px) = Way Andalso game.grid(cy-py, cx-px) = Way Then
+                door = game.grid(ny, nx)
+                flipDoor = Iif(door = DoorWingVertical, DoorWingHorizontal, DoorWingVertical)
+
+                ' Delete the previous door
+                game.grid(cy+py, cx+px) = Way
+                game.grid(cy-py, cx-px) = Way
+                game.grid(ny, nx) = Way
+                game.grid(cy+wy, cx+wx) = Way
+                game.grid(cy-wy, cx-wx) = Way
+
+                ' Draw the new door
+                game.grid(cy+py, cx+px) = flipDoor
+                game.grid(cy-py, cx-px) = flipDoor
+                game.grid(cy, cx) = DoorCenter
+
+                doorRotated = True
+                Exit For
+            End If
+        End If
+    Next i
+
+    If doorRotated Then
+        ' Redraw the door and its surroundings
+        For y = doorCenterY-2 To doorCenterY+2
+            For x = doorCenterX-2 To doorCenterX+2
+                If y >= 1 Andalso y <= My Andalso x >= 1 Andalso x <= Mx Then
+                    drawCell(x, y, game.grid(y, x))
+                End If
+            Next x
+        Next y
+    End If
+End Sub
+
+Sub MoveHero(Byref game As Game, direction As Integer)
+    Dim As Integer nx = game.x + DeltaX(direction)
+    Dim As Integer ny = game.y + DeltaY(direction)
+
+    If ny >= 1 Andalso ny <= My Andalso nx >= 1 Andalso nx <= Mx Then
+        Dim As Ubyte ch = game.grid(ny, nx)
+
+        Select Case ch
+        Case DoorWingVertical, DoorWingHorizontal, DoorCenter
+            rotateDoor(game, nx, ny)
+            ' After rotating, we check if the hero can move
+            If game.grid(ny, nx) = Way Then
+                game.grid(game.y, game.x) = Way
+                drawCell(game.x, game.y, Way)
+                game.x = nx
+                game.y = ny
+                game.grid(ny, nx) = Hero
+                drawCell(nx, ny, Hero)
+            End If
+        Case SterkMonster
+            game.grid(game.y, game.x) = Way
+            drawCell(game.x, game.y, Way)
+            game.grid(ny, nx) = DeadHero
+            game.y = ny
+            game.x = nx
+            drawCell(nx, ny, DeadHero)
+            game.terminate = True
+        Case Treasure
+            game.treasureCounter += 1
+            If game.treasureCounter = TreasureDb Then
+                game.terminate = True
+            End If
+            game.grid(game.y, game.x) = Way
+            drawCell(game.x, game.y, Way)
+            game.x = nx
+            game.y = ny
+            game.grid(ny, nx) = Hero
+            drawCell(nx, ny, Hero)
+        Case Bomb
+            game.bombs += 1
+            game.grid(game.y, game.x) = Way
+            drawCell(game.x, game.y, Way)
+            game.x = nx
+            game.y = ny
+            game.grid(ny, nx) = Hero
+            drawCell(nx, ny, Hero)
+        Case Way, WeakMonster
+            game.grid(game.y, game.x) = Way
+            drawCell(game.x, game.y, Way)
+            game.x = nx
+            game.y = ny
+            game.grid(ny, nx) = Hero
+            drawCell(nx, ny, Hero)
+        End Select
+    End If
+End Sub
+
+Sub keyboard(Byref game As Game)
+    Dim As String key = Inkey
+
+    If key = "" Then Exit Sub
+
+    Select Case key
+    Case Chr(27), "q", "Q"  ' ESC
+        game.terminate = True
+    Case Chr(255) & "H"  ' UP
+        MoveHero(game, 0)
+    Case Chr(255) & "P"  ' DOWN
+        MoveHero(game, 1)
+    Case Chr(255) & "K"  ' LEFT
+        MoveHero(game, 2)
+    Case Chr(255) & "M"  ' RIGHT
+        MoveHero(game, 3)
+    Case "b", "B"
+        If game.bombs > 0 Then
+            Dim As Integer i, nx, ny
+            game.bombs -= 1
+            ' Using the pump
+            For i = 0 To 3
+                nx = game.x + DeltaX(i)
+                ny = game.y + DeltaY(i)
+                If ny >= 1 Andalso ny <= My Andalso nx >= 1 Andalso nx <= Mx Then
+                    If game.grid(ny, nx) = Wall Then game.grid(ny, nx) = Way
+                End If
+            Next i
+            updateScreen(game)
+            initialDraw(game)
+        End If
+    Case "?", "h", "H"
+        game.showHelp = True
+        Cls
+        Print HelpText
+        While Inkey = "": Wend
+        initialDraw(game)
+    End Select
+End Sub
+
+' Main program
+Dim game As Game
+
+Screen 0
+Width Mx, My + 6
+
+initGame(game)
+initPositions(game)
+initialDraw(game)
+
+Do
+    keyboard(game)
+    monsterMove(game)
+    updateScreen(game)
+
+    If game.terminate Then Exit Do
+
+    Sleep 50
+Loop
+
+Locate My + 3, 1
+If game.treasureCounter = TreasureDb Then
+    Print "YOU WON! Congratulations!"
+Elseif game.grid(game.y, game.x) = DeadHero Then
+    Print "YOU PERISHED!"
+End If
+While Inkey = "": Wend

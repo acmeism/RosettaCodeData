@@ -1,0 +1,130 @@
+Type StringArray
+    elements(Any) As String
+    length As Integer
+End Type
+
+Function join(arr As StringArray, delimiter As String) As String
+    Dim result As String = ""
+    For i As Integer = 0 To arr.length - 1
+        If i > 0 Then result &= delimiter
+        result &= arr.elements(i)
+    Next
+    Return result
+End Function
+
+Function scanForURLs(text As String) As StringArray
+    Dim As String schemes(13) = { "ftp", "gopher", "http", "https", "mailto", _
+    "news", "nntp", "telnet", "wais", "file", "prospero", "edit", "tel", "urn" }
+
+    Dim As StringArray result
+    Redim result.elements(0)
+    result.length = 0
+
+    Dim As Integer chidx = 1, chidx2 = 1
+    Dim As Integer textLen = Len(text)
+
+    While chidx2 <= textLen
+        Dim As String ch2 = Mid(text, chidx2, 1)
+
+        If ch2 >= "a" And ch2 <= "z" Then
+            If chidx2 - 1 > chidx Or Asc(Mid(text, chidx, 1)) <= 32 Then chidx = chidx2
+
+            While chidx2 <= textLen
+                ch2 = Mid(text, chidx2, 1)
+                If ch2 < "a" Or ch2 > "z" Then Exit While
+                chidx2 += 1
+            Wend
+
+            Dim As String oneword = Mid(text, chidx, chidx2 - chidx)
+            If chidx2 > textLen Then Exit While
+
+            ch2 = Mid(text, chidx2, 1)
+            Dim As Boolean isScheme = False
+
+            For i As Integer = 0 To Ubound(schemes)
+                If oneword = schemes(i) Then
+                    isScheme = True
+                    Exit For
+                End If
+            Next
+
+            If (ch2 = ":" And isScheme) Or (ch2 = "." And oneword = "www") Then
+                chidx2 += 1
+                Dim As Integer chidx0 = chidx2
+                Dim As Boolean isUrl = False
+                Dim As String bstack = ""
+
+                While chidx2 <= textLen
+                    ch2 = Mid(text, chidx2, 1)
+
+                    If ch2 = Chr(34) And chidx2 = chidx0 Then
+                        While chidx2 < textLen
+                            chidx2 += 1
+                            ch2 = Mid(text, chidx2, 1)
+                            If ch2 = Chr(34) Then
+                                chidx2 += 1
+                                isUrl = True
+                                Exit While
+                            End If
+                        Wend
+                        Exit While
+                    Elseif Instr("(<[{", ch2) Then
+                        bstack &= Chr(Asc(ch2) + Iif(ch2 = "(", 1, 2))
+                    Elseif Instr(")>]}", ch2) Then
+                        If Len(bstack) = 0 Or Right(bstack, 1) <> ch2 Then Exit While
+                        bstack = Left(bstack, Len(bstack) - 1)
+                    End If
+
+                    If Asc(ch2) > 255 Or Asc(ch2) <= 32 Then Exit While
+                    isUrl = True
+                    chidx2 += 1
+                Wend
+
+                If isUrl Then
+                    Dim As String oneurl = Mid(text, chidx, chidx2 - chidx)
+                    If Right(oneurl, 1) = "." Then oneurl = Left(oneurl, Len(oneurl) - 1)
+
+                    Redim Preserve result.elements(result.length)
+                    result.elements(result.length) = oneurl
+                    result.length += 1
+                End If
+
+                chidx = chidx2
+                If chidx2 > textLen Then Exit While
+            Else
+                chidx2 -= 1
+            End If
+        End If
+        chidx2 += 1
+    Wend
+
+    Return result
+End Function
+
+' Main program
+Dim txt As String = _
+"this URI contains an illegal character, parentheses and a misplaced full stop:" & Chr(10) & _
+"http://en.wikipedia.org/wiki/Erich_Kästner_(camera_designer). (which is handled by http://mediawiki.org/)." & Chr(10) & _
+"and another one just to confuse the parser: http://en.wikipedia.org/wiki/-)" & Chr(10) & _
+"ftp://domain.name/path(balanced_brackets)/foo.html" & Chr(10) & _
+"ftp://domain.name/path(balanced_brackets)/ending.in.dot." & Chr(10) & _
+"ftp://domain.name/path(unbalanced_brackets/ending.in.dot." & Chr(10) & _
+"leading junk ftp://domain.name/path/embedded?punct/uation." & Chr(10) & _
+"leading junk ftp://domain.name/dangling_close_paren)" & Chr(10) & _
+"http://www.example.org/foo.html#includes_fragment" & Chr(10) & _
+"http://www.example.org/foo.html#enthält_Unicode-Fragment" & Chr(10) & _
+"http://192.168.0.1/admin/?hackme=%%%%%%%%%true" & Chr(10) & _
+"blah (foo://domain.hld/))))" & Chr(10) & _
+"https://haxor.ur:4592/~mama/####&?foo" & Chr(10) & _
+"ftp://ftp.is.co.za/rfc/rfc1808.txt" & Chr(10) & _
+"http://www.ietf.org/rfc/rfc2396.txt" & Chr(10) & _
+"mailto:John.Doe@example.com" & Chr(10) & _
+"news:comp.infosystems.www.servers.unix" & Chr(10) & _
+"tel:+1-816-555-1212" & Chr(10) & _
+"telnet://192.0.2.16:80/" & Chr(10) & _
+"urn:oasis:names:specification:docbook:dtd:xml:4.1.2"
+
+Dim As StringArray urls = scanForURLs(txt)
+Print join(urls, Chr(10))
+
+Sleep

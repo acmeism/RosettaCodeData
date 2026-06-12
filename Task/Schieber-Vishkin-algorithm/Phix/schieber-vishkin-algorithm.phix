@@ -1,0 +1,205 @@
+-- WARNING: horrible mashup of 0|1|2-based indexing, and logical|bitwise|math operations (tee-hee!)
+enum CHILD,SIB,PARENT
+--enum PIE,BETA,ALFA,TAU,LAM -- (not actually used anymore)
+
+function computeAlfa(integer node, sequence alfa, beta, nodes)
+
+    node += 1
+    alfa[node] = alfa[nodes[node][PARENT]+1] || (beta[node] && -beta[node])
+
+    if nodes[node][CHILD]!=0 then
+        alfa = computeAlfa(nodes[node][CHILD],alfa,beta,nodes)
+    end if
+
+    if nodes[node][SIB]!=0 then
+        alfa = computeAlfa(nodes[node][SIB],alfa,beta,nodes)
+    end if
+    return alfa
+end function
+
+function process(integer N, sequence A)
+
+    sequence pie = repeat(0,N+1),
+            beta = repeat(0,N+1),
+            alfa = repeat(0,N+1),
+             tau = repeat(0,N+1),
+             lam = repeat(0,N+1),
+           nodes = repeat({0,0,0},N+1)
+
+    -- Make triply linked tree.
+    integer t = 1
+    for v=N+1 to 2 by -1 do
+        integer u = 0
+        while A[v]>A[t] or (A[v]==A[t] and v>t) do
+            u = t
+            t = nodes[t][PARENT]+1
+        end while
+        if u!=0 then
+            nodes[v][SIB] = nodes[u][SIB]
+            nodes[u][SIB] = 0
+            nodes[u][PARENT] = v-1
+            nodes[v][CHILD] = u-1
+        else
+            nodes[v][SIB] = nodes[t][CHILD]
+        end if
+        nodes[t][CHILD] = v-1
+        nodes[v][PARENT] = t-1
+        t = v
+    end for
+
+    -- First traversal.
+    integer p = nodes[1][CHILD]+1, n = 0
+    lam[1] = -1
+
+    bool done = false
+    while not done do
+        -- Compute beta in the easy case.
+        while true do
+            n += 1
+            pie[p] = n
+            tau[n+1] = 0
+            lam[n+1] = 1 + lam[(n>>1)+1]
+
+            if nodes[p][CHILD]=0 then
+                beta[p] = n
+                exit
+            end if
+
+            p = nodes[p][CHILD]+1
+        end while
+
+        -- Compute tau, bottom-up.
+        while true do
+            tau[beta[p]] = nodes[p][PARENT]
+
+            if nodes[p][SIB]!=0 then
+                p = nodes[p][SIB]+1
+                exit
+            end if
+
+            p = nodes[p][PARENT]+1
+            if p=1 then
+                done = true
+                exit
+            end if
+            -- Compute beta in the hard case.
+            integer h = lam[(n&&-pie[p])+1]
+            beta[p] = ((n>>h)||1) << h
+        end while
+    end while
+
+    -- Second traversal.
+    p = nodes[1][CHILD]
+    lam[1] = lam[n]
+    alfa[1] = 0
+    beta[1] = 0
+    pie[1] = 0
+
+    if p!=0 then
+        alfa = computeAlfa(p,alfa,beta,nodes)
+    end if
+    return {pie, beta, alfa, tau, lam}
+end function
+
+function nca(integer x, y, sequence r)
+
+    sequence {pie, beta, alfa, tau, lam} = r
+    x += 1
+    y += 1
+    -- Find common height.
+    integer h = iff(beta[x]<=beta[y]?lam[(beta[y]&&-beta[x])+1]
+                                    :lam[(beta[x]&&-beta[y])+1])
+
+    -- Find true height.
+    integer k = alfa[x]&&alfa[y]&&-(1<<h)
+    h = lam[(k&&-k)+1]
+
+    -- Find beta[z].
+    integer j = ((beta[x]>>h)||1) << h
+
+    -- Find x' and y'.
+    integer l
+    if j != beta[x] then
+        l = lam[(alfa[x]&&((1<<h)-1))+1]
+        x = tau[(((beta[x]>>l)||1)<<l)+1]
+    end if
+
+    if j != beta[y] then
+        l = lam[(alfa[y]&&((1<<h)-1))+1]
+        y = tau[(((beta[y]>>l)||1)<<l)+1]
+    end if
+
+    -- Find z.
+    integer z = iff(pie[x]<=pie[y] ? x : y)
+    return z
+end function
+
+function solve_test_case(integer n, sequence v, queries)
+
+    sequence res = {},
+               A = {power(2,30)},
+               R = repeat(0,n),
+               B = repeat(0,n)
+
+    integer N = 1,
+        count = 0,
+         oldx = -1
+
+    for i,x in v do
+        if i>1 and x!=oldx then
+            A &= count
+            R[N] = i
+            N += 1
+            count = 0
+        end if
+        B[i] = N
+        count += 1
+        oldx = x
+    end for
+
+    A &= count
+    R[N] = n+1
+
+    sequence r = process(N,A)
+
+    for t in queries do
+        integer {i,j} = t,
+                    x = B[i],
+                    y = B[j],
+                    z = j-i+1 -- (x==y case)
+        if x!=y then
+            z = iff(x+1!=y?A[nca(x+1, y-1, r)]:0)
+            z = max(z,max(R[x]-i,A[y+1]-R[y]+j+1))
+        end if
+        res &= z
+    end for
+    return res
+end function
+
+constant tests = {
+    {{-1, -1, 1, 1, 1, 1, 3, 10, 10, 10},
+     {{{2,3},1},{{1,10},4},{{5,10},3}}}
+}
+
+for idx, t in tests do
+    sequence {v,q} = t
+    integer n = length(v)
+
+    printf(1,"Test Case %d:\n",idx)
+    printf(1,"Size: %d, Queries: %d\n",{n,length(q)})
+    printf(1,"Values: %s\n",{join(v,fmt:="%d")})
+
+    sequence results = solve_test_case(n,v,vslice(q,1))
+
+    printf(1,"Queries and Results:\n")
+    for qdx,qe in q do
+        integer {{i,j},e} = qe,
+                   result = results[qdx]
+        printf(1,"Query: %d %d\n",{i,j})
+        printf(1,"Result: %d (Expected: %d)\n",{result,e})
+        if result!=e then
+            printf(1,"  WARNING: Result doesn't match expected output\n")
+        end if
+    end for
+    printf(1,"\n")
+end for

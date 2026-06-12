@@ -1,0 +1,386 @@
+Const N As Integer = 32
+Const NMAX As Integer = 40000
+
+Type SaveType
+    p As Integer Ptr
+    v As Integer
+End Type
+
+' Arrays
+Dim Shared As Integer u(N-1) = {1, 2} ' upper bounds
+Dim Shared As Integer l(N-1) = {1, 2}  ' lower bounds
+Dim Shared As Integer out_(N-1), sum(N-1), tail(N-1), cache(NMAX)
+cache(2) = 1
+Dim Shared As Integer stack = 0, known = 2
+Dim Shared As SaveType undo(N*N-1)
+
+Declare Function seq(n As Integer, le As Integer, buf As Integer Ptr) As Integer
+Declare Function seqRecur(le As Integer) As Boolean
+
+Sub replace(x() As Integer, i As Integer, t As Integer)
+    undo(stack).p = @x(i)
+    undo(stack).v = x(i)
+    x(i) = t
+    stack += 1
+End Sub
+
+Sub restore_(t As Integer)
+    While stack > t
+        stack -= 1
+        *undo(stack).p = undo(stack).v
+    Wend
+End Sub
+
+' lower and upper bounds
+Function lower(t As Integer, up As Integer Ptr) As Integer
+    If t <= 2 Orelse (t <= NMAX Andalso cache(t) <> 0) Then
+        If up <> 0 Then *up = cache(t)
+        Return cache(t)
+    End If
+
+    Dim As Integer i = -1, o = 0, tmp = t
+
+    While tmp <> 0
+        If (tmp And 1) <> 0 Then o += 1
+        tmp Shr= 1
+        i += 1
+    Wend
+
+    If up <> 0 Then
+        i -= 1
+        *up = o + i
+    End If
+
+    Do
+        i += 1
+        o Shr= 1
+    Loop Until o = 0
+
+    Return i
+End Function
+
+Function insert(x As Integer, posic As Integer) As Boolean
+    Dim As Integer save = stack
+    Dim As Integer i, t
+
+    If l(posic) > x Orelse u(posic) < x Then Return False
+    If l(posic) = x Then Goto replU
+
+    replace(l(), posic, x)
+
+    i = posic - 1
+    While u(i)*2 < u(i+1)
+        t = l(i+1) + 1
+        If t*2 > u(i) Then Goto bail
+        replace(l(), i, t)
+        i -= 1
+    Wend
+
+    i = posic + 1
+    While l(i) <= l(i-1)
+        t = l(i-1) + 1
+        If t > u(i) Then Goto bail
+        replace(l(), i, t)
+        i += 1
+    Wend
+
+    replU:
+    If u(posic) = x Then Return True
+
+    replace(u(), posic, x)
+
+    i = posic - 1
+    While u(i) >= u(i+1)
+        t = u(i+1) - 1
+        If t < l(i) Then Goto bail
+        replace(u(), i, t)
+        i -= 1
+    Wend
+
+    i = posic + 1
+    While u(i) > u(i-1)*2
+        t = u(i-1) * 2
+        If t < l(i) Then Goto bail
+        replace(u(), i, t)
+        i += 1
+    Wend
+
+    Return True
+
+    bail:
+    restore_(save)
+    Return False
+End Function
+
+Function try(p As Integer, q As Integer, le As Integer) As Boolean
+    Dim As Integer pl = cache(p)
+    If pl >= le Then Return False
+
+    Dim As Integer ql = cache(q)
+    If ql >= le Then Return False
+
+    Dim As Integer pu, qu
+
+    While pl < le Andalso u(pl) < p
+        pl += 1
+    Wend
+
+    pu = pl - 1
+    While pu < le-1 Andalso u(pu+1) >= p
+        pu += 1
+    Wend
+
+    While ql < le Andalso u(ql) < q
+        ql += 1
+    Wend
+
+    qu = ql - 1
+    While qu < le-1 Andalso u(qu+1) >= q
+        qu += 1
+    Wend
+
+    If p <> q Andalso pl <= ql Then pl += 1
+
+    If pl > pu Orelse ql > qu Orelse ql > pu Then Return False
+
+    If out_(le) = 0 Then
+        pu = le - 1
+        pl = pu
+    End If
+
+    Dim As Integer ps = stack
+
+    While pu >= pl
+        If insert(p, pu) Then
+            out_(pu) += 1
+            sum(pu) += le
+            If p <> q Then
+                Dim As Integer qs = stack
+                Dim As Integer j = qu
+                If j >= pu Then j = pu - 1
+
+                While j >= ql
+                    If insert(q, j) Then
+                        out_(j) += 1
+                        sum(j) += le
+                        tail(le) = q
+                        If seqRecur(le - 1) Then Return True
+                        restore_(qs)
+                        out_(j) -= 1
+                        sum(j) -= le
+                    End If
+                    j -= 1
+                Wend
+            Else
+                out_(pu) += 1
+                sum(pu) += le
+                tail(le) = p
+                If seqRecur(le - 1) Then Return True
+                out_(pu) -= 1
+                sum(pu) -= le
+            End If
+            out_(pu) -= 1
+            sum(pu) -= le
+            restore_(ps)
+        End If
+        pu -= 1
+    Wend
+
+    Return False
+End Function
+
+Function seqRecur(le As Integer) As Boolean
+    Dim As Integer t = l(le)
+    If le < 2 Then Return True
+
+    Dim As Integer limit = t - 1
+    If out_(le) = 1 Then limit = t - tail(sum(le))
+    If limit > u(le-1) Then limit = u(le-1)
+
+    Dim As Integer q, p = limit
+
+    While p >= (t+1)\2
+        q = t - p
+        If try(p, q, le) Then Return True
+        p -= 1
+    Wend
+
+    Return False
+End Function
+
+Function seq(t As Integer, le As Integer, buf As Integer Ptr) As Integer
+    Dim As Integer i
+
+    If le = 0 Then le = seqLen(t)
+    stack = 0
+    l(le) = t : u(le) = t
+
+    For i = 0 To le
+        out_(i) = 0 : sum(i) = 0
+    Next
+
+    For i = 2 To le - 1
+        l(i) = l(i-1) + 1
+        u(i) = u(i-1) * 2
+    Next
+
+    For i = le - 1 To 3 Step -1
+        If l(i)*2 < l(i+1) Then l(i) = (1 + l(i+1)) \ 2
+        If u(i) >= u(i+1) Then u(i) = u(i+1) - 1
+    Next
+
+    If Not seqRecur(le) Then Return 0
+
+    If buf <> 0 Then
+        For i = 0 To le
+            buf[i] = u(i)
+        Next
+    End If
+
+    Return le
+End Function
+
+Function seqLen(t As Integer) As Integer
+    If t <= known Then Return cache(t)
+
+    ' Need all lower t to compute sequence
+    While known + 1 < t
+        seqLen(known + 1)
+    Wend
+
+    Dim As Integer ub, lb = lower(t, @ub)
+
+    While lb < ub Andalso seq(t, lb, 0) = 0
+        lb += 1
+    Wend
+
+    known = t
+    If (t And 1023) = 0 Then Print "Cached"; known
+
+    cache(t) = lb
+    Return lb
+End Function
+
+Function binLen(t As Integer) As Integer
+    Dim As Integer r = -1, o = -1, tmp = t
+
+    While tmp <> 0
+        If (tmp And 1) <> 0 Then o += 1
+        tmp Shr= 1
+        r += 1
+    Wend
+
+    Return r + o
+End Function
+
+Sub printMatrix(m As Double Ptr)
+    Dim As Integer i, j
+    For i = 0 To 5
+        Print "[";
+        For j = 0 To 5
+            Print Using "##.###### "; m[i*6 + j];
+        Next
+        Print Chr(8); "]"
+    Next
+    Print
+End Sub
+
+Sub matrixMul(m1 As Double Ptr, m2 As Double Ptr, result As Double Ptr)
+    Dim As Integer i, j, k
+    For i = 0 To 5
+        For j = 0 To 5
+            result[i*6 + j] = 0
+            For k = 0 To 5
+                result[i*6 + j] += m1[i*6 + k] * m2[k*6 + j]
+            Next
+        Next
+    Next
+End Sub
+
+Sub matrixPow(m As Double Ptr, t As Integer, result As Double Ptr, printout As Boolean)
+    Dim As Integer i, j, k
+    Dim As Integer e(N-1)
+    Dim As Double v(N-1, 5, 5)
+
+    Dim As Integer le = seq(t, 0, @e(0))
+
+    If printout Then
+        Print "Addition chain:"
+        For i = 0 To le
+            Print Str(e(i)); Iif(i = le, "", " ");
+        Next
+    End If
+
+    ' Copy initial matrix to v(0)
+    For i = 0 To 5
+        For j = 0 To 5
+            v(0, i, j) = m[i*6 + j]
+        Next
+    Next
+
+    ' Calculate v(1) = m * m
+    matrixMul(@v(0,0,0), m, @v(1,0,0))
+
+    For i = 2 To le
+        For j = i - 1 To 1 Step -1
+            For k = j To 0 Step -1
+                If e(k) + e(j) < e(i) Then Exit For
+                If e(k) + e(j) > e(i) Then Continue For
+                matrixMul(@v(j,0,0), @v(k,0,0), @v(i,0,0))
+                j = 1
+                Exit For
+            Next
+        Next
+    Next
+
+    ' Copy result
+    For i = 0 To 5
+        For j = 0 To 5
+            result[i*6 + j] = v(le, i, j)
+        Next
+    Next
+End Sub
+
+Sub main()
+    Dim As Integer i, q = 27182, r = 31415
+    Dim As Double rh = Sqr(0.5)
+    Dim As Double mx(5, 5)
+    mx(0,0) = rh  : mx(0,2) = rh
+    mx(1,1) = rh  : mx(1,3) = rh
+    mx(2,1) = rh  : mx(2,3) = -rh
+    mx(3,0) = -rh : mx(3,2) = rh
+    mx(4,5) = 1
+    mx(5,4) = 1
+
+    Print "Precompute chain lengths:"
+    seqLen(r)
+
+    Print !"\nThe first 100 terms of A003313 are:"
+    For i = 1 To 100
+        Print Str(seqLen(i)); " ";
+        If i Mod 10 = 0 Then Print
+    Next
+
+    Dim As Integer exs(1) = {q, r}
+    Dim As Double mxs(1, 5, 5)  ' Store results
+
+    For i = 0 To 1
+        Print !"\nExponent:" & exs(i)
+        matrixPow(@mx(0,0), exs(i), @mxs(i,0,0), True)
+        Print !"\nA ^ " & exs(i) & !":-\n"
+        printMatrix(@mxs(i,0,0))
+        Print "Number of A/C multiplies:"; seqLen(exs(i))
+        Print "  c.f. Binary multiplies:"; binLen(exs(i))
+    Next
+
+    Print !"\nExponent: " & q & " x " & r & " = " & q*r
+    Print "A ^ " & q*r & " = (A ^ " & q & ") ^ " & r & ":-" & !"\n"
+
+    Dim As Double mx2(5,5)
+    matrixPow(@mxs(0,0,0), r, @mx2(0,0), False)
+    printMatrix(@mx2(0,0))
+End Sub
+
+main()
+
+Sleep

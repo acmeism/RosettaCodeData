@@ -1,0 +1,33 @@
+DECLARE SUB Lindenmayer (s AS STRING, rules() AS STRING, count AS INTEGER)
+DIM rules(3) AS STRING
+rules(0) = "I"
+rules(1) = "M"
+rules(2) = "M"
+rules(3) = "MI"
+
+CALL Lindenmayer("I", rules(), 5)
+END
+
+SUB Lindenmayer (s AS STRING, rules() AS STRING, count AS INTEGER)
+    DIM i AS INTEGER, j  AS INTEGER, k AS INTEGER, found AS INTEGER
+    DIM t AS STRING, nxt AS STRING, c AS STRING, rep AS STRING
+
+    FOR i = 0 TO count
+        PRINT s
+        nxt = ""
+        FOR j = 1 TO LEN(s)
+            c = MID$(s, j, 1)
+            found = 0
+            FOR k = LBOUND(rules) TO UBOUND(rules) STEP 2
+                IF c = rules(k) THEN
+                    rep = rules(k + 1)
+                    found = -1
+                    EXIT FOR
+                END IF
+            NEXT k
+            IF found = -1 THEN t = rep ELSE t = c
+            nxt = nxt + t
+        NEXT j
+        s = nxt
+    NEXT i
+END SUB

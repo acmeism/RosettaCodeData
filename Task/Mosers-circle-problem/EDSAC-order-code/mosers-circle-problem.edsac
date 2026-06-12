@@ -1,0 +1,143 @@
+[Moser circle theoram, for Rosetta Code..]
+[EDSAC, initial orders 2.]
+[Evaluates polynomial (n^4 - 6n^3 + 23n^2 - 18n + 24)/24 in various ways]
+  [Arrange the storage]
+      T49K P56F   [L, 22 locations: library s/r R4 (read integer)]
+                  [Can overwrite R9, when R9 is finished with]
+      T46K P78F   [N, 48 locations: modified library s/r P7 (print integer)]
+      T54K P126F  [C, 6 locations: constants]
+      T55K P132F  [V, 12 locations: workspace for Pascal triangle method]
+      T48K P144F  [& (Delta), 10 locations: workspace for difference method]
+      T50K P154F  [X, 10 locations: workspace for recurrence method]
+      T53K P164F  [B, 6 locations: workspace for binomial coeff method]
+      T47K P170F  [M, main routine]
+[----------------------------------------------------------------------------]
+[Library subroutine R9 to read integers from tape at load time.]
+[Must be loaded at location 56; occupies 15 locations.]
+          T56K
+          GKT20FVDL8FA40DUDTFI40FA40FS39FG@S2FG23FA5@T5@E4@
+[----------------------------------------------------------------------------]
+[Library subroutine M3. Prints header at load time and is then overwritten.]
+[In this program, also sets teleprinter to figures.]
+          PFGKIFAFRDLFUFOFE@A6FG@E8FEZPF
+      *!!!!!!!!!!N!!PASCAL!TRI!DIFFERENCES!!RECURRENCE!!BIN!COEFFS&#
+          ..PK    [after header, blank tape and PK (WWG, 1951, page 91)]
+[----------------------------------------------------------------------------]
+[Constants. Load at even address.]
+          E25K TC GK
+          E69K    [at load time, call library s/r R9 to read 35-bit contants]
+          T#C     [tell R9 where to store constants]
+    [0]    1F     [35-bit integer 1]
+[Read in as integers, used as reals when calculating values:]
+    [2]  16777216F        [1/2^10]
+    [4]     11453246123#  [2/3 (to nearest integer)]
+[----------------------------------------------------------------------------]
+[Main routine.]
+          E25K TM GK
+    [0]   PF              [maximum argument]
+    [1]   PF              [integer argument n]
+    [2]   P1D             [17-bit 3]
+    [3]   P4D             [17-bit 9]
+    [4]   !F              [space]
+    [5]   @F              [carriage return]
+    [6]   &F              [line feed]
+    [7]   K4096F          [null]
+
+       [Enter here with acc = 0]
+    [8]   A8@ GL          [call library subroutine R4, 0D := maximum n]
+          AF T@           [store n_max (assumed < 2^16)]
+          AC T1@          [n := 17-bit 1]
+       [Initialize Pascal triangle]
+          A#C U10#V T#V   [f(n) and 0#V := 35-bit 1]
+          T2#V T4#V T6#V T8#V [initialize rest of row to 0]
+       [Initialize differences]
+          A#C U#& U2#& U4#& U6#& T8#&
+       [Initialize recurrence]
+          A#C U#X T2#X    [f(1) := 1, f(0) := 1]
+          T4#X T6#X       [clear all of f(-1), f(-2)]
+          A2@ T4X         [f(-1) := 3, extended to 35 bits]
+          A3@ T6X         [f(-2) := 9, ditto]
+       [Initial values are for n = 1, so skip updates the first time]
+          E87@
+       [Loop to here for next n]
+   [37]   TF              [clear acc]
+          A1@ AC T1@      [increment n]
+       [Update Pascal triangle]
+          A8#V A6#V T8#V
+          A6#V A4#V T6#V
+          A4#V A2#V T4#V
+          A2#V A#V T2#V
+          A#V A2#V A4#V A6#V A8#V T10#V [10#V := f(n)]
+       [Update differences: 0#& is f(n)]
+          A#& A2#& T#&
+          A2#& A4#& T2#&
+          A4#& A6#& T4#&
+          A6#& A8#& T6#&
+       [Update recurrence: start with 0#X = f(n-1), ..., 6#X = f(n-4)]
+          A6#X T8#X A4#X T6#X A2#X T4#X
+          A#X U2#X S4#X A6#X
+          LD              [acc := 2f(n-1) - 2f(n-2) + 2f(n-3)]
+          S4#X LD         [acc := 4f(n-1) - 6f(n=2) + 4f(n-3)]
+          S8#X A#C T#X    [acc := f(n), store in 0#X]
+       [Calculate value as (n C 4) + (n C 2) + 1]
+       [Unlike the other methods, this method is not iterative.]
+   [87]   T#B             [clear all of 0#B, including the sandwich bit]
+          A1@ L16F T1B    [0#B as real := n/2^10]
+          H#B             [mult reg := n/2^10]
+          A#B S2#C T#B    [0#B := (n - 1)/2^10]
+          V#B U2#B        [acc := n(n - 1)/2^20, save]
+          RF T4#B         [also shift 15 right and save (n C 2)/2^34]
+          A#B S2#C T#B    [0#B := (n - 2)/2^10]
+          H2#B            [mult reg := n(n - 1)/2^20 from above]
+          V#B T2#B        [2#B :=  n(n - 1)(n - 2)/1^30]
+       [Set mult reg := 2/3 + (1/3)/2^34 (since 2/3 can't be held exactly)]
+          H4#C
+          V2#B            [acc := (n C 3)/2^28 + h, where 0 < h < 1/2^34]
+       [Since the first term is an integer multiple of 1/2^34,]
+       [and the second term h is less than 1/2^34, the top]
+       [35 bits of the accumulator contain the first term exactly.]
+          T2#B            [2#B := (n C 3)/2^28 (exactly)]
+          A#B S2#C T#B    [0#B := (n - 3)/2^10]
+          H2#B V#B        [acc := (n - 3)(n C 3)/2^38 = (n C 4)/2^36]
+          L1F             [shift 2 left, acc := (n C 4)/2^34]
+          A4#B            [add (n C 2)/2^34 from above]
+          A#C             [add 1/2^34]
+          T#B             [store f(n) in 0#B for printing]
+       [Print n and f(n)]
+          TD              [clear 0D]
+          A1@ TF          [0D := n, extended to 35 bits]
+          A120@ GN O4@    [print n]
+          A10#V TD        [print f(n) by Pascal triangle]
+          A125@ GN O4@
+          A#& TD          [print f(n) by differences]
+          A130@ GN O4@
+          A#X TD          [print f(n) by recurrence]
+          A135@ GN O4@
+          A#B TD          [print f(n) by binomia; coefficients]
+          A140@ GN
+          O5@ O6@
+          A1@ S@ G37@     [loop if n < n_max]
+       [Exit]
+          O7@             [print null to flush teleprinter buffer]
+          ZF              [stop]
+[----------------------------------------------------------------------------]
+[Modified library subroutine P7. Prints any non-negative 35-bit integer.]
+[Input:  0D = integer to be printed (not preserved).]
+[Output: 11 characters, integer right-justified, padded left with spaces.]
+[48 locations, workspace 0D, 4D, 6D.]
+          E25K TN
+          GKA3FT37@H40#@VDRDT4DH18@N4DL8FADL1024FT6DH38#@N4DYFLDT4DS42@
+          TFH18@S18@T1FV4DAFG44@SFLDUFOFFFSFL4FT4DA1FA42@G21@O6FZF
+          T38#ZPFT40#ZPFT38ZP610D@524DS1638DE409DP1024F!FO43@SFL8FE32@
+[----------------------------------------------------------------------------]
+[Library subroutine R4. Reads signed integer from tape at run time.]
+[Input  : None]
+[Output : 0D = 35-bit signed integer.]
+          E25K TL
+          GKA3FT21@T4DH6@E11@P5DJFT6FVDL4FA4DTDI4FA4FS5@G7@S5@G20@SDTDT6FEF
+[----------------------------------------------------------------------------]
+          E25K TM GK      [M parameter again]
+          E8Z             [define entry point]
+          PF              [acc = 0 on entry]
+[----------------------------------------------------------------------------]
+[802+] 20+ [maximum n]

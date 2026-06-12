@@ -1,0 +1,52 @@
+scope # Air mass - translated from the Pluto sample
+
+    local constant re  := 6371000;  # radius of earth in meters
+    local constant dd  := 0.001;    # integrate in this fraction of the distance already covered
+    local constant fin := 1e7;      # integrate only to a height of 10000km, effectively infinity
+
+    # returns x degrees expressed in radians
+    local constant toRadians := proc( x :: number ) :: number is return Pi * ( x / 180 ) end;
+
+    # returns the maximum of a and b
+    local constant rmax := proc( a :: number, b :: number ) :: number
+                     is return if a >= b then a else b fi end;
+
+    # The density of air as a function of height above sea level.
+    local constant rho := proc( a :: number ) :: number
+                    is return exp( -a / 8500 ) end;
+
+    # a = altitude of observer
+    # z = zenith angle (in degrees)
+    # d = distance along line of sight
+    local constant height := proc( a :: number, z :: number, d :: number ) :: number is
+          local constant aa := re + a;
+          local constant hh := sqrt( aa * aa + d * d - 2 * d * aa * cos( toRadians ( 180 - z ) ) );
+    return hh - re
+    end; # height
+
+    # Integrates density along the line of sight.
+    local constant column_density := proc( a :: number, z :: number  ) :: number is
+          local sum := 0;
+          local d   := 0;
+          while d < fin do
+             local constant delta
+                  := rmax( dd, dd * d );  # adaptive step size to avoid it taking forever
+             sum +:= rho( height( a, z, d + 0.5 * delta ) ) * delta;
+             d   +:= delta
+          od;
+    return sum
+    end; # column density
+
+    local constant air_mass := proc( a :: number, z :: number ) :: number is
+    return column_density( a, z ) / column_density( a, 0 )
+    end; # air_mass
+
+    scope
+        print( "Angle     0 m              13700 m"   );
+        print( "------------------------------------" );
+        for z from 0 to 90 by 5 do
+            printf( "%2d      %11.8f",   z, air_mass(     0, z ) );
+            printf(    "      %11.8f\n",    air_mass( 13700, z ) )
+        od
+    end
+end

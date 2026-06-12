@@ -1,0 +1,97 @@
+requires(64,true)
+
+function mul_inv(integer a, n)
+    if n<0 then n = -n end if
+    if a<0 then a = n - mod(-a,n) end if
+    integer t = 0,  nt = 1,
+            r = n,  nr = a;
+    while nr!=0 do
+        integer q = floor(r/nr)
+        {t, nt} = {nt, t-q*nt}
+        {r, nr} = {nr, r-q*nr}
+    end while
+    if r>1 then return "a is not invertible" end if
+    if t<0 then t += n end if
+    return t
+end function
+
+function F(sequence LC, atom A, B, integer max_p, m, L, lo, k)
+
+    integer hi = round(power(floor(B/m),1/k))
+
+    if lo<=hi then
+        if k==1 then
+            hi = min(hi, max_p)
+            lo = round(max(lo, ceil(A/m)))
+            if lo <= hi then
+                integer imL = mul_inv(m, L),
+                          t = L - imL
+                if t <= hi then
+                    while t<lo do
+                        t += L
+                    end while
+                    for p=t to hi by L do
+                        if is_prime(p) then
+                            atom n = m*p
+                            if remainder(n+1,p+1)==0 then
+                                LC &= n
+                            end if
+                        end if
+                    end for
+                end if
+            end if
+        else
+            sequence plohi = get_primes_le(hi)
+            lo = abs(binary_search(lo,plohi))
+            plohi = plohi[lo..$]
+            for p in plohi do
+                if gcd(m, p+1) == 1 then
+                    LC = F(LC, A, B, max_p, m*p, lcm(L, p+1), p+1, k-1)
+                end if
+            end for
+        end if
+    end if
+    return LC
+end function
+
+function lucas_carmichael(atom A, B, integer k)
+    atom max_p = floor(sqrt(B+1))-1,
+          fppp = floor(product(get_primes(-k-1))/2)
+    return sort(F({}, max(A,fppp), B, max_p, 1, 1, 3, k))
+end function
+
+function LC_with_n_primes(integer n)
+    atom x = product(get_primes(-n-1))/2,
+         y = 2 * x
+    while true do
+        sequence LC = lucas_carmichael(x, y, n)
+        if length(LC)>=1 then
+            return LC[1]
+        end if
+        x = y + 1
+        y = 2 * x
+    end while
+end function
+
+printf(1,"Least Lucas-Carmichael number with n prime factors:\n")
+
+for n=3 to 12 do
+    printf(1,"%d: %,d\n",{n, LC_with_n_primes(n)})
+end for
+
+function LC_count(atom A, B)
+    integer count = 0
+    for k=3 to 1e6 do
+        if product(get_primes(-k-1))/2 > B then
+            exit
+        end if
+        count += length(lucas_carmichael(A, B, k))
+    end for
+    return count
+end function
+
+printf(1,"\nNumber of Lucas-Carmichael numbers less than 10^n:\n")
+
+for n=1 to 10 do
+    printf(1,"%d: %,d\n",{n, LC_count(1, power(10,n))})
+end for

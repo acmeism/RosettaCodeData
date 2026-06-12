@@ -1,0 +1,21 @@
+CLS
+amount = 988
+sumcoins = 0
+DIM coins(7)
+DATA 1,2,5,10,20,50,100,200
+FOR i = 0 TO 7
+    READ a
+    coins(i) = a
+NEXT i
+PRINT "Make a value of"; amount; "using the coins 1, 2, 5, 10, 20, 50, 100 and 200:"
+FOR n = UBOUND(coins) TO 0 STEP -1
+    'tmp = floor(amount / coins(n))
+    t = (amount / coins(n))
+    tmp = INT(t) - (SGN(t) < 0 AND t <> INT(t))
+    IF tmp >= 0 THEN
+        PRINT tmp; "* "; coins(n)
+        sumcoins = sumcoins + tmp
+        amount = amount MOD coins(n)
+    END IF
+NEXT n
+END

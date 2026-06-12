@@ -1,0 +1,89 @@
+with javascript_semantics
+requires("1.0.5")
+function walsh_matrix(integer n)
+    sequence walsh = repeat(repeat(0,n),n)
+    walsh[1, 1] = 1
+    integer k = 1
+    while k < n do
+        for i=1 to k do
+            for j=1 to k do
+                integer wij = walsh[i, j]
+                walsh[i+k, j  ] =  wij
+                walsh[i  , j+k] =  wij
+                walsh[i+k, j+k] = -wij
+            end for
+        end for
+        k *= 2
+    end while
+    return walsh
+end function
+
+function sign_changes(sequence row)
+    integer n = length(row)
+    return sum(sq_eq(row[1..n-1],sq_mul(row[2..n],-1)))
+end function
+
+--/* -- console version:
+for natural in {true,false} do
+    for order in {2, 4, 5} do
+        integer n = power(2,order)
+        printf(1,"Walsh matrix - order %d (%d x %d), %s order:\n", {order, n, n, iff(natural?"natural":"sequency")})
+        sequence w = walsh_matrix(n)
+        if not natural then
+            w = extract(w,custom_sort(apply(w,sign_changes),tagset(n)))
+        end if
+        pp(w,{pp_Nest,1,pp_IntFmt,"%2d",pp_Maxlen,132})
+    end for
+end for
+--*/
+
+include xpGUI.e
+
+integer order = 2, natural = true
+
+procedure redraw(gdx canvas)
+    integer {w,h} = gGetAttribute(canvas,"SIZE"),
+            mwh = min(w,h), n
+    gCanvasRect(canvas,0,w,0,h,true,colour:=XPG_PARCHMENT)
+    while true do
+        n = power(2,order)
+        if n<=(floor(mwh/4)) then exit end if
+        order -= 1
+    end while
+    string o = iff(natural?"natural":"sequency")
+    gSetAttribute(gGetDialog(canvas),"TITLE","Walsh matrix order %d, %s order",{order,o})
+    sequence m = walsh_matrix(n)
+    if not natural then
+        m = extract(m,custom_sort(apply(m,sign_changes),tagset(n)))
+    end if
+    integer s = floor(mwh/n), xm = floor((w-s*n)/2), ym = floor((h-s*n)/2)
+    for i=1 to n do
+        for j=1 to n do
+            integer mij = m[i,j],
+                    c = iff(mij=1?XPG_LIGHT_GREEN:XPG_RED),
+                    x = (i-1)*s+xm,
+                    y = (j-1)*s+ym
+            gCanvasRect(canvas,x,x+s,y,y+s,true,colour:=c)
+            gCanvasRect(canvas,x,x+s,y,y+s,false,colour:=XPG_BLACK)
+        end for
+    end for
+end procedure
+
+function key_handler(gdx dlg, integer c)
+    if c>='1' and c<='7' then
+        order = c-'0' -- (may be limited within redraw())
+        gRedraw(dlg)
+        return XPG_IGNORE
+    elsif lower(c)='s' then
+        natural = not natural
+        gRedraw(dlg)
+    end if
+    return XPG_CONTINUE
+end function
+
+gdx canvas = gCanvas(redraw),
+    dialog = gDialog(canvas,`gCanvas`,`SIZE=370x400`)
+gSetAttribute(canvas,"BGCLR",XPG_PARCHMENT)
+gSetHandler(dialog,`KEY`,key_handler)
+gShow(dialog)
+gMainLoop()

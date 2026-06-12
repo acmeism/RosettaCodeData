@@ -1,0 +1,288 @@
+-- demo/rosetta/Weiler-Atherton_polygon_clipping.exw
+--
+--  Based on https://liorsinai.github.io/mathematics/2023/09/30/polygon-clipping.html
+--  mainly section 2, but certainly omitting the half-plane stuff, and instead using
+--  ny own (slower) invention of mid-points to determine the entry/exit intersections.
+--
+with javascript_semantics
+requires("1.0.6") -- (sorry, not yet shipped - delete lines 252 (theGUI) on
+                  --                           to run with anything earlier)
+
+function in_polygon(sequence pt, p)
+    -- returns true if the point pt is inside the polygon p
+    atom {x,y} = pt
+    bool inside = false
+    integer l = length(p), j = l
+    for i=1 to l do
+        atom {xi,yi} = p[i], {xj,yj} = p[j]
+        if ((yi > y) != (yj > y))
+        and (x < (xj-xi) * (y-yi) / (yj-yi) + xi) then
+            inside = not inside
+        end if
+        j = i
+    end for
+    return inside
+end function
+
+function expand_and_mark(sequence pi, p, i, c)
+    --
+    -- local helper routine for get_intersections()
+    -- pi is the intersections per line (see "")
+    -- p is the original (clockwise) polygon/clip
+    -- i is the set of all intersections (for lookup)
+    -- c is the clip/polygon for enter/exit checking
+    --
+    -- returns "flattened"{p,pi} with enter/exit,
+    --     and rp, a reverse index lookup table
+    --
+    integer lp = length(p), li = length(i)
+    sequence res = {}, rp = repeat(0,li)
+    for k,s in p do
+        res = append(res,s) -- (a length 2 vertex...)
+        integer eidx = iff(k==lp ? 1 : k+1),
+                pkl = length(pi[k])
+        for pk,pik in pi[k] do -- (pik is {dist^2,ndx})
+            integer ndx = pik[2]
+            atom {sx,sy} = i[ndx],
+                 {ex,ey} = iff(pk==pkl ? p[eidx]
+                                       : i[pi[k][pk+1][2]])
+            sequence midpoint = {(sx+ex)/2,(sy+ey)/2}
+            bool inside = in_polygon(midpoint,c)
+            -- (... whereas intersections are length 4)
+            res = append(res,{sx,sy,ndx,inside})
+            rp[ndx] = length(res)
+        end for
+    end for
+    return {res,rp}
+end function
+
+function insertsect(sequence s, dn)
+    --
+    -- local helper routine for get_intersections()
+    -- s is some pi[k] or ci[k], the set of intersects
+    -- already found for edge k (which this ain't told)
+    -- dn is {dist^2,ndx} (this cares not what ndx is)
+    -- insert dn into s, maintaining dist^2-order.
+    --
+    s = deep_copy(s) -- (for JavaScript compatibility)
+    for i,p in s do
+        if p>dn then
+            s[i..i-1] = {dn} -- (insert before)
+            return s
+        end if
+    end for
+    s = append(s,dn)
+    return s
+end function
+
+function dsq(atom dx, dy) return dx*dx+dy*dy end function
+
+function get_intersections(sequence p, c)
+    --
+    -- returns five things:
+    -- i: the intersections (order is not really meaningful,
+    ---   and in fact only length(i) is used by the callee)
+    -- pi,ci: {dist^2,ndx} for each intersect on each line,
+    --        initially, then flattened/merged with p,c to
+    --        a list of {x,y[,ndx,in/out]} entries.
+    -- rp,rc: reverse lookups for ndx (apply to c,p resp)
+    -- eg if pi[1] is {{16,2},{25,3},{36,1}} it means that
+    --  i[2,3,1] occur on p[1]..p[2] in that order, and if
+    --  pi[$] is {} there are no intersects on p[$]..p[1],
+    --  (update: that now only applies to a pre-merge pi)
+    -- and if rp[3]=7 then when ci later hits ndx=3 it can
+    -- instantaneously find the matching pi entry, slot 7.
+    -- Each ndx always occurs precisely once in pi and ci.
+    --
+    integer lp = length(p),
+            lc = length(c)
+    sequence i = {}, rp, rc,
+            pi = repeat({},lp),
+            ci = repeat({},lc)
+    for j,s in p do
+        integer e = iff(j=lp ? 1 : j+1)
+        atom {{l1sx,l1sy},{l1ex,l1ey}} = {s,p[e]}
+        for k,cs in c do
+            integer ec = iff(k=lc ? 1 : k+1)
+            atom {{l2sx,l2sy},{l2ex,l2ey}} = {cs,c[ec]},
+                 {dx,dy} = {l1sx-l2sx,l1sy-l2sy},
+                 {x1,y1} = {l1ex-l1sx,l1ey-l1sy},
+                 {x2,y2} = {l2ex-l2sx,l2ey-l2sy},
+                 den = y2*x1 - x2*y1
+            if den!=0 then
+                atom f1 = (x1*dy-y1*dx) / den,
+                     f2 = (x2*dy-y2*dx) / den
+                if f1>=0 and f1<=1 and f2>=0 and f2<=1 then
+                    -- intersection point
+                    {x1,y1} = {l1sx+f2*x1, l1sy+f2*y1}
+                    i = append(i,{x1,y1})
+                    integer ndx = length(i)
+                    pi[j] = insertsect(pi[j],{dsq(x1-l1sx,y1-l1sy),ndx})
+                    ci[k] = insertsect(ci[k],{dsq(x1-l2sx,y1-l2sy),ndx})
+                end if
+            end if
+        end for
+    end for
+    {pi,rp} = expand_and_mark(pi,p,i,c)
+    {ci,rc} = expand_and_mark(ci,c,i,p)
+    return {i,pi,ci,rp,rc}
+end function
+
+function to_clockwise(sequence p)
+    -- aside: "clockwise" based on {0,0} top left, not btm left,
+    ---       aka may disagree with systems where y goes upwards
+    atom res = 0, {sx,sy} = p[$]
+    for e in p do
+        atom {ex,ey} = e
+        res += (ex-sx) * (ey+sy)
+        {sx,sy} = e
+    end for
+    if res > 0 then
+        p = reverse(p)
+    end if
+    return p
+end function
+
+function weiler_atherton_poly_clip(sequence p, c)
+    p = to_clockwise(p)
+    c = to_clockwise(c)
+    -- (see above for meaning/contents of all these:)
+    sequence {i,pi,ci,rp,rc} = get_intersections(p,c)
+
+    if length(i)==0 then -- no intersections
+        if in_polygon(p[1],c) then
+            return {p}
+        elsif in_polygon(c[1],p) then
+            return {c}
+        end if
+        return {}
+    end if
+
+    integer visits = 0, lv = length(i)
+    sequence visited = repeat(false,lv), res = {}
+    while visits<lv do
+        -- find an unvisited entry intersection
+        for j,pt in pi do
+            if length(pt)>2     -- intersection
+            and not visited[pt[3]]
+            and pt[4] then      -- of the entry kind
+                visits += 1
+                visited[pt[3]] = true
+                sequence rgn = {pt[1..2]} -- (start new region, with 1st pt)
+                bool scanningp = true
+                integer k = j, sl = length(pi)
+                while true do
+                    k = iff(k==sl ? 1 : k+1)
+                    sequence nxtpt = iff(scanningp?pi:ci)[k],
+                             newpt = nxtpt[1..2] -- (the short version)
+                    if length(nxtpt)>2 and nxtpt[3]=pt[3] then exit end if
+                    if length(rgn)=0 or newpt!=rgn[$] then
+                        rgn = append(rgn,newpt)
+                    end if
+                    if length(nxtpt)>2 then
+                        integer idx = nxtpt[3]
+                        visits += 1
+                        visited[idx] = true
+                        if not nxtpt[4] then
+                            scanningp = not scanningp
+                            k = iff(scanningp?rp:rc)[idx]
+                            sl = length(iff(scanningp?pi:ci))
+                        end if
+                    end if
+                end while
+                res = append(res,rgn)
+                exit
+            end if
+        end for
+    end while
+    return res
+end function
+
+-- aside: test[1] rotated (so P[1] top left) to match other outputs on rosettacode
+constant tests =
+    {{{{180,120},{520,120},{520,420},{420,420},{320,220},{180,420}},
+      {{60,220},{330,120},{410,290},{80,480},{280,280}}},
+     {{{120,120}, {310,280}, {420,145}, {465,315}, {210,325}},
+      {{140,295}, {170,180}, {460,80}, {490,270}}},
+     {{{210,120}, {355,115}, {425,290}, {380,315}, {180,275}},
+      {{110,180}, {210,55}, {420,80}, {470,305}, {315,355}, {130,305}}},
+     {{{195,85}, {515,80}, {410,360}, {80,280}},
+      {{230,130}, {425,120}, {450,200}, {330,290}, {190,245}}},
+     {{{84,140}, {200,135}, {290,190}, {245,340}, {60,340}},
+      {{360,80}, {540,140}, {550,230}, {330,250}}},
+     {{{247,183},{536,181},{536,374},{129,374}},
+      {{128,71},{295,70},{455,374},{263,374}}},
+     {{{50,80}, {170,250}, {210,165}, {310,340}, {470,225}, {515,365}, {90,365}},
+      {{95,190}, {515,180}, {530,320}, {30,280}}},
+     {{{95,90}, {250,300}, {425,145}, {475,330}, {125,325}},
+      {{130,175}, {465,100}, {500,275}, {70,250}}},
+     {{{130,80}, {250,275}, {500,175}, {500,350}, {100,330}},
+      {{60,140}, {550,130}, {530,285}, {45,220}}},
+     {{{270,175}, {447,175}, {468,353}, {270,353}},
+      {{213,175}, {394,175}, {394,292}, {134,292}}},
+     {{{232,178}, {470,177}, {470,389}, {232,389}},
+      {{152,210}, {378,119}, {376,203}, {152,347}}},
+     {{{56,440}, {230,487}, {260,340}, {90,300}},
+      {{188,132}, {188,388}, {444,388}, {444,132}}},
+     {{{245,70},{185,110},{360,290},{245,430},{435,300}},
+      {{470,380},{245,380},{420,110},{360,70},{110,445},{470,445}}},
+     {{{200,100},{300,100},{300,400},{200,400}},
+      {{250,150},{350,150},{350,450},{250,450}}},
+     {{{200,325},{550,325},{550,400},{200,400}},
+      {{250,150},{350,150},{350,450},{250,450}}},
+     {{{200,100},{300,100},{500,380},{300,400},{200,400},{150,305}},
+      {{250,150},{350,150},{350,450},{250,450}}},
+     {{{230,160},{330,160},{530,440},{330,460},{230,460},{180,365}},
+      {{205,80},{350,80},{305,435},{265,530},{205,380},{180,180}}},
+     {{{230,30},{330,30},{530,310},{330,330},{230,330},{180,235}},
+      {{205,80},{350,80},{305,435},{265,530},{205,380},{180,180}}}}
+
+integer tdx = 1, ndx = 0
+sequence P, C, CP
+procedure set_tests()
+    {P,C} = tests[tdx]
+    CP = weiler_atherton_poly_clip(P,C)
+    ndx = min(ndx,length(CP))
+    printf(1,"Found %d polygons\n",length(CP))
+    pp(CP,{pp_FltFmt,"%.0f",pp_Maxlen,120,pp_Nest,1})
+end procedure
+set_tests()
+
+include theGUI.e -- (delete to end if you don't have 1.0.6+)
+--gUseGTK()
+
+procedure redraw(gdx canvas, integer w, h)
+    gDrawPolygon(canvas,C,colour:=TG_CYAN)
+    gDrawPolygon(canvas,P,colour:=TG_MAGENTA)
+    for p in CP do
+        gDrawPolygon(canvas,p,colour:=TG_ORANGE)
+    end for
+    if ndx then
+        for i,pt in iff(ndx<0?{C,P}:CP)[ndx] do
+            atom {x,y} = pt
+            gDrawText(canvas,x,y,"%d",{i},TG_C)
+        end for
+    end if
+end procedure
+
+function key_handler(gdx dlg, integer c)
+    if c=' ' or c='+' then
+        tdx = iff(tdx=length(tests)?1:tdx+1)
+        set_tests()
+    elsif c='-' then
+        tdx = iff(tdx=1?length(tests):tdx-1)
+        set_tests()
+    elsif lower(c)='n' then
+        ndx = iff(ndx=length(CP)?-2:ndx+1)
+    elsif lower(c)='p' then
+        ndx = iff(ndx=-2?length(CP):ndx-1)
+    end if
+    gRedraw(dlg)
+    return TG_DEFAULT
+end function
+
+gdx canvas = gCanvas(redraw,"BGCLR = PARCHMENT, WU_BLEND = true"),
+    dlg = gDialog(canvas,"Weiler-Atherton polygon clipping","SIZE=600x600")
+gSetHandler(dlg,"KEY",key_handler)
+gShow(dlg)
+gMainLoop()

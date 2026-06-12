@@ -1,0 +1,102 @@
+import ballerina/io;
+
+function hypot(float x, float y) returns float {
+    return (x * x + y * y).sqrt();
+}
+
+// The classic CIE ΔE2000 implementation, which operates on two L*a*b* colors, and returns their difference.
+function ciede_2000(float l_1, float a_1, float b_1, float l_2, float a_2, float b_2) returns float {
+	// Implements the CIEDE2000 color-difference formula using Ballerina.
+	// k_l, k_c, k_h are parametric factors to be adjusted according to
+	// different viewing parameters such as textures, backgrounds...
+	final float k_l = 1.0;
+    final float k_c = 1.0;
+    final float k_h = 1.0;
+	float n = (hypot(a_1, b_1) + hypot(a_2, b_2)) * 0.5;
+	n = n * n * n * n * n * n * n;
+	// GitHub Project :
+	// https://github.com/michel-leonard/ciede2000-color-matching
+	n = 1.0 + 0.5 * (1.0 - (n / (n + 6103515625.0)).sqrt());
+	final float c_1 = hypot(a_1 * n, b_1);
+    final float c_2 = hypot(a_2 * n, b_2);
+	// atan2 is preferred over atan because it accurately computes the angle of
+	// a point (x, y) in all quadrants, handling the signs of both coordinates.
+	float h_1 = b_1.atan2(a_1 * n);
+    float h_2 = b_2.atan2(a_2 * n);
+	if h_1 < 0.0 { h_1 += 2.0 * float:PI; }
+	if h_2 < 0.0 { h_2 += 2.0 * float:PI; }
+	n = (h_2 - h_1).abs();
+	// Cross-implementation consistent rounding.
+	if float:PI - 1e-14 < n && n < float:PI + 1e-14 { n = float:PI; }
+	// When the hue angles lie in different quadrants, the straightforward
+	// average can produce a mean that incorrectly suggests a hue angle in
+	// the wrong quadrant, the next lines handle this issue.
+	float h_m = (h_1 + h_2) * 0.5;
+    float h_d = (h_2 - h_1) * 0.5;
+	if float:PI < n {
+		if 0.0 < h_d {
+			h_d -= float:PI;
+		} else {
+			h_d += float:PI;
+        }
+		h_m += float:PI;
+	}
+	final float p = 36.0 * h_m - 55.0 * float:PI;
+	n = (c_1 + c_2) * 0.5;
+	n = n * n * n * n * n * n * n;
+	// The hue rotation correction term is designed to account for the
+	// non-linear behavior of hue differences in the blue region.
+	final float r_t = -2.0 * (n / (n + 6103515625.0)).sqrt() *
+             (float:PI / 3.0 * (p * p / (-25.0 * float:PI * float:PI)).exp()).sin();
+	n = (l_1 + l_2) * 0.5;
+	n = (n - 50.0) * (n - 50.0);
+	// Lightness.
+	final float l = (l_2 - l_1) / (k_l * (1.0 + 0.015 * n / (20.0 + n).sqrt()));
+	// These coefficients adjust the impact of different harmonic
+	// components on the hue difference calculation.
+	final float t = 1.0 + 0.24 * (2.0 * h_m + float:PI * 0.5).sin() +
+				    0.32 * (3.0 * h_m + 8 * float:PI / 15).sin() -
+				    0.17 * (h_m + float:PI / 3).sin() -
+				    0.20 * (4.0 * h_m + 3 * float:PI / 20).sin();
+	n = c_1 + c_2;
+	// Hue.
+	final float h = 2.0 * (c_1 * c_2).sqrt() * h_d.sin() / (k_h * (1.0 + 0.0075 * n * t));
+	// Chroma.
+	final float c = (c_2 - c_1) / (k_c * (1.0 + 0.0225 * n));
+	// Returning the square root ensures that the result represents
+	// the "true" geometric distance in the color space.
+	return (l * l + h * h + c * c + c * h * r_t).sqrt();
+}
+
+public function main() {
+    float[15][6] tests = [
+        [73.0,   49.0,   39.4, 73.0,   49.0,   39.4],
+        [30.0,  -41.0, -119.1, 30.0,  -41.0, -119.0],
+        [79.0, -117.0, -100.4, 79.5, -117.0, -100.0],
+        [15.0,  -55.0,    6.7, 14.0,  -55.0,    7.0],
+        [83.0,   98.0,  -59.5, 85.2,   98.0,  -59.5],
+        [59.0,  -11.0,  -95.0, 56.3,  -11.0,  -95.0],
+        [74.0,   -1.0,   68.6, 81.0,   -1.0,   69.0],
+        [46.4,  125.0,    6.0, 40.0,  125.0,    6.0],
+        [18.0,   -5.0,   68.0, 20.0,    5.0,   82.0],
+        [35.5,  -99.0,  109.0, 25.0,  -99.0,  109.0],
+        [59.0,   77.0, 	 41.5, 63.3,   77.0,   12.4],
+        [40.0,  -92.0,    7.7, 58.0,  -92.0,   -8.0],
+        [49.0,   -9.0,  -74.5, 51.1,   31.0,   16.0],
+        [88.0, -124.0,   56.0, 97.0,   62.0,  -28.0],
+        [98.0,   75.7, 	 11.0, 	3.0,  -62.0,   11.0]
+    ];
+    io:println("   L1 	    a1 	    b1     L2     a2 	  b2       ΔE2000");
+    io:println("------------------------------------------------------------");
+    foreach float[] t in tests {
+        float res = ciede_2000(t[0], t[1], t[2], t[3], t[4], t[5]).round(10);
+        string t1 = t[0].toFixedString(1).padStart(6);
+        string t2 = t[1].toFixedString(1).padStart(9);
+        string t3 = t[2].toFixedString(1).padStart(8);
+        string t4 = t[3].toFixedString(1).padStart(7);
+        string t5 = t[4].toFixedString(1).padStart(7);
+        string t6 = t[5].toFixedString(1).padStart(8);
+        string rs = res.toFixedString(10).padStart(15);
+        io:println(t1, t2, t3, t4, t5, t6, rs);
+    }
+}

@@ -1,0 +1,85 @@
+Const PI = 4 * Atn(1)
+
+Dim Shared freqs(7) As Double
+Restore FreqData
+For i% = 0 To 7: Read freqs(i%): Next
+FreqData:
+Data 261.6,293.6,329.6,349.2,392.0,440.0,493.9,523.3
+
+Dim Shared notes$(7)
+Restore NoteData
+For i% = 0 To 7: Read notes$(i%): Next
+NoteData:
+Data "Doh","Ray","Mee","Fah","Soh","Lah","Tee","doh"
+
+filename$ = "musical_scale.wav"
+
+Open filename$ For Binary As #1
+If Err Then Print "Error opening file": Sleep: End
+
+hdr$ = Space$(44)
+Get #1, , hdr$
+
+' Check header parameters
+sampleRate& = CVL(Mid$(hdr$, 25, 4))
+Print "Sample Rate    :"; sampleRate&
+
+dataLength& = CVL(Mid$(hdr$, 41, 4))
+duration& = dataLength& \ sampleRate&
+Print "Duration       :"; duration&
+
+freq_sum# = 0.0
+sampleRateF# = sampleRate&
+sample_data$ = Space$(sampleRate&)
+samples_per_chunk% = 20
+Print "Bytes examined :"; samples_per_chunk%; " per sample"
+
+For j& = 0 To duration& - 1
+    Get #1, , sample_data$
+    For i% = 1 To samples_per_chunk%
+        sample_value# = Asc(Mid$(sample_data$, i%, 1))
+        freq# = (sample_value# * sampleRateF#) / (260 * (PI * 2))
+        freq_sum# = freq_sum# + freq#
+    Next
+Next
+
+computed_freq# = freq_sum# / (duration& * samples_per_chunk%)
+Print
+Print Using "Computed average frequency = ###.# Hz ("; computed_freq#;
+Print getNote$(computed_freq#); ")"
+
+freq_sum# = 0.0
+For i% = 0 To 7
+    freq_sum# = freq_sum# + freqs(i%)
+Next
+
+actual_avg# = freq_sum# / 8
+Print Using "Actual average frequency   = ###.# Hz ("; actual_avg#;
+Print getNote$(actual_avg#); ")"
+
+Close #1
+End
+
+Function getNote$ (freq#)
+    n% = 7
+    index% = n%
+    For i% = 0 To 7
+        If freq# <= freqs(i%) Then
+            index% = i%
+            Exit For
+        End If
+    Next
+
+    Select Case index%
+        Case 0
+            getNote$ = "Doh-"
+        Case n%
+            getNote$ = "doh+"
+        Case Else
+            If freqs(index%) - freq# <= freq# - freqs(index% - 1) Then
+                getNote$ = notes$(index%) + "-"
+            Else
+                getNote$ = notes$(index% - 1) + "+"
+            End If
+    End Select
+End Function

@@ -1,0 +1,120 @@
+INCLUDE "H6:REALMATH.ACT"
+
+CHAR ARRAY code32="0123456789bcdefghjkmnpqrstuvwxyz"
+
+PROC Encode(REAL POINTER lat,lng BYTE prec CHAR ARRAY hash)
+  REAL latMin,latMax,lngMin,lngMax,mid,r2,sum
+  REAL POINTER v,min,max
+  BYTE even,hashV,bits
+
+  IntToReal(2,r2)
+  ValR("-90",latMin) ValR("90",latMax)
+  ValR("-180",lngMin) ValR("180",lngMax)
+
+  hash(0)=0 hashV=0 even=1 bits=0
+  WHILE hash(0)<prec
+  DO
+    IF even THEN
+      v=lng min=lngMin max=lngMax
+    ELSE
+      v=lat min=latMin max=latMax
+    FI
+    RealAdd(min,max,sum)
+    RealDiv(sum,r2,mid)
+    hashV==LSH 1
+    IF RealGreaterOrEqual(v,mid) THEN
+      hashV==+1
+      RealAssign(mid,min)
+    ELSE
+      RealAssign(mid,max)
+    FI
+
+    even=1-even
+    IF bits<4 THEN
+      bits==+1
+    ELSE
+      bits=0
+      hash(0)==+1
+      hash(hash(0))=code32(hashV+1)
+      hashV=0
+    FI
+  OD
+RETURN
+
+BYTE FUNC GetCodeVal(CHAR c)
+  BYTE i
+
+  FOR i=1 TO code32(0)
+  DO
+    IF c=code32(i) THEN
+      RETURN (i-1)
+    FI
+  OD
+RETURN (0)
+
+PROC Decode(CHAR ARRAY hash REAL POINTER lat,lng,latPrec,lngPrec)
+  REAL latMin,latMax,lngMin,lngMax,r2,sum
+  REAL POINTER min,max
+  BYTE i,j,v,mask,even
+
+  IntToReal(2,r2)
+  ValR("-90",latMin) ValR("90",latMax)
+  ValR("-180",lngMin) ValR("180",lngMax)
+
+  even=1
+  FOR i=1 TO hash(0)
+  DO
+    v=GetCodeVal(hash(i))
+    mask=16
+    FOR j=1 TO 5
+    DO
+      IF even THEN
+        min=lngMin
+        max=lngMax
+      ELSE
+        min=latMin
+        max=latMax
+      FI
+      RealAdd(min,max,sum)
+      IF (v&mask)=mask THEN
+        RealDiv(sum,r2,min)
+      ELSE
+        RealDiv(sum,r2,max)
+      FI
+      even=1-even
+      mask==RSH 1
+    OD
+  OD
+
+  RealAdd(latMin,latMax,sum)
+  RealDiv(sum,r2,lat)
+  RealSub(latMax,lat,latPrec)
+  RealAdd(lngMin,lngMax,sum)
+  RealDiv(sum,r2,lng)
+  RealSub(lngMax,lng,lngPrec)
+RETURN
+
+PROC Test(CHAR ARRAY latStr,lngStr BYTE prec)
+  CHAR ARRAY hash(255)
+  REAL lat,lng,resLat,resLng,latPrec,lngPrec
+
+  ValR(latStr,lat) ValR(lngStr,lng)
+  Encode(lat,lng,prec,hash)
+  Decode(hash,resLat,resLng,latPrec,lngPrec)
+
+  Print("Input:  ") PrintR(lat) Print(", ")
+  PrintR(lng) PrintF(", prec=%B%E",prec)
+
+  PrintF("Encode: %S%E",hash)
+
+  Print("Decode: ") PrintR(resLat) Print(" (+/-") PrintR(latPrec)
+  Print("), ") PrintR(resLng) Print(" (+/-") PrintR(lngPrec)
+  PrintE(")") PutE()
+RETURN
+
+PROC Main()
+  Put(125) PutE() ;clear the screen
+  Test("51.433718","-0.214126",2)
+  Test("51.433718","-0.214126",9)
+  Test("57.64911","10.40744",11)
+RETURN

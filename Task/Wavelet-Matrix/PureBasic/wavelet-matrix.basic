@@ -1,0 +1,250 @@
+EnableExplicit
+
+Structure BitRank
+  Bits.q[64]      ; Array to store bits
+  Count.i[64]     ; Array to store counts
+  NumBlocks.i     ; Number of blocks
+EndStructure
+
+Structure WaveletMatrix
+  B.BitRank[32]   ; Array of BitRanks
+  Posic.i[32]     ; Position array
+  Height.i        ; Height of the matrix
+EndStructure
+
+; Get bit at position i from value
+Procedure.i GetBitAt(value.i, bitpos.i)
+  ProcedureReturn (value >> bitpos) & 1
+EndProcedure
+
+; Count number of 1's in [0, i)
+Procedure.i Rank1(*br.BitRank, i.i)
+  If i <= 0 : ProcedureReturn 0 : EndIf
+
+  Protected blockIndex.i = i >> 6
+  Protected bitPos.i = i & 63
+  Protected count.i = 0, j.i
+
+  ; Add count from previous blocks
+  If blockIndex > 0 :  count = *br\Count[blockIndex - 1] : EndIf
+
+  ; Count bits in current block
+  For j.i = 0 To bitPos - 1
+    If (*br\Bits[blockIndex] & (1 << j)) <> 0: count + 1 : EndIf
+  Next
+
+  ProcedureReturn count
+EndProcedure
+
+; Count number of 0's in [0, i)
+Procedure.i Rank0(*br.BitRank, i.i)
+  ProcedureReturn i - Rank1(*br, i)
+EndProcedure
+
+Procedure InitBitRank(*br.BitRank, size.i)
+  Protected i.i
+
+  *br\NumBlocks = (size + 63) >> 6
+
+  ; Initialize arrays
+  For i = 0 To 63
+    If i < *br\NumBlocks
+      *br\Bits[i] = 0
+      *br\Count[i] = 0
+    EndIf
+  Next
+EndProcedure
+
+; Initialize the WaveletMatrix with a vector
+Procedure CreateWaveletMatrix(*wm.WaveletMatrix, Array vec(1), n.i, maxVal.i)
+  Protected.i i, level, zeros, bitpos, blockIdx, runningCount, bitCount, bits
+  Protected.i zeroIdx, oneIdx, value
+
+  ; Calculate height based on maximum value
+  *wm\Height = 0
+  If maxVal > 0 : *wm\Height = Len(Bin(maxVal)) : EndIf
+
+  If *wm\Height < 1 : *wm\Height = 1 : EndIf
+
+  ; Create a copy of the input vector for manipulation
+  Dim tmpVec(n-1)
+  For i = 0 To n - 1
+    tmpVec(i) = vec(i)
+  Next
+
+  For level = 0 To *wm\Height - 1
+    If level < 32  ; Initialize BitRank for this level
+      InitBitRank(@*wm\B[level], n)
+
+      ; Count zeros
+      zeros = 0
+      For i = 0 To n - 1
+        If GetBitAt(tmpVec(i), *wm\Height - level - 1) = 0
+          zeros + 1
+        Else
+          ; Set bit in BitRank
+          blockIdx = i >> 6
+          bitPos = i & 63
+          If blockIdx < 64 : *wm\B[level]\Bits[blockIdx] | (1 << bitPos) : EndIf
+        EndIf
+      Next
+
+      ; Build count array
+      runningCount = 0
+      For i = 0 To *wm\B[level]\NumBlocks
+        If i < 64
+          bitCount = 0
+          bits = *wm\B[level]\Bits[i]
+
+          ; Count bits in this block
+          While bits <> 0
+            If (bits & 1) <> 0 : bitCount + 1 :EndIf
+            bits >> 1
+          Wend
+
+          *wm\B[level]\Count[i] = runningCount
+          runningCount + bitCount
+        EndIf
+      Next
+
+      ; Stable partition - separate 0's and 1's
+      Dim zeroValues(zeros-1)
+      Dim oneValues(n-zeros-1)
+      zeroIdx = 0
+      oneIdx = 0
+
+      For i = 0 To n - 1
+        value = tmpVec(i)
+        If GetBitAt(value, *wm\Height - level - 1) = 0
+          zeroValues(zeroIdx) = value
+          zeroIdx + 1
+        Else
+          oneValues(oneIdx) = value
+          oneIdx + 1
+        EndIf
+      Next
+
+      ; Combine arrays back
+      For i = 0 To zeros - 1
+        tmpVec(i) = zeroValues(i)
+      Next
+
+      For i = 0 To n - zeros - 1
+        tmpVec(zeros + i) = oneValues(i)
+      Next
+
+      ; Store position
+      *wm\Posic[level] = zeros
+    EndIf
+  Next
+EndProcedure
+
+; kth smallest element in [l, r)
+Procedure.i Quantile(*wm.WaveletMatrix, k.i, l.i, r.i)
+  Protected level.i, zeros.i
+  Protected res.i = 0
+
+  For level = 0 To *wm\Height - 1
+    If level < 32
+      zeros = Rank0(@*wm\B[level], r) - Rank0(@*wm\B[level], l)
+
+      If zeros > k
+        ; Go to left (0) child
+        l = Rank0(@*wm\B[level], l)
+        r = Rank0(@*wm\B[level], r)
+      Else
+        ; Go to right (1) child
+        l = *wm\Posic[level] + Rank1(@*wm\B[level], l)
+        r = *wm\Posic[level] + Rank1(@*wm\B[level], r)
+        k - zeros
+        res | (1 << (*wm\Height - level - 1))
+      EndIf
+    EndIf
+  Next
+
+  ProcedureReturn res
+EndProcedure
+
+; Main program
+If OpenConsole()
+  ; Define the array
+  Dim a.i(4)
+  a(0) = 3374
+  a(1) = 956
+  a(2) = 2114
+  a(3) = 3415
+  a(4) = 3437
+  Define.i i, n, l, r, k
+  Define.i uniqueCount, idx, izda, dcha, medio
+  n = 5
+
+  ; Create a sorted copy with unique values
+  Dim sortedA.i(n-1)
+  For i = 0 To n - 1
+    sortedA(i) = a(i)
+  Next
+
+  ; Sort the array
+  SortArray(sortedA(), #PB_Sort_Ascending)
+
+  ; Count unique values
+  uniqueCount = 1
+  For i.i = 1 To n - 1
+    If sortedA(i) <> sortedA(i-1) : uniqueCount + 1 : EndIf
+  Next
+
+  ; Create array with unique values
+  Dim uniqueA(uniqueCount-1)
+  uniqueA(0) = sortedA(0)
+  idx = 1
+
+  For i = 1 To n - 1
+    If sortedA(i) <> sortedA(i-1)
+      uniqueA(idx) = sortedA(i)
+      idx + 1
+    EndIf
+  Next
+
+  ; Map original values to indices in unique array
+  Dim mapped(n-1)
+  For i = 0 To n - 1
+    ; Find index of a(i) in uniqueA using binary search
+    izda = 0
+    dcha = uniqueCount - 1
+
+    While izda <= dcha
+      medio = (izda + dcha) / 2
+      If uniqueA(medio) = a(i)
+        mapped(i) = medio
+        Break
+      ElseIf uniqueA(medio) < a(i)
+        izda = medio + 1
+      Else
+        dcha = medio - 1
+      EndIf
+    Wend
+  Next
+
+  ; Create wavelet matrix
+  Define wm.WaveletMatrix
+  CreateWaveletMatrix(@wm, mapped(), n, uniqueCount)
+
+  ; Process queries
+  Dim queries.i(4, 2)
+  queries(0, 0) = 2 : queries(0, 1) = 2 : queries(0, 2) = 1
+  queries(1, 0) = 3 : queries(1, 1) = 4 : queries(1, 2) = 1
+  queries(2, 0) = 4 : queries(2, 1) = 5 : queries(2, 2) = 1
+  queries(3, 0) = 1 : queries(3, 1) = 2 : queries(3, 2) = 2
+  queries(4, 0) = 4 : queries(4, 1) = 4 : queries(4, 2) = 1
+
+  For i = 0 To 4
+    l = queries(i, 0) - 1  ; Convert to 0-indexed
+    r = queries(i, 1)
+    k = queries(i, 2)
+
+    PrintN(Str(uniqueA(Quantile(@wm, k - 1, l, r))))
+  Next
+
+  PrintN(#CRLF$ + "Press ENTER to exit"): Input()
+  CloseConsole()
+EndIf

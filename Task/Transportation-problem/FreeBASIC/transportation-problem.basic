@@ -1,0 +1,468 @@
+Const NULL As Any Ptr = 0
+
+#define MIN(a, b) iif((a) < (b), (a), (b))
+#define MAX_INT 2147483647
+#define EPSILON 0.0000001
+
+
+Type Shipment
+    Quantity As Double
+    CostPerUnit As Double
+    R As Integer
+    C As Integer
+End Type
+
+Function CreateShipment(q As Double, cpu As Double, rv As Integer, cv As Integer) As Shipment
+    Dim As Shipment s
+    s.Quantity = q
+    s.CostPerUnit = cpu
+    s.R = rv
+    s.C = cv
+    Return s
+End Function
+
+Function ShipmentEquals(s1 As Shipment, s2 As Shipment) As Boolean
+    Return s1.CostPerUnit = s2.CostPerUnit Andalso _
+    s1.Quantity = s2.Quantity Andalso _
+    s1.R = s2.R Andalso _
+    s1.C = s2.C
+End Function
+
+
+Type ListNode
+    Dato As Shipment
+    Sgte As ListNode Ptr
+    Prev As ListNode Ptr
+End Type
+
+Type LinkedList
+    Head As ListNode Ptr
+    Tail As ListNode Ptr
+    Count As Integer
+End Type
+
+Sub InitList(Byref list As LinkedList)
+    list.Head = NULL
+    list.Tail = NULL
+    list.Count = 0
+End Sub
+
+Sub PushFront(Byref list As LinkedList, dato As Shipment)
+    Dim As ListNode Ptr newNode = Allocate(Sizeof(ListNode))
+    newNode->Dato = dato
+    newNode->Sgte = list.Head
+    newNode->Prev = NULL
+
+    If list.Head <> NULL Then
+        list.Head->Prev = newNode
+    Else
+        list.Tail = newNode
+    End If
+
+    list.Head = newNode
+    list.Count += 1
+End Sub
+
+Sub PushBack(Byref list As LinkedList, dato As Shipment)
+    Dim As ListNode Ptr newNode = Allocate(Sizeof(ListNode))
+    newNode->Dato = dato
+    newNode->Sgte = NULL
+    newNode->Prev = list.Tail
+
+    If list.Tail <> NULL Then
+        list.Tail->Sgte = newNode
+    Else
+        list.Head = newNode
+    End If
+
+    list.Tail = newNode
+    list.Count += 1
+End Sub
+
+Sub RemoveNode(Byref list As LinkedList, node As ListNode Ptr)
+    If node = NULL Then Exit Sub
+
+    If node->Prev <> NULL Then
+        node->Prev->Sgte = node->Sgte
+    Else
+        list.Head = node->Sgte
+    End If
+
+    If node->Sgte <> NULL Then
+        node->Sgte->Prev = node->Prev
+    Else
+        list.Tail = node->Prev
+    End If
+
+    Deallocate(node)
+    list.Count -= 1
+End Sub
+
+Sub FreeList(Byref list As LinkedList)
+    Dim As ListNode Ptr current = list.Head
+    Dim As ListNode Ptr sgte
+
+    While current <> NULL
+        sgte = current->Sgte
+        Deallocate(current)
+        current = sgte
+    Wend
+
+    list.Head = NULL
+    list.Tail = NULL
+    list.Count = 0
+End Sub
+
+
+Type Transport
+    filename As String
+    numSources As Integer
+    numDestinations As Integer
+    supply As Integer Ptr
+    demand As Integer Ptr
+    costs As Double Ptr
+    matrix As Shipment Ptr
+End Type
+
+Sub InitTransport(filename As String, Byref t As Transport)
+    t.filename = filename
+
+    Dim As Integer i, j, ff = Freefile
+
+    If Open(filename For Input As #ff) = 0 Then
+        Input #ff, t.numSources, t.numDestinations
+
+        t.supply = Callocate(t.numSources * Sizeof(Integer))
+        t.demand = Callocate(t.numDestinations * Sizeof(Integer))
+
+        ' Read supply values
+        For i = 0 To t.numSources - 1
+            Input #ff, t.supply[i]
+        Next
+
+        ' Read demand values
+        For i = 0 To t.numDestinations - 1
+            Input #ff, t.demand[i]
+        Next
+
+        ' Calculate totals
+        Dim As Integer totalSrc = 0, totalDst = 0
+        For i = 0 To t.numSources - 1
+            totalSrc += t.supply[i]
+        Next
+        For i = 0 To t.numDestinations - 1
+            totalDst += t.demand[i]
+        Next
+
+        ' Handle imbalance
+        Dim As Integer diff = totalSrc - totalDst
+        Dim As Integer origSources = t.numSources
+        Dim As Integer origDestinations = t.numDestinations
+
+        If diff > 0 Then
+            ' Add dummy source
+            t.numDestinations += 1
+            t.demand = Reallocate(t.demand, t.numDestinations * Sizeof(Integer))
+            t.demand[t.numDestinations - 1] = diff
+        Elseif diff < 0 Then
+            ' Add dummy destination
+            t.numSources += 1
+            t.supply = Reallocate(t.supply, t.numSources * Sizeof(Integer))
+            t.supply[t.numSources - 1] = -diff
+        End If
+
+        ' Allocate and initialize costs matrix
+        t.costs = Callocate(t.numSources * t.numDestinations * Sizeof(Double))
+        t.matrix = Callocate(t.numSources * t.numDestinations * Sizeof(Shipment))
+
+        ' Read costs
+        For i = 0 To origSources - 1
+            For j = 0 To origDestinations - 1
+                Input #ff, t.costs[i * t.numDestinations + j]
+            Next
+        Next
+
+        ' Set costs for dummy rows/columns to 0 (or a large value if minimizing)
+        If t.numSources > origSources Then
+            For j = 0 To t.numDestinations - 1
+                t.costs[(t.numSources - 1) * t.numDestinations + j] = 0
+            Next
+        Elseif t.numDestinations > origDestinations Then
+            For i = 0 To t.numSources - 1
+                t.costs[i * t.numDestinations + (t.numDestinations - 1)] = 0
+            Next
+        End If
+
+        ' Initialize shipment matrix
+        For i = 0 To t.numSources - 1
+            For j = 0 To t.numDestinations - 1
+                Dim As Integer idx = i * t.numDestinations + j
+                t.matrix[idx] = CreateShipment(0, t.costs[idx], i, j)
+            Next
+        Next
+    Else
+        Print "Error: File " & filename & " not found."
+    End If
+    Close #ff
+End Sub
+
+Sub NorthWestCornerRule(Byref t As Transport)
+    Dim As Integer i, c, r = 0, northwest = 0
+    Dim As Integer Ptr supplyTemp = Callocate(t.numSources * Sizeof(Integer))
+    Dim As Integer Ptr demandTemp = Callocate(t.numDestinations * Sizeof(Integer))
+
+    ' Copy initial values
+    For i = 0 To t.numSources - 1
+        supplyTemp[i] = t.supply[i]
+    Next
+    For i = 0 To t.numDestinations - 1
+        demandTemp[i] = t.demand[i]
+    Next
+
+    ' Applying the Northwest Corner Rule
+    For r = 0 To t.numSources - 1
+        For c = northwest To t.numDestinations - 1
+            Dim As Integer quantity = MIN(supplyTemp[r], demandTemp[c])
+            If quantity > 0 Then
+                Dim As Integer idx = r * t.numDestinations + c
+                t.matrix[idx] = CreateShipment(quantity, t.costs[idx], r, c)
+                supplyTemp[r] -= quantity
+                demandTemp[c] -= quantity
+
+                If supplyTemp[r] = 0 Then
+                    northwest = c
+                    Exit For
+                End If
+            End If
+        Next
+    Next
+
+    Deallocate(supplyTemp)
+    Deallocate(demandTemp)
+End Sub
+
+Sub MatrixToList(Byref t As Transport, Byref list As LinkedList)
+    InitList(list)
+
+    For r As Integer = 0 To t.numSources - 1
+        For c As Integer = 0 To t.numDestinations - 1
+            Dim As Integer idx = r * t.numDestinations + c
+            If t.matrix[idx].Quantity > 0 Then PushBack(list, t.matrix[idx])
+        Next
+    Next
+End Sub
+
+Sub GetNeighbors(Byref t As Transport, s As Shipment, Byref list As LinkedList, nbrs() As Shipment)
+    Dim As Shipment emptyShipment = CreateShipment(0, 0, -1, -1)
+    nbrs(0) = emptyShipment
+    nbrs(1) = emptyShipment
+
+    Dim As ListNode Ptr current = list.Head
+
+    While current <> NULL
+        Dim As Shipment o = current->Dato
+
+        If Not ShipmentEquals(o, s) Then
+            If o.R = s.R Andalso ShipmentEquals(nbrs(0), emptyShipment) Then
+                nbrs(0) = o
+            Elseif o.C = s.C Andalso ShipmentEquals(nbrs(1), emptyShipment) Then
+                nbrs(1) = o
+            End If
+
+            If Not ShipmentEquals(nbrs(0), emptyShipment) Andalso Not ShipmentEquals(nbrs(1), emptyShipment) Then Exit While
+        End If
+
+        current = current->Sgte
+    Wend
+End Sub
+
+Sub GetClosedPath(Byref t As Transport, s As Shipment, path() As Shipment, Byref pathSize As Integer)
+    Dim As LinkedList list
+    MatrixToList(t, list)
+    PushFront(list, s)
+
+    Dim As Boolean removals
+    Dim As ListNode Ptr current, sgte
+
+    Do
+        removals = False
+        current = list.Head
+
+        While current <> NULL
+            sgte = current->Sgte
+
+            Dim As Shipment nbrs(1)
+            GetNeighbors(t, current->Dato, list, nbrs())
+
+            If ShipmentEquals(nbrs(0), CreateShipment(0, 0, -1, -1)) Orelse _
+                ShipmentEquals(nbrs(1), CreateShipment(0, 0, -1, -1)) Then
+                RemoveNode(list, current)
+                removals = True
+            End If
+
+            current = sgte
+        Wend
+    Loop Until Not removals
+
+    pathSize = list.Count
+    If pathSize > 0 Then
+        Redim path(pathSize - 1) As Shipment
+
+        Dim As Shipment prev = s
+        For i As Integer = 0 To pathSize - 1
+            path(i) = prev
+
+            Dim As Shipment nbrs(1)
+            GetNeighbors(t, prev, list, nbrs())
+            prev = nbrs(i Mod 2)
+        Next
+End If
+
+FreeList(list)
+End Sub
+
+Sub FixDegenerateCase(Byref t As Transport)
+    Dim As LinkedList list
+    MatrixToList(t, list)
+
+    If t.numSources + t.numDestinations - 1 <> list.Count Then
+        For r As Integer = 0 To t.numSources - 1
+            For c As Integer = 0 To t.numDestinations - 1
+                Dim As Integer idx = r * t.numDestinations + c
+
+                If t.matrix[idx].Quantity = 0 Then
+                    Dim As Shipment dummy = CreateShipment(EPSILON, t.costs[idx], r, c)
+
+                    Dim As Shipment path(t.numSources * t.numDestinations)
+                    Dim As Integer pathSize
+                    GetClosedPath(t, dummy, path(), pathSize)
+
+                    If pathSize = 0 Then
+                        t.matrix[idx] = dummy
+                        FreeList(list)
+                        Return
+                    End If
+                End If
+            Next
+        Next
+    End If
+
+    FreeList(list)
+End Sub
+
+Sub SteppingStone(Byref t As Transport)
+    Dim As Double maxReduction = 0
+    Dim As Shipment leaving = CreateShipment(0, 0, -1, -1)
+    Dim As Shipment path(t.numSources * t.numDestinations)
+    Dim As Shipment bestPath(t.numSources * t.numDestinations)
+    Dim As Integer pathSize, bestPathSize, i, r, c, idx
+
+    FixDegenerateCase(t)
+
+    For r = 0 To t.numSources - 1
+        For c = 0 To t.numDestinations - 1
+            idx = r * t.numDestinations + c
+
+            If t.matrix[idx].Quantity = 0 Then
+                Dim As Shipment trial = CreateShipment(0, t.costs[idx], r, c)
+
+                GetClosedPath(t, trial, path(), pathSize)
+
+                If pathSize > 0 Then
+                    Dim As Double reduction = 0
+                    Dim As Double lowestQuantity = MAX_INT
+                    Dim As Shipment leavingCandidate = CreateShipment(0, 0, -1, -1)
+                    Dim As Boolean plus = True
+
+                    For i = 0 To pathSize - 1
+                        If plus Then
+                            reduction += path(i).CostPerUnit
+                        Else
+                            reduction -= path(i).CostPerUnit
+                            If path(i).Quantity < lowestQuantity Then
+                                leavingCandidate = path(i)
+                                lowestQuantity = path(i).Quantity
+                            End If
+                        End If
+                        plus = Not plus
+                    Next
+
+                    If reduction < maxReduction Then
+                        maxReduction = reduction
+                        leaving = leavingCandidate
+                        bestPathSize = pathSize
+                        For i = 0 To pathSize - 1
+                            bestPath(i) = path(i)
+                        Next
+                    End If
+                End If
+            End If
+        Next
+    Next
+
+    If maxReduction < 0 Then
+        Dim As Double q = leaving.Quantity
+        Dim As Boolean plus = True
+
+        For i = 0 To bestPathSize - 1
+            idx = bestPath(i).R * t.numDestinations + bestPath(i).C
+
+            If plus Then
+                t.matrix[idx].Quantity += q
+            Else
+                t.matrix[idx].Quantity -= q
+            End If
+
+            If t.matrix[idx].Quantity = 0 Then
+                t.matrix[idx] = CreateShipment(0, t.costs[idx], bestPath(i).R, bestPath(i).C)
+            End If
+
+            plus = Not plus
+        Next
+
+        SteppingStone(t)
+    End If
+End Sub
+
+Sub PrintResult(Byref t As Transport)
+    Print "Optimal solution for "; t.filename
+    Print
+
+    Dim As Double totalCosts = 0.0
+
+    For r As Integer = 0 To t.numSources - 1
+        For c As Integer = 0 To t.numDestinations - 1
+            Dim As Integer idx = r * t.numDestinations + c
+            Dim As Shipment s = t.matrix[idx]
+
+            If s.Quantity > 0 Andalso s.R = r Andalso s.C = c Then
+                Print Using " ###"; Int(s.Quantity);
+                totalCosts += s.Quantity * s.CostPerUnit
+            Else
+                Print "  - ";
+            End If
+        Next
+        Print
+    Next
+
+    Print Using !"\nTotal costs: #,###.#\n"; totalCosts
+End Sub
+
+' Main program
+Dim As String filenames(2) = {"input1.txt", "input2.txt", "input3.txt"}
+
+For i As Integer = 0 To 2
+    Dim As Transport t
+
+    InitTransport(filenames(i), t)
+    NorthWestCornerRule(t)
+    SteppingStone(t)
+    PrintResult(t)
+
+    Deallocate(t.supply)
+    Deallocate(t.demand)
+    Deallocate(t.costs)
+    Deallocate(t.matrix)
+Next
+
+Sleep

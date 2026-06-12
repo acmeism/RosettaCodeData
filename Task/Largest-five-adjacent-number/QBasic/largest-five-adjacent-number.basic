@@ -1,0 +1,14 @@
+RANDOMIZE TIMER
+DIM number(0 TO 999)
+highest = 0
+lowest = 100000
+FOR i = 0 TO 999
+    number(i) = INT(RND * 10)
+    IF i >= 4 THEN
+        tmp = number(i) + 10 * number(i - 1) + 100 * number(i - 2) + 1000 * number(i - 3) + 10000 * number(i - 4)
+        IF tmp < lowest THEN lowest = tmp
+        IF tmp > highest THEN highest = tmp
+    END IF
+NEXT i
+PRINT highest, lowest
+END

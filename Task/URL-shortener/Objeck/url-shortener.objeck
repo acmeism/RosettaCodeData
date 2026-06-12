@@ -1,0 +1,62 @@
+use Collection.Generic;
+use Data.JSON;
+use Web.HTTP;
+
+class Shortner from HttpRequestHandler {
+  @url_mapping : static : Hash<String, String>;
+
+  function : Init() ~ Nil {
+    @url_mapping := Hash->New()<String, String>;
+  }
+
+  New() {
+    Parent();
+  }
+
+  function : Main(args : String[]) ~ Nil {
+    if(args->Size() = 1) {
+      Shortner->Init();
+      WebServer->Serve(Shortner->New()->GetClass(), args[0]->ToInt(), true);
+    };
+  }
+
+  method : ProcessGet(request_url : String, request_headers : Map<String, String>, response_headers : Map<String, String>) ~ Response {
+    long_url := @url_mapping->Find(request_url);
+    if(long_url <> Nil) {
+      response := Response->New(302);
+      response->SetReason(long_url);
+
+      return response;
+    };
+
+    return Response->New(404);
+  }
+
+  method : ProcessPost(buffer : Byte[], request_url : String, request_headers : Map<String, String>, response_headers : Map<String, String>) ~ Response {
+    response : Byte[];
+
+    json := JsonParser->New(String->New(buffer));
+    if(json->Parse()) {
+      url_json := json->GetRoot()->Get("long");
+      long_url := url_json->GetValue();
+
+      post_fix := "/";
+      each(i : 6)  {
+        if(Int->Random(1) % 2 = 0) {
+          post_fix += Int->Random('a', 'z')->As(Char);
+        }
+        else {
+          post_fix += Int->Random('A', 'Z')->As(Char);
+        };
+      };
+
+      short_url := "http://localhost:60013{$post_fix}";
+      @url_mapping->Insert(post_fix, long_url);
+
+      response_headers->Insert("Content-type", "application/json");
+      response := "{ \"short\": \"{$short_url}\" }"->ToByteArray();
+    };
+
+    return Response->New(200, response);
+  }
+}

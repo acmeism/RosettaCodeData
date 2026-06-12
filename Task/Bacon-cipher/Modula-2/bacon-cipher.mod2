@@ -1,0 +1,168 @@
+MODULE BaconCipher;
+(* Bacon cipher *)
+FROM STextIO IMPORT
+  WriteString, WriteLn;
+FROM Strings IMPORT
+  Compare, CompareResults, Length;
+
+TYPE
+  TCode = ARRAY[0 .. 5] OF CHAR;
+  TLetterCodes = ARRAY['a' .. 'z'] OF TCode;
+
+CONST
+  LetterCodes = TLetterCodes{
+    "AAAAA", "AAAAB", "AAABA", "AAABB", "AABAA",
+    "AABAB", "AABBA", "AABBB", "ABAAA", "ABAAB",
+    "ABABA", "ABABB", "ABBAA", "ABBAB", "ABBBA",
+    "ABBBB", "BAAAA", "BAAAB", "BAABA", "BAABB",
+    "BABAA", "BABAB", "BABBA", "BABBB", "BBAAA",
+    "BBAAB"};
+  SpaceCode = "BBBAA";
+  MaxLength = 100;
+  MaxMsgLength = 1000;
+
+PROCEDURE GetCode(C: CHAR; VAR OUT Result: TCode);
+BEGIN
+  IF (C >= 'a') AND (C <= 'z') THEN
+    Result := LetterCodes[C]
+  ELSE
+    Result := SpaceCode
+  END;
+END GetCode;
+
+PROCEDURE GetChar(Code: ARRAY OF CHAR): CHAR;
+VAR
+  C: CHAR;
+BEGIN
+  IF Compare(SpaceCode, Code) = equal THEN
+    RETURN ' '
+  END;
+  FOR C := 'a' TO 'z' DO
+    IF Compare(LetterCodes[C], Code) = equal THEN
+      RETURN C
+    END
+  END;
+  WriteLn;
+  WriteString("Code '");
+  WriteString(Code);
+  WriteString("' is invalid");
+  WriteLn;
+  HALT;
+END GetChar;
+
+PROCEDURE StrToLower(VAR S: ARRAY OF CHAR);
+VAR
+  I: CARDINAL;
+BEGIN
+  I := 0;
+  WHILE S[I] <> CHR(0) DO
+    IF (S[I] >= 'A') AND (S[I] <= 'Z') THEN
+      S[I] := CHR(ORD(S[I]) + 32);
+    END;
+    I := I + 1
+  END
+END StrToLower;
+
+PROCEDURE BaconEncode(PlainText: ARRAY OF CHAR; Message: ARRAY OF CHAR; VAR OUT Result: ARRAY OF CHAR);
+VAR
+  I, IP, J, Count, ELen: CARDINAL;
+  C: CHAR;
+  ET: ARRAY [0 .. 5 * MaxLength] OF CHAR;
+  TmpCode: TCode;
+BEGIN
+  ELen := 5 * Length(PlainText);
+  StrToLower(PlainText);
+  I := 0;
+  IP := 0;
+  WHILE PlainText[I] <> CHR(0) DO
+    GetCode(PlainText[I], TmpCode);
+    FOR J := 0 TO 4 DO
+      ET[IP + J] := TmpCode[J]
+    END;
+    I := I + 1;
+    IP := IP + 5
+  END;
+  ET[IP] := CHR(0);
+
+  (* 'A's to be in lower case, 'B's in upper case *)
+  StrToLower(Message);
+  I := 0;
+  Count := 0;
+  WHILE Message[I] <> CHR(0) DO
+    C := Message[I];
+    IF (C >= 'a') AND (C <= 'z') THEN
+      IF ET[Count] = 'A' THEN
+        Result[I] := C
+      ELSE
+        Result[I] := CAP(C)
+      END;
+      Count := Count + 1;
+      IF Count = ELen THEN
+        BREAK
+      END
+    ELSE
+      Result[I] := C
+    END;
+    I := I + 1;
+  END;
+END BaconEncode;
+
+PROCEDURE BaconDecode(CipherText: ARRAY OF CHAR; VAR OUT Result: ARRAY OF CHAR);
+VAR
+  I, J, IP, Count, PLen: CARDINAL;
+  C: CHAR;
+  Quintet: ARRAY [0 .. 5] OF CHAR;
+  CT: ARRAY [0 .. MaxMsgLength] OF CHAR;
+BEGIN
+  Count := 0;
+  I := 0;
+  WHILE CipherText[I] <> CHR(0) DO
+    C := CipherText[I];
+    IF (C >= 'a') AND (C <= 'z') THEN
+      CT[Count] := 'A';
+      Count := Count + 1
+    ELSIF (C >= 'A') AND (C <= 'Z') THEN
+      CT[Count] := 'B';
+      Count := Count + 1
+    END;
+    I := I + 1
+  END;
+  PLen := Length(CT) DIV 5;
+  IP := 0;
+  I := 0;
+  WHILE I < PLen DO
+    FOR J := 0 TO 4 DO
+      Quintet[J] := CT[IP + J];
+    END;
+    Quintet[5] := CHR(0);
+    Result[I] := GetChar(Quintet);
+    I := I + 1;
+    IP := IP + 5
+  END;
+  Result[PLen] := CHR(0);
+END BaconDecode;
+
+VAR
+  PlainText, HiddenText: ARRAY [0 .. MaxLength] OF CHAR;
+  Message, CipherText: ARRAY [0 .. MaxMsgLength] OF CHAR;
+BEGIN
+  PlainText := "the quick brown fox jumps over the lazy dog";
+  Message := "bacon's cipher is a method of steganography created by francis bacon. " +
+    "this task is to implement a program for encryption and decryption of " +
+    "plaintext using the simple alphabet of the baconian cipher or some " +
+    "other kind of representation of this alphabet (make anything signify anything). " +
+    "the baconian alphabet may optionally be extended to encode all lower " +
+    "case characters individually and/or adding a few punctuation characters " +
+    "such as the space.";
+  BaconEncode(PlainText, Message, CipherText);
+  WriteString("Cipher text:");
+  WriteLn; WriteLn;
+  WriteString(CipherText);
+  WriteLn;
+  BaconDecode(CipherText, HiddenText);
+  WriteLn;
+  WriteString("Hidden text:");
+  WriteLn; WriteLn;
+  WriteString(HiddenText);
+  WriteLn;
+END BaconCipher.

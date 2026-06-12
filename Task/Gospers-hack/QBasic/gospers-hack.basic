@@ -1,0 +1,32 @@
+DECLARE FUNCTION gospersHack! (x AS LONG)
+
+DIM starts(3) AS INTEGER
+starts(0) = 1
+starts(1) = 3
+starts(2) = 7
+starts(3) = 15
+
+DIM i AS INTEGER, j  AS INTEGER
+DIM x AS LONG
+DIM results(9) AS STRING
+
+FOR i = LBOUND(starts) TO UBOUND(starts)
+    x = starts(i)
+    FOR j = LBOUND(results) TO UBOUND(results)
+        x = gospersHack(x)
+        results(j) = STR$(x)
+    NEXT j
+    PRINT starts(i); ": ";
+    FOR j = LBOUND(results) TO UBOUND(results)
+        PRINT results(j);
+        IF j < 9 THEN PRINT " ";
+    NEXT j
+    PRINT
+NEXT i
+
+FUNCTION gospersHack (x AS LONG)
+    DIM c AS LONG, r AS LONG
+    c = x AND (-x)
+    r = x + c
+    gospersHack = (((r XOR x) \ 4) \ c) OR r
+END FUNCTION

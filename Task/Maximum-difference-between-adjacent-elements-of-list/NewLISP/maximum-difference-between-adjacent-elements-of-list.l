@@ -1,0 +1,7 @@
+(letn (lst '(1 8 2 -3 0 1 1 -2.3 0 5.5 8 6 2 9 11 10 3)
+       adj (map (fn (a b) (list (abs (sub a b)) a b))
+              (0 -1 lst)
+              (rest lst))
+       dif (apply max (map first adj)))
+  (dolist (xs adj)
+    (if (= dif (xs 0)) (println (format "dif.: %d  nums.: %d %d" xs)))))

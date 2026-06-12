@@ -1,0 +1,1 @@
+: tester   s" aabbcc" countabc ;

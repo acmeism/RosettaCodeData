@@ -1,0 +1,106 @@
+        cpu     8086
+        org     100h
+section .text
+        xor     ax,ax           ; Zero out the array
+        mov     di,tally
+        mov     cx,11000
+        rep     stosw
+        mov     bp,1000         ; BP = next threshold
+        mov     cx,640Ah        ; CH = table counter, CL = column counter
+
+restrt: xor     bx,bx           ; BX = current number
+takinv: shl     bx,1
+        mov     si,[tally+bx]   ; SI = current element
+        shr     bx,1
+        test    ch,ch           ; Any items left to print for the table?
+        jz      cktrsh          ; If not check threshold
+        dec     ch
+        mov     di,format.cell  ; Print cell
+        mov     dx,di
+        mov     ax,si
+        call    atoi
+        mov     ah,9
+        int     21h
+        dec     cl              ; Row done?
+        jnz     cktrsh
+        mov     dx,format.nl
+        mov     cl,10
+        int     21h
+
+cktrsh: cmp     si,bp           ; Has the threshold been reached?
+        jna     increm
+        mov     ax,bp           ; Yes, fill in the numbers
+        mov     di,format.trs
+        call    atoi
+        mov     ax,si
+        mov     di,format.num
+        call    atoi
+        mov     dx,format       ; Print the string
+        mov     ah,9
+        int     21h
+        add     bp,1000         ; Next threshold
+
+increm: mov     di,si           ; Increment count of current element
+        shl     di,1
+        inc     word [tally+di]
+        call    incidx          ; Increment current index
+        inc     bx              ; Increment search number
+        test    si,si           ; Reached zero?
+        jnz     takinv          ; If not, keep going
+        cmp     bp,10000        ; Last threshold reached?
+        jna     restrt          ; If not, start over
+        int     20h             ; Otherwise we're done
+
+        ; Convert AX to decimal and store at DI (must be 5-char buffer)
+atoi:   push    ax
+        push    bx
+        push    cx
+        push    dx
+        mov     cx,5
+        add     di,cx
+        mov     bx,10
+.digit: xor     dx,dx
+        div     bx
+        add     dl,'0'
+        dec     di
+        dec     cx
+        mov     [di],dl
+        test    ax,ax
+        jnz     .digit
+        jcxz    .out
+        mov     al,' '
+        dec     di
+        std
+        rep     stosb
+        cld
+.out:   pop     dx
+        pop     cx
+        pop     bx
+        pop     ax
+        ret
+
+        ; Increment index as ASCII in place
+incidx: mov     di,format.nl-1
+.loop:  cmp     byte [di],' '   ; Space -> 1
+        je      .one
+        inc     byte [di]
+        cmp     byte [di],'9'
+        ja      .carry
+        ret
+.carry: mov     byte [di],'0'
+        dec     di
+        jmp     .loop
+.one:   mov     byte [di],'1'
+        ret
+
+        ; Format to print first number above threshold
+format: db      "First > "
+.trs:   db      "*****: "
+.num:   db      "***** at "
+.idx:   db      "     0"
+.nl:    db      13,10,'$'
+.cell:  db      "*****$"         ; cell placeholder
+
+section .bss
+        align   2
+tally:  resw    11000

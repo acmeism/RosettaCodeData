@@ -1,0 +1,51 @@
+fcn calculate_Pvalue(array1,array2){
+   if (array1.len()<=1 or array2.len()<=1) return(1.0);
+
+   mean1,mean2 := array1.sum(0.0),array2.sum(0.0);
+   if(mean1==mean2) return(1.0);
+   mean1/=array1.len();
+   mean2/=array2.len();
+
+   variance1:=array1.reduce('wrap(sum,x){ sum + (x-mean1).pow(2) },0.0);
+   variance2:=array2.reduce('wrap(sum,x){ sum + (x-mean2).pow(2) },0.0);
+
+   variance1/=(array1.len() - 1);
+   variance2/=(array2.len() - 1);
+
+   WELCH_T_STATISTIC:=(mean1-mean2)/
+                     (variance1/array1.len() + variance2/array2.len()).sqrt();
+   DEGREES_OF_FREEDOM:=
+      ( variance1/array1.len() + variance2/array2.len() ).pow(2) // numerator
+      / (
+          (variance1*variance1)/(array1.len().pow(2)*(array1.len() - 1)) +
+	  (variance2*variance2)/(array2.len().pow(2)*(array2.len() - 1))
+        );
+   a:=DEGREES_OF_FREEDOM/2;
+   x:=DEGREES_OF_FREEDOM/( WELCH_T_STATISTIC.pow(2) + DEGREES_OF_FREEDOM );
+   N,h := 65535, x/N;
+
+   sum1,sum2 := 0.0, 0.0;
+   foreach i in (N){
+      sum1+=((h*i + h/2.0).pow(a - 1))/(1.0 - (h*i + h/2.0)).sqrt();
+      sum2+=((h*i).pow(a - 1))/(1.0 - h*i).sqrt();
+   }
+   return_value:=((h/6.0)*( x.pow(a - 1)/(1.0 - x).sqrt() +
+      4.0*sum1 + 2.0*sum2) ) /
+      ((0.0).e.pow(lngammal(a) + 0.57236494292470009 - lngammal(a + 0.5)));
+
+   if(return_value > 1.0) return(1.0);	// or return_value is infinite, throws
+   return_value;
+}
+fcn lngammal(xx){
+   var [const] cof=List(	// static
+      76.18009172947146,    -86.50532032941677,
+      24.01409824083091,    -1.231739572450155,
+      0.1208650973866179e-2,-0.5395239384953e-5
+   );
+
+   y:=x:=xx;
+   tmp:=x + 5.5 - (x + 0.5) * (x + 5.5).log();
+   ser:=1.000000000190015;
+   foreach x in (cof){ ser+=(x/(y+=1)); }
+   return((2.5066282746310005 * ser / x).log() - tmp);
+}

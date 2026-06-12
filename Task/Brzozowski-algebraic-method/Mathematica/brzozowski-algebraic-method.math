@@ -1,0 +1,121 @@
+(* Define regular expression types *)
+Clear[EmptyExpr, EpsilonExpr, CarExpr, UnionExpr, ConcatExpr, StarExpr]
+
+(* Simplify regular expressions using simplifications similar to OCaml's simple_re *)
+Clear[simplify]
+
+(* Simplify each type of regular expression *)
+simplify[EmptyExpr[]] := EmptyExpr[]
+simplify[EpsilonExpr[]] := EpsilonExpr[]
+simplify[CarExpr[c_]] := CarExpr[c]
+
+(* Simplify Union of expressions, accounting for EmptyExpr and redundant unions *)
+simplify[UnionExpr[e_, f_]] :=
+  If[e === f,
+    e,
+    (* Simplify Union with EmptyExpr *)
+    If[e === EmptyExpr[],
+      simplify[f],
+      If[f === EmptyExpr[],
+        simplify[e],
+        UnionExpr[simplify[e], simplify[f]]
+      ]
+    ]
+  ]
+
+(* Simplify Concat of expressions *)
+simplify[ConcatExpr[e_, f_]] :=
+  Which[
+    e === EpsilonExpr[], f,
+    f === EpsilonExpr[], e,
+    e === EmptyExpr[], EmptyExpr[],
+    f === EmptyExpr[], EmptyExpr[],
+    True, ConcatExpr[simplify[e], simplify[f]]
+  ]
+
+(* Simplify Star of expressions *)
+simplify[StarExpr[EmptyExpr[]]] := EpsilonExpr[]
+simplify[StarExpr[EpsilonExpr[]]] := EpsilonExpr[]
+simplify[StarExpr[e_]] := StarExpr[simplify[e]]
+
+(* Ensure the simplified expression is reduced as much as possible *)
+simplify[expr_] := expr
+
+(* Recursively simplify with a limit on depth to avoid infinite recursion *)
+Clear[recursiveSimplify]
+recursiveSimplify[expr_, depth_Integer] := Module[{simplified},
+  (* If we've reached a maximum depth, stop the recursion *)
+  If[depth > 200,
+    Return[expr],
+    simplified = simplify[expr];
+    If[simplified === expr,
+      simplified,
+      recursiveSimplify[simplified, depth + 1]
+    ]
+  ]
+]
+
+(* String representation of the regular expression *)
+Clear[sprintRE]
+sprintRE[EmptyExpr[]] := "0"
+sprintRE[EpsilonExpr[]] := "1"
+sprintRE[CarExpr[c_]] := ToString[c]
+sprintRE[UnionExpr[e_, f_]] := sprintRE[e] <> "+" <> sprintRE[f]
+sprintRE[ConcatExpr[e_, f_]] := "(" <> sprintRE[e] <> ")(" <> sprintRE[f] <> ")"
+sprintRE[StarExpr[e_]] := "(" <> sprintRE[e] <> ")*"
+
+(* Brzozowski's Algorithm for NFA to DFA conversion *)
+Clear[brzozowski]
+brzozowski[a_, b_] := Module[{m, n, i, j, tempA, tempB},
+  m = Length[a];
+
+  (* Initialize the result matrix b as an empty DFA transition matrix *)
+  tempA = a;
+  tempB = b;
+
+  Do[
+    (* Process each state in reverse order *)
+    tempB[[n]] = ConcatExpr[StarExpr[tempA[[n, n]]], tempB[[n]]];
+
+    Do[
+      (* Update the NFA transition matrix tempA *)
+      tempA[[n, j]] = ConcatExpr[StarExpr[tempA[[n, n]]], tempA[[n, j]]];
+    , {j, 1, n - 1}];
+
+    Do[
+      tempB[[i]] = UnionExpr[tempB[[i]], ConcatExpr[tempA[[i, n]], tempB[[n]]]];
+
+      Do[
+        tempA[[i, j]] = UnionExpr[
+          tempA[[i, j]],
+          ConcatExpr[tempA[[i, n]], tempA[[n, j]]]
+        ];
+      , {j, 1, n - 1}];
+    , {i, 1, n - 1}];
+
+    Do[
+      tempA[[i, n]] = EmptyExpr[];
+    , {i, 1, n - 1}];
+  , {n, m, 1, -1}];
+
+  (* Return the regular expression for the DFA starting from state 0 *)
+  tempB[[1]]
+]
+
+(* Define an example NFA transition matrix *)
+a = {
+  {EmptyExpr[], CarExpr["a"], CarExpr["b"]},
+  {CarExpr["b"], EmptyExpr[], CarExpr["a"]},
+  {CarExpr["a"], CarExpr["b"], EmptyExpr[]}
+};
+
+b = {EpsilonExpr[], EmptyExpr[], EmptyExpr[]};
+
+(* Convert NFA to DFA using Brzozowski's algorithm *)
+dfaExpr = brzozowski[a, b];
+
+Print[sprintRE@dfaExpr, "\n"];
+
+(* Apply recursive simplification and print the simplified result *)
+simplifiedDFA = recursiveSimplify[dfaExpr, 0];
+Print[sprintRE[simplifiedDFA]]

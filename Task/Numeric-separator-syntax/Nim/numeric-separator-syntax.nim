@@ -1,0 +1,10 @@
+const a = 2_9             # 29
+const b = 2_9_9_0         # 2990
+const c = 2_9_9.0_01      # 299.001
+const d = 1._01           # Error: invalid token: _ (\95)
+const e = -1_0            # -10
+const f = -_10            # Error: invalid token: _ (\95)
+const g = 0x34_ff         # 0x34ff
+const h = 0x_34ff         # Error: invalid number: '0x_34ff'
+const i = 10_000_000      # 10000000
+const j = 10__000__000    # Error: only single underscores may occur in a token and token may not end with an underscore: e.g. '1__1' and '1_' are invalid

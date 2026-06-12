@@ -1,0 +1,173 @@
+include "Tlbx AVFoundation.incl"
+
+output file "Speech Synthesis with Indicator"
+
+CFStringRef string
+
+string = @"FutureBasic is a free Macintosh development language.\n¬
+Considering the contempt some programmers have for the BASIC programming ¬
+language -- \"BASIC ruins programmers\" -- it's a shame FB has the word ¬
+'Basic' in its official name. Not only can FB handle BASIC source code, ¬
+but since it's a front end to clang, it can interpret C, Apple's Core Foundation, ¬
+Objective-C (Cocoa), HTML, XML, SOAP, UNIX Shell, Open GL, etc. ¬
+This makes it an excellent tool for prototyping -- especially for programmatic ¬
+Objective-C when the overhead of Xcode is not needed.\n¬
+Compiling and running this code as a stand-alone Mac application should ¬
+calm any fears concerning FB's capabilities with the most advanced technologies."
+
+_window = 1
+begin enum 1
+  _scrlView
+  _textView
+  _speakBtn
+  _resetBtn
+  _pauseBtn
+  _resumeBtn
+  _voicePopup
+end enum
+
+void local fn BuildWindow
+  NSInteger wndStyle = NSWindowStyleMaskResizable¬
+  + NSWindowStyleMaskTitled¬
+  + NSWindowStyleMaskClosable¬
+  + NSWindowStyleMaskMiniaturizable
+
+  CGRect r = fn CGRectMake( 0, 0, 500, 500 )
+  window _window, @"Using Speech Engine to Highlight Spoken Words", r, wndStyle
+  WindowSetMinSize( _window, fn CGSizeMake( 400, 270 ) )
+
+  r = fn CGRectMake( 20, 60, 460, 425 )
+  scrollview _scrlView, r, NSBezelBorder
+  ViewSetAutoresizingMask( _scrlView, NSViewWidthSizable + NSViewHeightSizable )
+  textview _textView,, _scrlView,,_window
+  TextViewSetTextContainerInset( _textView, fn CGSizeMake( 10, 10 ) )
+  TextSetString( _textView, string )
+  CFMutableAttributedStringRef                     aString = fn TextViewMutableAttributedString( _textView )
+  MutableAttributedStringSetFontWithName(          aString, @"Times", 16.0 )
+  MutableAttributedStringSetFirstLineHeadIndent(   aString, 10.0 )
+  MutableAttributedStringSetParagraphSpacing(      aString, 20.0 )
+  MutableAttributedStringBeginEditing(             aString )
+  MutableAttributedStringReplaceCharactersInRange( aString, string, fn CFRangeMake( 0, len(string) - 1 ) )
+  MutableAttributedStringEndEditing(               aString )
+
+  r = fn CGRectMake( 380, 13, 110, 32 )
+  button _speakBtn,,, @"Speak text", r
+  ViewSetAutoresizingMask( _speakBtn, NSViewMinXMargin + NSViewMaxYMargin )
+
+  r = fn CGRectMake( 300, 13, 80, 32 )
+
+  button _resetBtn,,, @"Reset", r
+  ViewSetAutoresizingMask( _resetBtn, NSViewMinXMargin + NSViewMaxYMargin )
+
+  r = fn CGRectMake( 220, 13, 80, 32 )
+  button _pauseBtn, NO,, @"Pause", r
+  ViewSetAutoresizingMask( _pauseBtn, NSViewMinXMargin + NSViewMaxYMargin )
+
+  r = fn CGRectMake( 140, 13, 80, 32 )
+  button _resumeBtn, NO,, @"Resume", r
+  ViewSetAutoresizingMask( _resumeBtn, NSViewMinXMargin + NSViewMaxYMargin )
+
+  AVSpeechSynthesisVoiceRef voice
+  CFArrayRef voices = fn AVSpeechSynthesisVoiceSpeechVoices
+  CFMutableArrayRef temp = fn MutableArrayNew
+  for voice in voices
+    if fn StringIsEqual( fn AVSpeechSynthesisVoiceLanguage( voice ), @"en-US" ) || ¬
+      fn StringIsEqual(  fn AVSpeechSynthesisVoiceLanguage( voice ), @"en-GB" ) || ¬
+      fn StringIsEqual(  fn AVSpeechSynthesisVoiceLanguage( voice ), @"en-AU" )
+      MutableArrayAddObject( temp, voice )
+    end if
+  next
+
+  SortDescriptorRef sd = fn SortDescriptorWithKey( @"name", YES )
+  voices = fn ArraySortedArrayUsingDescriptors( temp, @[sd] )
+
+  r = fn CGRectMake( 20, 13, 110, 32 )
+  popupbutton _voicePopup,, 0, fn ArrayValueForKey( voices, @"name" ), r
+
+  MenuRef popMenu = fn PopUpButtonMenu( _voicePopup )
+  long index = 0
+  for voice in voices
+    MenuItemSetProperty( popMenu, index, @"voice", voice )
+    index++
+  next
+end fn
+
+
+void local fn MySpeechSynthesizerCallback( ref as AVSpeechSynthesizerRef, ev as long, utterance as AVSpeechUtteranceRef, userData as ptr )
+  CFRange range
+  select ( ev )
+    case _speechSynthesizerWillSpeakRangeOfSpeechString
+      range = fn AVSpeechSynthesizerDelegateRange( ref )
+      TextViewShowFindIndicatorForRange( _textView, range )
+      TextScrollRangeToVisible( _textView, range )
+    case _speechSynthesizerDidFinishSpeechUtterance
+      range = fn CFRangeMake( 0, 0 )
+      TextScrollRangeToVisible( _textView, range )
+      AppRemoveProperty( @"synth" )
+  end select
+end fn
+
+
+void local fn HighlightSpokenText
+  button _speakBtn, NO
+  button _pauseBtn, YES
+  button _resumeBtn, NO
+  AVSpeechUtteranceRef utterance = fn AVSpeechUtteranceWithString( fn TextString( _textView )  )
+  AVSpeechUtteranceSetVolume( utterance, 0.5 )
+  AVSpeechUtteranceSetRate(   utterance, 0.3 )
+  AVSpeechSynthesisVoiceRef voice = fn MenuItemProperty( fn PopUpButtonMenu( _voicePopup ), fn PopUpButtonIndexOfSelectedItem( _voicePopup ), @"voice" )
+  if ( voice ) then AVSpeechUtteranceSetVoice( utterance, voice )
+  AVSpeechSynthesizerRef synth = fn AVSpeechSynthesizerInit
+  AppSetProperty( @"synth", synth )
+  CFMutableAttributedStringRef aString = fn TextViewMutableAttributedString( _textView )
+  AVSpeechSynthesizerSetDelgateCallback( synth, @fn MySpeechSynthesizerCallback, aString )
+  AVSpeechSynthesizerSpeakUtterance( synth, utterance )
+end fn
+
+
+void local fn PauseSpokeText
+  AVSpeechSynthesizerRef synth = fn AppProperty( @"synth" )
+  fn AVSpeechSynthesizerPauseSpeakingAtBoundary( synth, AVSpeechBoundaryWord )
+  button _pauseBtn, NO
+  button _resumeBtn, YES
+end fn
+
+
+void local fn ResumeSpokeText
+  AVSpeechSynthesizerRef synth = fn AppProperty( @"synth" )
+  fn AVSpeechSynthesizerContinueSpeaking( synth )
+  button _pauseBtn, YES
+  button _resumeBtn, NO
+end fn
+
+
+local fn Reset
+  AVSpeechSynthesizerRef synth = fn AppProperty( @"synth" )
+  fn AVSpeechSynthesizerStopSpeakingAtBoundary( synth, AVSpeechBoundaryImmediate )
+  CFRange range = fn CFRangeMake( 0, 0 )
+  TextScrollRangeToVisible( _textView, range )
+  AppRemoveProperty( @"synth" )
+  button _speakBtn, YES
+  button _pauseBtn, NO
+  button _resumeBtn, NO
+end fn
+
+
+void local fn DoDialog( ev as long, tag as long, wnd as long )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case _speakBtn    : fn HighlightSpokenText
+        case _pauseBtn    : fn PauseSpokeText
+        case _resumeBtn   : fn ResumeSpokeText
+        case _resetBtn    : fn Reset
+      end select
+    case _windowWillClose : end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+fn BuildWindow
+
+HandleEvents

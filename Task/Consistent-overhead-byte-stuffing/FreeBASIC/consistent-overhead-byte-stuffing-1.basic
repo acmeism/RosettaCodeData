@@ -1,0 +1,207 @@
+Const NULL As Any Ptr = 0
+
+Type ByteArray
+    dato As Ubyte Ptr
+    longitud As Integer
+    capacidad As Integer
+End Type
+
+Function CreateByteArray() As ByteArray
+    Dim As ByteArray arr
+    arr.capacidad = 16
+    arr.longitud = 0
+    arr.dato = Callocate(arr.capacidad)
+    Return arr
+End Function
+
+Sub AddByte(Byref arr As ByteArray, value As Ubyte)
+    If arr.longitud >= arr.capacidad Then
+        arr.capacidad *= 2
+        arr.dato = Reallocate(arr.dato, arr.capacidad)
+    End If
+    arr.dato[arr.longitud] = value
+    arr.longitud += 1
+End Sub
+
+Sub FreeByteArray(Byref arr As ByteArray)
+    If arr.dato <> NULL Then
+        Deallocate(arr.dato)
+        arr.dato = NULL
+    End If
+    arr.longitud = 0
+    arr.capacidad = 0
+End Sub
+
+Function COBSEncode(Byref dato As ByteArray, delim As Ubyte) As ByteArray
+    Dim As ByteArray enc = CreateByteArray()
+    AddByte(enc, 0)
+
+    Dim As Integer i, ins = 0, code = 1
+    Dim As Boolean addLastCode = True
+
+    For i = 0 To dato.longitud - 1
+        Dim As Ubyte bite = dato.dato[i]
+        If bite <> 0 Then
+            AddByte(enc, bite)
+            code += 1
+        End If
+        addLastCode = True
+        If bite = 0 Orelse code = 255 Then
+            If code = 255 Then addLastCode = False
+            enc.dato[ins] = code
+            code = 1
+            ins = enc.longitud
+            AddByte(enc, 0)
+        End If
+    Next
+
+    If addLastCode Then
+        enc.dato[ins] = code
+        If delim <> 0 Then
+            For i = 0 To enc.longitud - 1
+                enc.dato[i] Xor= delim
+            Next
+        End If
+        AddByte(enc, delim)
+    Else
+        If delim <> 0 Then
+            For i = 0 To enc.longitud - 1
+                enc.dato[i] Xor= delim
+            Next
+        End If
+        enc.dato[ins] = delim
+    End If
+
+    Return enc
+End Function
+
+Function COBSDecode(Byref enc As ByteArray, delim As Ubyte) As ByteArray
+    If enc.longitud = 0 Orelse enc.dato[enc.longitud - 1] <> delim Then
+        Print "Error: Invalid encoded data"
+        Return CreateByteArray()
+    End If
+
+    Dim As ByteArray dec = CreateByteArray()
+    Dim As ByteArray enc2 = CreateByteArray()
+    Dim As Integer i, length = enc.longitud - 1
+
+    For i = 0 To length - 1
+        AddByte(enc2, enc.dato[i] Xor Iif(delim <> 0, delim, 0))
+    Next
+
+    Dim As Integer code = 255, block = 0
+    For i = 0 To length - 1
+        Dim As Ubyte bite = enc2.dato[i]
+        If block <> 0 Then
+            AddByte(dec, bite)
+        Else
+            If i + bite > length Then
+                Print "Error: Marker pointing beyond packet end"
+                FreeByteArray(dec)
+                FreeByteArray(enc2)
+                Return CreateByteArray()
+            End If
+            If code <> 255 Then AddByte(dec, 0)
+            code = bite
+            block = code
+            If code = 0 Then Exit For
+        End If
+        block -= 1
+    Next
+
+    FreeByteArray(enc2)
+    Return dec
+End Function
+
+Sub PrintByteArrayHex(Byref arr As ByteArray)
+    Dim As Integer i
+    If arr.longitud <= 5 Then
+        For i = 0 To arr.longitud - 1
+            Print Hex(arr.dato[i], 2);
+            If i < arr.longitud - 1 Then Print " ";
+        Next
+        Print Space(35 - (arr.longitud * 3));
+    Else
+        For i = 0 To 4
+            Print Hex(arr.dato[i], 2); " ";
+        Next
+        Print "... ";
+        For i = arr.longitud - 5 To arr.longitud - 1
+            Print Hex(arr.dato[i], 2);
+            If i < arr.longitud - 1 Then Print " ";
+        Next
+        Print " ";
+    End If
+End Sub
+
+' Main program
+Dim As Integer i, d
+Dim As ByteArray examples(10)
+For i = 0 To 10 : examples(i) = CreateByteArray() : Next
+
+' Initialize examples
+AddByte(examples(0), &h00)
+With examples(1)
+    AddByte(examples(1), &h00): AddByte(examples(1), &h00)
+End With
+
+With examples(2)
+    AddByte(examples(2), &h00): AddByte(examples(2), &h11): AddByte(examples(2), &h00)
+End With
+
+With examples(3)
+    AddByte(examples(3), &h11): AddByte(examples(3), &h22): AddByte(examples(3), &h00): AddByte(examples(3), &h33)
+End With
+
+With examples(4)
+    AddByte(examples(4), &h11): AddByte(examples(4), &h22): AddByte(examples(4), &h33): AddByte(examples(4), &h44)
+End With
+
+With examples(5)
+    AddByte(examples(5), &h11): AddByte(examples(5), &h00): AddByte(examples(5), &h00): AddByte(examples(5), &h00)
+End With
+
+For i = 1 To 254 : AddByte(examples(6), i) : Next
+
+For i = 0 To 254 : AddByte(examples(7), i) : Next
+
+For i = 1 To 255 : AddByte(examples(8), i) : Next
+
+With examples(9)
+    For i = 2 To 255 : AddByte(examples(9), i) :Next
+    AddByte(examples(9), 0)
+End With
+
+With examples(10)
+    For i = 3 To 255 : AddByte(examples(10), i) : Next
+    AddByte(examples(10), 0)
+    AddByte(examples(10), 1)
+End With
+
+Dim As Ubyte delims(1) = {0, 2}
+
+For d = 0 To 1
+    Print "COBS encoding (hex) with delimiter 0x"; Hex(delims(d), 2); ":"
+
+    Dim As ByteArray encoded(10)
+    For i = 0 To 10
+        encoded(i) = COBSEncode(examples(i), delims(d))
+        PrintByteArrayHex(examples(i)): Print " -> "; : PrintByteArrayHex(encoded(i))
+        Print
+    Next
+
+    Print !"\nCOBS decoding (hex) with delimiter 0x"; Hex(delims(d), 2); ":"
+    For i = 0 To 10
+        Dim As ByteArray decoded = COBSDecode(encoded(i), delims(d))
+        PrintByteArrayHex(encoded(i)): Print " -> "; : PrintByteArrayHex(decoded)
+        Print
+        FreeByteArray(decoded)
+    Next
+
+    Print
+    For i = 0 To 10 : FreeByteArray(encoded(i)) : Next
+Next
+
+For i = 0 To 10 : FreeByteArray(examples(i)) : Next
+
+Sleep

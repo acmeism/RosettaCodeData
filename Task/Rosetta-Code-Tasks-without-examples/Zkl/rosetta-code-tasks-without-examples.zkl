@@ -1,0 +1,46 @@
+var [const] CURL=Import("zklCurl"), YAJL=Import("zklYAJL")[0];
+
+fcn getTasks(language){
+   continueValue,tasks,curl := "",Data(0,String), CURL();  // "nm\0nm\0...."
+   do{	// eg 5 times
+      page:=curl.get(("http://rosettacode.org/mw/api.php?"
+         "action=query&cmlimit=500"
+	 "&format=json"
+	 "&list=categorymembers"
+	 "&cmtitle=Category:%s"
+	 "&cmcontinue=%s").fmt(language,continueValue),Void);
+      page=page[0];  // get HTML body
+      json:=YAJL().write(page).close();
+      json["query"]["categorymembers"].pump(tasks,T("get","title"));
+      continueValue=json.find("continue") #{continue : -||,cmcontinue:page|954|19)}
+          .toList()	# ( ("continue","-||"), ("cmcontinue","page|954|19") )
+	  .apply("concat","=").concat("&"); # continue=-||&cmcontinue=page|954|19
+   }while(continueValue);
+   tasks
+}
+
+var allTasks  =getTasks.future("Programming_Tasks");	    // thread
+var draftTasks=getTasks.future("Draft_Programming_Tasks");  // thread
+var tasks     =getTasks.future(lang);		  	    // thread
+
+fcn newTasks{
+   langTasks:=tasks.pump(Dictionary().add.fp1(Void)); // { "Semordnilap":Void }
+   unimplementedTasks:=allTasks.filter('!(langTasks.holds))
+             .extend(draftTasks.filter('!(langTasks.holds)));
+#if 0
+   unimplementedTasks.pump(List()).sort().pump(Console.println);
+#else  // this next part is very very slow, useless, can't find a wikimedia api
+       // and the amount of information is pretty overwhelming
+   curl:=CURL();
+   foreach task in (unimplementedTasks.pump(List()).sort()){
+      // some task names have a / in them, can't url encode: "Active Directory/Connect"
+      page:="https://rosettacode.org/wiki/" + task.replace(" ","_");
+      page:=curl.get(page)[0];  // sloooow
+      s,s := page.find("\"infobox\""), page.find("<p>",s);
+      if(not (e:=page.find("<div id=\"toc\"",s))) e:=page.find("</p>",s);
+      println("<h2>%s</h2>\n%s\n<hr>".fmt(task,page[s,e-s].text));
+   }
+#endif
+}
+
+newTasks();

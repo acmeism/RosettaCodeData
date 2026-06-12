@@ -1,0 +1,54 @@
+include "NSLog.incl"
+
+local fn Redact( string as CFStringRef, target as CFStringRef, whole as BOOL, icase as BOOL, over as BOOL ) as CFStringRef
+  ErrorRef   err = NULL
+  CFStringRef  w = @"p", i = @"s", o = @"n", result = NULL
+  NSRegularExpressionOptions options = 0
+
+  CFStringRef pattern = fn RegularExpressionEscapedPattern( target )
+  if whole == YES
+    pattern = fn StringWithFormat( @"%@%@%@", @"(?<![-[^[:punct:]\\s]])", pattern, @"(?![-[^[:punct:]\\s]])" )
+    w = @"w"
+  end if
+  if over == YES
+    pattern = fn StringWithFormat( @"%@%@%@", @"[-[^[:punct:]\\s]]*", pattern, @"[-[^[:punct:]\\s]]*+" )
+    o = @"o"
+  end if
+  if icase == YES Then options = NSRegularExpressionCaseInsensitive : i = @"i"
+
+  RegularExpressionRef regex = fn RegularExpressionWithPattern( pattern, options, @err )
+  if err then NSLog( @"%@", fn ErrorLocalizedDescription( err ) )
+  CFMutableStringRef  mutStr = fn MutableStringWithString( string )
+  CFArrayRef         matches = fn RegularExpressionMatches( regex, mutStr, 0, fn CFRangeMake( 0, len( mutStr ) ) )
+  long              x, count = len(matches)
+
+  for x = 0 to count - 1
+    CFRange matchRange = fn ValueRange( fn ObjectValueForKey( matches[x], @"range" ) )
+    MutableStringReplaceOccurrencesOfString( mutStr, @".(?:\\u200d.)*+", @"X", NSRegularExpressionSearch, matchRange )
+  next
+  result = fn StringWithFormat( @"[%@|%@|%@] %@", w, i, o, mutStr )
+end fn = result
+
+CFStringRef tomTest
+tomTest = @"Tom? Toms bottom tomato is in his stomach while playing the \"Tom-tom\" brand tom-toms. That's so tom."
+NSLog( @"Test string:\n%@\n\nRedact 'Tom':", tomTest )
+NSLog( @"%@", fn Redact( tomTest, @"Tom", YES,  NO,  NO ) )
+NSLog( @"%@", fn Redact( tomTest, @"Tom", YES, YES,  NO ) )
+NSLog( @"%@", fn Redact( tomTest, @"Tom",  NO,  NO,  NO ) )
+NSLog( @"%@", fn Redact( tomTest, @"Tom",  NO, YES,  NO ) )
+NSLog( @"%@", fn Redact( tomTest, @"Tom",  NO,  NO, YES ) )
+NSLog( @"%@", fn Redact( tomTest, @"Tom",  NO, YES, YES ) )
+NSLog( @"\nRedact 'tom':" )
+NSLog( @"%@", fn Redact( tomTest, @"tom", YES,  NO,  NO ) )
+NSLog( @"%@", fn Redact( tomTest, @"tom", YES, YES,  NO ) )
+NSLog( @"%@", fn Redact( tomTest, @"tom",  NO,  NO,  NO ) )
+NSLog( @"%@", fn Redact( tomTest, @"tom",  NO, YES,  NO ) )
+NSLog( @"%@", fn Redact( tomTest, @"tom",  NO,  NO, YES ) )
+NSLog( @"%@", fn Redact( tomTest, @"tom",  NO, YES, YES ) )
+
+NSLogSetFont( fn FontWithName( @"Menlo", 18.0 ) )
+NSLog( @"\n                     🧑 👨 🧔 👨‍👩‍👦" )
+NSLog( @"Redact '👨': %@", fn Redact( @"🧑 👨 🧔 👨‍👩‍👦", @"👨", YES, YES, YES ) )
+NSLog( @"Redact '👨‍👩‍👦': %@", fn Redact( @"🧑 👨 🧔 👨‍👩‍👦", @"👨‍👩‍👦", YES, YES, YES ) )
+
+HandleEvents

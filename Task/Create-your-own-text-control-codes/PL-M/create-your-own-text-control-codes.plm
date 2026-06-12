@@ -1,0 +1,128 @@
+100H: /* FORMATTED OUTPUT */
+
+   /* CP/M BDOS SYSTEM CALL */
+   BDOS: PROCEDURE( FN, ARG ); DECLARE FN BYTE, ARG ADDRESS; GOTO 5;END;
+   /* CONSOLE OUTPUT ROUTINES */
+   PR$CHAR:   PROCEDURE( C ); DECLARE C BYTE;    CALL BDOS( 2, C ); END;
+   PR$STRING: PROCEDURE( S ); DECLARE S ADDRESS; CALL BDOS( 9, S ); END;
+   PR$NL:     PROCEDURE; CALL PR$STRING( .( 0DH, 0AH, '$' ) );      END;
+   PR$NUMBER: PROCEDURE( N );
+      DECLARE N ADDRESS;
+      DECLARE V ADDRESS, N$STR( 6 ) BYTE INITIAL( '.....$' ), W BYTE;
+      N$STR( W := LAST( N$STR ) - 1 ) = '0' + ( ( V := N ) MOD 10 );
+      DO WHILE( ( V := V / 10 ) > 0 );
+         N$STR( W := W - 1 ) = '0' + ( V MOD 10 );
+      END;
+      CALL PR$STRING( .N$STR( W ) );
+   END PR$NUMBER;
+   PR$OCTAL: PROCEDURE( N );
+      DECLARE N ADDRESS;
+      DECLARE V ADDRESS, N$STR( 7 ) BYTE INITIAL( '......$' ), W BYTE;
+      DO W = 0 TO LAST( N$STR ) - 2; N$STR( W ) = '0'; END;
+      N$STR( W := LAST( N$STR ) - 1 ) = '0' + ( ( V := N ) AND 7 );
+      DO WHILE( ( V := SHR( V, 3 ) ) > 0 );
+         N$STR( W := W - 1 ) = '0' + ( V AND 7 );
+      END;
+      CALL PR$STRING( .N$STR( W ) );
+   END PR$OCTAL;
+
+   /* FORMATTED PRINT ROUTINE - VAGUELY LIKE THE C ROUTINE */
+   PRINTF: PROCEDURE( FMT, A, B, C, D, E, F, G );
+      DECLARE ( FMT, A, B, C, D, E, F, G ) ADDRESS;
+
+      PR$HEX: PROCEDURE( B ); /* PRINTS B AS A 2 DIGIT HEX NUMBER */
+         DECLARE B BYTE;
+         DECLARE D BYTE;
+         IF ( D := SHR( B, 4 ) ) > 9 THEN CALL PR$CHAR( ( D - 10 ) + 'A' );
+                                     ELSE CALL PR$CHAR(     D      + '0' );
+         IF ( D := B AND 0FH   ) > 9 THEN CALL PR$CHAR( ( D - 10 ) + 'A' );
+                                     ELSE CALL PR$CHAR(     D      + '0' );
+      END PR$HEX ;
+      /* RETURNS A CONVERTED TO LOWERCASE, IF NECESSARY */
+      TO$LOWER: PROCEDURE( A )BYTE;
+         DECLARE A BYTE;
+         IF A >= 'A' AND A <= 'Z' THEN RETURN ( A + 32 ); ELSE RETURN A;
+      END TO$LOWER;
+
+      DECLARE FRAME LITERALLY '''/''';
+      DECLARE P ( 7 )ADDRESS;
+      DECLARE FPTR   ADDRESS;
+      DECLARE ( PPOS, FCH BASED FPTR, IN$LOWERCASE ) BYTE;
+      P( 0 ) = A; P( 1 ) = B; P( 2 ) = C; P( 3 ) = D;
+      P( 4 ) = E; P( 5 ) = F; P( 6 ) = G;
+      PPOS = 0;
+      FPTR = FMT;
+      DO WHILE( FCH <> '$' );
+         IF FCH <> FRAME THEN DO;                   /* NOT A FORMAT FRAME */
+            CALL PR$CHAR( FCH );
+            END;
+         ELSE DO;                                    /* IS A FORMAT FRAME */
+            FPTR = FPTR + 1;
+            IF ( IN$LOWERCASE := FCH = 'L' ) THEN FPTR = FPTR + 1;
+            IF FCH = 'C' OR FCH = 'S' THEN DO;
+               /* CHARACTER OR STRING OPTIONALLY CONVERTED TO LOWER CASE  */
+               IF FCH = 'C' THEN DO;                         /* CHARACTER */
+                  IF IN$LOWERCASE THEN CALL PR$CHAR( TO$LOWER( P( PPOS ) ) );
+                                  ELSE CALL PR$CHAR(           P( PPOS )   );
+                  END;
+               ELSE IF NOT IN$LOWERCASE THEN DO;          /* STRING AS-IS */
+                  CALL PR$STRING( P( PPOS ) );
+                  END;
+               ELSE DO;                               /* LOWERCASE STRING */
+                  DECLARE SPTR ADDRESS;
+                  DECLARE SCH BASED SPTR BYTE;
+                  SPTR = P( PPOS );
+                  DO WHILE( SCH <> '$' );
+                     CALL PR$CHAR( TO$LOWER( SCH ) );
+                     SPTR = SPTR + 1;
+                  END;
+               END;
+               PPOS = PPOS + 1;
+               END;
+            ELSE IF FCH = 'I' OR FCH = 'D' OR FCH = 'U' THEN DO;
+               /* SIGNED OR UNSIGNED DECIMAL INTEGER */
+               DECLARE V ADDRESS;
+               V = P( PPOS );
+               IF FCH <> 'U' AND V > 32767 THEN DO;
+                  /* THE NUMBER IS NEGATIVE AND MUST BE PRINTED AS SIGNED */
+                  CALL PR$CHAR( '-' );
+                  V = - V;
+               END;
+               CALL PR$NUMBER( V );
+               PPOS = PPOS + 1;
+               END;
+            ELSE IF FCH = 'H' OR FCH = 'X' THEN DO;
+               /* UNSIGNED INTEGER IN HEX */
+               DECLARE V ADDRESS;
+               V = P( PPOS );
+               CALL PR$CHAR( '$' );
+               CALL PR$HEX( HIGH( V ) );
+               CALL PR$HEX( LOW(  V ) );
+               PPOS = PPOS + 1;
+               END;
+            ELSE IF FCH = 'O' THEN DO;          /* UNSIGNED OCTAL INTEGER */
+               CALL PR$OCTAL( P( PPOS ) );
+               PPOS = PPOS + 1;
+               END;
+            ELSE IF FCH = 'N' THEN DO;                         /* NEWLINE */
+               CALL PR$NL;
+               END;
+            ELSE DO;                     /* ANYTHING ELSE - JUST PRINT IT */
+               CALL PR$CHAR( FCH );
+            END /* IF VARIOUS FRAMES;; */ ;
+         END /* IF FCH <> FRAME;; */ ;
+         FPTR = FPTR + 1;
+      END /* WHILE FCH <> '$' */ ;
+   END PRINTF ;
+
+   /* TEST PRINTF */
+   DECLARE ( P3, P4, P5, P6, P7 ) ADDRESS;
+   P3 = 301; P4, P5, P6 = 0;
+   P3 = - P3; P4 = P4 - 1; P5 = P5 - 2; P6 = P6 - 3; P7 = 65535;
+   CALL PRINTF( .'HELLO, /S/C /I/$ /D /U /X./N(END)/O/N$'
+              , .'WORLD$', 33, P3, P4, P5, P6, P7
+              );
+   CALL PRINTF( .'H/LC/LC/LC/LC, W/LS/C$'
+              , 'E', 'L', 'L', 'O', .'ORLD$', 33, 0
+              );
+EOF

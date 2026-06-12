@@ -1,0 +1,102 @@
+global target_fn omega phip phig iter xmin[] xmax[] pos[][] vel[][] bpos[][] bval[] gbpos[] gbval nparticles ndims .
+#
+func sinr x .
+   return sin (x * 180 / pi)
+.
+func evaluate x[] .
+   if target_fn = 1
+      # --- McCormick ---
+      a = x[1]
+      b = x[2]
+      s = sinr (a + b)
+      return s + (a - b) * (a - b) + 1 + 2.5 * b - 1.5 * a
+   elif target_fn = 2
+      # --- Michalewicz ---
+      m = 10
+      for i = 1 to len x[]
+         j = x[i]
+         k = sinr (i * j * j / pi)
+         sum += sinr j * pow k (2 * m)
+      .
+      return -sum
+   .
+.
+proc psoInit xmi[] xma[] o p g n .
+   xmin[] = xmi[]
+   xmax[] = xma[]
+   omega = o
+   phip = p
+   phig = g
+   nparticles = n
+   iter = 0
+   ndims = len xmin[]
+   gbval = 1e100
+   len gbpos[] ndims
+   for k = 1 to ndims : gbpos[k] = 1e100
+   len pos[][] nparticles
+   len vel[][] nparticles
+   len bpos[][] nparticles
+   len bval[] nparticles
+   for i = 1 to nparticles
+      len pos[i][] ndims
+      len vel[i][] ndims
+      len bpos[i][] ndims
+      for k = 1 to ndims
+         pos[i][k] = xmin[k] + (xmax[k] - xmin[k]) * randomf
+         vel[i][k] = 0
+         bpos[i][k] = pos[i][k]
+      .
+      bval[i] = 1e100
+   .
+.
+proc pso .
+   rg = randomf
+   for i = 1 to nparticles
+      v = evaluate pos[i][]
+      if v < bval[i]
+         bval[i] = v
+         bpos[i][] = pos[i][]
+      .
+      if bval[i] < gbval
+         gbval = bval[i]
+         gbpos[] = bpos[i][]
+      .
+   .
+   for i = 1 to nparticles
+      rp = randomf
+      for k = 1 to ndims
+         vel[i][k] = omega * vel[i][k] + phip * rp * (bpos[i][k] - pos[i][k]) + phig * rg * (gbpos[k] - pos[i][k])
+         pos[i][k] += vel[i][k]
+         if pos[i][k] <= xmin[k] or pos[i][k] >= xmax[k]
+            for k = 1 to ndims
+               pos[i][k] = xmin[k] + (xmax[k] - xmin[k]) * randomf
+            .
+            break 1
+         .
+      .
+   .
+   iter += 1
+.
+proc iterate n .
+   for i = 1 to n : pso
+.
+proc report name$ .
+   print "Test Function        : " & name$
+   print "Iterations           : " & iter
+   print "Global Best Position : " & gbpos[]
+   print "Global Best Value    : " & gbval
+.
+numfmt 0 5
+target_fn = 1
+psoInit [ -1.5 -3.0 ] [ 4.0 4.0 ] 0.0 0.6 0.3 100
+iterate 40
+report "McCormick"
+print evaluate [ -0.54719 -1.54719 ]
+print ""
+#
+target_fn = 2
+psoInit [ 0 0 ] [ pi pi ] 0.3 0.3 0.3 1000
+iterate 30
+report "Michalewicz (2D)"
+print evaluate [ 2.2 1.57 ]
+

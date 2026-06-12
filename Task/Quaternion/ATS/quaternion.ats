@@ -1,0 +1,266 @@
+//--------------------------------------------------------------------
+
+#include "share/atspre_staload.hats"
+
+//--------------------------------------------------------------------
+
+(* Here is one way to get a sqrt function without going beyond the ATS
+   prelude. The prelude (at the time of this writing) contains some
+   templates for which implementations were never added. Here I add an
+   implementation.
+
+   The ats2-xprelude package at
+   https://sourceforge.net/p/chemoelectric/ats2-xprelude contains a
+   much more extensive and natural interface to the C math library. *)
+
+%{^
+#include <math.h>
+%}
+
+implement                       (* "Generic" square root. *)
+gsqrt_val<double> x =
+  (* Call "sqrt" from the C math library. *)
+  $extfcall (double, "sqrt", x)
+
+//--------------------------------------------------------------------
+
+abst@ype quaternion (tk : tkind) =
+  (* The following determines the SIZE of a quaternion, but not its
+     actual representation: *)
+  @(g0float tk, g0float tk, g0float tk, g0float tk)
+
+extern fn {tk : tkind} quaternion_make :
+  (g0float tk, g0float tk, g0float tk, g0float tk) -<> quaternion tk
+
+extern fn {tk : tkind} fprint_quaternion :
+  (FILEref, quaternion tk) -> void
+extern fn {tk : tkind} print_quaternion :
+  quaternion tk -> void
+
+extern fn {tk : tkind} quaternion_norm_squared :
+  quaternion tk -<> g0float tk
+extern fn {tk : tkind} quaternion_norm :
+  quaternion tk -< !exn > g0float tk
+
+extern fn {tk : tkind} quaternion_neg :
+  quaternion tk -<> quaternion tk
+extern fn {tk : tkind} quaternion_conj :
+  quaternion tk -<> quaternion tk
+
+extern fn {tk : tkind} add_quaternion_g0float :
+  (quaternion tk, g0float tk) -<> quaternion tk
+extern fn {tk : tkind} add_g0float_quaternion :
+  (g0float tk, quaternion tk) -<> quaternion tk
+extern fn {tk : tkind} add_quaternion_quaternion :
+  (quaternion tk, quaternion tk) -<> quaternion tk
+
+extern fn {tk : tkind} mul_quaternion_g0float :
+  (quaternion tk, g0float tk) -<> quaternion tk
+extern fn {tk : tkind} mul_g0float_quaternion :
+  (g0float tk, quaternion tk) -<> quaternion tk
+extern fn {tk : tkind} mul_quaternion_quaternion :
+  (quaternion tk, quaternion tk) -<> quaternion tk
+
+extern fn {tk : tkind} quaternion_eq :
+  (quaternion tk, quaternion tk) -<> bool
+
+overload fprint with fprint_quaternion
+overload print with print_quaternion
+
+overload norm_squared with quaternion_norm_squared
+overload norm with quaternion_norm
+
+overload ~ with quaternion_neg
+overload conj with quaternion_conj
+
+overload + with add_quaternion_g0float
+overload + with add_g0float_quaternion
+overload + with add_quaternion_quaternion
+
+overload * with mul_quaternion_g0float
+overload * with mul_g0float_quaternion
+overload * with mul_quaternion_quaternion
+
+overload = with quaternion_eq
+
+//--------------------------------------------------------------------
+
+local
+
+  (* Now we decide the REPRESENTATION of a quaternion. A quaternion is
+     represented as an unboxed 4-tuple of "real" numbers of any one
+     particular typekind. *)
+  typedef _quaternion (tk : tkind) =
+    @(g0float tk, g0float tk, g0float tk, g0float tk)
+
+  assume quaternion tk = _quaternion tk
+
+in (* local *)
+
+  implement {tk}
+  quaternion_make (a, b, c, d) =
+    @(a, b, c, d)
+
+  implement {tk}
+  fprint_quaternion (outf, q) =
+    let
+      typedef t = g0float tk
+      val @(a, b, c, d) = q
+    in
+      fprint_val<t> (outf, a);
+      if g0i2f 0 <= b then fprint_val<string> (outf, "+");
+      fprint_val<t> (outf, b);
+      fprint_val<string> (outf, "i");
+      if g0i2f 0 <= c then fprint_val<string> (outf, "+");
+      fprint_val<t> (outf, c);
+      fprint_val<string> (outf, "j");
+      if g0i2f 0 <= d then fprint_val<string> (outf, "+");
+      fprint_val<t> (outf, d);
+      fprint_val<string> (outf, "k");
+    end
+
+  implement {tk}
+  print_quaternion q =
+    fprint_quaternion (stdout_ref, q)
+
+  implement {tk}
+  quaternion_norm_squared q =
+    let
+      val @(a, b, c, d) = q
+    in
+      (a * a) + (b * b) + (c * c) + (d * d)
+    end
+
+  implement {tk}
+  quaternion_norm q =
+    gsqrt_val<g0float tk> (quaternion_norm_squared q)
+
+  implement {tk}
+  quaternion_neg q =
+    let
+      val @(a, b, c, d) = q
+    in
+      @(~a, ~b, ~c, ~d)
+    end
+
+  implement {tk}
+  quaternion_conj q =
+    let
+      val @(a, b, c, d) = q
+    in
+      @(a, ~b, ~c, ~d)
+    end
+
+  implement {tk}
+  add_quaternion_g0float (q, r) =
+    let
+      val @(a, b, c, d) = q
+    in
+      @(a + r, b, c, d)
+    end
+
+  implement {tk}
+  add_g0float_quaternion (r, q) =
+    let
+      val @(a, b, c, d) = q
+    in
+      @(r + a, b, c, d)
+    end
+
+  implement {tk}
+  add_quaternion_quaternion (q1, q2) =
+    let
+      val @(a1, b1, c1, d1) = q1
+      and @(a2, b2, c2, d2) = q2
+    in
+      @(a1 + a2, b1 + b2, c1 + c2, d1 + d2)
+    end
+
+  implement {tk}
+  mul_quaternion_g0float (q, r) =
+    let
+      val @(a, b, c, d) = q
+    in
+      @(a * r, b * r, c * r, d * r)
+    end
+
+  implement {tk}
+  mul_g0float_quaternion (r, q) =
+    let
+      val @(a, b, c, d) = q
+    in
+      @(r * a, r * b, r * c, r * d)
+    end
+
+  implement {tk}
+  mul_quaternion_quaternion (q1, q2) =
+    let
+      val @(a1, b1, c1, d1) = q1
+      and @(a2, b2, c2, d2) = q2
+    in
+      @((a1 * a2) - (b1 * b2) - (c1 * c2) - (d1 * d2),
+        (a1 * b2) + (b1 * a2) + (c1 * d2) - (d1 * c2),
+        (a1 * c2) - (b1 * d2) + (c1 * a2) + (d1 * b2),
+        (a1 * d2) + (b1 * c2) - (c1 * b2) + (d1 * a2))
+    end
+
+  implement {tk}
+  quaternion_eq (q1, q2) =
+    let
+      val @(a1, b1, c1, d1) = q1
+      and @(a2, b2, c2, d2) = q2
+    in
+      (a1 = a2) * (b1 = b2) * (c1 = c2) * (d1 = d2)
+    end
+
+end (* local *)
+
+//--------------------------------------------------------------------
+
+val q = quaternion_make (1.0, 2.0, 3.0, 4.0)
+and q1 = quaternion_make (2.0, 3.0, 4.0, 5.0)
+and q2 = quaternion_make (3.0, 4.0, 5.0, 6.0)
+and r = 7.0
+
+implement
+main0 () =
+  let
+    (* Let us print double precision numbers in a format more readable
+       than is the prelude's default. *)
+    implement
+    fprint_val<double> (outf, x) =
+      let
+        typedef f = $extype"FILE *"
+        val _ = $extfcall (int, "fprintf", $UNSAFE.cast{f} outf,
+                           "%g", x)
+      in
+      end
+  in
+    println! ("q = ", q);
+    println! ("q1 = ", q1);
+    println! ("q2 = ", q2);
+    println! ();
+    println! ("||q|| = ", norm q);
+    println! ("||q1|| = ", norm q1);
+    println! ("||q2|| = ", norm q2);
+    println! ();
+    println! ("-q = ", ~q);
+    println! ("-q1 = ", ~q1);
+    println! ("-q2 = ", ~q2);
+    println! ();
+    println! ("conj q = ", conj q);
+    println! ("conj q1 = ", conj q1);
+    println! ("conj q2 = ", conj q2);
+    println! ();
+    println! ("q + r = ", q + r);
+    println! ("r + q = ", r + q);
+    println! ("q1 + q2 = ", q1 + q2);
+    println! ();
+    println! ("q * r = ", q * r);
+    println! ("r * q = ", r * q);
+    println! ("q1 * q2 = ", q1 * q2);
+    println! ("q2 * q1 = ", q2 * q1);
+    println! ("((q1 * q2) = (q2 * q1)) is ", (q1 * q2) = (q2 * q1))
+  end
+
+//--------------------------------------------------------------------

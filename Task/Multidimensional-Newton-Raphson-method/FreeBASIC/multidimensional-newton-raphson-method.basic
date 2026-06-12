@@ -1,0 +1,241 @@
+Type Matrix
+    Dim As Double m(Any, Any)
+End Type
+
+Dim Shared As Matrix gu1
+
+Sub rowswap(Byref M As Matrix, i As Uinteger, j As Uinteger)
+    Dim As Integer k
+    For k = 0 To Ubound(M.m, 2)
+        Swap M.m(j, k), M.m(i, k)
+    Next k
+End Sub
+
+Function rowech(Byref M As Matrix) As Matrix
+    Dim As Uinteger lead = 0, rowCount = 1 + Ubound(M.m, 1), colCount = 1 + Ubound(M.m, 2)
+    Dim As Uinteger r, i, j
+    Dim As Double K
+    For r = 0 To rowCount - 1
+        If lead >= colCount Then Exit For
+        i = r
+        While M.m(i, lead) = 0
+            i += 1
+            If i = rowCount Then
+                i = r
+                lead += 1
+                If lead = colCount Then Exit For
+            End If
+        Wend
+        rowswap M, r, i
+        K = M.m(r, lead)
+        If K <> 0 Then
+            For j = 0 To colCount - 1
+                M.m(r, j) /= K
+            Next j
+        End If
+        For i = 0 To rowCount - 1
+            If i <> r Then
+                K = M.m(i, lead)
+                For j = 0 To colCount - 1
+                    M.m(i, j) -= M.m(r, j) * K
+                Next j
+            End If
+        Next i
+        lead += 1
+    Next r
+    Return M
+End Function
+
+Function MatrixTranspose(Byref A As Matrix) As Matrix
+    Dim mtranspuesta As Matrix
+    Redim mtranspuesta.m(Lbound(A.m, 2) To Ubound(A.m, 2), Lbound(A.m, 1) To Ubound(A.m, 1))
+    Dim As Integer fila, columna
+
+    For fila = Lbound(A.m, 1) To Ubound(A.m, 1)
+        For columna = Lbound(A.m, 2) To Ubound(A.m, 2)
+            mtranspuesta.m(columna, fila) = A.m(fila, columna)
+        Next columna
+    Next fila
+    Return mtranspuesta
+End Function
+
+Function MatrixInverse(Byref A As Matrix) As Matrix
+    Dim ret As Matrix, working As Matrix
+    Dim As Uinteger i, j
+    If Ubound(A.m, 1) <> Ubound(A.m, 2) Then Return ret
+    Dim As Integer n = Ubound(A.m, 1)
+    Redim ret.m(n, n)
+    Redim working.m(n, 2 * (n + 1))
+    For i = 0 To n
+        For j = 0 To n
+            working.m(i, j) = A.m(i, j)
+        Next j
+        working.m(i, i + n + 1) = 1
+    Next i
+    working = rowech(working)
+    For i = 0 To n
+        For j = 0 To n
+            ret.m(i, j) = working.m(i, j + n + 1)
+        Next j
+    Next i
+    Return ret
+End Function
+
+Function MatrixMultiply(Byref A As Matrix, Byref B As Matrix) As Matrix
+    Dim As Matrix result
+    Redim result.m(Ubound(A.m, 1), Ubound(B.m, 2))
+
+    For i As Integer = 0 To Ubound(A.m, 1)
+        For j As Integer = 0 To Ubound(B.m, 2)
+            result.m(i, j) = 0
+            For k As Integer = 0 To Ubound(A.m, 2)
+                result.m(i, j) += A.m(i, k) * B.m(k, j)
+            Next k
+        Next j
+    Next i
+
+    Return result
+End Function
+
+Function MatrixSubtract(Byref A As Matrix, Byref B As Matrix) As Matrix
+    Dim As Matrix result
+    Redim result.m(Ubound(A.m, 1), Ubound(A.m, 2))
+
+    For i As Integer = 0 To Ubound(A.m, 1)
+        For j As Integer = 0 To Ubound(A.m, 2)
+            result.m(i, j) = A.m(i, j) - B.m(i, j)
+        Next j
+    Next i
+
+    Return result
+End Function
+
+Type FuncType As Function(x() As Double) As Double
+Type JacobianType As Function(x() As Double, i As Integer, j As Integer) As Double
+
+Function solve(funcs() As FuncType, Byref jacobian As JacobianType, guesses() As Double) As Double Ptr
+    Dim As Integer size = Ubound(funcs)
+    Dim As Double Ptr gu2 = Callocate((size + 1) * Sizeof(Double))
+    Dim As Matrix jac
+    Redim jac.m(size, size)
+    Dim As Double tol = 1e-8
+    Dim As Integer maxIter = 12
+    Dim As Integer iter = 0
+    Dim As Integer i, j, k
+    Dim As Double temp_x(size)
+
+    For i = 0 To size
+        gu2[i] = guesses(i)
+    Next
+
+    Do
+        Dim As Matrix f
+        Redim f.m(size, 0)
+        For i = 0 To size
+            For j = 0 To size
+                temp_x(j) = gu2[j]
+            Next j
+            f.m(i, 0) = funcs(i)(temp_x())
+        Next
+
+        For i = 0 To size
+            For j = 0 To size
+                For k = 0 To size
+                    temp_x(k) = gu2[k]
+                Next k
+                jac.m(i, j) = jacobian(temp_x(), i, j)
+            Next j
+        Next i
+
+        Dim As Matrix jacInv = MatrixInverse(jac)
+        Dim As Matrix delta = MatrixMultiply(jacInv, f)
+
+        Dim maxChange As Double = 0
+        For i = 0 To size
+            gu2[i] -= delta.m(i, 0)
+            If Abs(delta.m(i, 0)) > maxChange Then
+                maxChange = Abs(delta.m(i, 0))
+            End If
+        Next
+
+        iter += 1
+        If iter >= maxIter Or maxChange < tol Then Exit Do
+    Loop
+
+    Return gu2
+End Function
+
+' Funciones para el primer sistema de ecuaciones
+Function f1(x() As Double) As Double
+    Return -x(0) * x(0) + x(0) + 0.5 - x(1)
+End Function
+
+Function f2(x() As Double) As Double
+    Return x(1) + 5 * x(0) * x(1) - x(0) * x(0)
+End Function
+
+Function jacobian1(x() As Double, i As Integer, j As Integer) As Double
+    Select Case As Const i
+    Case 0
+        If j = 0 Then Return -2 * x(0) + 1
+        If j = 1 Then Return -1
+    Case 1
+        If j = 0 Then Return 5 * x(1) - 2 * x(0)
+        If j = 1 Then Return 1 + 5 * x(0)
+    End Select
+    Return 0
+End Function
+
+Function f3(x() As Double) As Double
+    Return 9 * x(0) * x(0) + 36 * x(1) * x(1) + 4 * x(2) * x(2) - 36
+End Function
+
+Function f4(x() As Double) As Double
+    Return x(0) * x(0) - 2 * x(1) * x(1) - 20 * x(2)
+End Function
+
+Function f5(x() As Double) As Double
+    Return x(0) * x(0) - x(1) * x(1) + x(2) * x(2)
+End Function
+
+Function jacobian2(x() As Double, i As Integer, j As Integer) As Double
+    Select Case As Const i
+    Case 0
+        If j = 0 Then Return 18 * x(0)
+        If j = 1 Then Return 72 * x(1)
+        If j = 2 Then Return 8 * x(2)
+    Case 1
+        If j = 0 Then Return 2 * x(0)
+        If j = 1 Then Return -4 * x(1)
+        If j = 2 Then Return -20
+    Case 2
+        If j = 0 Then Return 2 * x(0)
+        If j = 1 Then Return -2 * x(1)
+        If j = 2 Then Return 2 * x(2)
+    End Select
+    Return 0
+End Function
+
+' Main program
+Dim As FuncType funcs(1)
+funcs(0) = @f1
+funcs(1) = @f2
+
+Dim As Double guesses(1) = {1.2, 1.2}
+Dim As Double Ptr sols = solve(funcs(), @jacobian1, guesses())
+
+Print Using "Approximate solutions are x = #.#######, y = #.#######"; sols[0]; sols[1]
+
+Dim As FuncType funcs2(2)
+funcs2(0) = @f3
+funcs2(1) = @f4
+funcs2(2) = @f5
+
+Dim As Double guesses2(2) = {1.0, 1.0, 0.0}
+sols = solve(funcs2(), @jacobian2, guesses2())
+
+Print Using !"\nApproximate solutions are x = #.#######, y = #.#######, z = #.#######"; sols[0]; sols[1]; sols[2]
+
+Deallocate(sols)
+
+Sleep

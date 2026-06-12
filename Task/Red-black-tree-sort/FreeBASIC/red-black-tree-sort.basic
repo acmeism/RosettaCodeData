@@ -1,0 +1,597 @@
+#define NULL Cast(Any Ptr,0)
+
+Enum nodecolor
+    BLACK = 0
+    RED = 1
+End Enum
+
+Type RBNode
+    Dim izda As RBNode Ptr
+    Dim dcha As RBNode Ptr
+    Dim parent As RBNode Ptr
+    Dim kolor As nodecolor
+    Dim key As Integer
+    Dim value As String
+    Dim nonzero As Integer
+    Declare Constructor(Byval key As Integer = 0, value As String = "", Byval clr As nodecolor = RED)
+    Declare Destructor()
+End Type
+
+Constructor RBNode(Byval key As Integer, value As String, Byval clr As nodecolor = RED)
+    This.key = key
+    This.value = value
+    This.izda = NULL
+    This.dcha = NULL
+    This.parent = NULL
+    This.kolor = clr
+    This.nonzero = 1
+End Constructor
+
+Destructor RBNode()
+
+End Destructor
+
+Function integer_compare(Byval key1 As Integer, Byval key2 As Integer) As Integer
+    If (key1 = key2) Then
+        Return 0
+    Elseif (key1 < key2) Then
+        Return -1
+    Elseif (key1 > key2) Then
+        Return 1
+    End If
+End Function
+
+Type RBTree
+    Dim sentinel As RBNode Ptr
+    Dim root As RBNode Ptr
+    Dim count As Integer
+    Dim Compare As Function(Byval key1 As Integer, Byval key2 As Integer) As Integer
+    Declare Constructor(Byval cmp As Function(Byval key1 As Integer, Byval key2 As Integer) As Integer)
+    Declare Sub rotateLeft(Byval x As RBNode Ptr)
+    Declare Sub rotateRight(Byval x As RBNode Ptr)
+    Declare Sub insertFixup(Byval x As RBNode Ptr)
+    Declare Function insertNode(Byval key As Integer, value As String) As RBNode Ptr
+    Declare Sub deleteFixup(Byval x As RBNode Ptr)
+    Declare Sub deleteNode(Byval z As RBNode Ptr)
+    Declare Function findNode(Byval key As Integer) As RBNode Ptr
+    Declare Destructor()
+End Type
+
+Constructor RBTree(Byval cmp As Function(Byval key1 As Integer, Byval key2 As Integer) As Integer)
+    This.sentinel = New RBNode(0,"",BLACK)
+    This.sentinel->izda = sentinel
+    This.sentinel->dcha = sentinel
+    This.root = This.sentinel
+    This.count = 0
+    This.Compare = cmp
+End Constructor
+
+
+Destructor RBTree()
+    'The tree is transformed into a tree in which
+    'left children are always leaves. This is done by rotation.
+    'After rotating any left child is a leaf (not a tree)
+    'so a izda child can simply be deleted.
+    'Usually a stack is used to keep track of what nodes have
+    'been removed. By using rotation there is no need for a stack.
+
+    Dim parent As RBNode Ptr
+    Dim child As RBNode Ptr
+
+    If (This.root <> This.sentinel Andalso This.root <> NULL) Then
+        parent = This.root
+        While (parent <> This.sentinel)
+            If (parent->izda = This.sentinel) Then
+                child = parent->dcha
+                Delete parent
+                parent = 0
+            Else
+                'rotate
+                child = parent->izda
+                parent->izda = child->dcha
+                child->dcha = parent
+            End If
+            parent = child
+        Wend
+    Else
+        If (This.sentinel <> 0) Then
+            Delete This.sentinel
+            This.sentinel = 0
+        End If
+    End If
+End Destructor
+
+Sub RBTree.rotateLeft(Byval x As RBNode Ptr)
+    'rotate node x to right
+
+    Var y = x->dcha
+
+    'establish x->dcha link
+    x->dcha = y->izda
+    If (y->izda <> This.sentinel) Then
+        y->izda->parent = x
+    End If
+
+    'establish y->parent link
+    If (y <> This.sentinel) Then
+        y->parent = x->parent
+    End If
+    If (x->parent) Then
+        If (x = x->parent->izda) Then
+            x->parent->izda = y
+        Else
+            x->parent->dcha = y
+        End If
+    Else
+        This.root = y
+    End If
+
+    'link x and y
+    y->izda = x
+    If (x <> This.sentinel) Then
+        x->parent = y
+    End If
+End Sub
+
+Sub RBTree.rotateRight(Byval x As RBNode Ptr)
+    'rotate node x to right
+
+    Var y = x->izda
+
+    ' establish x->left link
+    x->izda = y->dcha
+    If (y->dcha <> This.sentinel) Then
+        y->dcha->parent = x
+    End If
+
+    ' establish y->parent link
+    If (y <> This.sentinel) Then
+        y->parent = x->parent
+    End If
+    If (x->parent) Then
+        If (x = x->parent->dcha) Then
+            x->parent->dcha = y
+        Else
+            x->parent->izda = y
+        End If
+    Else
+        This.root = y
+    End If
+
+    'link x and y
+    y->dcha = x
+    If (x <> This.sentinel) Then
+        x->parent = y
+    End If
+End Sub
+
+Sub RBTree.insertFixup(Byval x As RBNode Ptr)
+    'maintain tree balance after inserting node x
+
+    'check Red-Black properties
+    While (x <> This.Root Andalso x->parent->kolor = RED)
+        'we have a violation
+        If (x->parent = x->parent->parent->izda) Then
+            Var y = x->parent->parent->dcha
+            If (y->kolor = RED) Then
+                'uncle is RED
+                x->parent->kolor = BLACK
+                y->kolor = BLACK
+                x->parent->parent->kolor = RED
+                x = x->parent->parent
+            Else
+                'uncle is BLACK
+                If (x = x->parent->dcha) Then
+                    'make x a izda child
+                    x = x->parent
+                    This.rotateLeft(x)
+                End If
+                'recolor and rotate
+                x->parent->kolor = BLACK
+                x->parent->parent->kolor = RED
+                This.rotateRight(x->parent->parent)
+            End If
+        Else
+            ' mirror image of above code
+            Var y = x->parent->parent->izda
+            If (y->kolor = RED) Then
+                ' uncle is RED
+                x->parent->kolor = BLACK
+                y->kolor = BLACK
+                x->parent->parent->kolor = RED
+                x = x->parent->parent
+            Else
+                ' uncle is BLACK
+                If (x = x->parent->izda) Then
+                    x = x->parent
+                    This.rotateRight(x)
+                End If
+                x->parent->kolor = BLACK
+                x->parent->parent->kolor = RED
+                This.rotateLeft(x->parent->parent)
+            End If
+        End If
+    Wend
+    This.root->kolor = BLACK
+End Sub
+
+Function RBTree.insertNode(Byval key As Integer, value As String) As RBNode Ptr
+    'Insert a node in the RBTree
+
+    'find where node belongs
+    Dim current As RBNode Ptr = This.root
+    Dim parent As RBNode Ptr
+    While (current <> This.sentinel)
+        Var rc = This.Compare(key, current->key)
+        If (rc = 0) Then Return current
+        parent = current
+        If (rc < 0) Then
+            current = current->izda
+        Else
+            current = current->dcha
+        End If
+    Wend
+    ' setup new node
+    Dim x As RBNode Ptr = New RBNode(key, value)
+    x->izda  = This.sentinel
+    x->dcha = This.sentinel
+    x->parent = parent
+
+    This.count = This.count + 1
+
+    ' insert node in tree
+    If (parent) Then
+        If (This.Compare(key, parent->key) < 0) Then
+            parent->izda = x
+        Else
+            parent->dcha = x
+        End If
+    Else
+        This.root = x
+    End If
+
+    This.insertFixup(x)
+    Return x
+End Function
+
+Sub RBTree.deleteFixup(Byval x As RBNode Ptr)
+    'maintain tree balance after deleting node x
+
+    Dim w As RBNode Ptr
+    While (x <> This.root Andalso x->kolor = BLACK)
+        If (x = x->parent->izda) Then
+            w = x->parent->dcha
+            If (w->kolor = RED) Then
+                w->kolor = BLACK
+                x->parent->kolor = RED
+                This.rotateLeft(x->parent)
+                w = x->parent->dcha
+            End If
+
+            If (w->izda->kolor = BLACK And w->dcha->kolor = BLACK) Then
+                w->kolor = RED
+                x = x->parent
+            Else
+                If (w->dcha->kolor = BLACK) Then
+                    w->izda->kolor = BLACK
+                    w->kolor = RED
+                    This.rotateRight(w)
+                    w = x->parent->dcha
+                End If
+
+                w->kolor = x->parent->kolor
+                x->parent->kolor = BLACK
+                w->dcha->kolor = BLACK
+                This.rotateLeft(x->parent)
+                x = This.root
+            End If
+        Else
+            w = x->parent->izda
+            If (w->kolor = RED) Then
+                w->kolor = BLACK
+                x->parent->kolor = RED
+                This.rotateRight(x->parent)
+                w = x->parent->izda
+            End If
+
+            If (w->dcha->kolor = BLACK And w->izda->kolor = BLACK) Then
+                w->kolor = RED
+                x = x->parent
+            Else
+                If (w->izda->kolor = BLACK) Then
+                    w->dcha->kolor = BLACK
+                    w->kolor = RED
+                    This.rotateLeft(w)
+                    w = x->parent->izda
+                End If
+
+                w->kolor = x->parent->kolor
+                x->parent->kolor = BLACK
+                w->izda->kolor = BLACK
+                This.rotateRight(x->parent)
+                x = This.root
+            End If
+        End If
+    Wend
+    x->kolor = BLACK
+End Sub
+
+Sub RBTree.deleteNode(Byval z As RBNode Ptr)
+    'delete node z from tree
+
+    Dim y As RBNode Ptr
+    Dim x As RBNode Ptr
+
+    If (0 =  z Orelse z = This.sentinel) Then Return
+
+    If (z->izda = This.sentinel Orelse z->dcha = This.sentinel) Then
+        'y has a This.sentinel node as a child
+        y = z
+    Else
+        'find tree successor with a This.sentinel node as a child
+        y = z->dcha
+        While (y->izda <> This.sentinel)
+            y = y->izda
+        Wend
+    End If
+
+    'x is y's only child
+    If (y->izda <> This.sentinel) Then
+        x = y->izda
+    Else
+        x = y->dcha
+    End If
+
+    'remove y from the parent chain
+    x->parent = y->parent
+    If (y->parent) Then
+        If (y = y->parent->izda) Then
+            y->parent->izda = x
+        Else
+            y->parent->dcha = x
+        End If
+    Else
+        This.root = x
+    End If
+
+    If (y <> z) Then
+        z->key = y->key
+        z->value = y->value
+    End If
+
+    If (y->kolor = BLACK) Then
+        This.deleteFixup(x)
+    End If
+
+    Delete y
+
+    This.count = This.count - 1
+End Sub
+
+Function RBtree.findNode(Byval key As Integer) As RBNode Ptr
+    'find node with key equal to key
+    Var current = This.root
+
+    While (current <> This.sentinel)
+        Var rc = This.Compare(key, current->key)
+        If (rc = 0) Then
+            Return current
+        Else
+            If (rc < 0) Then
+                current = current->izda
+            Else
+                current = current->dcha
+            End If
+        End If
+    Wend
+    Return 0
+End Function
+
+Type GraphicsNode
+    Dim node As RBNode Ptr
+    Dim lvl As Ubyte
+    Dim nxt As GraphicsNode Ptr
+    Dim prev As GraphicsNode Ptr
+    Dim x As Uinteger
+    Dim y As Uinteger
+End Type
+
+Type NodeQueue
+    Dim startx As Integer
+    Dim starty As Integer
+    Dim first As GraphicsNode Ptr
+    Dim last  As GraphicsNode Ptr
+    Dim levels(2 To 11) As Integer => {100,50,25,12,10,10,10,10,10}
+    Dim count As Integer
+    Declare Constructor
+    Declare Destructor
+    Declare Function Enqueue(Byref item As GraphicsNode Ptr) As Integer
+    Declare Function Dequeue(Byref item As GraphicsNode Ptr) As GraphicsNode Ptr
+    Declare Sub PrintNode(Byval item As GraphicsNode Ptr, Byval x As Integer, Byval y As Integer)
+    Declare Sub PrintTree(Byval tree As RBTree Ptr)
+End Type
+
+Constructor NodeQueue()
+''Draw first node in the middle of the screen
+'(just below the top of the screen)
+    This.startx = 350
+    This.starty = 100
+    This.first = NULL
+    This.last = NULL
+    This.count = 1
+    '800x600, 32 bits kolor
+    Screen 19,32
+    color , Rgb(255,255,155)
+    Cls
+    WindowTitle "Red black tree sort"
+End Constructor
+
+Destructor NodeQueue()
+
+End Destructor
+
+Function NodeQueue.Enqueue(Byref item As GraphicsNode Ptr) As Integer
+    'Insertion into an empty que
+    If (This.first = NULL) Then
+        This.first = item
+        This.last = item
+        This.Count += 1
+        Return 0
+    Else
+        Var tmp = This.last
+        This.last = item
+        This.last->prev = tmp
+        tmp->nxt = This.last
+        This.last->nxt = NULL
+        This.Count += 1
+        Return 0
+    End If
+
+    Return -1
+End Function
+
+Function NodeQueue.Dequeue(Byref item As GraphicsNode Ptr) As GraphicsNode Ptr
+    'Dequeueing from an empty queue or a queue with one node
+    If (This.last = This.first) Then
+        'Dequeueing from an empty queue
+        If (This.last = NULL) Then
+            This.Count -= 1
+            Return NULL
+        Else
+            'Dequeueing from a queue with one node
+            item->node = This.First->node
+            item->x = This.First->x
+            item->y = This.First->y
+            item->lvl = This.first->lvl
+            Delete This.first
+            This.first = NULL
+            This.last = NULL
+            This.Count -= 1
+            Return item
+        End If
+    Else
+        'Dequeueing from a queue with more than one node
+        Var tmp = This.Last
+        item->node = This.Last->node
+        item->x = This.Last->x
+        item->y = This.Last->y
+        item->lvl = This.Last->lvl
+        This.last = This.last->prev
+        This.last->nxt = NULL
+        Delete tmp
+        Return item
+    End If
+    Return NULL
+End Function
+
+Sub NodeQueue.PrintNode(Byval item As GraphicsNode Ptr, Byval x As Integer, Byval y As Integer)
+    'Draw a black line from parent node to child node
+    Line (x,y)-(item->x,item->y), Rgb(0,0,0)
+    'Draw node (either red or black)
+    If (item->node->kolor = RED) Then
+        Circle (item->x,item->y),5, Rgb(255,0,0),,,,F
+    Else
+        Circle (item->x,item->y),5, Rgb(0,0,0),,,,F
+    End If
+    Draw String (item->x,item->y - 40), Str(item->node->key), Rgb(0,0,0)
+    Draw String (item->x-8,item->y - 25),"""" & item->node->value & """", Rgb(0,0,0)
+End Sub
+
+Sub NodeQueue.PrintTree(Byval tree As RBTree Ptr)
+    Dim item As GraphicsNode Ptr
+
+    Dim current As GraphicsNode Ptr = New GraphicsNode
+    Dim tmp As GraphicsNode Ptr
+    Dim lvl As Integer = 1
+    Dim x As Integer = This.startx
+    Dim y As Integer = This.starty
+
+    'check for empty tree
+    If (tree->root = tree->sentinel) Then Return
+
+    'Start with printing the root
+    current->node = tree->root
+    current->x = x
+    current->y = y
+    current->lvl = lvl
+    This.PrintNode(current,x,y)
+    Do
+        'Print izda node (position it at izda side of current node)
+        If (current->node->izda <> tree->sentinel) Then
+            item = New GraphicsNode
+            item->lvl = lvl + 1
+            If (item->lvl <= 9) Then
+                item->x = x - This.levels(lvl+1)
+            Else
+                item->x = x - 10
+            End If
+            item->y = y + 50
+            item->node = current->node->izda
+            This.PrintNode(item,x,y)
+            This.Enqueue(item)
+        End If
+        'Print dcha node (position it at dcha side of current node
+        If (current->node->dcha <> tree->sentinel) Then
+            item = New GraphicsNode
+            item->lvl = lvl + 1
+            If (item->lvl <= 9) Then
+                item->x = x + This.levels(lvl+1)
+            Else
+                item->x = x + 10
+            End If
+            item->y = y + 50
+            item->node = current->node->dcha
+            This.PrintNode(item,x,y)
+            This.Enqueue(item)
+        End If
+        'Continue drawing from first node in the queue
+        'Nodes in izda tree will be drawn first as these are put in
+        'the queue first
+        Var tmp = This.Dequeue(current)
+        'If count smaller then entire tree has been drawn
+        If (This.count < 1) Then Exit Do
+        x = current->x
+        y = current->y
+        lvl = current->lvl
+    Loop
+End Sub
+
+Dim x As Integer Ptr
+Dim i As Integer
+Var tree = New RBTree(@integer_compare)
+
+Open Cons For Output As #1
+For i = 0 To 29
+    Print #1, "Insert "; i
+    tree->Insertnode(i,Str(i))
+    Sleep()
+    Dim print_tree As NodeQueue Ptr
+    print_tree = New NodeQueue
+    print_tree->PrintTree(tree)
+    Delete print_tree
+Next i
+
+Print #1, !"\nStarting Deletion after keypress"
+Var print_tree = New NodeQueue
+print_tree->PrintTree(tree)
+Sleep()
+Delete print_tree
+
+randomize timer
+For i = 0 To 14
+    Dim as integer j = int(rnd * 15) + int(rnd * 16)
+    Print #1, "Delete"; j
+    Var n = tree->FindNode(j)
+    If (n) Then tree->Deletenode(n)
+    Sleep()
+    Dim print_tree As NodeQueue Ptr
+    print_tree = New NodeQueue
+    print_tree->PrintTree(tree)
+    Delete print_tree
+Next i
+
+Bsave "FreeBASIC_Red-black-tree_sort.bmp", 0
+Print #1, !"\nEnding program after keypress"
+Sleep()
+Close #1
+Delete tree

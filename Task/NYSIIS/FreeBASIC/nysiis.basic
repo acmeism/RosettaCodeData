@@ -1,0 +1,147 @@
+Function Replace(text As String, find As String, repl As String) As String
+    Dim As String result = ""
+    Dim As Integer posic = 1
+    Dim As Integer fLen = Len(find)
+    Dim As Integer lastPos = 1
+
+    If fLen = 0 Then Return text
+    Do
+        posic = Instr(lastPos, text, find)
+        If posic = 0 Then
+            result &= Mid(text, lastPos)
+            Exit Do
+        Else
+            result &= Mid(text, lastPos, posic - lastPos) & repl
+            lastPos = posic + fLen
+        End If
+    Loop
+
+    Return result
+End Function
+
+Function TrimSuffix(nombre As String) As String
+    Dim As String n = Ucase(nombre)
+    n = Replace(n, ",", " ")
+    While Instr(n, "  ") > 0
+        n = Replace(n, "  ", " ")
+    Wend
+    n = Trim(n)
+    ' Removes Roman suffixes and common titles
+    Dim As String suffixes(19) = { _
+    " JR", " SR", " JNR", " III", " IV", " II", " I", " XVI", " XV", " XIV", _
+    " XIII", " XII", " XI", " X", " IX", " VIII", " VII", " VI", " V" }
+    For i As Integer = 0 To Ubound(suffixes)
+        If Right(n, Len(suffixes(i))) = suffixes(i) Then
+            n = Trim(Left(n, Len(n) - Len(suffixes(i))))
+            Exit For
+        End If
+    Next
+
+    Return n
+End Function
+
+Function NYSIIS(nombre As String) As String
+    Dim As String n = Ucase(nombre)
+    Dim As String vowels = "AEIOU"
+    Dim As String c, tmp = ""
+    Dim As Integer i
+
+    ' Removes non-alphabetic characters
+    For i = 1 To Len(n)
+        c = Mid(n, i, 1)
+        If Asc(c) >= 65 And Asc(c) <= 90 Then tmp &= c
+    Next
+    n = tmp
+
+    ' Initial rules
+    If Left(n, 3) = "MAC" Then
+        n = "MC" & Mid(n, 4)
+    Elseif Left(n, 2) = "MC" Then
+        n = "MC" & Mid(n, 3)
+    End If
+    If Left(n, 2) = "KN" Then n = "N" & Mid(n, 3)
+    If Left(n, 1) = "K" Then n = "C" & Mid(n, 2)
+    If Left(n, 2) = "PH" Or Left(n, 2) = "PF" Then n = "F" & Mid(n, 3)
+    If Left(n, 3) = "SCH" Then n = "SSS" & Mid(n, 4)
+
+    ' Final Rules
+    If Right(n, 2) = "EE" Or Right(n, 2) = "IE" Then n = Left(n, Len(n) - 2) & "Y"
+    If Right(n, 2) = "DT" Or Right(n, 2) = "RT" Or Right(n, 2) = "RD" Or Right(n, 2) = "NT" Or Right(n, 2) = "ND" Then
+        n = Left(n, Len(n) - 2) & "D"
+    End If
+
+    ' Internal substitutions (non-initial EV only)
+    If Len(n) > 2 Then n = Left(n, 1) & Replace(Mid(n, 2), "EV", "AF")
+    n = Replace(n, "Q", "G")
+    n = Replace(n, "Z", "S")
+    n = Replace(n, "KN", "N")
+    n = Replace(n, "K", "C")
+    n = Replace(n, "SCH", "S")
+    n = Replace(n, "PH", "F")
+    n = Replace(n, "PF", "F")
+
+    ' Vowels to A (except first letter)
+    tmp = Left(n, 1)
+    For i = 2 To Len(n)
+        c = Mid(n, i, 1)
+        If Instr(vowels, c) > 0 Then
+            If Right(tmp, 1) <> "A" Then tmp &= "A"
+        Else
+            tmp &= c
+        End If
+    Next
+    n = tmp
+
+    ' Remove Y not between vowels (does not eliminate initial H)
+    tmp = ""
+    For i = 1 To Len(n)
+        c = Mid(n, i, 1)
+        Dim As String prev = ""
+        Dim As String nextc = ""
+        If c = "H" And i > 1 Then
+            If i > 1 Then prev = Mid(n, i - 1, 1)
+            If i < Len(n) Then nextc = Mid(n, i + 1, 1)
+            If Instr(vowels, prev) = 0 Or Instr(vowels, nextc) = 0 Then Continue For
+        End If
+        tmp &= c
+    Next
+    n = tmp
+
+    ' Drop W after vowel (does not drop initial W)
+    tmp = ""
+    For i = 1 To Len(n)
+        c = Mid(n, i, 1)
+        If c = "W" And i > 1 And Instr(vowels, Mid(n, i - 1, 1)) > 0 Then Continue For
+        tmp &= c
+    Next
+    n = tmp
+
+    ' Remove S, A at the end
+    If Right(n, 1) = "S" Then n = Left(n, Len(n) - 1)
+    If Right(n, 1) = "A" Then n = Left(n, Len(n) - 1)
+
+    ' Remove consecutive duplicates
+    tmp = Left(n, 1)
+    For i = 2 To Len(n)
+        If Mid(n, i, 1) <> Mid(n, i - 1, 1) Then tmp &= Mid(n, i, 1)
+    Next
+    n = tmp
+
+    Return n
+End Function
+
+Dim names(41) As String = { _
+"Bishop", "Carlson", "Carr", "Chapman", "Franklin", "Greene", "Harper", "Jacobs", _
+"Larson", "Lawrence", "Lawson", "Louis, XVI", "Lynch", "Mackenzie", "Matthews", _
+"May jnr", "McCormack", "McDaniel", "McDonald", "Mclaughlin", "Morrison", "O'Banion", _
+"O'Brien", "Richards", "Silva", "Watkins", "Xi", "Wheeler", "Willis", "brown, sr", _
+"browne, III", "browne, IV", "knight", "mitchell", "o'daniel", "bevan", "evans", _
+"D'Souza", "Hoyle-Johnson", "Vaughan Williams", "de Sousa", "de la Mare II" }
+
+For i As Integer = 0 To Ubound(names)
+    Dim ny As String = NYSIIS(TrimSuffix(names(i)))
+    If Len(ny) > 6 Then ny = Left(ny, 6) & "(" & Mid(ny, 7) & ")"
+    Print Using "\              \ : &"; names(i); ny
+Next
+
+Sleep

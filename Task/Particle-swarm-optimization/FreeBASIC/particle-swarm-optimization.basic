@@ -1,0 +1,163 @@
+#define INF  1E+308
+
+Type Parameters
+    omega As Double
+    phip As Double
+    phig As Double
+End Type
+
+Type State
+    iter As Integer
+    gbpos(Any) As Double
+    gbval As Double
+    minBound(Any) As Double
+    maxBound(Any) As Double
+    params As Parameters
+    posic(Any, Any) As Double
+    vel(Any, Any) As Double
+    bpos(Any, Any) As Double
+    bval(Any) As Double
+    nParticles As Integer
+    nDims As Integer
+End Type
+
+Function mccormick(x() As Double) As Double
+    Dim As Double a = x(0)
+    Dim As Double b = x(1)
+    Return Sin(a + b) + (a - b) * (a - b) + 1 + 2.5 * b - 1.5 * a
+End Function
+
+Function michalewicz(x() As Double) As Double
+    Const m As Integer = 10
+    Dim As Integer d = Ubound(x) + 1
+    Dim As Double sum = 0
+
+    For i As Integer = 1 To d
+        Dim As Double j = x(i - 1)
+        Dim As Double k = Sin(i * j * j / (4 * Atn(1)))
+        sum += Sin(j) * (k ^ (2 * m))
+    Next
+    Return -sum
+End Function
+
+Sub initState(Byref state As State, minBound() As Double, maxBound() As Double, params As Parameters, nParticles As Integer)
+    state.nDims = Ubound(minBound) + 1
+    state.nParticles = nParticles
+
+    Redim state.gbpos(state.nDims - 1)
+    Redim state.minBound(state.nDims - 1)
+    Redim state.maxBound(state.nDims - 1)
+    Redim state.posic(state.nParticles - 1, state.nDims - 1)
+    Redim state.vel(state.nParticles - 1, state.nDims - 1)
+    Redim state.bpos(state.nParticles - 1, state.nDims - 1)
+    Redim state.bval(state.nParticles - 1)
+
+    state.iter = 0
+    state.gbval = INF
+    state.params = params
+
+    For i As Integer = 0 To state.nDims - 1
+        state.minBound(i) = minBound(i)
+        state.maxBound(i) = maxBound(i)
+        state.gbpos(i) = INF
+    Next
+
+    Randomize Timer
+    For i As Integer = 0 To state.nParticles - 1
+        For j As Integer = 0 To state.nDims - 1
+            state.posic(i, j) = minBound(j)
+            state.vel(i, j) = 0
+            state.bpos(i, j) = minBound(j)
+        Next
+        state.bval(i) = INF
+    Next
+End Sub
+
+Sub psoIteration(Byref state As State, fn As Function(x() As Double) As Double)
+    Dim As Double v, rg = Rnd
+
+    For j As Integer = 0 To state.nParticles - 1
+        Dim As Double tempPos(state.nDims - 1)
+        For k As Integer = 0 To state.nDims - 1
+            tempPos(k) = state.posic(j, k)
+        Next
+
+        v = fn(tempPos())
+
+        If v < state.bval(j) Then
+            For k As Integer = 0 To state.nDims - 1
+                state.bpos(j, k) = state.posic(j, k)
+            Next
+            state.bval(j) = v
+
+            If v < state.gbval Then
+                state.gbval = v
+                For k As Integer = 0 To state.nDims - 1
+                    state.gbpos(k) = state.bpos(j, k)
+                Next
+            End If
+        End If
+    Next
+
+    For j As Integer = 0 To state.nParticles - 1
+        Dim As Double rp = Rnd
+        Dim As Boolean ok = True
+
+        For k As Integer = 0 To state.nDims - 1
+            state.vel(j, k) = state.params.omega * state.vel(j, k) + _
+            state.params.phip * rp * (state.bpos(j, k) - state.posic(j, k)) + _
+            state.params.phig * rg * (state.gbpos(k) - state.posic(j, k))
+
+            state.posic(j, k) += state.vel(j, k)
+
+            If state.posic(j, k) <= state.minBound(k) Or state.posic(j, k) >= state.maxBound(k) Then
+                ok = False
+            End If
+        Next
+
+        If Not ok Then
+            For k As Integer = 0 To state.nDims - 1
+                state.posic(j, k) = state.minBound(k) + (state.maxBound(k) - state.minBound(k)) * Rnd
+            Next
+        End If
+    Next
+
+    state.iter += 1
+End Sub
+
+Sub report(state As State, testfunc As String)
+    Print Using !"Test Function         : &\nIterations            : &\nGlobal Best Position  : [&, &]\nGlobal Best Value     : &"; testfunc; state.iter; state.gbpos(0); state.gbpos(1); state.gbval
+End Sub
+
+' Main program
+Dim As State state
+Dim As Parameters params = Type(0.0, 0.6, 0.3)
+Dim As Double minBound(1) = {-1.5, -3.0}
+Dim As Double maxBound(1) = {4.0, 4.0}
+
+initState(state, minBound(), maxBound(), params, 100)
+
+For i As Integer = 1 To 40
+    psoIteration(state, @mccormick)
+Next
+
+report(state, "McCormick")
+Dim As Double testArray(1) = {-0.54719, -1.54719}
+Print "f(-0.54719, -1.54719) : " & mccormick(testArray())
+
+Dim As Parameters params2 = Type(0.3, 0.3, 0.3)
+Dim As Double minBound2(1) = {0.0, 0.0}
+Dim As Double maxBound2(1) = {3.14159265359, 3.14159265359}
+
+initState(state, minBound2(), maxBound2(), params2, 1000)
+
+For i As Integer = 1 To 30
+    psoIteration(state, @michalewicz)
+Next
+
+Print
+report(state, "Michalewicz (2D)")
+Dim As Double testArray2(1) = {2.2, 1.57}
+Print "f(2.20, 1.57)         : " & michalewicz(testArray2())
+
+Sleep

@@ -1,0 +1,213 @@
+#include once "datetime.bi"
+#include once "vbcompat.bi"
+
+Const UTC_EPOCH As Double = 0
+Dim Shared As Double UNIX_EPOCH, NTP_EPOCH, TAI_EPOCH, GPS_EPOCH
+UNIX_EPOCH = Dateserial(1970, 1, 1) * 86400
+NTP_EPOCH  = Dateserial(1900, 1, 1) * 86400
+TAI_EPOCH  = Dateserial(1958, 6, 1) * 86400
+GPS_EPOCH  = Dateserial(1980, 1, 1) * 86400
+
+' TDICT equivalent
+Type TDictEntry
+    As Double key
+    As Integer value
+End Type
+
+Dim Shared TDICT(27) As TDictEntry = { _
+(2272060800, 10), (2287785600, 11), (2303683200, 12), (2335219200, 13), _
+(2366755200, 14), (2398291200, 15), (2429913600, 16), (2461449600, 17), _
+(2492985600, 18), (2524521600, 19), (2571782400, 20), (2603318400, 21), _
+(2634854400, 22), (2698012800, 23), (2776982400, 24), (2840140800, 25), _
+(2871676800, 26), (2918937600, 27), (2950473600, 28), (2982009600, 29), _
+(3029443200, 30), (3076704000, 31), (3124137600, 32), (3345062400, 33), _
+(3439756800, 34), (3550089600, 35), (3644697600, 36), (3692217600, 37) }
+
+Function UTC_to_Unix(utc_string As String) As Double
+    Dim As Double y, m, d, hh, mm, ss
+    If Len(utc_string) >= 19 Then
+        y = Val(Mid(utc_string, 1, 4))
+        m = Val(Mid(utc_string, 6, 2))
+        d = Val(Mid(utc_string, 9, 2))
+        hh = Val(Mid(utc_string, 12, 2))
+        mm = Val(Mid(utc_string, 15, 2))
+        ss = Val(Mid(utc_string, 18, 2))
+    End If
+    Return Dateserial(y, m, d) * 86400 + Timeserial(hh, mm, ss) - UNIX_EPOCH
+End Function
+
+Function UTC_to_NTP(utc_string As String) As Double
+    Return UTC_to_Unix(utc_string) + UNIX_EPOCH - NTP_EPOCH
+End Function
+
+Function NTP_to_Unix(ntp_secs As Double) As Double
+    Return ntp_secs + NTP_EPOCH - UNIX_EPOCH
+End Function
+
+Function Unix_to_NTP(unix_secs As Double) As Double
+    Return unix_secs + UNIX_EPOCH - NTP_EPOCH
+End Function
+
+Function Unix_to_UTC(unix_secs As Double) As String
+    Dim As Double dd = (unix_secs + UNIX_EPOCH) / 86400
+
+    Dim As Integer a, m, d, hh, mm, ss
+    a = Year(dd)
+    m = Month(dd)
+    d = Day(dd)
+
+    Dim As Double fracDay = dd - Int(dd)
+    hh = Int(fracDay * 24)
+    mm = Int((fracDay * 24 - hh) * 60)
+    ss = Int(((fracDay * 24 - hh) * 60 - mm) * 60)
+
+    Return Format(a, "0000") & "-" & Format(m, "00") & "-" & Format(d, "00") & "T" & _
+    Format(hh, "00") & ":" & Format(mm, "00") & ":" & Format(ss, "00")
+End Function
+
+Function NTP_to_UTC(ntp_seconds As Double) As String
+    Return Unix_to_UTC(NTP_to_Unix(ntp_seconds))
+End Function
+
+Function TAI_to_GPS(tai_secs As Double) As Double
+    Return tai_secs + TAI_EPOCH - GPS_EPOCH - 19
+End Function
+
+Function GPS_to_TAI(gps_secs As Double) As Double
+    Return gps_secs + GPS_EPOCH - TAI_EPOCH + 19
+End Function
+
+Function NTP_to_TAI(ntp_secs As Double) As Double
+    Dim tai As Double = ntp_secs + NTP_EPOCH - TAI_EPOCH
+    If ntp_secs < TDICT(0).key Then Return tai
+    If ntp_secs >= TDICT(Ubound(TDICT)).key Then Return tai + TDICT(Ubound(TDICT)).value
+
+    Dim i As Integer
+    For i = 0 To Ubound(TDICT)
+        If TDICT(i).key > ntp_secs Then
+            Return tai + TDICT(i - 1).value
+        End If
+    Next
+    Return tai
+End Function
+
+Function TAI_to_NTP(tai_secs As Double) As Double
+    Dim ntp As Double = tai_secs + TAI_EPOCH - NTP_EPOCH
+    If ntp < TDICT(0).key Then Return ntp
+
+    Dim As Integer delta, i
+    If ntp >= TDICT(Ubound(TDICT)).key Then
+        delta = TDICT(Ubound(TDICT)).value
+    Else
+        For i = 0 To Ubound(TDICT)
+            If TDICT(i).key > ntp Then
+                delta = TDICT(i - 1).value
+                Exit For
+            End If
+        Next
+    End If
+
+    If ntp - delta < TDICT(0).key Then
+        Return TDICT(0).key - 1 + (ntp - Int(ntp))
+    Elseif ntp - delta < TDICT(i - 1).key Then
+        Return ntp - delta + 1
+    Else
+        Return ntp - delta
+    End If
+End Function
+
+Function NTP_to_GPS(ntp_secs As Double) As Double
+    Return TAI_to_GPS(NTP_to_TAI(ntp_secs))
+End Function
+
+Function GPS_to_NTP(gps_secs As Double) As Double
+    Return TAI_to_NTP(GPS_to_TAI(gps_secs))
+End Function
+
+Function TAI_to_Unix(tai_secs As Double) As Double
+    Return NTP_to_Unix(TAI_to_NTP(tai_secs))
+End Function
+
+Function Unix_to_TAI(unix_secs As Double) As Double
+    Return NTP_to_TAI(Unix_to_NTP(unix_secs))
+End Function
+
+Function TAI_to_UTC(tai_secs As Double) As String
+    Return NTP_to_UTC(TAI_to_NTP(tai_secs))
+End Function
+
+Function UTC_to_TAI(utc_string As String) As Double
+    Return NTP_to_TAI(UTC_to_NTP(utc_string))
+End Function
+
+Function GPS_to_Unix(gps_secs As Double) As Double
+    Return TAI_to_Unix(GPS_to_TAI(gps_secs))
+End Function
+
+Function Unix_to_GPS(unix_secs As Double) As Double
+    Return TAI_to_GPS(Unix_to_TAI(unix_secs))
+End Function
+
+Function UTC_to_GPS(utc_string As String) As Double
+    Return TAI_to_GPS(UTC_to_TAI(utc_string))
+End Function
+
+Function GPS_to_UTC(gps_secs As Double) As String
+    Return TAI_to_UTC(GPS_to_TAI(gps_secs))
+End Function
+
+' Main program
+Print "      UTC"; Spc(21); "Unix"; Spc(17); "NTP"; Spc(17); "TAI"; Spc(17); "GPS"
+Print String(100, "_")
+
+Dim utc_dates(8) As String = { _
+"0001-01-01T00:00:00", "1900-01-01T00:00:00", "1958-01-01T00:00:00", _
+"1970-01-01T00:00:00", "1980-01-06T00:00:00", "1989-12-31T00:00:00", _
+"1990-01-01T00:00:00", "2025-06-01T00:00:00", "2050-01-01T00:00:00" }
+
+Dim As Integer i
+For i = 0 To 8
+    Print Left(utc_dates(i) & Space(22), 22);
+    Print Using "############.####   "; UTC_to_Unix(utc_dates(i));
+    Print Using "############.####   "; UTC_to_NTP(utc_dates(i));
+    Print Using "############.####   "; UTC_to_TAI(utc_dates(i));
+    Print Using "############.####"; UTC_to_GPS(utc_dates(i))
+Next i
+
+Dim unix_times(2) As Double = {1810753809.806, 154956295.688, 780673454.121}
+For i = 0 To 2
+    Print Left(Unix_to_UTC(unix_times(i)) & Space(22), 22);
+    Print Using "############.####   "; unix_times(i);
+    Print Using "############.####   "; Unix_to_NTP(unix_times(i));
+    Print Using "############.####   "; Unix_to_TAI(unix_times(i));
+    Print Using "############.####"; Unix_to_GPS(unix_times(i))
+Next i
+
+Dim As Double ntp_times(2) = {2871676795, 2335219189, 3029443171}
+For i = 0 To 2
+    Print Left(NTP_to_UTC(ntp_times(i)) & Space(22), 22);
+    Print Using "############.####   "; NTP_to_Unix(ntp_times(i));
+    Print Using "############.####   "; ntp_times(i);
+    Print Using "############.####   "; NTP_to_TAI(ntp_times(i));
+    Print Using "############.####"; NTP_to_GPS(ntp_times(i))
+Next i
+
+Dim As Double tai_times(3) = {996796823, 996796824, 996796825, 996796826}
+For i = 0 To 3
+    Print Left(TAI_to_UTC(tai_times(i)) & Space(22), 22);
+    Print Using "############.####   "; TAI_to_Unix(tai_times(i));
+    Print Using "############.####   "; TAI_to_NTP(tai_times(i));
+    Print Using "############.####   "; tai_times(i);
+    Print Using "############.####"; TAI_to_GPS(tai_times(i))
+Next i
+
+Dim As Double gps_times(3) = {996796804.250, 996796805.5, 996796806.750, 996796807.9999}
+For i = 0 To 3
+    Print Left(GPS_to_UTC(gps_times(i)) & Space(22), 22);
+    Print Using "############.####   "; GPS_to_Unix(gps_times(i));
+    Print Using "############.####   "; GPS_to_NTP(gps_times(i));
+    Print Using "############.####   "; GPS_to_TAI(gps_times(i));
+    Print Using "############.####"; gps_times(i)
+Next i
+
+Sleep

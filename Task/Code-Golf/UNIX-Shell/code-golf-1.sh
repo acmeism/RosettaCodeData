@@ -1,0 +1,1 @@
+echo 'Code Golf\c'

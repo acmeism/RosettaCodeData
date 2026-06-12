@@ -1,0 +1,122 @@
+-- demo\rossetta\berlekamp_massey.exw
+
+constant MDL = 2
+
+function Berlekamp_Massey(sequence a)
+    sequence ans_coef = {}, lst = {}
+    integer w = 0, delta = 0
+    for i=2 to length(a) do
+        integer tmp = 0
+        for j=1 to length(ans_coef) do
+            if i-1-j >= 1 then
+                tmp = mod(tmp+a[i-j]*ans_coef[j],MDL)
+            end if
+        end for
+        integer discrepancy = mod(a[i]-tmp+MDL,MDL)
+        if discrepancy!=0 then
+            if w=0 then
+                ans_coef = repeat(0,i-1)
+                w = i
+                delta = discrepancy
+            else
+                sequence now = deep_copy(ans_coef)
+                integer mul = discrepancy*powmod(delta,MDL-2,MDL)
+                ans_coef = pad_tail(ans_coef,length(lst)+i-w,0)
+                if i-w >= 1 then
+                    ans_coef[i-w] = mod(ans_coef[i-w]+mul,MDL)
+                end if
+                for j=1 to length(lst) do
+                    integer idx = i-w+j
+                    if idx<=length(ans_coef) then
+                        ans_coef[idx] = mod(ans_coef[idx]-mod(mul*lst[j],MDL)+MDL,MDL)
+                    end if
+                end for
+                if length(ans_coef) > length(now) then
+                    lst = now
+                    w = i
+                    delta = discrepancy
+                end if
+            end if
+        end if
+    end for
+    ans_coef = sq_mod(sq_add(ans_coef,MDL),MDL)
+    return ans_coef
+end function
+
+function calculate_term(integer m, sequence coef, h)
+    if m < length(h) then return mod(h[m+1]+MDL,MDL) end if
+    integer k = length(coef)
+    if k = 1 then return 0 end if
+    sequence p_coeffs = mod(MDL-1,MDL) & coef,
+             f = 1 & repeat(0,k-1),
+             g = repeat(0,k), tmp
+    if k = 1 then
+        g[1] = p_coeffs[2]
+    else
+        g[2] = 1
+    end if
+    integer term, idx, degree_k = k, pwr = m
+    while pwr > 0 do
+        if odd(pwr) then
+            tmp = repeat(0,2*degree_k-1)
+            for i=1 to degree_k do
+                if f[i] != 0 then
+                    for j=1 to degree_k do
+                        tmp[i+j-1] = mod(tmp[i+j-1] + f[i]*g[j],MDL)
+                    end for
+                end if
+            end for
+            for i=2*degree_k-1 to degree_k+1 by -1 do
+                term = tmp[i]
+                if term!=0 then
+                    tmp[i] = 0
+                    for j=1 to k+1 do
+                        idx = i-j+1
+                        if idx >= 1 then
+                            tmp[idx] = mod(tmp[idx] + term*p_coeffs[j],MDL)
+                        end if
+                    end for
+                end if
+            end for
+            f[1..degree_k] = tmp[1..degree_k]
+        end if
+        tmp = repeat(0,2*degree_k-1)
+        for i=1 to degree_k do
+            if g[i]!=0 then
+                for j=1 to degree_k do
+                    tmp[i+j-1] = mod(tmp[i+j-1] + g[i]*g[j],MDL)
+                end for
+            end if
+        end for
+        for i = 2*degree_k-1 to degree_k+1 by -1 do
+            term = tmp[i]
+            if term!=0 then
+                tmp[i] = 0
+                for j=1 to k+1 do
+                    idx = i-j+1
+                    if idx >= 1 then
+                        tmp[idx] = mod(tmp[idx] + term*p_coeffs[j],MDL)
+                    end if
+                end for
+            end if
+        end for
+        g[1..degree_k] = tmp[1..degree_k]
+        pwr = floor(pwr/2)
+    end while
+    integer final_ans = 0
+    for i=1 to min(k,length(h)-1) do
+        final_ans = mod(final_ans + h[i+1] * f[i],MDL)
+    end for
+    return final_ans
+end function
+
+procedure solve()
+    sequence h_input = {0, 0, 1, 1, 0, 1 ,0},
+                   h = {0} & h_input, r,
+            ans_coef = Berlekamp_Massey(h)
+    printf(1, "Coefficients: %s\n",{join(ans_coef,fmt:="%d")})
+    r = apply(true,calculate_term,{tagset(30,0),{ans_coef},{h}})
+    printf(1,"terms[0..30]: %v\n",{r})
+end procedure
+
+solve()

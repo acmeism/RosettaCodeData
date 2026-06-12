@@ -1,0 +1,1 @@
+def isSquare: sqrt | (. == floor);

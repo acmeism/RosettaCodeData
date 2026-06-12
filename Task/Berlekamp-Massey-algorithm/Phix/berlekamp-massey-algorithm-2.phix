@@ -1,0 +1,105 @@
+-- (also in demo\rossetta\berlekamp_massey.exw)
+
+function berlekamp_massey(sequence s)
+    sequence c = {}, // the linear recurrence sequence we are building
+          oldC = {}  // the best previous version of c to use (the one with the rightmost left endpoint)
+    integer f = -1;  // the index at which the best previous version of c failed on
+    for i=0 to length(s)-1 do
+        // evaluate c(i)
+        // delta = s_i - \sum_{j=1}^n c_j s_{i-j}
+        // if delta == 0, c(i) is correct
+        atom delta = s[i+1];
+        for j=1 to length(c) do
+            delta -= c[j] * s[i-j+1];   // c_j is one-indexed
+        end for
+        if delta!=0 then    // if c(i) is correct, keep going
+            // now at this point, delta != 0, so we need to adjust it
+            if f == -1 then
+                // this is the first time we're updating c
+                // s_i was the first non-zero element we encountered
+                // we make c of length i + 1 so that s_i is part of the base case
+--              c = shuffle(tagset(i+1))    // just to prove initial values don't matter in first step
+                c = repeat(0,i+1)
+                f = i;
+            else
+                // we need to use a previous version of c to improve on this one
+                // apply the 5 steps to build d
+                // 1. set d equal to our chosen sequence
+                // 2. multiply the sequence by -1
+                // 3. insert a 1 on the left
+                sequence d = 1&sq_mul(oldC,-1)
+                // 4. multiply the sequence by delta / d(f + 1)
+                atom df1 = 0;   // d(f + 1)
+                for j=1 to length(d) do
+                    df1 += d[j] * s[f+1-j+1];
+                end for
+                assert(df1 != 0);
+                atom coef = delta / df1;    // storing this in outer variable so it's O(n^2) instead of O(n^2 log MOD)
+                // 5. insert i - f - 1 zeros on the left
+                d = repeat(0,i-f-1)&sq_mul(d,coef)
+                // now we have our new recurrence: c + d
+                sequence temp = deep_copy(c); // save last version since it might have a better left endpoint
+                integer k = length(d)-length(c)
+                if k>0 then c &= repeat(0,k) end if
+                for j,dj in d do
+                    c[j] += d[j];
+                end for
+                // finally, let's consider updating oldC
+                if i-length(temp) > f-length(oldC) then
+                    // better left endpoint, let's update!
+                    oldC = temp;
+                    f = i;
+                end if
+            end if
+        end if
+    end for
+    return c;
+end function
+
+function mul(sequence a, b, c)
+    integer n = length(c),
+            lr = length(a)+length(b)-1
+    sequence res = repeat(0,lr)
+    // ret = a * b
+    for i,ai in a do
+        for j,bj in b do
+            res[i+j-1] += ai * bj;
+        end for
+    end for
+    // reducing ret mod f(x)
+    for i=lr to n+1 by -1 do
+        for j=n to 1 by -1 do
+            res[i-j-0] += res[i] * c[j];
+        end for
+    end for
+    res = res[1..min(lr,n)]
+    return res
+end function
+
+function calc_kth(integer k, sequence c, s)
+    integer n = length(c)
+    assert(n <= length(s));
+
+    sequence a = iff(n == 1 ? {c[1]} : {0, 1}),
+             x = {1};
+    while k do
+        if odd(k) then
+            x = mul(x,a,c); // mul(a, b) computes a(x) * b(x) mod f(x)
+        end if
+        a = mul(a,a,c);
+        k = floor(k/2)
+    end while
+    n = min(n,length(x))
+    integer res = sum(sq_mul(x[1..n],s[1..n]))
+    return res;
+end function
+
+sequence s = {0,1,1,2,3,5,8,13,21},
+         c = berlekamp_massey(s),
+         r = apply(true,calc_kth,{tagset(21,0),{c},{s}})
+printf(1,"fibonacci[0..21]: %v\n",{r})
+-- NB there is an off-by-one error lurking round these parts:
+--    should I try this, with a suitable MDL eg power(2,30),
+--    it misses 34, unless it sets pwr:=m-1, but obvs that
+--    messes up GF(2) above/python, at least afaict.
+--?apply(true,calculate_term,{tagset(21),{c},{s}})

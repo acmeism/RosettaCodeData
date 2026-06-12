@@ -1,0 +1,14 @@
+proc iml;
+use tbl;
+read all var {value} into x where(group=1);
+read all var {value} into y where(group=2);
+close tbl;
+n1 = nrow(x);
+n2 = nrow(y);
+v1 = var(x);
+v2 = var(y);
+t = (mean(x)-mean(y))/(sqrt(v1/n1+v2/n2));
+df = (v1/n1+v2/n2)**2/(v1**2/(n1**2*(n1-1))+v2**2/(n2**2*(n2-1)));
+p = 2*probt(-abs(t), df);
+print t df p;
+quit;

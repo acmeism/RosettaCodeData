@@ -1,0 +1,182 @@
+Const LineLength = 5
+Const Disjoint = 0
+
+Enum State
+    Blank
+    Occupied
+    DirNS
+    DirEW
+    DirNESW
+    DirNWSE
+    NewlyAdded
+    Current
+End Enum
+
+Type BoardCell
+    As Boolean states(7)
+End Type
+
+Type Move
+    As Integer m, s, seqnum, x, y
+End Type
+
+Type Offset
+    As Integer dx, dy, dr
+End Type
+
+Dim Shared As Offset Ofs(3)
+Ofs(0) = Type(0, 1, State.DirNS)
+Ofs(1) = Type(1, 0, State.DirEW)
+Ofs(2) = Type(1, -1, State.DirNESW)
+Ofs(3) = Type(1, 1, State.DirNWSE)
+
+Dim Shared As BoardCell board(100, 100)
+Dim Shared As Integer boardWidth = 20
+Dim Shared As Integer boardHeight = 20
+
+Sub initBoard()
+    Dim As Integer x, y
+    ' Clear the board first
+    For y = 0 To boardHeight - 1
+        For x = 0 To boardWidth - 1
+            board(y, x).states(State.Occupied) = False
+        Next x
+    Next y
+
+    ' Create the initial pattern
+    Dim As String pattern(9)
+    pattern(0) = "...XXXX..."
+    pattern(1) = "...X..X..."
+    pattern(2) = "...X..X..."
+    pattern(3) = "XXXX..XXXX"
+    pattern(4) = "X........X"
+    pattern(5) = "X........X"
+    pattern(6) = "XXXX..XXXX"
+    pattern(7) = "...X..X..."
+    pattern(8) = "...X..X..."
+    pattern(9) = "...XXXX..."
+
+    ' Convert pattern to board state
+    For y = 0 To 9
+        For x = 0 To Len(pattern(0)) - 1
+            If Mid(pattern(y), x + 1, 1) = "X" Then
+                board(y + 5, x + 5).states(State.Occupied) = True
+            End If
+        Next x
+    Next y
+End Sub
+
+Sub showBoard()
+    Screenlock
+    Cls
+    For y As Integer = 0 To boardHeight - 1
+        For x As Integer = 0 To boardWidth - 1
+            If board(y, x).states(State.Current) Then
+                Draw String((x * 15) + 10, (y * 15) + 35), "X"
+            Elseif board(y, x).states(State.NewlyAdded) Then
+                Draw String((x * 15) + 10, (y * 15) + 35), "0"
+            Elseif board(y, x).states(State.Occupied) Then
+                Draw String((x * 15) + 10, (y * 15) + 35), "+"
+            End If
+        Next x
+    Next y
+    Screenunlock
+End Sub
+
+Function testPosition(y As Integer, x As Integer, rec As Move) As Boolean
+    If board(y, x).states(State.Occupied) Then Return False
+
+    Dim As Integer m, s, k, xx, yy
+    For m = 0 To 3 ' 4 directions.
+        For s = (1 - LineLength) To 0 ' offset line.
+            k = -1
+            While k < LineLength
+                k += 1
+                If s + k = 0 Then Continue While
+
+                xx = x + Ofs(m).dx * (s + k)
+                yy = y + Ofs(m).dy * (s + k)
+
+                If xx < 0 Orelse xx >= boardWidth Orelse yy < 0 Orelse yy >= boardHeight Then Exit While
+                If Not board(yy, xx).states(State.Occupied) Then Exit While ' No piece at position.
+                If board(yy, xx).states(Ofs(m).dr) Then Exit While ' This direction taken.
+            Wend
+            If k <> LineLength Then Continue For
+
+            ' Position ok.
+            ' Rand to even each option chance of being picked.
+            If Rnd * rec.seqnum = 0 Then
+                rec.m = m : rec.s = s : rec.x = x : rec.y = y
+            End If
+            rec.seqnum += 1
+        Next s
+    Next m
+
+    Return True
+End Function
+
+Sub addPiece(rec As Move)
+    Dim As Integer k, xx, yy
+    board(rec.y, rec.x).states(State.Current) = True
+    board(rec.y, rec.x).states(State.Occupied) = True
+
+    For k = 0 To LineLength - 1
+        xx = rec.x + Ofs(rec.m).dx * (k + rec.s)
+        yy = rec.y + Ofs(rec.m).dy * (k + rec.s)
+        board(yy, xx).states(State.NewlyAdded) = True
+
+        If k >= Disjoint Orelse k < LineLength - Disjoint Then
+            board(yy, xx).states(Ofs(rec.m).dr) = True
+        End If
+    Next k
+End Sub
+
+Function nextMove() As Boolean
+    Dim As Integer x, y
+    Dim As Move rec
+    rec.seqnum = 0
+
+    'Clear previous markers
+    For y = 0 To boardHeight - 1
+        For x = 0 To boardWidth - 1
+            board(y, x).states(State.NewlyAdded) = False
+            board(y, x).states(State.Current) = False
+        Next x
+    Next y
+
+    'Find next legal move
+    For y = 0 To boardHeight - 1
+        For x = 0 To boardWidth - 1
+            testPosition(y, x, rec)
+        Next x
+    Next y
+
+    If rec.seqnum = 0 Then Return False
+
+    addPiece(rec)
+    Return True
+End Function
+
+' Main program
+Randomize Timer
+Screen 12
+Windowtitle "Morpion solitaire in FreeBASIC"
+
+initBoard()
+
+Dim As Integer move = 0
+While Inkey <> Chr(27) 'ESC to exit
+    showBoard()
+    Draw String(5, 5), "Move " &  move
+    move += 1
+
+    If Not nextMove() Then
+        showBoard()
+        Sleep 2000
+        Exit While
+    End If
+
+    Sleep 400
+Wend
+
+Sleep

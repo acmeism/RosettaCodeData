@@ -1,0 +1,793 @@
+/* ARM assembly Raspberry PI or andoid with termux */
+/*  program perceptron3.s        */
+
+/* compile with as         */
+/* link with gcc and options -lX11 -L/usr/lpp/X11/lib   */
+/* REMARK 1 : this program run on android smarphone 32 bits with termux
+   and X11 x Server. The memory addresses are relocatable and
+   can be simplified for raspberry pi. */
+
+ /* REMARK 2 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+/********************************************/
+/*Constantes                                */
+/********************************************/
+.equ STDOUT,              1     @ Linux output console
+.equ EXIT,                1     @ Linux syscall
+.equ WRITE,               4     @ Linux syscall
+/* constantes X11 */
+.equ KeyPressed,          2
+.equ ButtonPress,         4
+.equ MotionNotify,        6
+.equ EnterNotify,         7
+.equ LeaveNotify,         8
+.equ Expose,              12
+.equ ClientMessage,       33
+.equ KeyPressMask,        1
+.equ ButtonPressMask,     4
+.equ ButtonReleaseMask,   8
+.equ ExposureMask,        1<<15
+.equ StructureNotifyMask, 1<<17
+.equ EnterWindowMask,     1<<4
+.equ LeaveWindowMask,     1<<5
+.equ ConfigureNotify,     22
+
+.equ GCForeground,	1<<2
+
+/* constantes perceptron */
+.equ WINDOWWIDTH,       600           @ windows size
+.equ WINDOWHEIGHT,      600
+.equ NBENTREES,           2           @ entry number
+.equ NBENTRAI,         4000           @ training number
+.equ NBPOINTS,           500          @ display points number
+/************************************/
+/* Structures       */
+/************************************/
+/* training datas */
+    .struct  0
+entrai_entrees:
+    .struct  entrai_entrees + 4 * NBENTREES
+entrai_entrees_biais:
+    .struct  entrai_entrees_biais + 4
+entrai_reponse:
+     .struct entrai_reponse +4
+entrai_fin:
+
+/*******************************************/
+/* DONNEES INITIALISEES                    */
+/*******************************************/
+.data
+szWindowName:            .asciz "Windows Raspberry"
+szRetourligne:           .asciz  "\n"
+szMessDebutPgm:          .asciz "Program start. \n"
+szMessErreur:            .asciz "Server X not found.\n"
+szMessErrfen:            .asciz "Can not create window.\n"
+szMessErreurX11:         .asciz "Error call function X11. \n"
+szMessErrGc:             .asciz "Can not create graphics context.\n"
+szTitreFenRed:           .asciz "Pi"
+
+szLibDW:           .asciz "WM_DELETE_WINDOW"    @ special label for correct close error
+
+
+.align 4
+tbfEntrees:        .float 10.0,0.0,1.0          @ entries for tests
+                   .float 10.0,20.0,1.0
+                   .float 10.0,40.0,1.0
+                   .float 10.0,60.0,1.0
+                   .float 10.0,80.0,1.0
+                   .float 20.0,50.0,1.0
+                   .float 40.0,50.0,1.0
+                   .float 60.0,50.0,1.0
+                   .float 80.0,50.0,1.0
+                   .float 100.0,50.0,1.0
+                   .float 10.0,50.0,1.0
+                   .equ NBPOINTDIS, (. - tbfEntrees) / 12
+stXGCValues:       .int 0,0,0x00FF0000,0,0,0,0,0,0,0,0,0   @ for foreground color red
+stXGCValues1:      .int 0,0,0x00FFFFFF,0,0,0,0,0,0,0,0,0   @ for foreground color white
+stXGCValues2:      .int 0,0,0x0000FF00,0,0,0,0,0,0,0,0,0   @ for foreground color green
+iGraine:           .int 1234567
+/*******************************************/
+/* DONNEES NON INITIALISEES                    */
+/*******************************************/
+.bss
+.align 4
+ptDisplay:          .skip 4      @ pointer display
+ptEcranDef:         .skip 4      @ pointer screen default
+ptFenetre:          .skip 4      @ pointer window
+ptGC:               .skip 4      @ pointer graphic context
+ptGC1:              .skip 4      @ pointer graphic context
+key:                .skip 4      @ key code
+wmDeleteMessage:    .skip 8      @ ident close message
+event:              .skip 400    @ TODO: event size ??
+PrpNomFenetre:      .skip 100    @ window name proprety
+buffer:             .skip 500
+iWhite:             .skip 4      @ rgb code for white pixel
+iBlack:             .skip 4      @ rgb code for black pixel
+stEnt:              .skip entrai_fin * NBENTRAI
+tbfPoids:           .skip 4 * (NBENTREES + 1)
+/**********************************************/
+/* -- Code section                            */
+/**********************************************/
+.text
+.global main
+iOfWhite:           .int iWhite - .
+iOfBlack:           .int iBlack - .
+iOfszMessDebutPgm:  .int szMessDebutPgm - .
+main:                           @ entry of program
+    adr r0,iOfszMessDebutPgm    @ Start message
+    ldr r1,[r0]
+    add r0,r1
+    bl affichageMess
+    /* attention r6  pointer display*/
+    /* attention r8  pointer graphic context   */
+    /* attention r9 ident window  */
+    /*****************************/
+    /*    OPEN SERVER X11        */
+    /*****************************/
+    mov r0,#0
+    bl XOpenDisplay             @ open X server
+    cmp r0,#0                   @ error ?
+    beq erreurServeur
+    adr r2,iOfptDisplay
+    ldr r1,[r2]
+    add r1,r2
+    str r0,[r1]                  @ store display address
+
+    mov r6,r0                   @ and in register r6
+    ldr r2,[r0,#+132]           @ load default_screen
+    adr r1,iOfptEcranDef
+    ldr r3,[r1]
+    add r1,r3
+    str r2,[r1]                 @ store default_screen
+    mov r2,r0
+    ldr r0,[r2,#+140]           @ load pointer screen list
+    ldr r5,[r0,#+52]            @ load value white pixel
+    adr r4,iOfWhite            @ and store in memory
+    ldr r3,[r4]
+    add r4,r3
+    str r5,[r4]
+    ldr r3,[r0,#+56]            @ load value black pixel
+    adr r4,iOfBlack             @ and store in memory
+    ldr r5,[r4]
+    add r4,r5
+    str r3,[r4]
+    ldr r4,[r0,#+28]            @ load bits par pixel
+    ldr r1,[r0,#+8]             @ load root windows
+    /**************************/
+    /* CREATE WINDOW          */
+    /**************************/
+    mov r0,r6                   @ address display
+    mov r2,#0                   @ window position X
+    mov r3,#0                   @ window position Y
+    mov r8,#0                   @ for stack alignement
+    push {r8}
+    push {r3}                   @  background  = black pixel
+    push {r5}                   @  border = white pixel
+    mov r8,#2                   @  border size
+    push {r8}
+    mov r8,#WINDOWHEIGHT        @ height
+    push {r8}
+    mov r8,#WINDOWWIDTH         @ width
+    push {r8}
+    bl XCreateSimpleWindow
+    add sp,#24                  @ stack alignement  6 push (4 bytes * 6)
+    cmp r0,#0                   @ error ?
+    beq erreurF
+
+    adr r1,iOfptFenetre
+    ldr r3,[r1]
+    add r1,r3
+    str r0,[r1]                 @ store window address in memory
+    mov r9,r0                   @ and in register r9
+
+    /*****************************/
+    /* add window property       */
+    /*****************************/
+    mov r0,r6                   @ display address
+    mov r1,r9                   @ window address
+    adr r2,iOfszWindowName     @ window name
+    ldr r5,[r2]
+    add r2,r5
+    adr r3,iOfszTitreFenRed    @ window name reduced
+    ldr r5,[r3]
+    add r3,r5
+    mov r4,#0
+    push {r4}                   @ parameters not use
+    push {r4}
+    push {r4}
+    push {r4}
+    bl XSetStandardProperties
+    add sp,sp,#16               @ stack alignement for 4 push
+    /**************************************/
+    /* for correction window close error  */
+    /**************************************/
+    mov r0,r6                   @ display address
+    adr r1,iOfszLibDW           @ atom address
+    ldr r5,[r1]
+    add r1,r5
+    mov r2,#1                   @ False  créate atom if not exists
+    bl XInternAtom
+    cmp r0,#0                   @ error X11 ?
+    blt erreurX11               @ Modif avril 22 pour android (ble pour raspberry)
+    adr r1,iOfwmDeleteMessage   @ recept address
+    ldr r5,[r1]
+    add r1,r5
+    str r0,[r1]
+    mov r2,r1                   @ return address
+    mov r0,r6                   @ display address
+    mov r1,r9                   @ window address
+    mov r3,#1                   @ number of protocols
+    bl XSetWMProtocols
+    cmp r0,#0                   @ error X11 ?
+    ble erreurX11
+    /**********************************/
+    /*  create graphic context        */
+    /**********************************/
+    mov r0,r6                   @ display address
+    mov r1,r9                   @ window address
+    mov r2,#GCForeground        @
+    adr r3,iOfstXGCValues2      @ green color in foreground
+    ldr r5,[r3]
+    add r3,r5
+    bl XCreateGC
+    cmp r0,#0                   @ error ?
+    beq erreurGC
+    adr r1,iOfptGC
+    ldr r5,[r1]
+    add r1,r5
+    str r0,[r1]                 @ store address graphic context
+    mov r8,r0                   @ and in r8
+    /**********************************/
+    /*  create 2 graphic context        */
+    /**********************************/
+    mov r0,r6                   @ display address
+    mov r1,r9                   @ window address
+    mov r2,#GCForeground        @ red color in Foreground
+    adr r3,iOfstXGCValues
+    ldr r5,[r3]
+    add r3,r5
+    bl XCreateGC
+    cmp r0,#0                   @ error ?
+    beq erreurGC
+    adr r1,iOfptGC1
+    ldr r5,[r1]
+    add r1,r5
+    str r0,[r1]                 @ store address graphic context
+    mov r10,r0                  @ and in r10
+    /**********************************/
+    /*  create 2 graphic context        */
+    /**********************************/
+    mov r0,r6                   @ display address
+    mov r1,r9                   @ window address
+    mov r2,#GCForeground        @ white color in Foreground
+    adr r3,iOfstXGCValues1
+    ldr r5,[r3]
+    add r3,r5
+    bl XCreateGC
+    cmp r0,#0                   @ error ?
+    beq erreurGC
+    mov r11,r0                  @ address GC2 in r11
+    /****************************/
+    /* modif window background  */
+    /****************************/
+    mov r0,r6                   @ display address
+    mov r1,r9                   @ window address
+    ldr r2,iGris1               @ background color
+    bl XSetWindowBackground
+    cmp r0,#0                   @ error ?
+    ble erreurX11
+
+    /***************************/
+    /* OUF!! window display    */
+    /***************************/
+    mov r0,r6                   @ display address
+    mov r1,r9                   @ window address
+    bl XMapWindow
+
+    /* init perceptron */
+    bl initPerceptron
+
+    /* draw line */
+    mov r0,r6                   @ display
+    mov r1,r9                   @ windows
+    mov r2,r11                  @ graphic context
+    bl draw_line_Function
+
+    mov r5,#0
+0:                              @ loop to write point
+    mov r0,r6                   @ display
+    mov r1,r9                   @ windows
+    mov r2,r8                   @ GC0
+    mov r3,r10                  @ GC1
+    bl writePoint
+    add r5,#1
+    cmp r5,#NBPOINTS            @ maxi ?
+    blt 0b                      @ no -> loop
+
+    /****************************/
+    /* Autorisations            */
+    /****************************/
+    mov r0,r6                   @ display address
+    mov r1,r9                   @ window address
+    ldr r2,iFenetreMask         @ autorisation mask
+    bl XSelectInput
+    cmp r0,#0                   @ error ?
+    ble erreurX11
+
+    /****************************/
+    /* Events loop              */
+    /****************************/
+1:
+    mov r0,r6                   @ display address
+    adr r1,iOfevent             @ events address
+    ldr r5,[r1]
+    add r1,r5
+    bl XNextEvent               @ event ?
+    adr r0,iOfevent
+    ldr r5,[r0]
+    add r0,r5
+    ldr r0,[r0]                 @ code event
+    cmp r0,#KeyPressed          @ key ?
+    bne 2f
+    adr r0,iOfevent            @ yes read key in buffer
+    ldr r5,[r0]
+    add r0,r5
+    adr r1,iOfbuffer
+    ldr r5,[r1]
+    add r1,r5
+    mov r2,#255
+    adr r3,iOfkey
+    ldr r5,[r3]
+    add r3,r5
+    mov r4,#0
+    push {r4}                   @ stack alignement
+    push {r4}
+    bl XLookupString
+    add sp,#8                   @ stack alignement 2 push
+    cmp r0,#1                   @ is character key ?
+    bne 2f
+    adr r0,iOfbuffer           @ yes -> load first buffer character
+    ldr r5,[r0]
+    add r0,r5
+    ldrb r0,[r0]
+    cmp r0,#0x71                @ character q for quit
+    beq 5f                      @ yes -> end
+    b 4f
+2:
+    /************************************/
+    /* for example  clic mouse button   */
+    /************************************/
+    cmp r0,#ButtonPress         @ clic mouse buton
+    bne 3f
+    adr r0,iOfevent
+    ldr r5,[r0]
+    add r0,r5
+    ldr r1,[r0,#+32]            @ position X mouse clic
+    ldr r2,[r0,#+36]            @ position Y
+    @ etc for eventuel use
+    b 4f
+3:
+    cmp r0,#ClientMessage       @ code for close window within error
+    bne 4f
+    adr r0,iOfevent
+    ldr r5,[r0]
+    add r0,r5
+    ldr r1,[r0,#+28]            @ code message address
+    adr r2,iOfwmDeleteMessage  @ equal code window créate ???
+    ldr r5,[r2]
+    add r2,r5
+    ldr r2,[r2]
+    cmp r1,r2
+    beq 5f                      @ yes -> end window
+
+4:  @ loop for other event
+    b 1b
+    /***********************************/
+    /* Close window -> free ressources */
+    /***********************************/
+5:
+    mov r0,r6                  @ display address
+    adr r1,iOfptGC
+    ldr r5,[r1]
+    add r1,r5
+    ldr r1,[r1]                @ load context graphic address
+    bl XFreeGC
+    mov r0,r6                  @ display address
+    adr r1,iOfptGC1
+    ldr r5,[r1]
+    add r1,r5
+    ldr r1,[r1]                @ load context graphic address
+    bl XFreeGC
+    cmp r0,#0
+    blt erreurX11
+    mov r0,r6                  @ display address
+    mov r1,r9                  @ window address
+    bl XDestroyWindow
+    cmp r0,#0
+    blt erreurX11
+    mov r0,r6                  @ display address
+    bl XCloseDisplay
+    cmp r0,#0
+    blt erreurX11
+    mov r0,#0                  @ return code OK
+    b 100f
+iOfptDisplay:         .int ptDisplay - .
+iOfptEcranDef:      .int ptEcranDef - .
+erreurF:   @ create error window but possible not necessary. Display error by server
+    adr r1,iOfszMessErrfen
+    ldr r5,[r1]
+    add r1,r5
+    bl   displayError
+    mov r0,#1                  @ return error code
+    b 100f
+erreurGC:                      @ error create graphic context
+    adr r1,iOfszMessErrGc
+    ldr r5,[r1]
+    add r1,r5
+    bl   displayError
+    mov r0,#1
+    b 100f
+erreurX11:                      @ erreur X11
+    adr r1,iOfszMessErreurX11
+    ldr r5,[r1]
+    add r1,r5
+    bl   displayError
+    mov r0,#1
+    b 100f
+erreurServeur:                 @ error no found X11 server see doc putty and Xming
+    adr r1,iOfszMessErreur
+    ldr r5,[r1]
+    add r1,r5
+    bl   displayError
+    mov r0,#1
+    b 100f
+
+100:                           @ standard end of the program
+    mov r7, #EXIT
+    svc 0
+iOfptFenetre:       .int ptFenetre - .
+iOfptGC:            .int ptGC - .
+iOfptGC1:           .int ptGC1 - .
+iOfevent:           .int event - .
+iOfbuffer:          .int buffer - .
+iOfkey:             .int key - .
+iOfszLibDW:         .int szLibDW - .
+iOfszMessErreurX11: .int szMessErreurX11 - .
+iOfszMessErrGc:     .int szMessErrGc - .
+iOfszMessErreur:    .int szMessErreur - .
+iOfszMessErrfen:    .int szMessErrfen - .
+iOfszWindowName:    .int szWindowName - .
+iOfszTitreFenRed:   .int szTitreFenRed - .
+iOfPrpNomFenetre:   .int PrpNomFenetre - .
+iOfwmDeleteMessage: .int wmDeleteMessage - .
+iOfstXGCValues:     .int stXGCValues - .
+iOfstXGCValues1:     .int stXGCValues1 - .
+iOfstXGCValues2:     .int stXGCValues2 - .
+iFenetreMask:        .int  KeyPressMask|ButtonPressMask|StructureNotifyMask
+iGris1:              .int 0xFFA0A0A0
+/******************************************************************/
+/*     initialisation perceptron                                  */
+/******************************************************************/
+/*  */
+initPerceptron:               @ INFO: initPerceptron
+    push {r1-r6,lr}
+    mov r1,#0
+    adr r2,iOftbfPoids
+    ldr r5,[r2]
+    add r2,r5
+1:                            @ création alea weight
+    mov r0,#10000
+    bl genereraleasFloat
+    lsl r3,r1,#2              @ compute offset
+    add r3,r2                 @ compute weight address
+    vstr s0,[r3]              @ and store first alea weight
+    add r1,#1
+    cmp r1,#NBENTREES + 1     @ + biais entry
+    blt 1b
+
+    mov r1,#0                 @ training indice
+    mov r6,#entrai_fin        @ size one element training
+    adr r2,iOfstEnt           @ address trainning
+    ldr r5,[r2]
+    add r2,r5
+    ldr r4,fUn                @ biais value = 1.0
+    vldr s5,fConst3           @
+    vldr s6,fConst4
+2:                            @ loop training value
+    mla r3,r1,r6,r2
+    mov r0,#WINDOWWIDTH
+    bl genereraleasFloat      @ value x
+    vmul.f32 s0,s0,s6
+    vstr s0,[r3]
+    vmov s2,s0                @ save x
+    mov r0,#WINDOWHEIGHT
+    bl genereraleasFloat      @ value y
+    vmul.f32 s0,s0,s5
+    vstr s0,[r3,#4]          @ save y
+    str r4,[r3,#entrai_entrees_biais] @ store biais
+    vldr s3,fConst1
+    vmul.f32 s4,s3,s2           @ x * 0.7
+    vldr s3,fConst2
+    vadd.f32 s4,s3              @ + 40
+    vcmp.f32 s0,s4              @ compare y and résult
+    vmrs APSR_nzcv,FPSCR        @ move float flags in standard flags
+    movlt r0,#-1                @ -1 if smaller
+    movge r0,#1                 @ +1 else
+    str r0,[r3,#entrai_reponse] @ store in reply
+    add r1,#1
+    cmp r1,#NBENTRAI            @ other training ?
+    blt 2b
+
+    bl entrainerPerceptron
+
+100:
+    pop {r1-r6,pc}
+iOftbfPoids:    .int tbfPoids - .
+iOfstEnt:       .int stEnt - .
+fUn:             .float 1.0
+fConst3:         .float 1000.0
+fConst4:         .float 1000.0
+/***************************************************/
+/*   training percepton       */
+/***************************************************/
+/*  */
+entrainerPerceptron:            @ INFO: entrainerPerceptron
+    push {r1-r8,lr}
+    mov r4,#0                  @ training indice
+    adr r5,iOfstEnt           @ entry address
+    ldr r6,[r5]
+    add r5,r6
+    adr r6,iOftbfPoids        @ weight address
+    ldr r7,[r6]
+    add r6,r7
+    mov r7,#entrai_fin         @ size one entry
+1:
+    mul r0,r7,r4
+    add r0,r5                  @ training element address
+    ldr r1,[r0,#entrai_reponse] @ desired reply
+    mov r8,r0
+    bl feedforward             @ compute reply
+    sub r0,r1,r0               @ error
+    vmov s3,r0
+    vcvt.f32.s32  s3,s3        @ float conversion
+    mov r2,#0                  @ indice weight
+2:
+    add r3,r6,r2,lsl #2        @ compute weight address
+    vldr s5,[r3]               @ load weight
+    add r1,r8,r2,lsl #2        @ compute entry address
+    vldr s1,[r1]               @ load input[n]
+    vldr s2,fConstC            @ constante C
+    vmul.f32 s4,s2,s3          @ compute new weight = C * error
+    vmul.f32 s4,s4,s1          @ * input[n]
+    vadd.f32 s5,s5,s4          @ + weight precedent
+    vstr s5,[r3]               @ store new weight
+
+    add r2,#1
+    cmp r2,#NBENTREES + 1
+    blt 2b
+    add r4,#1
+    cmp r4,#NBENTRAI
+    blt 1b
+100:
+    pop {r1-r8,pc}
+fConstC:         .float 0.01       @ à adapter suivant problème
+fConst1:         .float 0.7        @ coefficient
+fConst2:         .float 40.0
+/***************************************************/
+/*   compute perceptron  reply                   */
+/***************************************************/
+/* r0  entry address */
+/* r0 return résult */
+feedforward:              @ INFO: feedforward:
+    push {r1-r5,lr}
+    mov r4,r0             @ entry address
+    mov r0,#0
+    vmov s2,r0
+    vcvt.f32.u32  s2,s2   @ convert zéro in float
+    vmov s3,s2            @ and save
+    mov r1,#0             @ indice weight
+    adr r2,iOftbfPoids    @ weight address
+    ldr r5,[r2]
+    add r2,r5
+1:
+    lsl r3,r1,#2
+    add r5,r3,r2          @ compute weight address
+    vldr s0,[r5]          @ load weight
+    add r5,r3,r4          @ compute entry address
+    vldr s1,[r5]          @ load entry
+    vmul.f32 s0,s1,s0     @ multiply entry by weight
+    vadd.f32 s2,s0        @ and add to sum
+    add r1,#1
+    cmp r1,#NBENTREES + 1
+    blt 1b
+
+    vcmp.f32 s2,s3        @ compare sum to zéro
+    vmrs APSR_nzcv,FPSCR  @ move float flags to standard flags
+    movlt r0,#-1          @ -1 if smaller
+    movge r0,#1           @ +1 else
+100:
+    pop {r1-r5,pc}
+/***************************************************/
+/*   Génération nombre aleatoire format float       */
+/***************************************************/
+/* r0   */
+/* s0 retourne  (alea r0)/range */
+genereraleasFloat:          @ INFO: genereraleasFloat
+    push {r1-r5,lr}         @ save  registres
+    mov r4,r0               @ save plage
+    adr r0,iOfiGraine1      @ load seed
+    ldr r5,[r0]
+    add r0,r5
+    ldr r0,[r0]
+    ldr r1,iNombre1
+    mul r0,r1
+    add r0,#1
+    adr r1,iOfiGraine1
+    ldr r5,[r1]
+    add r1,r5
+    str r0,[r1]             @ store new seed
+    ldr r1,m                @ divisor for 32 bits register
+    bl division
+    mov r0,r3               @ remainder
+    ldr r1,m1               @ divisor  10000
+    bl division
+    mul r0,r2,r4            @ multiply quotient for range
+    ldr r1,m1               @
+    bl division             @
+    mov r0,r2               @ quotient alea integer
+    vmov s0,r4
+    vcvt.f32.u32  s0,s0     @ conversion range en float
+    vmov s1,r0
+    vcvt.f32.u32  s1,s1     @ conversion aléa entier en float
+    vdiv.f32 s0,s1,s0       @ division
+
+100:
+    pop {r1-r5,pc}          @ restaur registres
+iOfiGraine1:  .int iGraine - .
+iNombre1:     .int 31415821
+m1:           .int 10000
+m:            .int 100000000
+/******************************************************************/
+/*     dessin points                     */
+/******************************************************************/
+/* r0 contains display */
+/* r1 contains windows */
+/* r2 contains context graphic  (color point) */
+/* r3 contains context graphic 1 */
+writePoint:                   @ INFO: draw_line_function
+    push {r1-r11,lr}          @ save  registres
+    mov r6,r0                 @ save display
+    adr r4,iOftbfEntrees
+    ldr r5,[r4]
+    add r4,r5
+    mov r0,#WINDOWWIDTH       @
+    bl genereraleasFloat      @ alea float X
+    mov r0,#WINDOWWIDTH
+    vmov s1,r0
+    vcvt.f32.u32  s1,s1     @ conversion en float
+    vmul.f32 s0,s1            @ cadrage X
+    vstr s0,[r4]
+    mov r0,#WINDOWHEIGHT
+    bl genereraleasFloat      @ alea float Y
+    mov r0,#WINDOWHEIGHT
+    vmov s1,r0
+    vcvt.f32.u32  s1,s1       @ conversion en float
+    vmul.f32 s0,s1            @ cadrage Y
+    vstr s0,[r4,#4]
+    mov r0,r4
+    bl feedforward            @ request perceptron
+    cmp r0,#0
+    movgt r2,r10              @ if low use graphic context 1
+    mov r8,r2
+    mov r7,r1
+    mov r0,r6
+    vldr s0,[r4]              @ load X
+    vcvt.s32.f32  s0,s0       @ conversion  entier
+    vmov r3,s0                @ position x
+    mov r9,r3
+    sub sp,sp,#4              @ stack alignement
+    vldr s1,[r4,#4]           @ Load Y
+    vcvt.s32.f32  s1,s1       @ conversion  entier
+    vmov r4,s1                @ position y
+    rsb r4,r4,#WINDOWHEIGHT
+    sub r4,r4,#50             @ correction system bar
+    push {r4}                 @ on the stack
+    bl XDrawPoint
+    add sp,sp,#8              @ stack alignement 1 push and 1 stack alignement
+    mov r0,r6
+    mov r1,r7
+    mov r2,r8
+    add r9,#1
+    mov r3,r9
+    sub sp,sp,#4              @ stack alignement
+    push {r4}                 @ on the stack
+    bl XDrawPoint
+    add sp,sp,#8              @ stack alignement 1 push and 1 stack alignement
+    mov r0,r6
+    mov r1,r7
+    mov r2,r8
+    sub r9,#2
+    mov r3,r9
+    sub sp,sp,#4              @ stack alignement
+    push {r4}                 @ on the stack
+    bl XDrawPoint
+    add sp,sp,#8              @ stack alignement 1 push and 1 stack alignement
+    mov r0,r6
+    mov r1,r7
+    mov r2,r8
+    add r9,#1
+    mov r3,r9
+    sub sp,sp,#4              @ stack alignement
+    add r4,#1
+    push {r4}                 @ on the stack
+    bl XDrawPoint
+    add sp,sp,#8              @ stack alignement 1 push and 1 stack alignement
+100:
+    pop {r1-r11,pc}           @ restaur registers
+iOftbfEntrees:      .int tbfEntrees - .
+/******************************************************************/
+/*     draw points                     */
+/******************************************************************/
+/* r0 contains display */
+/* r1 contains windows */
+/* r2 contains context graphic  (color line) */
+/* r3 contains X position */
+/* r4 contains Y position */
+draw_points:                 @ INFO: draw_points
+    push {r0-r12,lr}         @ save  registres
+    sub sp,sp,#4                @ stack alignement
+    push {r4}                 @ on the stack
+    bl XDrawPoint
+    add sp,sp,#8              @ stack alignement 1 push and 1 stack alignement
+100:
+    pop {r0-r12,pc}                         @ restaur registers
+/******************************************************************/
+/*     draw line function;                     */
+/******************************************************************/
+/* r0 contains display */
+/* r1 contains windows */
+/* r2 contains context graphic  (color line) */
+
+draw_line_Function:         @ INFO: draw_line_function
+    push {r1-r6,lr}         @ save  registres
+
+                            @ compute begin y for x = 0
+    vldr s1,fConst2
+    vcvt.s32.f32  s1,s1     @ conversion integer
+    vmov r3,s1
+    rsb r4,r3,#WINDOWHEIGHT @ = y = windows size - 40
+
+                            @ calcul y fin pour x = WINDOWWIDTH
+    mov r5,#WINDOWWIDTH     @ window width = x1
+    vmov s2,r5
+    vcvt.f32.s32  s2,s2     @ conversion  float
+    vldr s1,fConst1
+    vmul.f32 s0,s2,s1       @ * O,7
+    vldr s2,fConst2
+    vadd.f32 s0,s2          @ add contante (40)
+    vcvt.s32.f32  s0,s0     @ conversion  entier
+    vmov r3,s0
+    rsb r6,r3,#WINDOWHEIGHT @ = y1
+    mov r3,#0               @ position x
+    sub sp,sp,#4            @ stack alignement
+    push {r6}               @ position y1
+    push {r5}               @ position x1
+    push {r4}               @ position y
+    bl XDrawLine
+    add sp,sp,#16           @ for 4 push
+
+100:
+    pop {r1-r6,pc}                         @ restaur registers
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

@@ -1,0 +1,198 @@
+include "Tlbx AVKit.incl"
+
+_window = 1
+begin enum 1
+  _freqLabel
+  _freqSlider
+  _freqFld
+  _hzLabel
+  _ampLabel
+  _ampSlider
+  _ampFld
+  _infoFld
+  _playBtn
+end enum
+
+void local fn FixViews
+
+  select ( fn ButtonState( _playBtn ) )
+    case NSControlStateValueOn
+      slider    _freqSlider, YES
+      textfield _freqFld,    YES
+      slider    _ampSlider,  YES
+      textfield _ampFld,     YES
+    case NSControlStateValueOff
+      slider    _freqSlider, NO
+      textfield _freqFld,    NO
+      slider    _ampSlider,  NO
+      textfield _ampFld,     NO
+  end select
+end fn
+
+void local fn BuildWindow
+  window _window, @"Audio Frequency Generator", (0,0,455,193), NSWindowStyleMaskTitled + NSWindowStyleMaskClosable + NSWindowStyleMaskMiniaturizable
+
+  textlabel _freqLabel, @"Frequency:", (18,158,63,14)
+  ControlSetSize( _freqLabel, NSControlSizeSmall )
+
+  slider _freqSlider,, 441, (87,151,266,22), 20, 7400,, _window
+  ControlSetSize( _freqSlider, NSControlSizeSmall )
+  ControlSetContinuous( _freqSlider, YES )
+
+  textfield _freqFld,, @"1000.0", (361,156,55,19)
+  ControlSetSize( _freqFld, NSControlSizeSmall )
+  ControlSetAlignment( _freqFld, NSTextAlignmentCenter )
+  ControlSetFormat( _freqFld, @"0123456789.", YES, 0, 7 )
+
+  textlabel _hzLabel, @"Hz", (418,158,19,14)
+  ControlSetSize( _hzLabel, NSControlSizeSmall )
+
+  textlabel _ampLabel, @"Amplitude:", (18,106,63,14)
+  ControlSetSize( _ampLabel, NSControlSizeSmall )
+
+  slider _ampSlider,, 0.2, (87,100,266,22), 0, 1 , 11
+  ControlSetSize( _ampSlider, NSControlSizeSmall )
+  ControlSetContinuous( _ampSlider, YES )
+
+  textfield _ampFld,, @"0.20", (361,104,55,19)
+  ControlSetSize( _ampFld, NSControlSizeSmall )
+  ControlSetAlignment( _ampFld, NSTextAlignmentCenter )
+  ControlSetFormat( _ampFld, @"0123456789.", YES, 0, 7 )
+
+  textlabel _infoFld,, (20,15,400,76), _window
+  ControlSetAlignment( _infoFld, NSTextAlignmentLeft )
+
+  button _playBtn,YES,NSControlStateValueOff, @"Play tone", (345,18,91,24), NSButtonTypeMomentaryLight, NSBezelStyleRegularSquare, _window
+
+  fn FixViews
+end fn
+
+void local fn PlayFrequency( frequency as float, amplitude as float )
+  AVAudioEngineRef audioEngine = fn AVAudioEngineInit
+  AppSetProperty( @"engine", audioEngine )
+
+  AVAudioPlayerNodeRef player = fn AVAudioPlayerNodeInit
+  AppSetProperty( @"player", player )
+
+  AVAudioMixerNodeRef mixer = fn AVAudioEngineMainMixerNode( audioEngine )
+  float sampleRate = fn AVAudioFormatSampleRate( fn AVAudioNodeOutputFormatForBus( mixer, 0 ) )
+  AVAudioFrameCount frameBufferLength = fn floorf(sampleRate / frequency) * 1
+  AVAudioPCMBufferRef buffer = fn AVAudioPCMBufferWithFormat( fn AVAudioNodeOutputFormatForBus( player, 0 ), frameBufferLength )
+  AVAudioPCMBufferSetFrameLength( buffer, frameBufferLength )
+  NSInteger channelCount = fn AVAudioFormatChannelCount( fn AVAudioNodeOutputFormatForBus( mixer, 0 ) )
+  AVAudioFrameCount frameLength = fn AVAudioPCMBufferFrameLength(buffer)
+  CFStringRef infoStr = fn StringWithFormat( @"%ld channels\nfrequency = %.1f Hz        amplitude = %.2f\nsample rate = %.1f         frame length = %u", channelCount, frequency, amplitude, sampleRate, frameLength )
+  ControlSetStringValue( _infoFld, infoStr )
+
+  ptr p = (ptr)fn AVAudioPCMBufferFloatChannelData(buffer)
+  xref floatChannelData(100) as ^float
+  floatChannelData = p
+
+  long i, channelNumber
+  float theta, value
+  ^float channelBuffer
+
+  for i = 0 to frameLength - 1
+    theta = frequency * i * 2.0 * M_PI / sampleRate
+    value = fn sinf(theta)
+    for channelNumber = 0 to channelCount - 1
+      channelBuffer = floatChannelData(channelNumber)
+      cln channelBuffer[i] = value * amplitude;
+    next
+  next
+
+  AVAudioEngineAttachNode( audioEngine, player )
+  AVAudioEngineConnect( audioEngine, player, mixer, fn AVAudioNodeOutputFormatForBus( player, 0 ) )
+  fn AVAudioEngineStart( audioEngine, NULL )
+  AVAudioPlayerNodePlay( player )
+  AVAudioPlayerNodeScheduleBufferAtTime( player, buffer, NULL, AVAudioPlayerNodeBufferLoops, NULL, NULL )
+end fn
+
+void local fn PlayStopAction
+  AVAudioPlayerNodeRef player
+  select ( fn ButtonState( _playBtn ) )
+    case NSControlStateValueOn
+      ButtonSetTitle( _playBtn, @"Stop tone" )
+      fn PlayFrequency( fn ControlDoubleValue(_freqFld), fn ControlDoubleValue(_ampFld) )
+    case NSControlStateValueOff
+      player = fn AppProperty( @"player" )
+      AVAudioPlayerNodeStop( player )
+      AppRemoveAllProperties
+      ButtonSetTitle( _playBtn, @"Play tone" )
+  end select
+  fn FixViews
+end fn
+
+local fn StopPlayer
+  AVAudioPlayerNodeRef player
+  player = fn AppProperty( @"player" )
+  AVAudioPlayerNodeStop( player )
+  AppRemoveAllProperties
+end fn
+
+local fn AdjustFrequency
+  fn StopPlayer
+  double frequency = fn ControlDoubleValue(_freqSlider)
+  CFStringRef freqStr = fn StringWithFormat( @"%.1f", frequency )
+  ControlSetStringValue(_freqFld, freqStr )
+  fn PlayFrequency( fn ControlDoubleValue(_freqFld), fn ControlDoubleValue(_ampFld) )
+end fn
+
+local fn AdjustAmplitude
+  fn StopPlayer
+  double amplitude = fn ControlDoubleValue(_ampSlider)
+  CFStringRef ampStr = fn StringWithFormat( @"%.2f", amplitude )
+  ControlSetStringValue(_ampFld, ampStr )
+  fn PlayFrequency( fn ControlDoubleValue(_freqFld), fn ControlDoubleValue(_ampFld) )
+end fn
+
+local fn UserFrequency
+  double frequency = fn ControlDoubleValue(_freqFld)
+
+  fn StopPlayer
+  if ( ( frequency < 20.0 ) or ( frequency > 7400.0 ) )
+    alert 1, NSAlertStyleWarning, @"Frequency must be between 20.0 Hz and 7400.0 Hz.", @"Please enter value in range.", @"Okay", YES
+  else
+    CFStringRef freqStr = fn StringWithFormat( @"%.1f", frequency )
+    ControlSetStringValue(_freqFld, freqStr )
+    ControlSetDoubleValue( _freqSlider, frequency )
+    fn PlayFrequency( fn ControlDoubleValue(_freqFld), fn ControlDoubleValue(_ampFld) )
+  end if
+end fn
+
+local fn UserAmplitude
+  double amplitude = fn ControlDoubleValue(_ampFld)
+
+  fn StopPlayer
+  if ( amplitude > 1.0 )
+    alert 1, NSAlertStyleWarning, @"Amplitude (volume) must be between 0.0 (silent) and 1.0 (max volume).", @"Please enter value in range.", @"Okay", YES
+  else
+    ControlSetDoubleValue(_ampSlider, amplitude)
+    CFStringRef ampStr = fn StringWithFormat( @"%.2f", amplitude )
+    ControlSetStringValue(_ampFld, ampStr )
+    fn PlayFrequency( fn ControlDoubleValue(_freqFld), fn ControlDoubleValue(_ampFld) )
+  end if
+end fn
+
+void local fn DoDialog( ev as long, tag as long )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case _freqSlider  : fn AdjustFrequency
+        case _ampSlider   : fn AdjustAmplitude
+        case _playBtn     : fn PlayStopAction
+      end select
+    case _controlTextDidEndEditing
+      select ( tag )
+        case _freqFld     : fn UserFrequency
+        case _ampFld      : fn UserAmplitude
+      end select
+    case _windowWillClose : end
+  end select
+end fn
+
+fn BuildWindow
+
+on dialog fn DoDialog
+
+HandleEvents

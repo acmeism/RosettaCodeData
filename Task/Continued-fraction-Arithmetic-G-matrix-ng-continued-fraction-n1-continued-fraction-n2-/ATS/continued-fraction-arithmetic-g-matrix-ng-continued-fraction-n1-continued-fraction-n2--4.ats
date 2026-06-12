@@ -1,0 +1,116 @@
+(* Main program. *)
+(*
+
+  Install ats2-xprelude, being sure to enable GMP support:
+  https://sourceforge.net/p/chemoelectric/ats2-xprelude
+
+  If you have it installed already, there might have been bugfixes
+  since. So try updating.
+
+  Then, to compile the program:
+
+    patscc -std=gnu2x -g -O2 -DATS_MEMALLOC_GCBDW \
+      $(pkg-config --cflags ats2-xprelude) \
+      $(pkg-config --variable=PATSCCFLAGS ats2-xprelude) \
+      continued-fraction-task.dats continued_fraction.{s,d}ats \
+      $(pkg-config --libs ats2-xprelude) -lgc -lm
+
+*)
+
+(* Load templates from the ATS2 prelude: *)
+#include "share/atspre_staload.hats"
+
+staload "continued_fraction.sats" (* Programmer access to exported stuff. *)
+dynload "continued_fraction.dats" (* Initialize the "val". *)
+
+(* Load declarations and templates from ats2-xprelude: *)
+#include "xprelude/HATS/xprelude.hats"
+staload "xprelude/SATS/exrat.sats"
+staload _ = "xprelude/DATS/exrat.dats"
+
+fn
+make_pad (n : size_t) : string =
+  let
+    val n = g1ofg0 n
+    prval () = lemma_g1uint_param n
+    implement string_tabulate$fopr<> _ = ' '
+  in
+    strnptr2string (string_tabulate<> n)
+  end
+
+fn
+show_with_note (expression : string,
+                cf         : continued_fraction,
+                note       : string) : void =
+  let
+    val cf_str = cf2string cf
+
+    val expr_sz = strlen expression
+    and cf_sz = strlen cf_str
+    and note_sz = strlen note
+
+    val expr_pad_sz = max (i2sz 19 - expr_sz, i2sz 0)
+    and cf_pad_sz =
+      if iseqz note_sz then
+        i2sz 0
+      else
+        max (i2sz 48 - cf_sz, i2sz 0)
+
+    val expr_pad = make_pad expr_pad_sz
+    and cf_pad = make_pad cf_pad_sz
+  in
+    println! (expr_pad, expression, " =>  ",
+              cf_str, cf_pad, note)
+  end
+
+fn
+show_without_note (expression : string,
+                   cf         : continued_fraction) : void =
+  show_with_note (expression, cf, "")
+
+overload show with show_with_note
+overload show with show_without_note
+
+implement
+main0 () =         (* A main that takes no arguments and returns 0. *)
+  begin
+    show ("golden ratio", golden_ratio, "(1 + sqrt(5))/2");
+    show ("silver ratio", silver_ratio, "(1 + sqrt(2))");
+    show ("sqrt2", sqrt2);
+    show ("sqrt5", sqrt5);
+
+    show ("1/4", one_fourth);
+    show ("1/3", one_third);
+    show ("1/2", one_half);
+    show ("2/3", two_thirds);
+    show ("3/4", three_fourths);
+
+    show ("13/11", r2cf (13, 11));
+    show ("22/7", r2cf (22, 7), "approximately pi");
+
+    show ("0", zero);
+    show ("1", one);
+    show ("2", two);
+    show ("3", three);
+    show ("4", four);
+
+    show ("4 + 3", four + three);
+    show ("4 - 3", four - three);
+    show ("4 * 3", four * three);
+    show ("4 / 3", four / three);
+    show ("4 ** 3", four ** 3);
+    show ("4 ** (-3)", four ** (~3));
+    show ("negative 4", ~four);
+
+    show ("(1 + 1/sqrt(2))/2",
+          (one + (one / sqrt2)) / two, "method 1");
+    show ("(1 + 1/sqrt(2))/2",
+          silver_ratio * (sqrt2 ** (~3)), "method 2");
+    show ("(1 + 1/sqrt(2))/2",
+          ((silver_ratio ** 2) + one) / (four * two), "method 3");
+
+    show ("sqrt2 + sqrt2", sqrt2 + sqrt2);
+    show ("sqrt2 - sqrt2", sqrt2 - sqrt2);
+    show ("sqrt2 * sqrt2", sqrt2 * sqrt2);
+    show ("sqrt2 / sqrt2", sqrt2 / sqrt2);
+  end

@@ -1,0 +1,33 @@
+DECLARE FUNCTION isin (n(), k)
+DECLARE FUNCTION fmp (n())
+
+DIM a(3)
+FOR x = 1 TO UBOUND(a): READ a(x): NEXT x
+DIM b(4)
+FOR x = 1 TO UBOUND(b): READ b(x): NEXT x
+DIM c(5)
+FOR x = 1 TO UBOUND(c): READ c(x): NEXT x
+
+PRINT fmp(a())
+PRINT fmp(b())
+PRINT fmp(c())
+Sleep
+END
+
+DATA 1,2,0
+DATA 3,4,-1,1
+DATA 7,8,9,11,12
+
+FUNCTION fmp (n())
+    j = 1
+    WHILE isin(n(), j)
+        j = j + 1
+    WEND
+    fmp = j
+END FUNCTION
+
+FUNCTION isin (n(), k)
+    FOR i = LBOUND(n) TO UBOUND(n)
+        IF n(i) = k THEN isin = 1
+    NEXT i
+END FUNCTION

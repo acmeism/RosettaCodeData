@@ -1,0 +1,195 @@
+// ------------------------------------------------------------
+//  Exponential Digital Sum
+//
+//  Using FutureBasic 7.0.36
+//  November 2025, R.W.
+//
+//  Integers n > 1 such that digitSum(n^p) = n
+//  for some integer power p > 1.
+//
+//  This task is bothersome for me since I cannot find an
+//  algorithm except a brute force trial and error.
+//
+// ------------------------------------------------------------
+
+include "gmp.incl"
+
+CFTimeInterval t
+_kMaxBase = 8046
+
+// Global mpz_t reused for speed
+mpz_t gNBig
+
+long gNextBase   // next base to start searching after batch
+
+// ------------------------------------------------------------
+//  DigitSumFromMPZ
+//  Compute decimal digit sum of a big integer (mpz_t)
+// ------------------------------------------------------------
+local fn DigitSumFromMPZ( v as mpz_t ) as long
+  CFStringRef s
+  long       i, slen, sum
+  UniChar    ch
+  s = fn mpz_cf2( v )    // autorelease don't CFRelease s
+  if s = 0 then RETURN 0
+  sum = 0
+  slen = len(s)
+  for i = 0 to slen - 1
+    ch = fn CFStringGetCharacterAtIndex( s, i )
+    sum = sum + (ch - 48)   // '0' = 48
+  next
+end fn = sum
+
+// ------------------------------------------------------------
+// Output formatter to make things line up
+//
+local fn outForm(theString as CFStringRef, theLen as long, justify as Int) as CFStringRef
+  CFStringRef pad = @""
+  CFStringRef result = @""
+  long theSLen
+  theSLen = len(theString)
+  if theSLen < theLen
+    pad = fn StringByPaddingToLength( @"", theLen - theSLen, @" ", 0 )
+  end if
+  if justify == 1    //right justify
+    result = concat(pad,theString)
+  else
+    result = concat(theString, pad)
+  end if
+  result = left(result, theLen)  //ensure does not exceed
+
+end fn = result
+
+// ------------------------------------------------------------
+//  Int_Exp( baseInt, minWays, maxPower ) -> number of ways
+//
+//  PASS 1: Count how many powers satisfy digitSum(n^p) == n.
+//  PASS 2: If enough, print them (n^p = value).
+// ------------------------------------------------------------
+local fn Int_Exp( baseInt as long, minWays as long, maxPower as long ) as long
+  CFStringRef col1 = @""
+  long ways, p, ds
+
+  if baseInt <= 1 then RETURN 0
+
+  // PASS 1: count matches
+  fn mpz_set_ui( gNBig, baseInt )
+  ways = 0
+
+  for p = 2 to maxPower
+    fn mpz_mul_ui( gNBig, gNBig, baseInt )
+    ds = fn DigitSumFromMPZ( gNBig )
+    if ds = baseInt
+      ways++
+    end if
+
+    // We can bail when the digital sum is
+    // more than twice the number since
+    // the sum would surely exceed the base
+
+    if (p > 10) and (ds > baseInt * 2) then exit for
+  next
+  if ways < minWays then RETURN 0
+
+  // PASS 2: print matches
+  fn mpz_set_ui( gNBig, baseInt )
+
+  for p = 2 to maxPower
+    fn mpz_mul_ui( gNBig, gNBig, baseInt )
+    ds = fn DigitSumFromMPZ( gNBig )
+    if ds = baseInt
+      col1 = concat(mid(str(baseInt),1),@"^",mid(str(p),1))
+      col1 = fn outForm(col1,10,1)
+      CFStringRef powStr = fn mpz_cf2( gNBig )    // autoreleased
+      //printf @"%ld^%ld = %@", baseInt, p, powStr
+      print @col1; @" = ";powStr
+    end if
+
+    if (p > 10) and (ds > baseInt * 2) then p = maxPower + 99 //exit for
+  next p
+
+end fn = ways
+
+// ------------------------------------------------------------
+//  ListFirstTwenty
+// ------------------------------------------------------------
+local fn ListFirstTwenty
+  long baseInt, found, ways
+  print @"\nFirst twenty integers that are equal to the digital sum¬
+  of that integer raised to some power:\n"
+
+  t = fn CACurrentMediaTime
+  baseInt = 1
+  found   = 0
+  while found < 20
+    baseInt++
+    ways = fn Int_Exp( baseInt, 1, 100 )
+    if ways > 0
+      found++
+    end if
+  wend
+  printf @"\nElapsed time: %.3f secs\n", (fn CACurrentMediaTime - t)
+  gNextBase = baseInt + 1
+end fn
+
+// ------------------------------------------------------------
+//  Int_Exp_More — next 10 satisfying at least minWays
+// ------------------------------------------------------------
+void local fn Int_Exp_More( startBase as long, minWays as long, maxPower as long )
+  long baseInt, found, ways
+  printf @"\nNext ten integers that satisfy at least %ld ways:\n", minWays
+
+  t = fn CACurrentMediaTime
+  baseInt = startBase - 1
+  found   = 0
+  while found < 10
+    baseInt++
+    ways = fn Int_Exp( baseInt, minWays, maxPower )
+    if ways > 0
+      found++
+    end if
+  wend
+  printf @"\nElapsed time (Next): %.3f secs\n", (fn CACurrentMediaTime - t)
+  gNextBase = baseInt + 1
+  if gNextBase > _kMaxBase then button 2, NO
+end fn
+
+
+// ------------------------------------------------------------
+//  Main
+// ------------------------------------------------------------
+local fn Main
+  mpz_init( gNBig )
+  gNextBase = 2
+  fn ListFirstTwenty
+  print @"Click [Next] for the next 10 integers (min 3 ways).\n"
+end fn
+
+// ------------------------------------------------------------
+//  Dialog handler
+// ------------------------------------------------------------
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case 2
+          fn Int_Exp_More( gNextBase, 3, 500 )
+      end select
+
+    case _windowShouldClose
+      mpz_clear( gNBig )
+      end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+// ------------------------------------------------------------
+//  Main
+// ------------------------------------------------------------
+window 1, @"Exponential digital sums", (0,0,720,560)
+button 2, YES,, @"Next", (500,20,100,20),,, 1
+
+fn Main
+
+HandleEvents

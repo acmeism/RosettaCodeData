@@ -1,0 +1,230 @@
+'Programmed for Freebasic by James Klutho
+'--------------------------------------------------------------------
+
+#include once "windows.bi"
+#INCLUDE ONCE "VList.inc"
+
+Dim Shared hVList1 As hwnd
+Dim Shared hLBox As hwnd
+Dim Shared hButExit As hwnd
+Dim Shared hButChange As hwnd
+
+
+Const IDC_VLIST = 101
+Const IDC_LBOX  = 102
+Const IDC_MYEXIT  = 103
+Const IDC_MYCHANGE  = 104
+
+'To switch between ANSI and Wstrings, make these changes in the VList.inc file
+
+'define VL_WSTRINGLEN     50    'Change to any desired fixed length Wstring you desire
+'define USEWSTR            1    'Change to zero to use dynamic ANSI strings
+
+Dim Shared ss(50) As String                  'ANSI dynamic string
+Dim Shared ww(50) As Wstring * VL_WSTRINGLEN 'Fixed length Wstring
+
+
+Sub AddNote(hMyLBox As hwnd, s As String)
+    Dim MyMsg As ZString * 256
+    Static COUNT As Long
+    Dim s5 As zSTRING * 5
+
+    COUNT = COUNT +1
+    s5 = Str(COUNT)
+    MyMsg="Notification # "& s5 & ":" & s
+    SendMessage(hMyLBox,LB_INSERTSTRING,0,Cast(lparam,Varptr(MyMsg)))
+End Sub
+
+Declare Function WinMain (Byval hInstance As HINSTANCE, _
+                          Byval hPrevInstance As HINSTANCE, _
+                          Byval szCmdLine As zstring Ptr, _
+                          Byval iCmdShow As Integer) As Integer
+End WinMain(GetModuleHandle(null), null, Command(), SW_NORMAL)
+
+'':::::
+Function WndProc (Byval hWnd As HWND, Byval wMsg As UINT, _
+    Byval wParam As WPARAM, Byval lParam As LPARAM) As LRESULT
+
+    Dim MyNptr As MyNotify Ptr
+
+    Function = 0
+
+    Select Case(wMsg)
+    Case WM_CREATE
+        Exit Function
+
+    Case WM_COMMAND
+        If GETFOCUS = hVList1 Then Exit Function
+
+        Select Case Loword(wParam)
+        Case IDC_MYEXIT
+            ' // close the application sending an WM_CLOSE message
+            If Hiword(wParam) = BN_CLICKED Then
+                SendMessageW hwnd, WM_CLOSE, 0, 0
+                Exit Function
+            End If
+        Case IDC_MYCHANGE
+            ' // Display the message
+            If Hiword(wParam) = BN_CLICKED Then
+                #If(USEWSTR = 0)
+                ss(10) = "Changed"
+                #Else
+                ww(10) = "Changed"
+                #endif
+                SendMessageW hVList1, VL_REFRESH, 0, 0
+            End If
+        End Select
+
+    Case WM_NOTIFY
+        MyNptr = Cast(MyNotify Ptr,lParam)
+        If MyNptr->NMHeader.idFrom = IDC_VLIST Then
+            Select Case MyNptr->NMHeader.code
+            Case VLN_RETURN
+                AddNote hLBox, "RETURN "
+            Case VLN_SPACE
+                AddNote hLBox, "SPACE  "
+            Case VLN_DELETE
+                AddNote hLBox, "DELETE "
+            End Select
+        End If
+
+    Case WM_PAINT
+        Dim rct As RECT
+        Dim pnt As PAINTSTRUCT
+        Dim hDC As HDC
+
+        hDC = BeginPaint(hWnd, @pnt)
+
+        EndPaint(hWnd, @pnt)
+        Exit Function
+
+    Case WM_KEYDOWN
+
+
+    Case WM_DESTROY
+        PostQuitMessage(0)
+        Exit Function
+    End Select
+
+    Function = DefWindowProc(hWnd, wMsg, wParam, lParam)
+End Function
+
+'':::::
+Function WinMain (Byval hInstance As HINSTANCE, _
+                  Byval hPrevInstance As HINSTANCE, _
+                  Byval szCmdLine As zstring Ptr, _
+                  Byval iCmdShow As Integer) As Integer
+
+    Dim wMsg As MSG
+    Dim wcls As WNDCLASS
+    Dim hWnd As HWND
+    Dim x As Long
+
+    Function = 0
+
+    With wcls
+    	.style         = CS_HREDRAW Or CS_VREDRAW
+    	.lpfnWndProc   = @WndProc
+    	.cbClsExtra    = 0
+    	.cbWndExtra    = 0
+    	.hInstance     = hInstance
+    	.hIcon         = LoadIcon(NULL, IDI_APPLICATION)
+    	.hCursor       = LoadCursor(NULL, IDC_ARROW)
+    	.hbrBackground = GetStockObject(WHITE_BRUSH)
+    	.lpszMenuName  = NULL
+    	.lpszClassName = @"FBListTest"
+    End With
+
+    If(RegisterClass(@wcls) = FALSE) Then
+        MessageBox(null, "Failed to register wcls", "Error", MB_ICONERROR)
+        Exit Function
+    End If
+
+    hWnd = CreateWindowEx(0, _
+           @"FBListTest", _
+           "The Hello Program", _
+           WS_OVERLAPPEDWINDOW, _
+           4, 4, 500, 500, _
+           NULL, _
+           NULL, _
+           hInstance, _
+           NULL)
+
+
+    VL_Int
+
+    hVList1 = CreateWindow ("FBVLIST",_   'window class name
+              Byval NULL,_                'window caption
+              FBVLISTSTYLES,_             'window style
+              4,4,300,300,_               'initial Position
+              hWnd,_                      'parent window handle
+              Cast(hMENU,IDC_VLIST),_     'window menu handle
+              hInstance,_                 'program instance handle
+              Byval NULL)
+
+    hLBox = CreateWindow ("listbox",_  'window class name
+            Byval NULL,_   'window caption
+            LBS_NOTIFY Or WS_CHILDWINDOW Or WS_BORDER Or WS_VSCROLL Or WS_VISIBLE, _
+            4,_    'initial x position
+            325,_  'initial y position
+            480,_  'initial x size
+            100,_  'initial y
+            HWND,_ 'parent window handle
+            Cast(hMENU,IDC_LBOX),_
+            hInstance,_  'program instance handle
+            Byval NULL)
+
+    hButExit = CreateWindow ("button",_  'window class name
+               "Exit",_   'window caption
+               WS_CHILDWINDOW Or WS_BORDER Or WS_VISIBLE, _
+               325,_  'initial x position
+               50,_   'initial y position
+               50,_   'initial x size
+               30,_   'initial y
+               HWND,_ 'parent window handle
+               Cast(hMENU,IDC_MYEXIT),_
+               hInstance,_  'program instance handle
+               Byval NULL)
+
+    hButChange = CreateWindow ("button",_  'window class name
+                 "Change",_   'window caption
+                 WS_CHILDWINDOW Or WS_BORDER Or WS_VISIBLE, _
+                 325,_  'initial x position
+                 125,_  'initial y position
+                 75,_   'initial x size
+                 30,_   'initial y
+                 HWND,_ 'parent window handle
+                 Cast(hMENU,IDC_MYCHANGE),_
+                 hInstance,_  'program instance handle
+                 Byval NULL)
+
+    SendMessage hVList1,WM_SETFONT,Cast(wParam,GetStockObject(SYSTEM_FIXED_FONT)),MAKELONG(TRUE,0)
+    AddNote hLBox,"Ready"
+
+    For x = Lbound(ww) To Ubound(ww)
+        ww(x) = "FreeBasic Wide String " & Wstr(x)
+    Next x
+
+    For x = Lbound(ss) To Ubound(ss)
+        ss(x) = "FreeBasic " & Str(x)
+    Next x
+
+
+    #If(USEWSTR = 0)
+        SendMessage hVList1,VL_SETARRAY,Cast(wparam,Varptr(ss(0))),Cast(lparam,Ubound(ss))
+    #Else
+        SendMessage hVList1,VL_SETARRAY,Cast(wparam,Varptr(ww(0))),Cast(lparam,Ubound(ww))
+    #endif
+    SendMessage hVList1,VL_REFRESH,0,0
+
+
+    ShowWindow(hWnd, iCmdShow)
+    UpdateWindow(hWnd)
+
+    While(GetMessage(@wMsg, NULL, 0, 0) <> FALSE)
+        TranslateMessage(@wMsg)
+        DispatchMessage(@wMsg)
+    Wend
+
+    Function = wMsg.wParam
+End Function

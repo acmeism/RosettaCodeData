@@ -1,0 +1,226 @@
+// Reference:
+//
+//  A. F. Kracklauer, ‘EPR-B correlations: non-locality or geometry?’,
+//  J. Nonlinear Math. Phys. 11 (Supp.) 104–109 (2004).
+//  https://doi.org/10.2991/jnmp.2004.11.s1.13 (Open access, CC BY-NC)
+
+#include "share/atspre_staload.hats"
+
+typedef zero_or_one = intBtwe (0, 1)
+
+val angleL1 = 0.0
+and angleL2 = 45.0
+and angleR1 = 22.5
+and angleR2 = 67.5
+
+(*------------------------------------------------------------------*)
+
+%{^
+
+#include <math.h>
+#include <stdio.h>
+
+//
+// fscanf(3) will be a most convenient way to input the necessary
+// data. It will ignore line breaks, but the line breaks are in the
+// raw data for the convenience of line-by-line input, not because
+// they matter.
+//
+static atstype_uint
+_read_uint (FILE *f)
+{
+  unsigned int u = 0U - 1U;     // Yes, this is legal in standard C.
+  int bitbucket = fscanf (f, "%u", &u);
+  return u;
+}
+
+%}
+
+fn
+read_uint (inpf : FILEref) : uint =
+  let
+    typedef FILEstar = $extype"FILE *"
+    extern castfn FILEref2star : FILEref -<> FILEstar
+    extern fn _read_uint : FILEstar -> uint = "mac#_read_uint"
+  in
+    _read_uint (FILEref2star inpf)
+  end
+
+fn
+read_intGte0 (inpf : FILEref) : intGte 0 =
+  let
+    val u = g1ofg0 (read_uint inpf)
+    prval () = lemma_g1uint_param u (* Proves u >= 0. *)
+  in
+    u2i u
+  end
+
+fn
+read_zero_or_one (inpf : FILEref) : zero_or_one =
+  let
+    val i = read_intGte0 inpf
+  in
+    if i <= 1 then
+      i
+    else
+      begin
+        fprintln! (stderr_ref, "bad data");
+        exit (1)
+      end
+  end
+
+(*------------------------------------------------------------------*)
+
+fn
+read_raw_data (inpf : FILEref) : mtrxszref zero_or_one =
+  let
+    val n = read_intGte0 inpf
+    val data = mtrxszref_make_elt<zero_or_one> (i2sz n, i2sz 7, 0)
+    var i : intGte 0
+  in
+    for (i := 0; i2sz i <> data.nrow(); i := succ i)
+      let
+        var j : intGte 0
+      in
+        for (j := 0; j <> 7; j := succ j)
+          data[i, j] := read_zero_or_one inpf
+      end;
+    data
+  end
+
+fn {a : t@ype}
+mtrxszref_swap (M  : mtrxszref a,
+                i1 : int,
+                j1 : int,
+                i2 : int,
+                j2 : int) : void =
+  let
+    val m1 = M[i1, j1] and m2 = M[i2, j2]
+  in
+    M[i1, j1] := m2;  M[i2, j2] := m1
+  end
+
+fn
+adjust_for_geometry (data : mtrxszref zero_or_one) : void =
+  let
+    var i : intGte 0
+  in
+    for (i := 0; i2sz i <> data.nrow(); i := succ i)
+      if data[i, 0] = 1 then
+        begin
+          mtrxszref_swap (data, i, 3, i, 4);
+          mtrxszref_swap (data, i, 5, i, 6)
+        end
+  end
+
+fn
+group_size (data   : mtrxszref zero_or_one,
+            group  : @(zero_or_one, zero_or_one)) : intGte 0 =
+  let
+    fun
+    loop (i     : intGte 0,
+          count : intGte 0) : intGte 0 =
+      if i2sz i = data.nrow() then
+        count
+      else if data[i, 1] = group.0 && data[i, 2] = group.1 then
+        loop (succ i, succ count)
+      else
+        loop (succ i, count)
+  in
+    loop (0, 0)
+  end
+
+fn
+count_detections (data   : mtrxszref zero_or_one,
+                  group  : @(zero_or_one, zero_or_one),
+                  column : intBtwe (3, 6)) : intGte 0 =
+  let
+    fun
+    loop (i     : intGte 0,
+          count : intGte 0) : intGte 0 =
+      if i2sz i = data.nrow() then
+        count
+      else if data[i, 1] = group.0 && data[i, 2] = group.1 then
+        loop (succ i, count + data[i, column])
+      else
+        loop (succ i, count)
+  in
+    loop (0, 0)
+  end
+
+fn
+correlation_coefficient (data  : mtrxszref zero_or_one,
+                         group : @(zero_or_one, zero_or_one))
+    : double =
+  let
+    extern fn sqrt : double -<> double = "mac#sqrt"
+
+    val N = group_size (data, group)
+    and NL1 = count_detections (data, group, 3)
+    and NL2 = count_detections (data, group, 4)
+    and NR1 = count_detections (data, group, 5)
+    and NR2 = count_detections (data, group, 6)
+
+    (* Equation (2.4) in the reference. *)
+    val sinL = sqrt (g0i2f NL1 / g0i2f N)
+    and cosL = sqrt (g0i2f NL2 / g0i2f N)
+    and sinR = sqrt (g0i2f NR1 / g0i2f N)
+    and cosR = sqrt (g0i2f NR2 / g0i2f N)
+
+    (* Equation (2.3). *)
+    val cosLR = (cosR * cosL) + (sinR * sinL)
+    and sinLR = (sinR * cosL) - (cosR * sinL)
+
+    (* Equation (2.5). *)
+    val kappa = (cosLR * cosLR) - (sinLR * sinLR)
+  in
+    kappa
+  end
+
+fn
+analyze_data (data : mtrxszref zero_or_one) : void =
+  let
+    extern fn sqrt : double -<> double = "mac#sqrt"
+
+    val kappa00 = correlation_coefficient (data, @(0, 0))
+    and kappa01 = correlation_coefficient (data, @(0, 1))
+    and kappa10 = correlation_coefficient (data, @(1, 0))
+    and kappa11 = correlation_coefficient (data, @(1, 1))
+
+    val chsh_contrast = ~kappa00 + kappa01 + kappa10 + kappa11
+    and chsh_contrast_nominal = 2.0 * sqrt 2.0
+
+    macdef X (x) = ignoret (,(x)) (* "ignore return value" *)
+  in
+    X ($extfcall (int, "printf", "\n   light pulse events   %9zu\n",
+                  data.nrow()));
+    X ($extfcall (int, "printf", "\n    correlation coefs\n"));
+
+    X ($extfcall (int, "printf", "          %4.1f° %4.1f°   %+9.6f\n",
+                  angleL1, angleR1, kappa00));
+    X ($extfcall (int, "printf", "          %4.1f° %4.1f°   %+9.6f\n",
+                  angleL1, angleR2, kappa01));
+    X ($extfcall (int, "printf", "          %4.1f° %4.1f°   %+9.6f\n",
+                  angleL2, angleR1, kappa10));
+    X ($extfcall (int, "printf", "          %4.1f° %4.1f°   %+9.6f\n",
+                  angleL2, angleR2, kappa11));
+
+    X ($extfcall (int, "printf", "\n        CHSH contrast   %+9.6f\n",
+                  chsh_contrast));
+    X ($extfcall (int, "printf", "  2*sqrt(2) = nominal   %+9.6f\n",
+                  chsh_contrast_nominal));
+    X ($extfcall (int, "printf", "           difference   %+9.6f\n",
+                  chsh_contrast - chsh_contrast_nominal));
+
+    X ($extfcall (int, "printf",
+                  "\n       CHSH violation   %+9.6f\n\n",
+                  chsh_contrast - 2.0))
+  end
+
+implement main0 () =
+  let
+    val data = read_raw_data stdin_ref
+  in
+    adjust_for_geometry data;
+    analyze_data data
+  end

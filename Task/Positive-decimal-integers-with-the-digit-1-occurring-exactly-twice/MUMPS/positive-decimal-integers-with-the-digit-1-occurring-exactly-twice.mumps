@@ -1,0 +1,2 @@
+ WRITE ! SET COUNT=0 FOR I=0:1:999 IF $LENGTH(I,"1")=3 WRITE I," " SET COUNT=COUNT+1
+ WRITE !,"Found ",COUNT," numbers."

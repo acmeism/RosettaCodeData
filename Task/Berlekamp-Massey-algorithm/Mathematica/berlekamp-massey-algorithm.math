@@ -1,0 +1,174 @@
+(* Berlekamp-Massey Algorithm Implementation in Mathematica *)
+
+(* Main BerlekampMassey function *)
+BerlekampMasseyCoefficients[source_List, modulus_Integer] := Module[
+  {result = {}, previousResult = {}, failIndex = -1, i, j, delta,
+   previousResultCopy, termFailIndexPlusOne, coeff, resultCopy},
+
+  For[i = 1, i <= Length[source], i++,
+    delta = source[[i]];
+    For[j = 1, j <= Length[result], j++,
+      delta -= result[[j]] * source[[i - j]];
+    ];
+
+    If[delta == 0, Continue[]];
+
+    If[failIndex == -1,
+      result = ConstantArray[0, i];
+      failIndex = i,
+      (* else *)
+      previousResultCopy = Join[{1}, -previousResult];
+      termFailIndexPlusOne = 0;
+      For[j = 1, j <= Length[previousResultCopy], j++,
+        termFailIndexPlusOne += previousResultCopy[[j]] * source[[failIndex + 1 - j + 1]];
+      ];
+      coeff = delta / termFailIndexPlusOne;
+      previousResultCopy = previousResultCopy * coeff;
+
+      (* Pad with zeros at the beginning *)
+      previousResultCopy = Join[ConstantArray[0, i - failIndex - 1], previousResultCopy];
+
+      resultCopy = result;
+      (* Ensure result is long enough *)
+      While[Length[result] < Length[previousResultCopy],
+        result = Join[result, {0}];
+      ];
+
+      (* Add the vectors *)
+      For[j = 1, j <= Length[previousResultCopy], j++,
+        result[[j]] = result[[j]] + previousResultCopy[[j]];
+      ];
+
+      If[i - Length[resultCopy] > failIndex - Length[previousResult],
+        previousResult = resultCopy;
+        failIndex = i;
+      ];
+    ];
+  ];
+
+  result
+];
+
+(* Compute a specific term using the coefficients *)
+ComputeTerm[source_List, bmCoeffs_List, index_Integer, modulus_Integer] := Module[
+  {coeffs, bmCoeffsSize, f, g, power, result},
+
+  If[Length[bmCoeffs] == 0, Return[0]];
+
+  If[index <= Length[source],
+    Return[Mod[source[[index]], modulus]]
+  ];
+
+  coeffs = Join[{modulus - 1}, bmCoeffs];
+  bmCoeffsSize = Length[bmCoeffs];
+
+  f = Join[{1}, ConstantArray[0, bmCoeffsSize - 1]];
+  g = If[bmCoeffsSize == 1,
+    {coeffs[[2]]},
+    Join[{0, 1}, ConstantArray[0, bmCoeffsSize - 2]]
+  ];
+
+  power = index - 1;
+  While[power > 0,
+    If[OddQ[power],
+      f = PolynomialMultiply[f, g, bmCoeffsSize, coeffs, modulus];
+    ];
+    g = PolynomialMultiply[g, g, bmCoeffsSize, coeffs, modulus];
+    power = Floor[power/2];
+  ];
+
+  result = 0;
+  For[i = 1, i <= bmCoeffsSize, i++,
+    If[i + 1 <= Length[source],
+      result = Mod[result + source[[i + 1]] * f[[i]], modulus];
+    ];
+  ];
+
+  Mod[result, modulus]
+];
+
+(* Polynomial multiplication helper function *)
+PolynomialMultiply[a_List, b_List, degree_Integer, coeffs_List, modulus_Integer] := Module[
+  {result, i, j, term, index},
+
+  result = ConstantArray[0, 2 * degree];
+
+  For[i = 1, i <= degree, i++,
+    If[a[[i]] == 0, Continue[]];
+    For[j = 1, j <= degree, j++,
+      result[[i + j - 1]] = Mod[result[[i + j - 1]] + a[[i]] * b[[j]], modulus];
+    ];
+  ];
+
+  For[i = 2 * degree, i > degree, i--,
+    If[result[[i]] == 0, Continue[]];
+    term = result[[i]];
+    result[[i]] = 0;
+    For[j = 1, j <= degree + 1, j++,
+      index = i - j + 1;
+      If[index >= 1,
+        result[[index]] = Mod[result[[index]] + term * coeffs[[j]], modulus];
+      ];
+    ];
+  ];
+
+  Take[result, degree]
+];
+
+(* Convert coefficients to polynomial string representation *)
+CoefficientsToPolynomial[bmCoeffs_List] := Module[
+  {degree, terms, i, coeff, sign, coeffAbs, term},
+
+  degree = Length[bmCoeffs] - 1;
+  If[degree == 0, Return[ToString[bmCoeffs[[1]]]]];
+
+  terms = {};
+  For[i = degree + 1, i >= 1, i--,
+    coeff = bmCoeffs[[i]];
+    If[coeff == 0, Continue[]];
+
+    sign = Which[
+      coeff < 0 && i == degree + 1, "-",
+      coeff < 0, " - ",
+      i < degree + 1, " + ",
+      True, ""
+    ];
+
+    coeffAbs = Abs[coeff];
+    term = Which[
+      i - 1 > 1, "x^" <> ToString[i - 1],
+      i - 1 == 1, "x",
+      coeffAbs == 1, "1",
+      True, ""
+    ];
+
+    If[coeffAbs > 1 && i > 1,
+      term = ToString[coeffAbs] <> term,
+      If[i == 1, term = ToString[coeffAbs]]
+    ];
+
+    AppendTo[terms, sign <> term];
+  ];
+
+  StringJoin[terms]
+];
+
+(* Main execution - equivalent to the Java main method *)
+RunBerlekampMasseyExample[] := Module[
+  {source, bmCoeffs, indices},
+
+  source = {0, 1, 1, 2, 3, 5, 8, 13, 21};
+  bmCoeffs = BerlekampMasseyCoefficients[source, 100];
+
+  Print["Berlekamp-Massey coefficients: ", bmCoeffs, " (lowest to highest degree)"];
+  Print["The connection polynomial is ", CoefficientsToPolynomial[bmCoeffs],
+        " having degree ", Length[bmCoeffs] - 1];
+  Print[];
+
+  Print["Terms indexed 35 to 40 from the Fibonacci sequence modulo 100:"];
+  indices = Range[35, 40];
+  Print[Map[ComputeTerm[source, bmCoeffs, #, 100] &, indices]];
+];
+
+(* Run the example *)
+RunBerlekampMasseyExample[]

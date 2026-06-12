@@ -1,0 +1,526 @@
+#include "string.bi"
+#include "complex.bi"
+
+Const EPSILON = 0.000000001
+
+Function evalPoly(coeffs() As tReal, z As tReal) As tReal
+    Dim As tReal res = 0
+    For i As Integer = 0 To Ubound(coeffs)
+        res += coeffs(i) * (z ^ i)
+    Next
+    Return res
+End Function
+
+Function evalPoly_complex(coeffs() As tReal, z As Complex) As Complex
+    Dim As Integer i, j
+    Dim As Complex res = Complex(0, 0)
+
+    For i = 0 To Ubound(coeffs)
+        Dim As Complex zpower = Complex(1, 0)
+        For j = 1 To i
+            zpower *= z
+        Next
+
+        ' Multiply coefficient by z^i and add to result
+        Dim As tReal coeff = coeffs(i)
+        res += (Complex(coeff, 0) * zpower)
+    Next
+
+    Return res
+End Function
+
+Function printPoly(s() As tReal) As String
+    Dim As String r = ""
+
+    For t As Integer = Ubound(s) To 0 Step -1
+        Dim As tReal st = s(t)
+        If st <> 0 Then
+            If st = 1 And t > 0 Then
+                r &= Iif(r = "", "", " + ")
+            Elseif st = -1 And t > 0 Then
+                r &= Iif(r = "", "-", " - ")
+            Else
+                If r <> "" Then
+                    r &= Iif(st < 0, " - ", " + ")
+                    st = Abs(st)
+                End If
+                r &= Str(st)
+            End If
+
+            If t > 0 Then
+                r &= "z"
+                If t > 1 Then r &= "^" & t
+            End If
+        End If
+    Next
+
+    If r = "" Then r = "0"
+    Return r
+End Function
+
+Function myTest3(P_coeffs() As tReal, n_order As Integer) As Boolean
+    Dim As Boolean stability = True
+
+    ' 1. P(z=1) > 0
+    Dim As tReal val_at_1 = 0
+    val_at_1 = evalPoly(P_coeffs(), 1)
+    Dim As Boolean test1 = (val_at_1 > EPSILON)
+    Print Using !"\t       P(z = 1)  > 0       =>   ###.### > 0        => "; val_at_1;
+    Print test1
+
+    If Not test1 Then stability = False
+
+    ' 2. (-1)^n * P(z=-1) > 0
+    Dim As tReal val_at_minus_1 = 0
+    val_at_minus_1 = evalPoly(P_coeffs(), -1)
+    Dim As tReal term_with_n = Iif(n_order Mod 2 = 0, 1, -1) * val_at_minus_1
+    Dim As Boolean test2 = (term_with_n > EPSILON)
+
+    'Print !"\t     n"
+    Print Using !"\t (-1)^nP(z = -1) > 0       =>   ###.### > 0        => "; term_with_n;
+    Print test2
+
+    If Not test2 Then stability = False
+
+    ' 3. |an| > |a0|
+    Dim As tReal a0 = P_coeffs(0)
+    Dim As tReal an = P_coeffs(n_order)
+    Dim As Boolean test3_cond = (Abs(an) > Abs(a0))
+
+    Print Using !"\t            |an| > |a0|    =>   | # | > | #.### |  => "; an; a0;
+    Print test3_cond
+
+    If Not test3_cond Then stability = False
+
+    Return stability
+End Function
+
+Sub juryTable(P_coeffs() As tReal, n_order As Integer, T() As tReal)
+    Dim As Integer i, num_coeffs = n_order + 1
+
+    ' First two rows
+    For i = 0 To n_order
+        T(0, i) = P_coeffs(i)
+        T(1, i) = P_coeffs(n_order - i)
+    Next
+
+    ' Third row - first derived row
+    For i = 0 To n_order - 1
+        T(2, i) = T(0, 0) * T(0, i) - T(1, 0) * T(1, i)
+    Next
+
+    ' Loop for subsequent rows (if n_order > 3)
+    For j_m As Integer = 3 To 2 * n_order - 4
+        Dim As Integer row_idx = j_m
+        Dim As Integer prev_row = row_idx - 1
+        Dim As Integer colsToProcess = n_order - (row_idx \ 2)
+
+        ' Reverse the previous row for even-indexed rows
+        If row_idx Mod 2 = 0 Then
+            For i = 0 To colsToProcess - 1
+                T(row_idx, i) = T(prev_row, colsToProcess - 1 - i)
+            Next
+        Else
+            ' Calculate the derived row for odd-indexed rows
+            For i = 0 To colsToProcess - 1
+                T(row_idx, i) = T(row_idx - 2, 0) * T(row_idx - 2, i) - T(row_idx - 1, 0) * T(row_idx - 1, i)
+            Next
+        End If
+    Next
+End Sub
+
+Sub printJuryTable(T() As tReal, n_order As Integer)
+    Print "       Row       Table"
+
+    Dim As Integer i, j, cols
+
+    For i = 0 To n_order - 1
+        cols = n_order - i
+        Print Using !"\t# |\t"; cols + 1 ;
+
+        For j = 0 To cols
+            Print Using "###.###   "; T(i * 2, j);
+        Next
+
+        If i * 2 + 1 >= 2 * n_order - 3 Then Exit For
+
+        Print !"\n\t  |\t";
+        For j = 0 To cols
+            Print Using "###.###   "; T(i * 2 + 1, j);
+        Next
+
+        Print !"\n\t  |\t";
+        For j = 0 To cols
+            Print "--------  ";
+        Next
+        Print
+    Next
+    Print
+End Sub
+
+Function additionalTests(T() As tReal, n_order As Integer) As Boolean
+    Dim As Boolean stability = True
+
+    For i As Integer = 0 To n_order - 3
+        Dim As Integer riga = 2 * i + 2
+        Dim As Integer idx_last_coeff = n_order - i - 1
+
+        Dim As tReal val_first = T(riga, 0)
+        Dim As tReal val_last = T(riga, idx_last_coeff)
+
+        Dim As Boolean currentTest = (Abs(val_first) > Abs(val_last))
+
+        Print Using !"\t| ###.###  | > | ###.###  | \t\t => "; val_first; val_last;
+        Print currentTest
+
+        If Not currentTest Then stability = False
+    Next
+
+    Return stability
+End Function
+
+Sub diffPoly(coefs() As tReal, deriv() As tReal)
+    Dim As Integer i, c = Ubound(coefs)
+
+    If c = 0 Then
+        Redim As tReal deriv(0)
+        deriv(0) = 0
+        Exit Sub
+    End If
+
+    Redim As tReal deriv(c - 1)
+
+    For i = 1 To c
+        deriv(i - 1) = i * coefs(i)
+    Next
+End Sub
+
+Function complex_sprint(c As Complex) As String
+    Dim As tReal real_part = c.real()
+    Dim As tReal imag_part = c.imag()
+
+    If Abs(imag_part) < 0.000000001 Then
+        Return Format(real_part, "0.00000") & String(11, " ")
+    Elseif Abs(real_part) < 0.000000001 Then
+        Return Iif(imag_part = 1, "i", Iif(imag_part = -1, "-i", Format(imag_part, "0.00000") & "i"))
+    Else
+        Return Format(real_part, "0.00000") & Iif(imag_part >= 0, " + ", " - ") & _
+        Iif(Abs(imag_part) = 1, "i", Format(Abs(imag_part), "0.00000") & "i")
+    End If
+End Function
+
+Function rootPoly(coefs() As tReal, Byref mult As Integer) As Complex
+    Dim As Complex result
+    Dim As Integer deg = Ubound(coefs)
+
+    If deg = 0 Then
+        result = Complex(0, 0)
+        mult = 0
+        Return result
+    End If
+
+    If deg = 1 Then
+        Dim As tReal r = -coefs(0) / coefs(1)
+        result = Complex(r, 0)
+        mult = 1
+        Return result
+    End If
+
+    ' For quadratic, use the quadratic formula
+    If deg = 2 Then
+        Dim As tReal a = coefs(2)
+        Dim As tReal b = coefs(1)
+        Dim As tReal c = coefs(0)
+        Dim As tReal discriminant = b * b - 4 * a * c
+
+        If discriminant >= 0 Then
+            Dim As tReal r = (-b + Sgn(-b) * rSQR(discriminant)) / (2 * a)
+            result = Complex(r, 0)
+        Else
+            Dim As tReal real_part = -b / (2 * a)
+            Dim As tReal imag_part = rSQR(-discriminant) / (2 * a)
+            result = Complex(real_part, imag_part)
+        End If
+
+        mult = 1
+        Return result
+    End If
+
+    ' For higher degree, use Newton's method
+    Dim As tReal tol = 0.000000000000001
+    Dim As Integer maxIter = 100
+    Dim As tReal guess = 0.001
+    Dim As tReal eps = 0.001
+
+    Redim As tReal deriv(deg - 1)
+    diffPoly(coefs(), deriv())
+
+    Dim As tReal x0 = guess
+
+    For iter As Integer = 1 To maxIter
+        Dim As tReal den = evalPoly(deriv(), x0)
+
+        If den = 0 Then
+            x0 = Iif(x0 >= 0, x0 + eps, x0 - eps)
+        Else
+            Dim As tReal num = evalPoly(coefs(), x0)
+            Dim As tReal x1 = x0 - num / den
+
+            If Abs(x1 - x0) <= tol Then
+                Dim As tReal r = Int(x1 + 0.5)
+
+                If Abs(r - x1) <= eps And evalPoly(coefs(), r) = 0 Then
+                    result = Complex(r, 0)
+                Else
+                    result = Complex(x1, 0)
+                End If
+
+                mult = 1
+                Return result
+            End If
+
+            x0 = x1
+        End If
+    Next
+
+    ' If we didn't converge, try with the rounded value
+    x0 = Int(x0 + 0.5)
+
+    If evalPoly(coefs(), x0) = 0 Then
+        result = Complex(x0, 0)
+        mult = 1
+        Return result
+    End If
+
+    ' Failed to find a root
+    result = Complex(0, 0)
+    mult = 0
+    Return result
+End Function
+
+Sub quadratic(a As tReal, b As tReal, c As tReal, roots() As Complex)
+    Redim roots(1)
+
+    Dim As tReal d = b * b - 4 * a * c
+
+    If d = 0 Then
+        ' Single real root
+        Dim As tReal r = -b / (2 * a)
+        roots(0) = Complex(r, 0)
+        roots(1) = roots(0)
+    Elseif d > 0 Then
+        ' Two real roots
+        Dim As tReal sr = rSQR(d)
+        Dim As tReal q = Iif(b < 0, -b + sr, -b - sr) / 2
+
+        roots(0) = Complex(q / a, 0)
+        roots(1) = Complex(c / q, 0)
+    Else
+        ' Two complex roots
+        Dim As tReal realPart = -b / (2 * a)
+        Dim As tReal imagPart = rSQR(-d) / (2 * a)
+
+        roots(0) = Complex(realPart, imagPart)
+        roots(1) = Complex(realPart, -imagPart)
+    End If
+End Sub
+
+Sub polyRoots(coeffs() As tReal, roots() As Complex, Byref rootCount As Integer)
+    Dim As Integer i, l = Ubound(coeffs) + 1
+
+    If l < 2 Then
+        rootCount = 0
+        Exit Sub
+    End If
+
+    If l = 2 Then
+        Redim roots(0)
+        Dim As tReal r = -coeffs(0) / coeffs(1)
+        roots(0) = Complex(r, 0)
+        rootCount = 1
+        Exit Sub
+    End If
+
+    ' For quadratic polynomials
+    If l = 3 Then
+        Redim roots(1)
+        quadratic(coeffs(2), coeffs(1), coeffs(0), roots())
+        rootCount = 2
+        Exit Sub
+    End If
+
+    ' For higher degree polynomials, use a combination of methods
+    Redim roots(Ubound(coeffs))
+    rootCount = 0
+
+    ' Make a copy of coefficients to work with
+    Dim As Integer polyDegree = Ubound(coeffs)
+    Dim As tReal tempCoeffs(polyDegree)
+    For i = 0 To polyDegree
+        tempCoeffs(i) = coeffs(i)
+    Next
+
+    ' Find roots one by one using Newton's method and polynomial deflation
+    Do While polyDegree > 2
+        Dim As Integer mult
+        Dim As Complex root = rootPoly(tempCoeffs(), mult)
+
+        If mult = 0 Then Exit Do
+
+        ' Store the root
+        roots(rootCount) = root
+        rootCount += 1
+
+        ' Deflate the polynomial (divide by (x - root))
+        Dim As tReal newCoeffs(polyDegree - 1)
+        newCoeffs(polyDegree - 1) = tempCoeffs(polyDegree)
+
+        For i = polyDegree - 2 To 0 Step -1
+            newCoeffs(i) = tempCoeffs(i + 1) + newCoeffs(i + 1) * root.real()
+        Next
+
+        ' Update the polynomial degree and coefficients
+        polyDegree -= 1
+        Redim tempCoeffs(polyDegree)
+        For i = 0 To polyDegree
+            tempCoeffs(i) = newCoeffs(i)
+        Next
+    Loop
+
+    ' Solve the remaining quadratic or linear equation
+    If polyDegree = 2 Then
+        Dim As Complex quadRoots(1)
+        quadratic(tempCoeffs(2), tempCoeffs(1), tempCoeffs(0), quadRoots())
+
+        roots(rootCount) = quadRoots(0)
+        roots(rootCount + 1) = quadRoots(1)
+        rootCount += 2
+    Elseif polyDegree = 1 Then
+        ' Linear case
+        Dim As tReal r = -tempCoeffs(0) / tempCoeffs(1)
+        roots(rootCount) = Complex(r, 0)
+        rootCount += 1
+    End If
+End Sub
+
+Sub printRoots(coeffs() As tReal)
+    Print !" The roots are:\n"
+
+    ' Find the highest non-zero coefficient
+    Dim As Integer highestOrder = Ubound(coeffs)
+    While highestOrder > 0 And coeffs(highestOrder) = 0
+        highestOrder -= 1
+    Wend
+
+    ' Ensure we have a valid polynomial
+    If highestOrder < 1 Then
+        Print "Invalid polynomial (constant or zero)"
+        Exit Sub
+    End If
+
+    ' Resize the array to the actual polynomial order
+    Dim As tReal actualCoeffs(highestOrder)
+    For i As Integer = 0 To highestOrder
+        actualCoeffs(i) = coeffs(i)
+    Next
+
+    ' Calculate the roots
+    Dim As Complex roots(highestOrder)
+    Dim As Integer rootCount
+    polyRoots(actualCoeffs(), roots(), rootCount)
+
+    ' Print each root
+    For i As Integer = 0 To rootCount - 1
+        Dim As tReal modulus = Abs(roots(i))
+
+        Print Using !"\t z# = "; i + 1;
+        Print complex_sprint(roots(i));
+        Print Using " => modulus = ##.###";  modulus
+    Next
+End Sub
+
+Sub jury_c(test_case As Integer, coeffs() As tReal)
+    ' Remove trailing zeros
+    Dim As Integer highestOrder = Ubound(coeffs)
+    While highestOrder > 0 And coeffs(highestOrder) = 0
+        highestOrder -= 1
+    Wend
+
+    ' Resize the array to the actual polynomial order
+    Dim As tReal actualCoeffs(highestOrder)
+    For i As Integer = 0 To highestOrder
+        actualCoeffs(i) = coeffs(i)
+    Next
+
+    ' Ensure an > 0
+    If actualCoeffs(highestOrder) < 0 Then
+        For i As Integer = 0 To highestOrder
+            actualCoeffs(i) = -actualCoeffs(i)
+        Next
+    End If
+
+    Dim As Integer n_order = highestOrder
+
+    Print "Test case "; test_case; ": "; printPoly(actualCoeffs()); ", polynomial order = "; n_order
+    Print !"\nnecessary "; Iif(n_order <= 2, "and sufficient ", ""); !"conditions:\n"
+
+    Dim As Boolean stability_flag = myTest3(actualCoeffs(), n_order)
+
+    If n_order <= 2 Then
+        If stability_flag Then
+            Print !"\nThe system is stable. ";
+        Else
+            Print !"\n*** The system IS NOT STABLE ***. ";
+        End If
+    Else  ' n_order > 2
+        If stability_flag Then
+            Print !"\nThe necessary conditions are met."
+            Print !"\nIt is necessary to build the Jury table.\n"
+
+            ' Create and fill the Jury table
+            Dim As tReal T(2 * n_order - 4, n_order)
+            juryTable(actualCoeffs(), n_order, T())
+
+            printJuryTable(T(), n_order)
+
+            Print Using !"\n\t\tAdditional conditions to test: #"; n_order - 2
+            Print
+
+            stability_flag = additionalTests(T(), n_order)
+
+            If stability_flag Then
+                Print !"\nThe system is stable. ";
+            Else
+                Print !"\n*** The system IS NOT STABLE ***. ";
+            End If
+        Else
+            Print !"\n*** The system IS NOT STABLE because the necessary conditions are not met***."
+        End If
+    End If
+
+    printRoots(actualCoeffs())
+    Print
+    Print
+End Sub
+
+' Main program
+' Test case 1
+Dim As tReal coeffs1(3)
+coeffs1(0) = 0.8
+coeffs1(1) = 4
+coeffs1(2) = 3.3
+coeffs1(3) = 1
+
+jury_c(1, coeffs1())
+
+' Test case 2
+Dim As tReal coeffs2(4)
+coeffs2(0) = 0.012
+coeffs2(1) = 0.154
+coeffs2(2) = 0.71
+coeffs2(3) = 1.4
+coeffs2(4) = 1
+
+jury_c(2, coeffs2())
+
+Sleep

@@ -1,0 +1,67 @@
+string  0;              \use zero-terminated strings
+int     Dict(26000);    \pointers to words (enough for unixdict.txt)
+int     DictSize;       \actual number of pointers in Dict
+
+func    StrCmp(A, B);   \Compare string A to B
+char    A, B;           \Returns: >0 if A>B, =0 if A=B, and <0 if A<B
+int     I;
+[for I:= 0 to -1>>1 do
+        [if A(I) # B(I) then return A(I) - B(I);
+         if A(I) = 0 then return 0;
+        ];
+];      \StrCmp
+
+func    LookUp(Word);   \Return 'true' if Word is in Dict
+char    Word;
+int     Lo, Hi, I, Cmp;
+[Lo:= 0;  Hi:= DictSize-1;
+loop    [I:= (Lo+Hi) / 2; \binary search
+        Cmp:= StrCmp(Word, Dict(I));
+        if Cmp < 0 then Hi:= I-1 else Lo:= I+1;
+        if Cmp = 0 then return true;
+        if Lo > Hi then return false;
+        ];
+];      \LookUp
+
+int     I, I0, DI, Ch, Count;
+char    Word, Alt0(25);
+def     Tab=$09, LF=$0A, CR=$0D, EOF=$1A;
+
+[FSet(FOpen("unixdict.txt", 0), ^I); \load dictionary
+OpenI(3);                        \assume alphabetical order and all lowercase
+DI:= 0;                          \ignore non-alpha characters: 0..9, ' and &
+repeat  Dict(DI):= Reserve(0);   \get pointer to memory used to store Word
+        Word:= Dict(DI);
+        I:= 0;
+        loop    [repeat Ch:= ChIn(3) until Ch # CR;     \remove possible CR
+                if Ch=LF or Ch=EOF then quit;
+                Word(I):= Ch;
+                I:= I+1;
+                ];
+        Word(I):= 0;            \terminate Word string
+        I:= Reserve(I+1);       \reserve memory used for Word
+        DI:= DI+1;              \next dictionary entry
+until   Ch = EOF;
+DictSize:= DI;
+
+DI:= 0;  Count:= 0;
+repeat  Word:= Dict(DI);        \print out all odd words
+        I:= 0;  I0:= 0;
+        loop    [Ch:= Word(I);
+                if Ch = 0 then quit;
+                if (I&1) = 0 then [Alt0(I0):= Ch;  I0:= I0+1];
+                I:= I+1;
+                ];
+        if I >= 9 then          \Word must have at least 9 chars
+                [Alt0(I0):= 0;
+                if LookUp(Alt0) then
+                        [Count:= Count+1;
+                        IntOut(0, Count);  ChOut(0, Tab);
+                        Text(0, Word);  ChOut(0, Tab);
+                        Text(0, Alt0);  ChOut(0, Tab);
+                        CrLf(0);
+                        ];
+                ];
+        DI:= DI+1;
+until   DI >= DictSize;
+]

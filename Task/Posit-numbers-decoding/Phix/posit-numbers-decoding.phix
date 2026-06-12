@@ -1,0 +1,76 @@
+with javascript_semantics
+function twos_compliment_2_on(string bits, integer nbits)
+    for i=2 to nbits do
+        bits[i] = iff(bits[i]='0'?'1':'0')
+    end for
+    for i=nbits to 2 by -1 do
+        if bits[i]='0' then
+            bits[i] = '1'
+            exit
+        end if
+        bits[i] = '0'
+    end for
+    return bits
+end function
+
+function posit_decode(integer nbits, es, object bits)
+    --
+    -- nbits: number of bits (aka n)
+    -- es: exponent scale
+    -- bits: (binary) integer or string of nbits 0|1
+    --
+    if not string(bits) then
+        string fmt = sprintf("%%0%db",nbits)
+        bits = sprintf(fmt,bits)
+    end if
+    assert(length(bits)==nbits)
+    string ibits = bits -- save for return
+    integer s = bits[1]='1'
+    if s then bits = twos_compliment_2_on(bits,nbits) end if
+    integer r = find(xor_bits(bits[2],1),bits,3)-2,
+            b2z = bits[2]='0', exponent = 0, fraction = 0
+    atom fs = 1, useed = power(2,power(2,es))
+    if r<0 then
+        if b2z then
+            if s then
+                return {ibits,es,"NaR"} -- aka inf
+            end if
+            return {ibits,es,"zero"}
+        end if
+        r = nbits-1
+    else
+        integer estart = r+3,
+               efinish = min(r+2+es,nbits)
+        exponent = to_integer(bits[estart..efinish],0,2)
+        fraction = to_integer(bits[efinish+1..$],0,2)
+        fs = power(2,nbits-efinish)
+    end if
+    integer k = iff(b2z?-r:r-1)
+    atom res = iff(s?-1:+1)*power(useed,k)*power(2,exponent)*(1+fraction/fs)
+    return {ibits,es,res}
+end function
+
+constant tests = {{16,3,0b0000110111011101},
+                  {16,3,0b1000000000000000},
+                  {16,3,0b0000000000000000},
+                  {16,1,0b0110110010101000},
+                  {16,1,0b1001001101011000},
+                  {16,2,0b0000000000000001},
+                  {16,0,0b0111111111111111},
+                  {16,2,0b0111111111111111},
+                  {16,6,0b0111111111111110},
+                  {8,1,0b01000000},
+                  {8,1,0b11000000},
+                  {8,1,0b00110000},
+                  {8,1,0b00100000},
+                  {8,2,0b01001101}, -- 77 from encode (PI~=3.25)
+                  {8,2,0b00000001},
+                  {8,2,0b01111111},
+                  {8,7,0b01111110},
+                  {32,2,0b00000000000000000000000000000001},
+                  {32,2,0b01111111111111111111111111111111},
+                  {32,5,0b01111111111111111111111111111110}}
+printf(1,"%0b\n",77)
+for t in tests do
+    printf(1,"%s (es=%d) ==> %v\n",call_func(posit_decode,t))
+end for

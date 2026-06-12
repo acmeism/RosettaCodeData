@@ -1,0 +1,31 @@
+var [const] BN=Import("zklBigNum");   //libGMP
+fcn modEq(a,b,p) { (a-b)%p==0 }
+fcn Legendre(a,p){ a.powm((p - 1)/2,p) }
+
+class  Fp2{  // Arithmetic in Fp^2
+   fcn init(_x,_y){ var [const] x=BN(_x), y=BN(_y) }	// two big ints
+   //fcn add(b,p){ self((x + b.x)%p,(y + b.y)%p) }	// a + b
+   fcn mul(b,p,w2){ self(( x*b.x + y*b.y*w2 )%p, (x*b.y + y*b.x) %p) } // a * b
+   fcn square(p,w2){ mul(self,p,w2) }          	// a * a == self.mul(self,p,w2)
+   fcn pow(n,p,w2){				// a ^ n
+      if     (n==0)     self(1,0);
+      else if(n==1)     self;
+      else if(n==2)     square(p,w2);
+      else if(n.isEven) pow(n/2,p,w2).square(p,w2);
+      else 		mul(pow(n-1,p,w2),p,w2)
+   }
+}
+
+fcn Cipolla(n,p){ n=BN(n);	// x^2 == n (mod p) ?
+   if(Legendre(n,p)!=1)   // check n is a square
+      throw(Exception.AssertionError("not a square (mod p)"+vm.arglist));
+   // iterate until suitable 'a' found (the first one found)
+   a:=[BN(2)..p].filter1('wrap(a){ Legendre(a*a-n,p)==(p-1) });
+   w2:=a*a - n;
+   r:=Fp2(a,1).pow((p + 1)/2,p,w2);	    // (Fp2 a 1) = a + w2
+   x:=r.x;
+   _assert_(r.y==0,"r.y==0 : "+r.y);	    // hope that w has vanished
+   _assert_(modEq(n,x*x,p),"modEq(n,x*x,p)"); // checking the result
+   println("Roots of %d are (%d,%d)  (mod %d)".fmt(n,x,(p-x)%p,p));
+   return(x,(p-x)%p);
+}

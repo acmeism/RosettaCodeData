@@ -1,0 +1,103 @@
+(* Character frequency counter *)
+charfreq[s_String] := Module[{chars = Characters[s]},
+  Counts[chars]
+]
+
+(* Cumulative frequency calculator *)
+charcumfreq[dfreq_Association] := Module[{keys, lastval = 0, result},
+  keys = Sort[Keys[dfreq]];
+  result = Association[];
+  Do[
+   result[key] = lastval;
+   lastval += dfreq[key],
+   {key, keys}
+   ];
+  result
+]
+
+(* Lower bound calculation *)
+L[s_String, dfreq_Association, dcumfreq_Association] :=
+ Module[{chars = Characters[s], nbase, lsum = 0, cumprod = 1},
+  nbase = Length[chars];
+  Do[
+   lsum += nbase^(nbase - i) * dcumfreq[chars[[i]]] * cumprod;
+   cumprod *= dfreq[chars[[i]]],
+   {i, Length[chars]}
+   ];
+  lsum
+  ]
+
+(* Upper bound calculation *)
+U[l_, s_String, dfreq_Association] := Module[{chars = Characters[s]},
+  l + Times @@ (dfreq[#] & /@ chars)
+]
+
+(* Find representation with most trailing zeros *)
+mostzeros[low_, high_] := Module[{z, highStr, candidate},
+  z = Floor[Log10[high - low]];
+  If[z == 0, Return[{ToString[low], 0}]];
+
+  highStr = ToString[high];
+  candidate = ToExpression[
+    StringTake[highStr, StringLength[highStr] - z - 1] <>
+     StringRepeat["0", z + 1]];
+
+  If[low <= candidate <= high, z++];
+
+  {StringTake[highStr, StringLength[highStr] - z], z}
+]
+
+(* Main encoding function *)
+msgnum[s_String] := Module[{dfreq, dcumfreq, low, high},
+  dfreq = charfreq[s];
+  dcumfreq = charcumfreq[dfreq];
+  low = L[s, dfreq, dcumfreq];
+  high = U[low, s, dfreq];
+  {mostzeros[low, high], dfreq}
+]
+
+(* Decoding function *)
+decode[encoded_String, fdict_Association] :=
+ Module[{cdict, bas, kys, revdict, lastkey, rem, s = "", basepow, c,
+   newrem},
+  cdict = charcumfreq[fdict];
+  bas = Total[Values[fdict]];
+  kys = Sort[Keys[cdict]];
+
+  (* Create reverse dictionary *)
+  revdict = Association[cdict[#] -> # & /@ kys];
+  lastkey = revdict[0];
+
+  Do[
+   If[!KeyExistsQ[revdict, i],
+    revdict[i] = lastkey,
+    lastkey = revdict[i]
+    ],
+   {i, 0, bas}
+   ];
+
+  rem = ToExpression[encoded];
+
+  Do[
+   basepow = bas^(bas - i);
+   c = revdict[Quotient[rem, basepow]];
+   s = s <> c;
+   rem = Quotient[rem - basepow * cdict[c], fdict[c]],
+   {i, 1, bas}
+   ];
+
+  s
+]
+
+(* Test the implementation *)
+testStrings = {"DABDDB", "DABDDBBDDBA", "ABRACADABRA",
+   "TOBEORNOTTOBEORTOBEORNOT"};
+
+Do[
+ {{encoded, z}, dfreq} = msgnum[s];
+ decoded = decode[encoded <> StringRepeat["0", z], dfreq];
+ Print[StringPadLeft[s, 30] <> "  " <>
+   StringPadRight[encoded, 19] <> " * 10^" <>
+   StringPadRight[ToString[z], 4] <> "  " <> decoded],
+ {s, testStrings}
+]

@@ -1,0 +1,37 @@
+## Preliminaries
+create or replace function primep(nnumber) as (
+  select
+    case
+    when nnumber < 2 then false
+    when nnumber = 2 then true
+    else NOT exists
+         ( select * from
+           ( select (nnumber % anumber) as modNumber
+             from (select unnest(range(2, 1 + sqrt(nnumber)::BIGINT)) as anumber)
+           )
+           where modNumber = 0
+         )
+    end
+);
+
+# primes up to and possibly including mx
+create or replace function primes(mx) as table (
+  select if(mx>0,2,null) as p
+  union all
+  ( select n
+    from range(3,mx+1,2) _(n)
+    where primep(n))
+);
+
+create or replace function issquare(n) as trunc(sqrt(n)) ^ 2 = n;
+
+# The task:
+.maxrows 100
+with primes_t as (
+  select prime, lead(prime) over () as leadprime
+  from primes(10000000) _(prime)
+)
+select trunc(sqrt(2 * (prime+1)))::BIGINT as n, prime
+from primes_t
+where (prime + 2) = leadprime
+  and issquare(2 * (prime+1)) ;

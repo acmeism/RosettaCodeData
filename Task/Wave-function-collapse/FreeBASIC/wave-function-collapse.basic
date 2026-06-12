@@ -1,0 +1,196 @@
+Randomize Timer
+
+Function CreateFilledArray(size As Integer, value As Integer) As Integer Ptr
+    Dim As Integer Ptr arr = Allocate(size * Sizeof(Integer))
+    For i As Integer = 0 To size - 1
+        arr[i] = value
+    Next
+    Return arr
+End Function
+
+Function CopyArray(arr As Integer Ptr, size As Integer) As Integer Ptr
+    Dim As Integer Ptr newArr = Allocate(size * Sizeof(Integer))
+    For i As Integer = 0 To size - 1
+        newArr[i] = arr[i]
+    Next
+    Return newArr
+End Function
+
+Function WFC(blocks As Integer Ptr, tdim As Integer Ptr, target As Integer Ptr) As Integer Ptr
+    Dim As Integer i, j, k
+    Dim As Integer N = target[0] * target[1]
+    Dim As Integer t0 = target[0], t1 = target[1]
+    Dim As Integer Ptr adj = CreateFilledArray(4 * N, 0)
+
+    For i = 0 To t0 - 1
+        For j = 0 To t1 - 1
+            Dim As Integer k = j + t1 * i
+            Dim As Integer m = 4 * k
+            adj[m    ] = j + t1 * ((t0 + i - 1) Mod t0)  ' above (1)
+            adj[m + 1] = (t1 + j - 1) Mod t1 + t1 * i    ' left  (3)
+            adj[m + 2] = (j + 1) Mod t1 + t1 * i         ' right (5)
+            adj[m + 3] = j + t1 * ((i + 1) Mod t0)       ' below (7)
+        Next
+    Next
+
+    Dim As Integer td0 = tdim[0], td1 = tdim[1], td2 = tdim[2]
+    Dim As Integer Ptr horz = CreateFilledArray(td0 * td0, 0)
+    Dim As Integer Ptr vert = CreateFilledArray(td0 * td0, 0)
+
+    For i = 0 To td0 - 1
+        For j = 0 To td0 - 1
+            horz[j + i * td0] = 1
+            vert[j + i * td0] = 1
+            For k = 0 To td1 - 1
+                If blocks[0 + td2 * (k + td1 * i)] <> blocks[(td2 - 1) + td2 * (k + td1 * j)] Then
+                    horz[j + i * td0] = 0
+                    Exit For
+                End If
+            Next
+            For k = 0 To td2 - 1
+                If blocks[k + td2 * (0 + td1 * i)] <> blocks[k + td2 * ((td2 - 1) + td1 * j)] Then
+                    vert[j + i * td0] = 0
+                    Exit For
+                End If
+            Next
+        Next
+    Next
+
+    Dim As Integer stride = (td0 + 1) * td0
+    Dim As Integer Ptr allow = CreateFilledArray(4 * stride, 1)
+
+    For i = 0 To td0 - 1
+        For j = 0 To td0 - 1
+            allow[               (i * td0) + j] = vert[(j * td0) + i] ' above (north)
+            allow[     stride  + (i * td0) + j] = horz[(j * td0) + i] ' left (west)
+            allow[(2 * stride) + (i * td0) + j] = horz[(i * td0) + j] ' right (east)
+            allow[(3 * stride) + (i * td0) + j] = vert[(i * td0) + j] ' below (south)
+        Next
+    Next
+
+    Dim As Integer Ptr R = CreateFilledArray(N, td0)
+    Dim As Integer Ptr todo = CreateFilledArray(N, 0)
+    Dim As Integer Ptr wave = CreateFilledArray(N * td0, 0)
+    Dim As Integer Ptr entropy = CreateFilledArray(N, 0)
+    Dim As Integer Ptr indices = CreateFilledArray(N, 0)
+    Dim As Integer min = 0
+    Dim As Integer Ptr possible = CreateFilledArray(td0, 0)
+
+    Do
+        Dim As Integer c = 0
+        For i = 0 To N - 1
+            If td0 = R[i] Then
+                todo[c] = i
+                c += 1
+            End If
+        Next
+
+        If c = 0 Then Exit Do
+
+        min = td0
+        For i = 0 To c - 1
+            entropy[i] = 0
+            For j = 0 To td0 - 1
+                Dim As Integer K = 4 * todo[i]
+                wave[i * td0 + j] = allow[               td0 * R[adj[K    ]] + j] And _
+                allow[    stride  + td0 * R[adj[K + 1]] + j] And _
+                allow[(2 * stride) + td0 * R[adj[K + 2]] + j] And _
+                allow[(3 * stride) + td0 * R[adj[K + 3]] + j]
+                entropy[i] += wave[i * td0 + j]
+            Next
+            If entropy[i] < min Then min = entropy[i]
+        Next
+
+        If min = 0 Then
+            Deallocate(R)
+            R = 0
+            Exit Do
+        End If
+
+        Dim As Integer d = 0
+        For i = 0 To c - 1
+            If min = entropy[i] Then
+                indices[d] = i
+                d += 1
+            End If
+        Next
+
+        Dim As Integer ndx = indices[Int(Rnd * d)]
+        Dim As Integer ind = ndx * td0
+        d = 0
+        For i = 0 To td0 - 1
+            If wave[ind + i] <> 0 Then
+                possible[d] = i
+                d += 1
+            End If
+        Next
+
+        R[todo[ndx]] = possible[Int(Rnd * d)]
+    Loop
+
+    If R = 0 Then Return 0
+
+    Dim As Integer tileSize = (1 + t0 * (td1 - 1)) * (1 + t1 * (td2 - 1))
+    Dim As Integer Ptr tile = CreateFilledArray(tileSize, 0)
+
+    For i0 As Integer = 0 To t0 - 1
+        For i1 As Integer = 0 To td1 - 1
+            For j0 As Integer = 0 To t1 - 1
+                For j1 As Integer = 0 To td2 - 1
+                    Dim As Integer t = j1 + (td2 - 1) * j0 + (1 + t1 * (td2 - 1)) * (i1 + (td1 - 1) * i0)
+                    tile[t] = blocks[j1 + td2 * (i1 + td1 * R[j0 + t1 * i0])]
+                Next
+            Next
+        Next
+    Next
+
+    Deallocate(adj)
+    Deallocate(horz)
+    Deallocate(vert)
+    Deallocate(allow)
+    Deallocate(R)
+    Deallocate(todo)
+    Deallocate(wave)
+    Deallocate(entropy)
+    Deallocate(indices)
+    Deallocate(possible)
+
+    Return tile
+End Function
+
+' Main program
+Dim As Integer blocks(45) = { _
+0, 0, 0, _
+0, 0, 0, _
+0, 0, 0, _
+0, 0, 0, _
+1, 1, 1, _
+0, 1, 0, _
+0, 1, 0, _
+0, 1, 1, _
+0, 1, 0, _
+0, 1, 0, _
+1, 1, 1, _
+0, 0, 0, _
+0, 1, 0, _
+1, 1, 0, _
+0, 1, 0  }
+
+Dim As Integer tdims(3) = {5, 3, 3}
+Dim As Integer size(2) = {8, 8}
+Dim As Integer i, j
+Dim As Integer Ptr tile = WFC(@blocks(0), @tdims(0), @size(0))
+
+If tile = 0 Then
+    Print "Failed to generate tile."
+Else
+    For i = 0 To 16
+        For j = 0 To 16
+            Print Iif(tile[j + i * 17] = 0, " ", "#");
+        Next
+        Print
+    Next
+    Deallocate(tile)
+End If
+
+Sleep

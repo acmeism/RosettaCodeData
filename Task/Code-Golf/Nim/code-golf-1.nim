@@ -1,0 +1,1 @@
+stdout.write "Code Golf"

@@ -1,0 +1,73 @@
+// heldKarp solves the Traveling Salesman Problem using the Held–Karp algorithm (O(n^2·2^n)).
+// dist is an n×n matrix of pairwise distances.
+// Returns a Result{minimumCost, tour}, where tour is a sequence of city indices
+// starting and ending at 0.
+function heldKarp(sequence dist)
+    integer n := length(dist), subsetCount := power(2,n), INF = #1FFFFFFF
+
+    // dp[mask][j] = minimum cost to start at 0, visit exactly the cities in mask, and end at j
+    sequence dp := repeat(repeat(INF,n), subsetCount),
+        parents := repeat(repeat(-1,n), subsetCount)
+
+    // Base case: mask = 1<<0, at city 0, cost = 0
+    dp[1][1] = 0
+
+    // Build up dp table
+    for mask=1 to subsetCount-1 do
+        // City 0 must always be included
+        if mask && 1 then
+            for j=2 to n do
+                if mask && power(2,j-1) then
+                    integer prevMask := mask-power(2,j-1)
+                    for k=1 to n do
+                        if prevMask && power(2,k-1) then
+                            atom cost := dp[prevMask][k] + dist[k][j]
+                            if cost < dp[mask][j] then
+                                dp[mask][j] = cost
+                                parents[mask][j] = k
+                            end if
+                        end if
+                    end for
+                end if
+            end for
+        end if
+    end for
+
+    // Complete the tour by returning to city 0
+    integer fullMask := subsetCount - 1,
+            lastCity := 1
+    atom minCost := INF
+    for j=2 to n do
+        atom cost := dp[fullMask][j] + dist[j][1]
+        if cost < minCost then
+            minCost = cost
+            lastCity = j
+        end if
+    end for
+
+    // Reconstruct the optimal tour
+    sequence tour := {}
+    integer mask := fullMask,
+            curr := lastCity
+    while curr != 1 do
+        tour &= curr-1
+        integer p := parents[mask][curr]
+        mask -= power(2,curr-1)
+        curr = p
+    end while
+    // append the start city, reverse, then return to start
+    tour &= 0
+    tour = reverse(tour)
+    tour &= 0
+    return {minCost, tour}
+end function
+
+// Test case: 4 cities with symmetric distances
+constant dist = {{0, 2, 9, 10},
+                 {1, 0, 6, 4},
+                {15, 7, 0, 8},
+                {6, 3, 12, 0}}
+
+{atom cost, sequence tour} = heldKarp(dist)
+printf(1,"Minimum tour cost: %d\n", cost)
+printf(1,"Tour: %v\n", {tour})

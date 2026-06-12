@@ -1,0 +1,158 @@
+#include "windows.bi"
+#include "win/wininet.bi"
+
+Dim Shared As String Urls(1)
+Urls(0) = "http://rosettacode.org/wiki/Category:Programming_Tasks"
+Urls(1) = "http://rosettacode.org/wiki/Category:Draft_Programming_Tasks"
+
+Function GetContent(url As String) As String
+    Dim As HINTERNET hOpen, hConnect
+    Dim As String result
+
+    hOpen = InternetOpen("Mozilla/5.0", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0)
+    hConnect = InternetOpenUrl(hOpen, url, NULL, 0, INTERNET_FLAG_RELOAD, 0)
+
+    If hConnect Then
+        Dim As Ubyte buffer(4095)
+        Dim As DWORD bytesRead
+        Do
+            InternetReadFile(hConnect, @buffer(0), Sizeof(buffer), @bytesRead)
+            If bytesRead = 0 Then Exit Do
+            result &= Left(*Cast(ZString Ptr, @buffer(0)), bytesRead)
+        Loop
+        InternetCloseHandle(hConnect)
+    End If
+
+    InternetCloseHandle(hOpen)
+    Return result
+End Function
+
+Function ReplaceString(text As String, find As String, replace As String) As String
+    Dim As String result = ""
+    Dim As Integer i = 1, j
+
+    Do While i <= Len(text)
+        j = Instr(i, text, find)
+        If j = 0 Then
+            result &= Mid(text, i)
+            Exit Do
+        End If
+        result &= Mid(text, i, j - i) & replace
+        i = j + Len(find)
+    Loop
+
+    Return result
+End Function
+
+Function ReplaceHtmlEntities(text As String) As String
+    Dim As String result = text
+    result = ReplaceString(result, "&lt;", "<")
+    result = ReplaceString(result, "&gt;", ">")
+    result = ReplaceString(result, "&amp;", "&")
+    result = ReplaceString(result, "&quot;", """")
+    result = ReplaceString(result, "&#39;", "'")
+    Return result
+End Function
+
+Function GetAllTasks() As String Ptr
+    Dim As String Ptr tasks = Callocate(1, Sizeof(String))
+    Dim As Integer i, taskCnt = 0, start = 0
+    Dim As String regex = "<li><a href=""/wiki/(.*?)"""
+    Dim As String body, matches(1)
+
+    For i = 0 To 1
+        body = GetContent(Urls(i))
+        Do
+            start = Instr(start + 1, body, regex)
+            If start = 0 Then Exit Do
+            matches(0) = Mid(body, start + 15, Instr(start + 15, body, """") - start - 15)
+            If Left(matches(0), 9) <> "Category:" Then
+                taskCnt += 1
+                tasks = Reallocate(tasks, taskCnt * Sizeof(String))
+                tasks[taskCnt - 1] = matches(0)
+            End If
+        Loop
+    Next
+    Return tasks
+End Function
+
+' Main program
+Dim As String Ptr tasks = GetAllTasks()
+Dim As String task, url, body, lang1, lang2, ext, fileName, header, language, regex, source, kbd
+Dim As Integer i, idx, sourceStart, sourceEnd
+
+Do
+    Input "Enter the exact name of the task: ", task
+    For i = 1 To Len(task)
+        If Mid(task, i, 1) = " " Then Mid(task, i, 1) = "_"
+    Next
+
+    url = "https://rosettacode.org/w/index.php?title=" & task & "&action=edit"
+    body = GetContent(url)
+
+    body = ReplaceHtmlEntities(body)
+
+    Do
+        Input "Enter the language FreeBASIC/Julia/Python: ", lang1
+        lang1 = Lcase(lang1)
+        If lang1 = "freebasic" Or lang1 = "julia" Or lang1 = "python" Then Exit Do
+        Print !"Sorry that language is not supported.\n"
+    Loop
+
+    Select Case lang1
+    Case "freebasic"
+        lang2 = "FreeBASIC"
+        ext = "bas"
+    Case "julia"
+        lang2 = "Julia"
+        ext = "jl"
+    Case "python"
+        lang2 = "Python"
+        ext = "py"
+    End Select
+
+    fileName = "rc_temp." & ext
+    header = "=={{header|" & lang2 & "}}=="
+    language = "<syntaxhighlight lang=" & Chr(34) & Lcase(lang2) & Chr(34) & ">"
+    regex = language
+
+    idx = Instr(body, regex)
+    If idx = 0 Then
+        Print !"No runnable task entry for that language was detected.\n"
+        Continue Do
+    End If
+
+    sourceStart = Instr(idx + Len(header), body, ">") + 1
+    sourceEnd = Instr(sourceStart, body, "</syntax highlight>") - 1
+
+    If sourceStart > 0 And sourceEnd > sourceStart Then
+        source = Mid(body, sourceStart, sourceEnd - sourceStart + 1)
+        source = Trim(source)
+        Print !"\nThis is the source code for the first or only runnable program:\n"
+        Print source & Chr(10)
+    Else
+        Print "Unable to extract source code."
+        Continue Do
+    End If
+
+    Input "Do you want to run it (y/n)? ", kbd
+    If Lcase(kbd) = "y" Then
+        Open fileName For Output As #1
+        Print #1, source
+        Close #1
+        Select Case lang1
+        Case "freebasic"
+            Shell "fbc " & fileName & " && rc_temp"
+        Case "julia"
+            Shell "julia " & fileName
+        Case "python"
+            Shell "python " & fileName
+        End Select
+        Kill fileName
+        If lang1 = "freebasic" Then Kill "rc_temp.exe"
+    End If
+
+    Print
+    Input "Do another one (y/n)? ", kbd
+    If Lcase(kbd) <> "y" Then Exit Do
+Loop

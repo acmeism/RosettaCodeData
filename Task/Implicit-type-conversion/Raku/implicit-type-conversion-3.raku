@@ -1,0 +1,7 @@
+my $x = 1234;                                  say $x, ' ', $x.WHAT; # 1234 (Int)
+$x = 1234.ords;                                say $x, ' ', $x.WHAT; # 49 50 51 52 (List)
+$x = [+] 1234.ords;                            say $x, ' ', $x.WHAT; # 202 (Int)
+$x = ([+] 1234.ords).sqrt;                     say $x, ' ', $x.WHAT; # 14.2126704035519 (Num)
+$x = ([+] 1234.ords).sqrt.floor;               say $x, ' ', $x.WHAT; # 14 (Int)
+$x = ([+] 1234.ords).sqrt.floor ~ "beef";      say $x, ' ', $x.WHAT; # 14beef (Str)
+$x = :16(([+] 1234.ords).sqrt.floor ~ "beef"); say $x, ' ', $x.WHAT; # 1359599 (Int)

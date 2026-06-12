@@ -1,0 +1,124 @@
+with javascript_semantics
+function isVowel(integer byte)
+    return find(byte,"AEIOU")!=0
+end function
+
+function nysiis(string word)
+    if word == "" then return "" end if
+    word = upper(word)
+    sequence ww = split_any(word, ", ")
+    if length(ww)>1 then
+        if length(filter(ww[$],"out","IVX"))=0 then
+            word = word[1..-length(ww[$])-1]
+        end if
+    end if
+    word = substitute_all(word, " ,'-", repeat("",4))
+    for e in {"JR", "JNR", "SR", "SNR"} do
+        if ends(e,word) then word=word[1..-length(e)-1] end if
+    end for
+    for f in {{"MAC","MCC"}, {"KN","N"}, {"K","C"},
+              {"PH","FF"}, {"PF","FF"}, {"SCH","SSS"}} do
+        if begins(f[1],word) then
+            word[1..length(f[1])] = f[2]
+        end if
+    end for
+    integer e = length(word)>=2 and find(word[-2..-1],
+                {"EE","IE","DT","RT","RD","NT","ND"})
+    if e then
+        word[-2..-1] = iff(e<=2?"Y":"D")
+    end if
+    integer initial = word[1]
+    string key = word[1..1]
+    word = word[2..$]
+    word = substitute_all(word,{"EV","KN","SCH","PH"},
+                               {"AF","N", "SSS","FF"})
+    string sb = key&word
+    integer le := length(sb)
+    for i=2 to le do
+        switch sb[i] do
+            case 'E', 'I', 'O', 'U':    sb[i] = 'A'
+            case 'Q':                   sb[i] = 'G'
+            case 'Z':                   sb[i] = 'S'
+            case 'M':                   sb[i] = 'N'
+            case 'K':                   sb[i] = 'C'
+            case 'H':   if (i> 1 and not isVowel(sb[i-1]))
+                        or (i<le and not isVowel(sb[i+1])) then
+                            sb[i] = sb[i-1]
+                        end if
+            case 'W':   if isVowel(sb[i-1]) then
+                            sb[i] = sb[i-1]
+                        end if
+        end switch
+    end for
+    integer prev := initial
+    for j=2 to le do
+        integer c := sb[j]
+        if prev != c then
+            key &= c
+            prev = c
+        end if
+    end for
+    if length(key)>=1 and key[$]      == 'S'  then  key[$  ..$] = ""    end if
+    if length(key)>=2 and key[-2..-1] == "AY" then  key[$-1..$] = "Y"   end if
+    if length(key)>=1 and key[$]      == 'A'  then  key[$  ..$] = ""    end if
+    return key
+end function
+
+constant tests = {
+                  { "Bishop", "BASAP" },
+                  { "Carlson", "CARLSAN" },
+                  { "Carr", "CAR" },
+                  { "Chapman", "CAPNAN" },
+                  { "Franklin", "FRANCLAN" },
+                  { "Greene", "GRAN" },
+                  { "Harper", "HARPAR" },
+                  { "Jacobs", "JACAB" },
+                  { "Larson", "LARSAN" },
+                  { "Lawrence", "LARANC" },
+                  { "Lawson", "LASAN" },
+                  { "Louis, XVI", "L" },    -- (see note)
+                  { "Lynch", "LYNC" },
+                  { "Mackenzie", "MCANSY" },
+                  { "Matthews", "MAT" },    -- (see note)
+                  { "May jnr", "MY" },
+                  { "McCormack", "MCARNAC" },
+                  { "McDaniel", "MCDANAL" },
+                  { "McDonald", "MCDANALD" },
+                  { "Mclaughlin", "MCLAGLAN" },
+                  { "Morrison", "MARASAN" },
+                  { "O'Banion", "OBANAN" },
+                  { "O'Brien", "OBRAN" },
+                  { "Richards", "RACARD" },
+                  { "Silva", "SALV" },
+                  { "Watkins", "WATCAN" },
+                  { "Wheeler", "WALAR" },
+                  { "Willis", "WAL" },      -- (see note)
+                  { "Xi", "X" },
+                  { "bevan", "BAFAN" },
+                  { "brown, sr", "BRAN" },
+                  { "brown sr", "BRAN" },
+                  { "browne, III", "BRAN" },
+                  { "browne, IV", "BRAN" },
+                  { "evans", "EVAN" },
+                  { "knight", "NAGT" },
+                  { "mitchell", "MATCAL" },
+                  { "o'daniel", "ODANAL" },
+                  { "D'Souza", "DSAS" },
+                  { "de Sousa", "DASAS" },
+                  { "Hoyle-Johnson", "HAYLAJANSAN" },
+                  { "Vaughan Williams", "VAGANWALAN" },
+                  { "de la Mare II", "DALANAR" } }
+
+integer errors = 0
+for i=1 to length(tests) do
+    string {name,expected} = tests[i],
+            actual := nysiis(name)
+    if actual!=expected then
+        errors += 1
+        if length(actual) > 6 then
+            actual = sprintf("%s(%s)", {actual[1..6], actual[7..$]})
+        end if
+        printf(1,"%-16s : %s\n", {name, actual})
+    end if
+end for
+printf(1,"All tests completed, %d errors\n",errors)

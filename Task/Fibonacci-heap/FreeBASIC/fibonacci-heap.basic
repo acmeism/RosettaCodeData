@@ -1,0 +1,286 @@
+Type Node
+    valor As String
+    padre As Node Ptr
+    hijo As Node Ptr
+    prev As Node Ptr
+    sgte As Node Ptr
+    rank As Integer
+    mark As Boolean
+End Type
+
+Type FibonacciHeap
+    minNode As Node Ptr
+
+    Declare Function Insert(valor As String) As Node Ptr
+    Declare Sub Union_(other As FibonacciHeap Ptr)
+    Declare Function Minimum() As String
+    Declare Function ExtractMin() As String
+    Declare Sub DecreaseKey(n As Node Ptr, newvalor As String)
+    Declare Sub DeleteNode(n As Node Ptr)
+    Declare Sub Visualize()
+
+    Private:
+    Declare Sub Meld1(n1 As Node Ptr, n2 As Node Ptr)
+    Declare Sub Meld2(n1 As Node Ptr, n2 As Node Ptr)
+    Declare Sub CutAndMeld(n As Node Ptr)
+    Declare Sub Cut(n As Node Ptr)
+    Declare Sub AddToRoots(roots() As Node Ptr, ByRef count As Integer, r As Node Ptr)
+End Type
+
+Sub FibonacciHeap.Meld1(n1 As Node Ptr, n2 As Node Ptr)
+    n2->prev = n1->prev
+    n2->sgte = n1
+    If n1->prev Then n1->prev->sgte = n2
+    n1->prev = n2
+End Sub
+
+Sub FibonacciHeap.Meld2(n1 As Node Ptr, n2 As Node Ptr)
+    If n1->prev Then n1->prev->sgte = n2
+    If n2->prev Then n2->prev->sgte = n1
+    Dim As Node Ptr temp = n1->prev
+    n1->prev = n2->prev
+    n2->prev = temp
+End Sub
+
+Function FibonacciHeap.Insert(valor As String) As Node Ptr
+    Dim As Node Ptr newNode = New Node
+    newNode->valor = valor
+    newNode->prev = newNode
+    newNode->sgte = newNode
+
+    If This.minNode = 0 Then
+        This.minNode = newNode
+    Else
+        This.Meld1(This.minNode, newNode)
+        If valor < This.minNode->valor Then This.minNode = newNode
+    End If
+
+    Return newNode
+End Function
+
+Sub FibonacciHeap.Union_(other As FibonacciHeap Ptr)
+    If This.minNode = 0 Then
+        This.minNode = other->minNode
+    ElseIf other->minNode Then
+        This.Meld2(This.minNode, other->minNode)
+        If other->minNode->valor < This.minNode->valor Then This.minNode = other->minNode
+    End If
+    other->minNode = 0
+End Sub
+
+Function FibonacciHeap.Minimum() As String
+    If This.minNode = 0 Then Return ""
+    Return This.minNode->valor
+End Function
+
+Sub FibonacciHeap.AddToRoots(roots() As Node Ptr, ByRef count As Integer, r As Node Ptr)
+    r->prev = r
+    r->sgte = r
+    Dim As Node Ptr rr = r
+
+    Do
+        Dim As Integer index = rr->rank
+        If roots(index) = 0 Then Exit Do
+
+        Dim As Node Ptr x = roots(index)
+        roots(index) = 0
+        If x->valor < rr->valor Then Swap x, rr
+
+        x->padre = rr
+        x->mark = False
+        If rr->hijo = 0 Then
+            x->sgte = x
+            x->prev = x
+            rr->hijo = x
+        Else
+            This.Meld1(rr->hijo, x)
+        End If
+        rr->rank += 1
+    Loop
+
+    roots(rr->rank) = rr
+    If rr->rank >= count Then count = rr->rank + 1
+End Sub
+
+Function FibonacciHeap.ExtractMin() As String
+    If This.minNode = 0 Then Return ""
+
+    Dim As String minvalor = This.minNode->valor
+    Dim As Node Ptr roots(100)
+    Dim As Integer count = 0
+
+    ' Process roots
+    Dim As Node Ptr r = This.minNode->sgte
+    While r <> This.minNode
+        Dim As Node Ptr next = r->sgte
+        This.AddToRoots(roots(), count, r)
+        r = next
+    Wend
+
+    ' Process children
+    Dim As Node Ptr c = This.minNode->hijo
+    If c Then
+        c->padre = 0
+        Dim As Node Ptr rr = c->sgte
+        This.AddToRoots(roots(), count, c)
+        While rr <> c
+            Dim As Node Ptr next = rr->sgte
+            rr->padre = 0
+            This.AddToRoots(roots(), count, rr)
+            rr = next
+        Wend
+    End If
+
+    ' Rebuild heap
+    This.minNode = 0
+    For i As Integer = 0 To count - 1
+        If roots(i) Then
+            If This.minNode = 0 Then
+                roots(i)->sgte = roots(i)
+                roots(i)->prev = roots(i)
+                This.minNode = roots(i)
+            Else
+                This.Meld1(This.minNode, roots(i))
+                If roots(i)->valor < This.minNode->valor Then This.minNode = roots(i)
+            End If
+        End If
+    Next
+
+    Return minvalor
+End Function
+
+Sub FibonacciHeap.Cut(n As Node Ptr)
+    Dim As Node Ptr p = n->padre
+    If p = 0 Then Exit Sub
+
+    p->rank -= 1
+    If p->rank = 0 Then
+        p->hijo = 0
+    Else
+        p->hijo = n->sgte
+        If n->prev Then n->prev->sgte = n->sgte
+        If n->sgte Then n->sgte->prev = n->prev
+    End If
+
+    If p->padre = 0 Then Exit Sub
+
+    If p->mark = False Then
+        p->mark = True
+        Exit Sub
+    End If
+
+    This.CutAndMeld(p)
+End Sub
+
+Sub FibonacciHeap.CutAndMeld(n As Node Ptr)
+    This.Cut(n)
+    n->padre = 0
+    If This.minNode Then This.Meld1(This.minNode, n)
+End Sub
+
+Sub FibonacciHeap.DecreaseKey(n As Node Ptr, newvalor As String)
+    If newvalor >= n->valor Then Exit Sub
+    n->valor = newvalor
+    If n = This.minNode Then Exit Sub
+
+    Dim As Node Ptr p = n->padre
+    If p = 0 Then
+        If newvalor < This.minNode->valor Then This.minNode = n
+        Exit Sub
+    End If
+
+    This.CutAndMeld(n)
+End Sub
+
+Sub FibonacciHeap.DeleteNode(n As Node Ptr)
+    If n->padre = 0 Then
+        If n = This.minNode Then
+            This.ExtractMin()
+            Exit Sub
+        End If
+        If n->prev Then n->prev->sgte = n->sgte
+        If n->sgte Then n->sgte->prev = n->prev
+    Else
+        This.Cut(n)
+    End If
+
+    Dim As Node Ptr c = n->hijo
+    If c = 0 Then Exit Sub
+
+    Do
+        c->padre = 0
+        c = c->sgte
+    Loop Until c = n->hijo
+
+    If This.minNode Then This.Meld2(This.minNode, c)
+End Sub
+
+Sub PrintTree(n As Node Ptr, prefix As String)
+    Dim As Node Ptr current = n
+    Do
+        If current->sgte <> n Then
+            Print prefix & Chr(195) & Chr(196);  ' ├─
+        Else
+            Print prefix & Chr(192) & Chr(196);  ' └─
+        End If
+
+        If current->hijo = 0 Then
+            Print "- " & current->valor
+        Else
+            Print Chr(191) & " " & current->valor  ' ┐
+            If current->sgte <> n Then
+                PrintTree(current->hijo, prefix & Chr(179) & " ")  ' │
+            Else
+                PrintTree(current->hijo, prefix & "  ")  ' Spaces for last node
+            End If
+        End If
+
+        current = current->sgte
+    Loop Until current = n
+End Sub
+
+Sub FibonacciHeap.Visualize()
+    If This.minNode = 0 Then
+        Print "<empty>"
+        Exit Sub
+    End If
+    PrintTree(This.minNode, "")
+End Sub
+
+' Test code
+Dim As FibonacciHeap h
+Print "MakeHeap:"
+h.Visualize()
+
+Print !"\nInsert:"
+Dim As Node Ptr catNode = h.Insert("cat")
+h.Visualize()
+
+Print !"\nUnion:"
+Dim As FibonacciHeap h2
+h2.Insert("rat")
+h.Union_(@h2)
+h.Visualize()
+
+Print !"\nMinimum:"
+Print h.Minimum()
+
+Print !"\nExtractMin:"
+h.Insert("bat")
+Dim As Node Ptr meerkatNode = h.Insert("meerkat")
+Dim As String m = h.ExtractMin()
+Print "(extracted '" & m & "')"
+h.Visualize()
+
+Print !"\nDecreaseKey:"
+h.DecreaseKey(meerkatNode, "gnat")
+h.Visualize()
+
+Print !"\nDelete:"
+h.Insert("bobcat")
+h.Insert("bat")
+Print "(deleting '" & meerkatNode->valor & "')"
+h.DeleteNode(meerkatNode)
+h.Visualize()
+
+Sleep

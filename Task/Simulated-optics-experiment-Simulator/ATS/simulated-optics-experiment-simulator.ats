@@ -1,0 +1,420 @@
+#include "share/atspre_staload.hats"
+
+(* Simulation is by synchronous event loop run for a given amount of
+   clock time, then allowed to settle. *)
+
+#define ATS_EXTERN_PREFIX ""
+
+#define NIL list_nil ()
+#define ::  list_cons
+
+(*------------------------------------------------------------------*)
+
+typedef ident = intGte 0  (* event identification, for syncing data *)
+typedef zero_or_one = intBtwe (0, 1)
+typedef log_entry = @(ident, zero_or_one)
+typedef logbook = List0 log_entry
+
+datatype pwhv (tk : tkind) =   (* "photon with hidden variables" *)
+| pwhv of (ident, g0float tk)  (* angle of polarization, in degrees *)
+
+datatype pwhv_channel (tk : tkind) = (* a queue *)
+| pwhv_channel of
+    ref (List0 (pwhv tk))
+
+datatype pwhv_source (tk : tkind) = (* source of pwhv pairs *)
+| pwhv_source of
+    (g0float tk,                (* probability of emission *)
+     ref ident,                 (* the next identification number *)
+     ref logbook,               (* log of hidden variables *)
+     pwhv_channel tk,           (* leftwards emission *)
+     pwhv_channel tk)           (* rightwards emission *)
+
+datatype pbs (tk : tkind) =     (* "polarizing beam splitter" *)
+| pbs of (g0float tk,           (* angle setting 0, in degrees *)
+          g0float tk,           (* angle setting 1, in degrees *)
+          ref logbook,          (* log of settings *)
+          pwhv_channel tk,      (* impinging pwhv *)
+          pwhv_channel tk,      (* cos² emission *)
+          pwhv_channel tk)      (* sin² emission *)
+
+datatype photodetector (tk : tkind) =
+| photodetector of
+    (ref logbook,               (* log of detections *)
+     pwhv_channel tk)           (* impinging pwhv *)
+
+(*------------------------------------------------------------------*)
+(* Some math functionality, for all the standard floating point
+   types. The ats2-xprelude package includes this, and more, but one
+   may wish to avoid the dependency. And there is support for math
+   functions in libats/libc, but not with typekinds. *)
+
+%{^
+#include <math.h>
+// cospi(3) and sinpi(3) would be better than cos(3) and sin(3), but
+// I do not yet have cospi(3) or sinpi(3).
+#define pi__ \
+  3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214L
+#define cospi_float(x) (cosf (((atstype_float) pi__) * (x)))
+#define cospi_double(x) (cos (((atstype_double) pi__) * (x)))
+#define cospi_ldouble(x) (cosl (((atstype_ldouble) pi__) * (x)))
+#define sinpi_float(x) (sinf (((atstype_float) pi__) * (x)))
+#define sinpi_double(x) (sin (((atstype_double) pi__) * (x)))
+#define sinpi_ldouble(x) (sinl (((atstype_ldouble) pi__) * (x)))
+%}
+
+extern fn cospi_float : float -<> float = "mac#%"
+extern fn cospi_double : double -<> double = "mac#%"
+extern fn cospi_ldouble : ldouble -<> ldouble = "mac#%"
+extern fn {tk : tkind} g0float_cospi : g0float tk -<> g0float tk
+implement g0float_cospi<fltknd> x = cospi_float x
+implement g0float_cospi<dblknd> x = cospi_double x
+implement g0float_cospi<ldblknd> x = cospi_ldouble x
+
+extern fn sinpi_float : float -<> float = "mac#%"
+extern fn sinpi_double : double -<> double = "mac#%"
+extern fn sinpi_ldouble : ldouble -<> ldouble = "mac#%"
+extern fn {tk : tkind} g0float_sinpi : g0float tk -<> g0float tk
+implement g0float_sinpi<fltknd> x = sinpi_float x
+implement g0float_sinpi<dblknd> x = sinpi_double x
+implement g0float_sinpi<ldblknd> x = sinpi_ldouble x
+
+overload cospi with g0float_cospi
+overload sinpi with g0float_sinpi
+
+(*------------------------------------------------------------------*)
+
+%{^
+// PCG-XSH-RR random number generator, from Wikipedia.
+// https://en.wikipedia.org/w/index.php?title=Permuted_congruential_generator&oldid=1136326070#Example_code
+
+#include <stdint.h>
+static uint64_t       state      = 0x4d595df4d0f33173;		// Or something seed-dependent
+static uint64_t const multiplier = 6364136223846793005u;
+static uint64_t const increment  = 1442695040888963407u;	// Or an arbitrary odd constant
+
+static uint32_t rotr32(uint32_t x, unsigned r)
+{
+	return x >> r | x << (-r & 31);
+}
+
+uint32_t pcg32(void)
+{
+	uint64_t x = state;
+	unsigned count = (unsigned)(x >> 59);		// 59 = 64 - 5
+
+	state = x * multiplier + increment;
+	x ^= x >> 18;								// 18 = (64 - 27)/2
+	return rotr32((uint32_t)(x >> 27), count);	// 27 = 32 - 5
+}
+
+void pcg32_init(uint64_t seed)
+{
+	state = seed + increment;
+	(void)pcg32();
+}
+%}
+
+extern fn pcg32 : () -> uint32 = "mac#%"
+extern fn pcg32_init : uint64 -> void = "mac#%"
+
+fn {tk : tkind}
+randnum () : g0float tk =
+  (* Returns a random floating point number in [0,1) *)
+  let
+    extern castfn u32_to_ldouble : uint32 -<> ldouble
+
+    (* THE FOLLOWING WILL WORK ONLY IF g0float tk IS OF A TYPE THE C
+       COMPILER CAN CAST TO. This is not true of all the types in
+       ats2-xprelude. OTOH you wouldn’t need this cast in the first
+       place, if you were using ats2-xprelude. *)
+    extern castfn ldouble2tk : ldouble -<> g0float tk
+  in
+    ldouble2tk ((u32_to_ldouble (pcg32 ())) / 4294967296.0L)
+  end
+
+%{^
+#include <time.h>
+#define get_time_as_uint64() ((atstype_uint64) (time (NULL)))
+%}
+
+fn {}
+randomize () : void =
+  (* Seed the random number generator with something variable enough
+     to keep the program’s user entertained. *)
+  let
+    (* Seconds since the Epoch. *)
+    extern fn get_time_as_uint64 : () -> uint64 = "mac#%"
+  in
+    pcg32_init (get_time_as_uint64 ())
+  end
+
+(*------------------------------------------------------------------*)
+
+fn {tk : tkind}
+pwhv_channel_put (channel : pwhv_channel tk,
+                  pwhv    : pwhv tk) =
+  let
+    val+ pwhv_channel lst = channel
+  in
+    (* Inefficient if queues are large. Our queues will be tiny. *)
+    !lst := !lst + (pwhv :: NIL)
+  end
+
+fn {tk : tkind}
+pwhv_channel_get (channel : pwhv_channel tk) : Option (pwhv tk) =
+  let
+    val+ pwhv_channel lst = channel
+  in
+    case+ !lst of
+    | NIL => None ()
+    | hd :: tl => (!lst := tl; Some hd)
+  end
+
+(*------------------------------------------------------------------*)
+
+fn {tk : tkind}
+pwhv_source_poll (source : pwhv_source tk) : void =
+  let
+    val+ pwhv_source (probability_of_emission, ident, hv_log,
+                      channel_L, channel_R) = source
+  in
+    if randnum<tk> () < probability_of_emission then
+      let
+        val id = !ident
+      in
+        !ident := succ id;
+        if randnum<tk> () < g0f2f 0.5 then
+          begin
+            !hv_log := @(id, 0) :: !hv_log;
+            pwhv_channel_put<tk> (channel_L, pwhv (id, g0i2f 0));
+            pwhv_channel_put<tk> (channel_R, pwhv (id, g0i2f 90))
+          end
+        else
+          begin
+            !hv_log := @(id, 1) :: !hv_log;
+            pwhv_channel_put<tk> (channel_L, pwhv (id, g0i2f 90));
+            pwhv_channel_put<tk> (channel_R, pwhv (id, g0i2f 0))
+          end
+      end
+  end
+
+fn {tk : tkind}
+pbs_poll (splitter : pbs tk) : void =
+  let
+    val+ pbs (angle0, angle1, pbs_log,
+              channel_in, channel0, channel1) = splitter
+  in
+    case+ pwhv_channel_get (channel_in) of
+    | None () => ()
+    | Some (pwhv (id, angle)) =>
+      if randnum<tk> () < g0f2f 0.5 then
+        let
+          val c = cospi ((angle - angle0) / g0i2f 180)
+          and s = sinpi ((angle - angle0) / g0i2f 180)
+        in
+          !pbs_log := @(id, 0) :: !pbs_log;
+          if randnum<tk> () < c * c then
+            pwhv_channel_put<tk> (channel0, pwhv (id, angle0));
+          if randnum<tk> () < s * s then
+            pwhv_channel_put<tk> (channel1,
+                                  pwhv (id, angle0 + g0i2f 90))
+        end
+      else
+        let
+          val c = cospi ((angle - angle1) / g0i2f 180)
+          and s = sinpi ((angle - angle1) / g0i2f 180)
+        in
+          !pbs_log := @(id, 1) :: !pbs_log;
+          if randnum<tk> () < c * c then
+            pwhv_channel_put<tk> (channel0, pwhv (id, angle1));
+          if randnum<tk> () < s * s then
+            pwhv_channel_put<tk> (channel1,
+                                  pwhv (id, angle1 + g0i2f 90))
+        end
+  end
+
+fn {tk : tkind}
+photodetector_poll (detector : photodetector tk) : void =
+  let
+    val+ photodetector (pd_log, channel_in) = detector
+  in
+    case+ pwhv_channel_get (channel_in) of
+    | None () => ()
+    | Some (pwhv (id, angle)) => (!pd_log := @(id, 1) :: !pd_log)
+  end
+
+(*------------------------------------------------------------------*)
+
+fn {tk : tkind}
+event_loop (num_events  : intGte 0,
+            source      : pwhv_source tk,
+            splitter_L  : pbs tk,
+            splitter_R  : pbs tk,
+            detector_Lc : photodetector tk,
+            detector_Ls : photodetector tk,
+            detector_Rc : photodetector tk,
+            detector_Rs : photodetector tk) : void =
+  let
+    val+ pwhv_source (_, ident, _, _, _) = source
+    fun
+    main_loop () : void =
+      if !ident < num_events then
+        begin
+          pwhv_source_poll (source);
+          pbs_poll (splitter_L);
+          pbs_poll (splitter_R);
+          photodetector_poll (detector_Lc);
+          photodetector_poll (detector_Ls);
+          photodetector_poll (detector_Rc);
+          photodetector_poll (detector_Rs);
+          main_loop ()
+        end
+    fun
+    finishing_loop (n : intGte 0) : void =
+      if n <> 0 then
+        begin
+          pbs_poll (splitter_L);
+          pbs_poll (splitter_R);
+          photodetector_poll (detector_Lc);
+          photodetector_poll (detector_Ls);
+          photodetector_poll (detector_Rc);
+          photodetector_poll (detector_Rs);
+          finishing_loop (pred n)
+        end
+  in
+    main_loop ();
+
+    (* Actually some very small number is all that is needed here. But
+       this bigger number does no harm. *)
+    finishing_loop (100)
+  end
+
+fn {tk : tkind}
+run_simulation (outf       : FILEref,
+                angle_L0   : g0float tk,
+                angle_L1   : g0float tk,
+                angle_R0   : g0float tk,
+                angle_R1   : g0float tk,
+                probability_of_emission : g0float tk,
+                num_events : intGte 0) : void =
+  let
+    val pbs2detector_Lc = pwhv_channel (ref NIL)
+    and pbs2detector_Ls = pwhv_channel (ref NIL)
+    and pbs2detector_Rc = pwhv_channel (ref NIL)
+    and pbs2detector_Rs = pwhv_channel (ref NIL)
+    and source2pbs_L = pwhv_channel (ref NIL)
+    and source2pbs_R = pwhv_channel (ref NIL)
+
+    val detector_Lc = photodetector (ref NIL, pbs2detector_Lc)
+    and detector_Ls = photodetector (ref NIL, pbs2detector_Ls)
+    and detector_Rc = photodetector (ref NIL, pbs2detector_Rc)
+    and detector_Rs = photodetector (ref NIL, pbs2detector_Rs)
+    and splitter_L = pbs (angle_L0, angle_L1, ref NIL,
+                          source2pbs_L, pbs2detector_Lc,
+                          pbs2detector_Ls)
+    and splitter_R = pbs (angle_R0, angle_R1, ref NIL,
+                          source2pbs_R, pbs2detector_Rc,
+                          pbs2detector_Rs)
+    and source = pwhv_source (probability_of_emission, ref 0,
+                              ref NIL, source2pbs_L, source2pbs_R)
+
+    val () = event_loop<tk> (num_events, source,
+                             splitter_L, splitter_R,
+                             detector_Lc, detector_Ls,
+                             detector_Rc, detector_Rs);
+
+    val+ pwhv_source (_, _, hv_log, _, _) = source
+    val+ pbs (_, _, pbs_log_L, _, _, _) = splitter_L
+    val+ pbs (_, _, pbs_log_R, _, _, _) = splitter_R
+    val+ photodetector (pd_log_Lc, _) = detector_Lc
+    val+ photodetector (pd_log_Ls, _) = detector_Ls
+    val+ photodetector (pd_log_Rc, _) = detector_Rc
+    val+ photodetector (pd_log_Rs, _) = detector_Rs
+
+    val hv_log = !hv_log
+    and pbs_log_L = !pbs_log_L
+    and pbs_log_R = !pbs_log_R
+    and pd_log_Lc = !pd_log_Lc
+    and pd_log_Ls = !pd_log_Ls
+    and pd_log_Rc = !pd_log_Rc
+    and pd_log_Rs = !pd_log_Rs
+
+    val n = length hv_log
+    and n_L = length pbs_log_L
+    and n_R = length pbs_log_R
+    and n_Lc = length pd_log_Lc
+    and n_Ls = length pd_log_Ls
+    and n_Rc = length pd_log_Rc
+    and n_Rs = length pd_log_Rs
+
+    prval [n : int] EQINT () = eqint_make_gint n
+
+    val () = assertloc (n_L = n)
+    val () = assertloc (n_R = n)
+    val () = assertloc (n_Lc <= n)
+    val () = assertloc (n_Ls <= n)
+    val () = assertloc (n_Rc <= n)
+    val () = assertloc (n_Rs <= n)
+
+    val data = mtrxszref_make_elt<zero_or_one> (i2sz n, i2sz 7, 0)
+    fun
+    transfer_data_from_logbook (log : logbook,
+                                j   : intBtwe (0, 6)) : void =
+      case+ log of
+      | NIL => ()
+      | @(id, entry) :: tl =>
+        begin
+          data[id, j] := entry;
+          transfer_data_from_logbook (tl, j)
+        end
+
+    val () = transfer_data_from_logbook (hv_log, 0)
+    val () = transfer_data_from_logbook (pbs_log_L, 1)
+    val () = transfer_data_from_logbook (pbs_log_R, 2)
+    val () = transfer_data_from_logbook (pd_log_Lc, 3)
+    val () = transfer_data_from_logbook (pd_log_Ls, 4)
+    val () = transfer_data_from_logbook (pd_log_Rc, 5)
+    val () = transfer_data_from_logbook (pd_log_Rs, 6)
+
+    fun
+    fprint_data (outf : FILEref,
+                 i    : intBtwe (0, n)) : void =
+      if i <> n then
+        begin
+          fprintln! (outf, data[i, 0], " ", data[i, 1], " ",
+                     data[i, 2], " ", data[i, 3], " ",
+                     data[i, 4], " ", data[i, 5], " ", data[i, 6]);
+          fprint_data (outf, succ i)
+        end
+  in
+    fprintln! (outf, n);
+    fprint_data (outf, 0)
+  end
+
+(*------------------------------------------------------------------*)
+
+implement
+main0 (argc, argv) =
+  let
+    val args = list_vt2t (listize_argc_argv (argc, argv))
+
+    val num_events =
+      if argc <= 1 then
+        1000
+      else
+        (max ($extfcall (Int, "atoi", args[1]), 0)) : intGte 0
+
+    val outf = stdout_ref
+
+    val () = randomize ()
+
+    val angle_L0 = 0.0
+    and angle_L1 = 45.0
+    and angle_R0 = 22.5
+    and angle_R1 = 67.5
+    and probability_of_emission = 0.05
+  in
+    run_simulation (outf, angle_L0, angle_L1, angle_R0, angle_R1,
+                    probability_of_emission, num_events)
+  end

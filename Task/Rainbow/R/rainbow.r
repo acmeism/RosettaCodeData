@@ -1,0 +1,7 @@
+png(filename="Rainbow-R.png", height=200, width=600)
+plot(x=NA, xlim=c(0, 1), ylim=c(0, 1), xlab=NA, ylab=NA, axes=FALSE)
+coords <- seq(0.1, 0.9, length.out=7)
+chars <- c("R", "A", "I", "N", "B", "O", "W")
+pal <- c("red", "orange", "yellow", "green", "blue", "purple", "violet")
+for(i in 1:7) text(x=coords[i], y=0.5, labels=chars[i], col=pal[i], cex=5)
+dev.off()

@@ -1,0 +1,99 @@
+import <Utilities/Set.sl>;
+import <Utilities/Math.sl>;
+import <Utilities/Sequence.sl>;
+
+Point ::= (x : int, y : int);
+
+State ::= (open : Point(1), closed : Point(1), cameFrom : Point(2), estimate : int(2), actual : int(2));
+
+allNeighbors := [(x : -1, y : -1), (x : 1, y : -1), (x : -1, y : 1), (x : 1, y : 1),
+				 (x : 0, y : -1), (x : -1, y : 0), (x : 0, y : 1), (x : 1, y : 0)];
+
+defaultBarriers := [(x : 3, y : 5),(x : 3, y : 6),(x : 3, y : 7),(x : 4, y : 7),
+	(x : 5, y : 7),(x : 6, y : 7),(x : 6, y : 6),(x : 6, y : 5),(x : 6, y : 4),
+	(x : 6, y : 3),(x : 5, y : 3),(x : 4, y : 3)];
+
+defaultWidth := 8;
+defaultHeight := 8;
+
+main(args(2)) := aStar(defaultWidth, defaultHeight, defaultBarriers, (x : 1, y : 1), (x : defaultWidth, y : defaultHeight));
+
+aStar(width, height, barriers(1), start, end) :=
+	let
+		newEstimate[i,j] := heuristic(start, end) when i = start.x and j = start.y else 0
+								foreach i within 1...width, j within 1 ... height;
+		newActual[i,j] := 0 foreach i within 1...width, j within 1...height;
+		newCameFrom[i,j] := (x : 0, y : 0) foreach i within 1...width, j within 1...height;
+
+		searchResults := search((open : [start], closed : [], estimate : newEstimate, actual : newActual, cameFrom : newCameFrom), barriers, end);
+		shortestPath := path(searchResults.cameFrom, start, end) ++ [end];
+	in
+		"No Path Found" when size(searchResults.open) = 0 else
+		"Path: " ++ toString(shortestPath) ++ "\nCost:" ++
+		toString(searchResults.actual[end.x, end.y]) ++ "\nMap:\n" ++ join(appendNT(drawMap(barriers,shortestPath,width, height),"\n"));
+
+path(cameFrom(2), start, current) :=
+	let
+		next := cameFrom[current.x, current.y];
+	in
+	[] when current = start else
+	path(cameFrom, start, next) ++ [next];
+
+drawMap(barriers(1), path(1), width, height)[i,j] :=
+	'#' when elementOf((x:i, y:j), barriers) else
+	'X' when elementOf((x:i, y:j), path) else
+	'.' foreach i within 1 ... width, j within 1 ... height;
+
+search(state, barriers(1), end) :=
+	let
+		nLocation := smallestEstimate(state.open, state.estimate, 2, 1, state.estimate[state.open[1].x, state.open[1].y]);
+		n := state.open[nLocation];
+		neighbors := createNeighbors(n, allNeighbors, size(state.actual), size(state.actual[1]));
+		startState := (open : state.open[1...nLocation-1] ++ state.open[nLocation+1 ... size(state.open)], closed : state.closed ++ [n], cameFrom : state.cameFrom,
+					   estimate : state.estimate, actual : state.actual);
+		newState := findOpenNeighbors(n, startState, barriers, end, neighbors);
+	in
+	state when size(state.open) = 0  else
+	state when n = end else
+	search(newState, barriers, end);
+
+smallestEstimate(open(1), estimate(2), index, minIndex, minEstimate) :=
+	let newEstimate := estimate[open[index].x, open[index].y]; in
+	minIndex when index > size(open) else
+	smallestEstimate(open, estimate, index + 1, minIndex, minEstimate) when newEstimate > minEstimate else
+	smallestEstimate(open, estimate, index + 1, index, newEstimate);
+
+findOpenNeighbors(n, state, barriers(1), end, neighbors(1)) :=
+	let
+		neighbor := head(neighbors);
+		cost := 1 + n.cost;
+		candidate := state.actual[n.x, n.y] + calculateCost(barriers, n, neighbor);
+	in
+		state when size(neighbors) = 0 else
+		findOpenNeighbors(n, state, barriers, end, tail(neighbors)) when elementOf(neighbor, state.closed) else
+		findOpenNeighbors(n, state, barriers, end, tail(neighbors)) when elementOf(neighbor, state.open) and candidate >= state.actual[neighbor.x, neighbor.y] else
+		findOpenNeighbors(n, (open : state.open ++ [neighbor], closed : state.closed,
+			cameFrom : setMap(state.cameFrom, neighbor, n),
+			estimate : setMap(state.estimate, neighbor, candidate + heuristic(neighbor, end)),
+			actual : setMap(state.actual, neighbor, candidate)),
+			barriers, end, tail(neighbors));
+
+createNeighbors(n, p, w, h) :=
+	let
+		x := n.x + p.x;
+		y := n.y + p.y;
+	in
+		(x : x, y : y) when x >= 1 and x <= w and y >= 1 and y <= h;
+
+calculateCost(barriers(1), start, end) := 100 when elementOf(end, barriers) else 1;
+
+heuristic(start, end) :=
+	let
+		dx := abs(start.x - end.x);
+		dy := abs(start.y - end.y);
+	in
+		(dx + dy) - min(dx, dy);
+
+setMap(map(2), point, value)[i,j] :=
+	value when point.x = i and point.y = j else
+	map[i,j] foreach i within 1 ... size(map), j within 1 ... size(map[1]);

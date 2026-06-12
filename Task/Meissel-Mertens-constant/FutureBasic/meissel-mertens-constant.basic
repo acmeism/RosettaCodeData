@@ -1,0 +1,277 @@
+// ------------------------------------------------------------
+//  Meissel–Mertens constant
+//
+//  Using FutureBasic 7.0.37
+//  November 2025, R.W.
+// ------------------------------------------------------------
+
+include "mpfr.incl"
+
+CFTimeInterval tim
+_prev = 1
+
+// ============================================================
+//  Globals
+// ============================================================
+
+// High-precision Meissel–Mertens constant (MPFR)
+mpfr_t gHighPrecM
+// Series parameter (kMax for μ(k)/k log ζ(k) sum)
+long gN, sC
+
+// -----------------------------------------------------------
+//  Mobius μ(n) helper
+//
+//  μ(n) =  1  if n is squarefree with even # of prime factors
+//         -1  if n is squarefree with odd  # of prime factors
+//          0  if n has a squared prime factor
+// -----------------------------------------------------------
+local fn MobiusMu( n as long ) as long
+  if n <  1 then RETURN 0
+  if n == 1 then RETURN 1
+  long nn
+  nn = n
+  long countFactors
+  countFactors = 0
+  long p
+  p = 2
+  while (p * p) <= nn
+    if (nn mod p) = 0
+      long power
+      power = 0
+      while (nn mod p) == 0
+        nn    = nn / p
+        power = power + 1
+        if power > 1 then RETURN 0        // not square-free
+      wend
+      countFactors = countFactors + 1
+    end if
+    if p == 2 then p = 3 else p = p + 2
+  wend
+  if nn > 1 then countFactors = countFactors + 1
+  if (countFactors MOD 2) = 0 then RETURN 1
+end fn = -1
+
+
+// -----------------------------------------------------------
+//  High-precision Meissel–Mertens constant
+//
+//  M = γ + z + y
+//  z = Σ_{p∈{2,3,5,7}} [ log(1 − 1/p) + 1/p ]
+//  y = Σ_{k=2..kMax} μ(k)/k * log( ζ(k) *
+//              Π_{p∈{2,3,5,7}} (1 − p^(−k)) )
+//
+//  This function:
+//   - assumes MPFR default precision already set (in Main),
+//   - computes MM in gHighPrecM,
+//   - returns a CFString for display
+// -----------------------------------------------------------
+local fn MeisselMertensConstant( kMax as long, digits as long ) as CFStringRef
+
+  mpfr_t z, y, r, q, t1, t2
+
+  fn mpfr_init( z )
+  fn mpfr_init( y )
+  fn mpfr_init( r )
+  fn mpfr_init( q )
+  fn mpfr_init( t1 )
+  fn mpfr_init( t2 )
+
+  fn mpfr_set_ui( z, 0, MPFR_RNDN )
+  fn mpfr_set_ui( y, 0, MPFR_RNDN )
+
+  // fixed prime list [2,3,5,7]
+  long primes(3)
+  primes(0) = 2: primes(1) = 3
+  primes(2) = 5: primes(3) = 7
+
+  long i, p
+  //  z = Σ_p [ log(1 − 1/p) + 1/p ]
+  for i = 0 to 3
+    p = primes(i)
+    // r = 1/p
+    fn mpfr_set_ui( r, 1, MPFR_RNDN )
+    fn mpfr_div_ui( r, r, p, MPFR_RNDN )
+    // t1 = 1 − r
+    fn mpfr_set_ui( t1, 1, MPFR_RNDN )
+    fn mpfr_sub( t1, t1, r, MPFR_RNDN )
+    // t1 = log(1 − r) + r
+    fn mpfr_log( t1, t1, MPFR_RNDN )
+    fn mpfr_add( t1, t1, r, MPFR_RNDN )
+    // z += t1
+    fn mpfr_add( z, z, t1, MPFR_RNDN )
+  next
+
+  // y = Σ_{k=2..kMax} μ(k)/k * log( ζ(k) * Π_p (1 − p^(−k)) )
+  long k
+  for k = 2 to kMax
+    // q = 1
+    fn mpfr_set_ui( q, 1, MPFR_RNDN )
+    for i = 0 to 3
+      p = primes(i)
+      // r = 1/p
+      fn mpfr_set_ui( r, 1, MPFR_RNDN )
+      fn mpfr_div_ui( r, r, p, MPFR_RNDN )
+      // t1 = r^k
+      fn mpfr_pow_ui( t1, r, k, MPFR_RNDN )
+      // t1 = 1 − r^k
+      fn mpfr_set_ui( t2, 1, MPFR_RNDN )
+      fn mpfr_sub( t1, t2, t1, MPFR_RNDN )
+      // q *= t1
+      fn mpfr_mul( q, q, t1, MPFR_RNDN )
+    next
+
+    long muVal
+    muVal = fn MobiusMu( k )
+    if muVal <> 0
+      // t1 = ζ(k)
+      fn mpfr_zeta_ui( t1, k, MPFR_RNDN )
+      // t1 *= q
+      fn mpfr_mul( t1, t1, q, MPFR_RNDN )
+      // t1 = log(...)
+      fn mpfr_log( t1, t1, MPFR_RNDN )
+      // apply μ(k)
+      if muVal = -1
+        fn mpfr_neg( t1, t1, MPFR_RNDN )
+      end if
+      // divide by k
+      fn mpfr_div_ui( t1, t1, k, MPFR_RNDN )
+      // y += t1
+      fn mpfr_add( y, y, t1, MPFR_RNDN )
+    end if
+  next
+
+  // add Euler–Mascheroni constant to x + y
+  fn mpfr_const_euler( gHighPrecM, MPFR_RNDN )
+  fn mpfr_add( gHighPrecM, gHighPrecM, z, MPFR_RNDN )
+  fn mpfr_add( gHighPrecM, gHighPrecM, y, MPFR_RNDN )
+
+  // Convert to CFString with exactly digits fractional digits
+  CFStringRef s
+  s = fn mpfr_cf2( digits, gHighPrecM, MPFR_RNDN )
+
+  fn mpfr_clear( t2 )
+  fn mpfr_clear( t1 )
+  fn mpfr_clear( q )
+  fn mpfr_clear( r )
+  fn mpfr_clear( y )
+  fn mpfr_clear( z )
+
+end fn = s
+
+// -----------------------------------------------------------
+//  Abbreviate big numeric CFString: head...tail
+// -----------------------------------------------------------
+local fn AbbrevCFNumber( s as CFStringRef, head as int, tail as int ) as CFStringRef
+  if s = 0 then RETURN @""
+  int nLen
+  nLen = len( s )
+  if nLen <= head + tail then RETURN s
+  CFStringRef a, b, out
+  a   = left( s, head )
+  b   = right( s, tail )
+  out = @""
+  out = concat( a, @"...", b )
+end fn = out
+
+// -----------------------------------------------------------
+//  MM_More — compute MM using slow convergence
+//  kMax 100 at a time
+// -----------------------------------------------------------
+void local fn MM_More
+  CFStringRef pline = @""
+  long kMax
+  Int last3
+  kMax = sC
+  // Compute MM with this kMax and 1003 fractional digits
+  CFStringRef s
+  if sC == 200
+    print @"Slow-convergence checkpoints (series in kMax):\n"
+    print @" kMax     digit 1000    MM (1002 dig )"
+    print @"--------------------------------------"
+    mda (_prev) = @""
+  end if
+  tim = fn CACurrentMediaTime
+  s = fn MeisselMertensConstant( kMax, 1003 )
+  int n
+  n = len( s )      // total chars including the leading '.'
+  last3 = intVal(right(s,3)) + 50  // round hundred
+  // 1000th digit after decimal = 3rd from the end
+  int idx1000
+  idx1000 = n - 3   // 0-based index
+  CFStringRef digit1000
+  digit1000 = mid( s, idx1000, 1 )   // single char at n-3
+
+  // verification at https://oeis.org/A077761/b077761.txt
+
+  pline = fn StringWithFormat(@"%5ld          %@       ", kMax, digit1000)
+  print @pline;
+  s = fn AbbrevCFNumber(s, 20, 20 )
+  print @s;
+  printf @" (%.3f secs)", (fn CACurrentMediaTime - tim)
+  sC = sC + 100
+  if fn stringIsEqual(mda (_prev),s)
+    print @"\n 1000 decimal digits convergence completed.\n"
+    button 2,NO
+    print @" Digit 1000 rounded =";left(str(last3),2)
+    fn mpfr_clear( gHighPrecM )  // we don't need it anymore
+  end if
+  mda (_prev) = s
+end fn
+
+// ============================================================
+//  Main
+// ============================================================
+local fn Main
+  long   digits
+  UInt32 precBits
+  gN = 2100           // sufficient reps
+  digits   = 1003
+  precBits = (digits + 2) * 4
+
+  fn mpfr_set_default_prec( precBits )
+  fn mpfr_init( gHighPrecM )
+  print @"\nMeissel–Mertens constant (1002 digits)\n"
+  tim = fn CACurrentMediaTime
+
+  // Compute Meissel–Mertens with 1003 digits
+  CFStringRef fullStr
+  fullStr = fn MeisselMertensConstant( gN, digits )
+  CFStringRef abbrev
+  abbrev = fn AbbrevCFNumber( fullStr, 40, 40 )
+
+  printf @"MM ≈ %@", abbrev
+  printf @"\nTime elapsed %.3f secs\n", (fn CACurrentMediaTime - tim)
+  print @"Click [Next] for slow convergence calculation.\n"
+  sC = 200
+end fn
+
+
+// ============================================================
+//  Dialog handler
+// ============================================================
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ev
+    case _btnClick
+      select tag
+        case 2
+          fn MM_More
+      end select
+
+    case _windowShouldClose
+      end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+
+// ============================================================
+//  UI setup and event loop
+// ============================================================
+window 1, @"Meissel–Mertens constant", (0,0,700,420)
+button 2, YES,, @"Next", (580,20,100,24),,, 1
+
+fn Main
+
+HandleEvents

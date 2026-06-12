@@ -1,0 +1,141 @@
+Type DecodeResult
+    codepoint As Integer
+    index As Integer
+End Type
+
+Function isHighSurrogate (Byval codepoint As Integer) As Boolean
+    Return codepoint >= &HD800 Andalso codepoint <= &HDBFF
+End Function
+
+Function isLowSurrogate (Byval codepoint As Integer) As Boolean
+    Return codepoint >= &HDC00 Andalso codepoint <= &HDFFF
+End Function
+
+Function parseHexDigits(Byref digits As String, Byref index As Integer) As Integer
+    Dim As Integer i, codepoint
+    Dim As Ubyte digit
+
+    codepoint = 0
+    For i = 1 To Len(digits)
+        digit = Asc(Lcase(Mid(digits, i, 1)))
+        codepoint Shl= 4
+        If digit >= Asc("0") And digit <= Asc("9") Then
+            codepoint += digit - Asc("0")
+        Elseif digit >= Asc("a") And digit <= Asc("f") Then
+            codepoint += digit - Asc("a") + 10
+        Else
+            Print "invalid \uXXXX escape sequence, at index " & index
+            Return -1
+        End If
+    Next
+    Return codepoint
+End Function
+
+Function decodeHexChar(Byref value As String, Byref index As Integer) As DecodeResult
+    Dim As Integer length, lowSurrogate
+    Dim As DecodeResult result
+
+    length = Len(value)
+    If index + 4 > length Then
+        Print "incomplete escape sequence, at index " & (index - 2)
+        result.codepoint = -1
+        Return result
+    End If
+
+    index += 1 ' Move past 'u'
+    result.codepoint = parseHexDigits(Mid(value, index, 4), index - 3)
+
+    If isLowSurrogate(result.codepoint) Then
+        Print "unexpected low surrogate code point, at index " & (index - 3)
+        result.codepoint = -1
+        Return result
+    End If
+
+    If isHighSurrogate(result.codepoint) Then
+        If Not (index + 9 < length And Mid(value, index + 4, 2) = "\u") Then
+            Print "incomplete escape sequence, at index " & (index - 3)
+            result.codepoint = -1
+            Return result
+        End If
+
+        lowSurrogate = parseHexDigits(Mid(value, index + 6, 4), index + 4)
+        If Not isLowSurrogate(lowSurrogate) Then
+            Print "unexpected code point, at index " & (index + 3)
+            result.codepoint = -1
+            Return result
+        End If
+
+        result.codepoint = &H10000 + ((result.codepoint And &H03FF) Shl 10) + (lowSurrogate And &H03FF)
+        result.index = index + 9
+        Return result
+    End If
+
+    result.index = index + 3
+    Return result
+End Function
+
+Function stringFromCodepoint(Byval codepoint As Integer, Byval index As Integer) As String
+    If codepoint <= &H1F Then
+        Print "invalid character, at index " & index
+        Return ""
+    End If
+    Return Chr(codepoint)
+End Function
+
+Function unescapeString(Byref value As String) As String
+    Dim As String res
+    Dim As Integer length, index, ch, startIndex
+    Dim As DecodeResult result
+
+    res = ""
+    length = Len(value)
+    index = 1
+    While index <= length
+        ch = Asc(Mid(value, index, 1))
+        If ch = Asc("\") Then
+            index += 1 ' Move past '\'
+            ch = Asc(Mid(value, index, 1))
+
+            Select Case ch
+            Case Asc(""""), Asc("\"), Asc("/")
+                res &= Chr(ch)
+            Case Asc("b")
+                res &= Chr(8)
+            Case Asc("f")
+                res &= Chr(12)
+            Case Asc("n")
+                res &= Chr(10)
+            Case Asc("r")
+                res &= Chr(13)
+            Case Asc("t")
+                res &= Chr(9)
+            Case Asc("u")
+                startIndex = index - 1
+                result = decodeHexChar(value, index)
+                If result.codepoint = -1 Then Return res
+                res &= stringFromCodepoint(result.codepoint, startIndex)
+                index = result.index
+            Case Else
+                Print "unknown escape sequence, at index " & (index - 1)
+                Return res
+            End Select
+        Else
+            res &= Chr(ch)
+        End If
+        index += 1
+    Wend
+    Return res
+End Function
+
+Dim As String test(13) = { _
+"abc", "a?c", "a\""c", "\u0061\u0062\u0063", "a\\c", "a\u263Ac", _
+"a\\u263Ac", "a\uD834\uDD1Ec", "a\ud834\udd1ec", "a\u263", "a\u263Xc", _
+"a\uDD1Ec", "a\uD834c", "a\uD834\u263Ac" }
+
+For i As Integer = 0 To Ubound(test)
+    Print test(i) & " -> ";
+    Dim As String result = unescapeString(test(i))
+    If result <> "a" Then Print result
+Next
+
+Sleep

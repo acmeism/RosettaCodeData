@@ -1,0 +1,111 @@
+' From FreeBasic translation to M2000
+' rSIN is SIN using RADIANS, rATN is ATN  using RADIANS.
+' Pi has value 3.1415926535897932384626433832 of type DECIMAL
+' ELSE IF is ELSE.IF
+' by default 1 is type of double so we don't have to write 1.0
+' So literal 1&& 64bit, 1& 32bit and 1% 16bit integer values for one.
+
+Module Color_Difference_CIE_ΔΕ2000 {
+	Function ciede_2000(l_1 As Double, a_1 As Double, b_1 As Double, l_2 As Double, a_2 As Double, b_2 As Double) {
+	    ' Michel Leonard uses VBA with the CIEDE2000 color-difference formula.
+	    ' k_l, k_c, k_h are parametric factors to be adjusted according to
+	    ' different viewing parameters such as textures, backgrounds...
+	    Const  k_l = 1, k_c = 1, k_h = 1
+	    Var n As Double, c_1 As Double, c_2 As Double, h_1 As Double, h_2 As Double
+	    Var h_m As Double, h_d As Double, p As Double, r_t As Double, l As Double
+	    Var t As Double, h As Double, c As Double
+	    n = (Sqrt(a_1 * a_1 + b_1 * b_1) + Sqrt(a_2 * a_2 + b_2 * b_2)) * 0.5
+	    n = n * n * n * n * n * n * n
+	    ' GitHub Project :
+	    ' https://github.com/michel-leonard/ciede2000-color-matching
+	    n = 1 + 0.5 * (1 - Sqrt(n / (n + 6103515625.0)))
+	    ' Since hypot is not available, sqrt is used here to calculate the
+	    ' Euclidean distance, without avoiding overflow/underflow.
+	    c_1 = Sqrt(a_1 * a_1 * n * n + b_1 * b_1)
+	    c_2 = Sqrt(a_2 * a_2 * n * n + b_2 * b_2)
+	    ' Using 20 lines to simulate atan2, as VBA does not have this built-in.
+	    c = a_1 * n
+	    If 0 < c Then
+	        h_1 = rAtn(b_1 / c)
+	    Else.if c < 0 Then
+	        h_1 = rAtn(b_1 / c) + PI * Sgn(b_1)
+	        If b_1 = 0 Then h_1 = h_1 + PI
+	    Else
+	        h_1 = PI * 0.5 * Sgn(b_1)
+	    End If
+	    c = a_2 * n
+	    If 0 < c Then
+	        h_2 = rAtn(b_2 / c)
+	    Else.if c < 0 Then
+	        h_2 = rAtn(b_2 / c) + PI * Sgn(b_2)
+	        If b_2 = 0 Then h_2 = h_2 + PI
+	    Else
+	        h_2 = PI * 0.5 * Sgn(b_2)
+	    End If
+	    ' The atan2 polyfill is complete.
+	    If h_1 < 0.0 Then h_1 = h_1 + 2.0 * PI
+	    If h_2 < 0.0 Then h_2 = h_2 + 2.0 * PI
+	    n = Abs(h_2 - h_1)
+	    ' Cross-implementation consistent rounding.
+	    If PI - 1E-14 < n And n < PI + 1E-14 Then n = PI
+	    ' When the hue angles lie in different quadrants, the straightforward
+	    ' average can produce a mean that incorrectly suggests a hue angle in
+	    ' the wrong quadrant, the next lines handle this issue.
+	    h_m = (h_1 + h_2) * 0.5
+	    h_d = (h_2 - h_1) * 0.5
+	    If PI < n Then
+	        If 0.0 < h_d Then h_d = h_d - PI Else h_d = h_d + PI
+	        h_m = h_m + PI
+	    End If
+	    p = 36.0 * h_m - 55.0 * PI
+	    n = (c_1 + c_2) * 0.5
+	    n = n * n * n * n * n * n * n
+	    ' The hue rotation correction term is designed to account for the
+	    ' non-linear behavior of hue differences in the blue region.
+	    r_t = -2.0 * Sqrt(n / (n + 6103515625.0))  * rSin(PI / 3.0 * Exp(p * p / (-25.0 * PI * PI)))
+	    n = (l_1 + l_2) * 0.5
+	    n = (n - 50.0) * (n - 50.0)
+	    ' Lightness.
+	    l = (l_2 - l_1) / (k_l * (1 + 0.015 * n / Sqrt(20.0 + n)))
+	    ' These coefficients adjust the impact of different harmonic
+	    ' components on the hue difference calculation.
+	    t = 1+ 0.24 * rSin(2.0 * h_m + PI * 0.5) + 0.32 * rSin(3.0 * h_m + 8.0 * PI / 15.0) - 0.17 * rSin(h_m + PI / 3.0)  - 0.2 * rSin(4.0 * h_m + 3.0 * PI / 20.0)
+	    n = c_1 + c_2
+	    ' Hue.
+	    h = 2.0 * Sqrt(c_1 * c_2) * rSin(h_d) / (k_h * (1 + 0.0075 * n * t))
+	    ' Chroma.
+	    c = (c_2 - c_1) / (k_c * (1 + 0.0225 * n))
+	    ' Returning the square root ensures that the result represents
+	    ' the "true" geometric distance in the color space.
+	    ' M2000 use = as statement too, for return value - it isn't an exit, we can use more than one = as statement.
+	    = Sqrt(l * l + h * h + c * c + c * h * r_t)
+	}
+	Locale 1033
+	Flush
+	Data 73.0, 49.0, 39.4, 73.0, 49.0, 39.4
+	Data 30.0, -41.0, -119.1, 30.0, -41.0, -119.0
+	Data 79.0, -117.0, -100.4, 79.5, -117.0, -100.0
+	Data 15.0, -55.0, 6.7, 14.0, -55.0, 7.0
+	Data 83.0, 98.0, -59.5, 85.2, 98.0, -59.5
+	Data 59.0, -11.0, -95.0, 56.3, -11.0, -95.0
+	Data 74.0, -1.0, 68.6, 81.0, -1.0, 69.0
+	Data 46.4, 125.0, 6.0, 40.0, 125.0, 6.0
+	Data 18.0, -5.0, 68.0, 20.0, 5.0, 82.0
+	Data 35.5, -99.0, 109.0, 25.0, -99.0, 109.0
+	Data 59.0, 77.0, 41.5, 63.3, 77.0, 12.4
+	Data 40.0, -92.0, 7.7, 58.0, -92.0, -8.0
+	Data 49.0, -9.0, -74.5, 51.1, 31.0, 16.0
+	Data 88.0, -124.0, 56.0, 97.0, 62.0, -28.0
+	Data 98.0, 75.7, 11.0, 3.0, -62.0, 11.0
+	Form 80
+	Print part $(2, 8), "L1", "a1", "b1", "L2", "a2", "b2",  $(2, 16),"ΔΕ2000"
+	Print
+	Print String$("-", 80)
+	while not empty
+		Read L1, a1, b1, L2, a2, b2
+		Print part $(0, 8),$("0.0"),L1, a1, b1, L2, a2, b2, $("0.0000000000", 16), ciede_2000(L1, a1, b1, L2, a2, b2)
+		Print
+	end while
+}
+Color_Difference_CIE_ΔΕ2000
+

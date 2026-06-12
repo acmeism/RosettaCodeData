@@ -1,0 +1,174 @@
+const ATM="A", F="F", HIT="H", G="G", GN="N", R="R", BLNK=" ", GY="Y";
+
+var
+   brd,hdn,	    // displayed board & hidden atoms
+   wikiGame = True; // set to False for a 'random' game
+
+fcn initialize{
+   brd,hdn = List.createLong(100,BLNK), List.createLong(100,F);
+
+   if(not wikiGame) hideAtoms();
+   else hdn[32] = hdn[37] = hdn[64] = hdn[87] = ATM;
+//   else hdn[64] = hdn[66] = ATM;	// Double deflection case
+
+   println(
+#<<<"
+    === BLACK BOX ===
+
+    H    Hit (scores 1)
+    R    Reflection (scores 1)
+    1-9, Detour (scores 2)
+    a-c  Detour for 10-12 (scores 2)
+    G    Guess (maximum 4)
+    Y    Correct guess
+    N    Incorrect guess (scores 5)
+    A    Unguessed atom
+
+    Cells are numbered a0 to j9.
+    Corner cells do nothing.
+    Use edge cells to fire beam.
+    Use middle cells to add/delete a guess.
+    Game ends automatically after 4 guesses.
+    Enter q to abort game at any time.\n\n");
+#<<<
+}
+
+fcn drawGrid(score, guesses){
+   var [const] vbs="\u2550\u2550\u2550\u256c", bt=(vbs.del(-3,3)),
+      be1=String("      %s",vbs*7,bt,"%s").fmt,
+      b1=be1("\u2554","\u2557"), e1=be1("\u255a","\u255d"),
+
+      be2=String("  %s", vbs*9, bt,"%s").fmt,
+      b2=be2("\u2554", "\u2557"), b3=be2("\u256c", "\u256c"),
+      e2=be2("\u255a", "\u255d"),
+
+      g1=String("%s%s    ","\u2551 %s "*9).fmt,		// a brd[0]=brd[90]=" "
+      g2=String("%s ","\u2551 %s "*11).del(-3,3).fmt;	// b c d .. i
+
+   println("    0   1   2   3   4   5   6   7   8   9 \n",b1);
+   grid,sep,n := g1, b2, -10;
+   foreach c in (["a".."i"]){
+      println(grid(c,brd[n+=10,10].xplode()));
+      println((c=="i") and e2 or sep);
+      grid,sep = g2,b3;
+   }
+   println(g1("j",brd[90,10].xplode()), "\n", e1);
+
+   status:=(guesses==4) and "Game over!" or "In play";
+   println("\n        Score = ", score, "\tGuesses = ", guesses, "\t Status = ", status);
+}
+
+fcn hideAtoms{
+   n:=4; do{
+      a,m:=(11).random(89), a % 10; 	// 11 to 88 inclusive
+      if(m==0 or m==9 or hdn[a]==ATM) continue;
+      hdn[a]=ATM;
+      n-=1;
+   }while(n);
+}
+
+fcn nextCell{
+   while(True){
+      s,c,n,sz := ask("    Choose cell [a-j][0-9]: ").strip().toLower(), s[0,1], s[1,1], s.len();
+      if(sz==1 and c=="q") System.exit();
+      if(not (sz==2 and ("a"<=c<="j") and ("0"<=n<="9"))) continue;
+      ix:=10*(c.toAsc() - 97) + n;	// row major, "a"-'a'
+      if(not atCorner(ix)){ println(); return(ix); }
+   }
+}
+
+fcn atCorner(ix){  ix==0 or ix==9 or ix==90 or ix==99 }
+fcn inRange(ix) {  (1<=ix<=98) and ix!=9 and ix!=90 }
+fcn atTop(ix)   {   1<=ix<= 8 }
+fcn atBottom(ix){  91<=ix<=98 }	
+fcn atLeft(ix)  {  inRange(ix) and ix%10 ==0 }
+fcn atRight(ix) {  inRange(ix) and ix%10 ==9 }
+fcn inMiddle(ix){
+   inRange(ix) and not ( atTop(ix) or atBottom(ix) or atLeft(ix) or atRight(ix) )
+}
+fcn play{
+   score,guesses,num := 0,0, 0x30;	// '0'
+   while(True){
+      drawGrid(score, guesses);
+      ix:=nextCell();
+      if(not inMiddle(ix) and brd[ix]!=BLNK) continue; // already processed
+      inc,def := 0,0;
+      if     (atTop(ix))    inc,def =  10,  1;
+      else if(atBottom(ix)) inc,def = -10,  1;
+      else if(atLeft(ix))   inc,def =   1, 10;
+      else if(atRight(ix))  inc,def =  -1, 10;
+      else{
+	 if(brd[ix]!=G){
+	    brd[ix]=G;
+	    if( (guesses+=1) ==4) break(1);	// you done
+	 }else{ brd[ix]=BLNK; guesses-=1; }
+	 continue;
+      }
+      x,first := ix + inc, True;
+      while(inMiddle(x)){
+	 if(hdn[x]==ATM){					// hit
+	    brd[ix]=HIT;
+	    score+=1;
+	    first=False;
+	    continue(2);
+	 }
+	 if(first and (inMiddle(x + def) and hdn[x + def]==ATM) or
+	    (inMiddle(x - def) and hdn[x - def]==ATM)){		// reflection
+	    brd[ix]=R;
+	    score+=1;
+	    first=False;
+	    continue(2);
+	 }
+	 first=False;
+	 y:=x + inc - def;
+	 if(inMiddle(y) and hdn[y]==ATM){			// deflection
+	    switch(inc){
+	       case( 1,  -1){  inc, def = 10, 1 }
+	       case(10, -10){  inc, def =  1,10 }
+	    }
+	 }
+	 y=x + inc + def;
+	 if(inMiddle(y) and hdn[y]==ATM){    // deflection or double deflection
+	    switch(inc){
+	       case( 1,  -1){ inc, def = -10,  1 }
+	       case(10, -10){ inc, def =  -1, 10 }
+	    }
+	 }
+	 x+=inc;
+      }// while inMiddle
+
+      if(brd[ix]==BLNK) score+=1;
+      if(num!=0x39) num+=1; else num=97;	// '0' & 'a'
+      brd[ix]=num.toChar();			// right back at ya
+      if(inRange(x)){
+	 if(ix==x) brd[ix]=R;
+	 else{
+	    if(brd[x]==BLNK) score+=1;
+	    brd[x]=num.toChar();
+	 }
+      }
+   }
+   drawGrid(  score, guesses);
+   finalScore(score, guesses);
+}
+
+fcn finalScore(score, guesses){
+println(hdn.toString(*));
+   foreach i in ([11..88]){
+      m:=i%10;
+      if(m==0 or m==9)		  	    continue;
+      if(brd[i]==G and hdn[i]==ATM)         brd[i]=GY;
+      else if(brd[i]==G and hdn[i]==F){     brd[i]=GN; score+=5; }
+      else if(brd[i]==BLNK and hdn[i]==ATM) brd[i]=ATM;
+   }
+   drawGrid(score, guesses);
+}
+
+while(True){
+   initialize(); play();
+   while(True){
+      yn:=ask("    Play again y/n : ").strip().toLower();
+      if(yn=="n")      break(2);
+      else if(yn=="y") break(1);
+   }
+}

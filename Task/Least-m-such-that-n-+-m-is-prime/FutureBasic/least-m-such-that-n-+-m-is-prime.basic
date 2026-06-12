@@ -1,0 +1,229 @@
+// ------------------------------------------------------------
+//  Least m such that n! + m is prime
+//
+//  Using FutureBasic 7.0.36
+//  November 2025, R.W.
+// ------------------------------------------------------------
+
+include "gmp.incl"
+
+CFTimeInterval t
+
+_kPrimeReps = 10  // Miller–Rabin reps 10 sufficient for this task
+
+// Global mpz_t bigints reused everywhere
+mpz_t gFact      // current n!
+mpz_t gP         // next prime after n!
+mpz_t gTmp       // scratch for p - fact
+mpz_t gCand      // candidate for next prime
+
+// Global integer state
+long    gLastN       // highest n for which gFact = n!
+long    gNextN       // next n to start from when [Next] is pressed
+long    gThresh      // current threshold (1000, 2000, ...)
+long    gLimit       // maximum threshold (e.g. 12000)
+Boolean gThreshDone  // true when all thresholds done
+
+// ------------------------------------------------------------
+//  Init globals (called once from Main)
+// ------------------------------------------------------------
+local fn InitLeastMGlobals
+  mpz_init( gFact )
+  mpz_init( gP )
+  mpz_init( gTmp )
+  mpz_init( gCand )
+
+  fn mpz_set_ui( gFact, 1 )    // fact = 1 = 0!
+  gLastN      = 0
+  gNextN      = 0
+  gThresh     = 1000
+  gLimit      = 12000
+  gThreshDone = _false
+end fn
+
+// ------------------------------------------------------------
+//  NextPrimeAfterFact
+//  Set gP to the next probable prime > gFact
+//  using mpz_probab_prime_p with _kPrimeReps reps.
+// ------------------------------------------------------------
+local fn NextPrimeAfterFact
+  int r
+  // Special case: for gFact <= 1, next prime is 2
+  if fn mpz_cmp_ui( gFact, 1 ) <= 0
+    fn mpz_set_ui( gP, 2 )
+    exit fn
+  end if
+  // General case: start from fact + 1, then move to odd ≥ 3
+  fn mpz_add_ui( gCand, gFact, 1 )
+  // ensure gCand is odd (tstbit(0) = 1 for odd)
+  if fn mpz_tstbit( gCand, 0 ) = 0
+    fn mpz_add_ui( gCand, gCand, 1 )
+  end if
+
+  while ( _true )
+    r = fn mpz_probab_prime_p( gCand, _kPrimeReps )
+    if r > 0
+      // probably prime (1 or 2); accept it
+      fn mpz_set( gP, gCand )
+      exit while
+    end if
+    // try next odd
+    fn mpz_add_ui( gCand, gCand, 2 )
+  wend
+end fn
+
+// ------------------------------------------------------------
+//  Least_m
+//  Return least positive m such that n! + m is prime.
+//  Uses and updates global gFact, gLastN, gP, gTmp.
+//  Assumes calls come with non-decreasing n.
+// ------------------------------------------------------------
+local fn Least_m( n as long ) as long
+  long k, m
+  if n < 0 then return 0
+  // If we somehow went backwards,
+  // I know... I know.. just for safety
+  if n < gLastN
+    fn mpz_set_ui( gFact, 1 ) // reset the factorial
+    gLastN = 0
+  end if
+  // Update factorial from gLastN! up to n!
+  for k = gLastN + 1 to n
+    fn mpz_mul_ui( gFact, gFact, k )
+  next
+  gLastN = n
+  // p = a faster next prime after gFact
+  fn NextPrimeAfterFact
+  // m = p - gFact
+  mpz_sub( gTmp, gP, gFact )
+  m = fn mpz_get_ui( gTmp )
+end fn = m
+
+// ------------------------------------------------------------
+//  Least_m_More
+//  On each click, continue from gNextN and search forward
+//  until we hit the next threshold (or finish them all).
+//  Print nothing if no threshold is found
+//  If the same (m, n) crosses multiple thresholds (e.g. 2000
+//  and 3000), we print multiple lines in this *one* click.
+// ------------------------------------------------------------
+void local fn Least_m_More
+  long n
+  long mVal
+  CFTimeInterval tLocal
+  CFTimeInterval elapsed
+  CFStringRef pline
+
+  // If we've already finished all thresholds, stay silent
+  if gThreshDone then return
+
+  tLocal = fn CACurrentMediaTime
+  n      = gNextN
+  // Keep going forward until we either:
+  //  - find mVal > current gThresh, or
+  //  - run out of thresholds (gThresh > gLimit)
+
+  while gThresh <= gLimit
+    mVal = fn Least_m( n )
+
+    if mVal > gThresh
+      // Time up to the first crossing for this click
+      elapsed = fn CACurrentMediaTime - tLocal
+
+      // This same (mVal, n) might satisfy several thresholds:
+      //  >1000, >2000, >3000, ...
+
+      while (mVal > gThresh) and (gThresh <= gLimit)
+        pline = fn StringWithFormat( @"First m > %6ld is %6ld at position %ld (%.3f secs)", ¬
+        gThresh, mVal, n, elapsed )
+        print @pline
+        gThresh = gThresh + 1000
+      wend
+
+      // Advance starting point for the [next] click
+      gNextN = n + 1
+
+      if gThresh > gLimit
+        gThreshDone = _true
+      end if
+
+      // We printed something for this click; stop now
+      return
+    end if
+
+    n = n + 1
+  wend
+
+  // If we drop out because gThresh > gLimit, we're done
+  gThreshDone = _true: button 2,NO
+end fn
+
+// ------------------------------------------------------------
+//  Main
+// ------------------------------------------------------------
+local fn Main
+  long k
+  long count
+  long mVal
+  CFStringRef pline
+
+  fn InitLeastMGlobals
+
+  print @"First 50 least positive m such that n! + m is prime:\n"
+
+  count = 0
+  k     = 0
+  t     = fn CACurrentMediaTime
+
+  while count < 50
+    mVal = fn Least_m( k )
+
+    pline = fn StringWithFormat( @"%4ld ", mVal )
+    print @pline;
+
+    count = count + 1
+    if (count mod 10) = 0
+      print
+    end if
+
+    k = k + 1
+  wend
+
+  printf @"\nElapsed time for first 50: %.3f secs\n", (fn CACurrentMediaTime - t)
+  print  @"\nClick [Next] to stretch thresholds (m > 1000, 2000, ..., 10000).\n"
+
+  gNextN = k
+end fn
+
+// ------------------------------------------------------------
+//  Dialog handler
+// ------------------------------------------------------------
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case 2
+          fn Least_m_More
+      end select
+
+    case _windowShouldClose
+      // clear any uncleared mpz_t
+      mpz_clear( gFact )
+      mpz_clear( gP )
+      mpz_clear( gTmp )
+      mpz_clear( gCand )
+      end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+// ------------------------------------------------------------
+//  Main
+// ------------------------------------------------------------
+window 1, @"Least m such that n! + m is prime", (0,0,620,500)
+button 2, YES,, @"Next", (500,20,100,20),,, 1
+
+fn Main
+
+HandleEvents

@@ -1,0 +1,65 @@
+-- Prints a row of the Romberg table.
+local function print_row(i, R)
+    io.write($"R[{i}] = ")
+    for j = 1, i do io.write(string.format("%0.8f ", R[j])) end
+    print()
+end
+
+--[[ Calculates the integral of a function using Romberg integration.
+
+    Args:
+        f: The function to integrate.
+        a: Lower limit of integration.
+        b: Upper limit of integration.
+        maxSteps: Maximum number of steps.
+        acc: Desired accuracy.
+
+    Returns:
+        The approximate value of the integral.
+]]
+local function romberg(f, a, b, max_steps, acc)
+    -- Buffers for storing previous and current rows.
+    local Rp = {}
+    local Rc = {}
+    for i = 1, max_steps do
+        Rp[i] = 0
+        Rc[i] = 0
+    end
+
+    local h = b - a  -- step size
+    Rp[1] = (f(a) + f(b)) * h * 0.5  -- first trapezoidal step
+    print_row(1, Rp)
+
+    for i = 2, max_steps do
+        h /= 2
+        local c = 0
+        local ep = 1 << (i - 2)
+        for j = 1, ep do
+            c = c + f(a + (2 * j - 1) * h)
+        end
+        Rc[1] = h * c + 0.5 * Rp[1]
+
+        for j = 2, i do
+            local n_k = 4 ^ (j - 1)
+            Rc[j] = (n_k * Rc[j - 1] - Rp[j - 1]) / (n_k - 1)
+        end
+
+        -- Print i'th row of R, R[i][i] is the best estimate so far.
+        print_row(i, Rc)
+
+        if i > 2 and math.abs(Rp[i - 1] - Rc[i]) < acc do return Rc[i] end
+
+        -- Swap Rp, Rc as we only need the last row.
+        local rt = Rp
+        Rp = Rc
+        Rc = rt
+    end
+    return Rp[#Rp] -- return our best guess
+end
+
+print("Integration of sin(x) over [0, 1] with a maximum of 5 steps.")
+print(string.format("%0.8f", romberg(math.sin,  0, 1, 5, 1e-8)))
+print()
+
+print("Integration of exp(x) over [-3, 3] with a maximum of 5 steps.")
+print(string.format("%0.8f", romberg(math.exp, -3, 3, 5, 1e-8)))

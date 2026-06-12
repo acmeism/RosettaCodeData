@@ -1,0 +1,90 @@
+import ballerina/io;
+
+# Solve the Traveling Salesman Problem using the Held–Karp algorithm.
+#
+# + dist - a 2D square matrix (list of lists) of pairwise distances.
+# + return - [min_cost, tour] where tour is a list of node indices, starting and ending at 0.
+function heldKarp(int[][] dist) returns [int, int[]] {
+    int n = dist.length();
+    int N = 1 << n;  // number of subsets: 2^n
+    int INF = int:MAX_VALUE / 4;
+
+    // dp[mask][j] = minimum cost to reach subset 'mask' and end at node j
+    int[][] dp = [];
+    dp.setLength(N);
+    foreach int i in 0..<N {
+        dp[i].setLength(n);
+        foreach int j in 0..<n { dp[i][j] = INF; }
+    }
+
+    // parent[mask][j] = previous node before j in optimal path for (mask, j)
+    int[][] parent = [];
+    parent.setLength(N);
+    foreach int i in 0..<N {
+        parent[i].setLength(n);
+        foreach int j in 0..<n { parent[i][j] = -1; }
+    }
+
+    // Base case: start at node 0, mask = 1<<0.
+    dp[1][0] = 0;
+
+    // Iterate over all subsets that include node 0.
+    foreach int mask in 1..<N {
+        if (mask & 1) == 0 { continue; }  // we always require the tour to start at node 0
+        foreach int j in 1..<n {
+            if (mask & (1 << j)) == 0 { continue; }  // j not in subset
+            int prevMask = mask ^ (1 << j);
+            // Try all possibilities of coming to j from some k in prev_mask.
+            foreach int k in 0..<n {
+                if (prevMask & (1 << k)) != 0 {
+                    int cost = dp[prevMask][k] + dist[k][j];
+                    if cost < dp[mask][j] {
+                        dp[mask][j] = cost;
+                        parent[mask][j] = k;
+                    }
+                }
+            }
+        }
+    }
+
+    // Close the tour: return to node 0.
+    int fullMask = (1 << n) - 1;
+    int minCost = INF;
+    int last = -1;
+    foreach int j in 1..<n {
+        int cost = dp[fullMask][j] + dist[j][0];
+        if cost < minCost {
+            minCost = cost;
+            last = j;
+        }
+    }
+
+    // Reconstruct path.
+    int[] path = [];
+    int mask = fullMask;
+    int curr = last;
+    while curr != -1 {
+        path.push(curr);
+        int prev = parent[mask][curr];
+        mask ^= (1 << curr);
+        curr = prev;
+    }
+
+    path.push(0);           // add the start node
+    path = path.reverse();  // reverse to get 0 -> ... -> last
+    path.push(0);           // and return to 0
+    return [minCost, path];
+}
+
+public function main() {
+    int[][] distMatrix = [
+       [0,  2,  9, 10],
+       [1,  0,  6,  4],
+       [15, 7,  0,  8],
+       [6,  3, 12,  0]
+    ];
+
+    [int, int[]] ct = heldKarp(distMatrix);
+    io:println(`Minimum tour cost: ${ct[0]}`);
+    io:println(`Tour: ${ct[1]}`);
+}

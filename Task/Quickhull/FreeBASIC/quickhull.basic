@@ -1,0 +1,428 @@
+Const NULL As Any Ptr = 0
+Const MAXN = 2500
+Const EPS = 1e-8
+
+' Vect represents a 3D point/vector
+Type Vect
+    x As Single
+    y As Single
+    z As Single
+    id As Integer
+End Type
+
+' Linea is the segment u->v
+Type Linea
+    u As Vect Ptr
+    v As Vect Ptr
+End Type
+
+' Plano is defined by three points u, v, w
+Type Plano
+    u As Vect Ptr
+    v As Vect Ptr
+    w As Vect Ptr
+End Type
+
+' Faceta is a face in the hull
+Type Faceta
+    n(2) As Integer
+    id As Integer
+    vistime As Integer
+    isdel As Integer       ' 0 = false, 1 = true
+    p As Plano
+End Type
+
+' Edge on the horizon
+Type Edge
+    netid As Integer
+    facetid As Integer
+End Type
+
+' ConvexHulls3d manages hull construction
+Type ConvexHulls3d
+    index As Integer
+    surfacearea As Single
+End Type
+
+' Global variables
+Dim Shared FAC() As Faceta Ptr
+Dim Shared pts(MAXN, MAXN) As Vect Ptr
+Dim Shared G_TIME As Integer
+Dim Shared e(1, MAXN-1) As Edge
+Dim Shared vistimeArr(MAXN-1) As Integer
+Dim Shared que() As Integer
+Dim Shared resfnew() As Integer
+Dim Shared resfdel() As Integer
+Dim Shared respt() As Vect Ptr
+
+'' Auxiliary vector functions
+Function Vect_Sub(a As Vect Ptr, b As Vect Ptr) As Vect
+    Dim res As Vect
+    res.x = a->x - b->x
+    res.y = a->y - b->y
+    res.z = a->z - b->z
+    res.id = 0
+    Return res
+End Function
+
+Function Vect_Cross(a As Vect Ptr, b As Vect Ptr) As Vect
+    Dim res As Vect
+    res.x = a->y * b->z - a->z * b->y
+    res.y = a->z * b->x - a->x * b->z
+    res.z = a->x * b->y - a->y * b->x
+    res.id = 0
+    Return res
+End Function
+
+Function Vect_Dot(a As Vect Ptr, b As Vect Ptr) As Single
+    Return a->x * b->x + a->y * b->y + a->z * b->z
+End Function
+
+Function Vect_Mag(a As Vect Ptr) As Single
+    Return Sqr(a->x * a->x + a->y * a->y + a->z * a->z)
+End Function
+
+Function Vect_Eq(a As Vect Ptr, b As Vect Ptr) As Integer
+    Return Abs(a->x - b->x) < EPS And Abs(a->y - b->y) < EPS And Abs(a->z - b->z) < EPS
+End Function
+
+'' Operations with planes
+Function Plano_Normal(p As Plano Ptr) As Vect
+    Dim ab As Vect = Vect_Sub(p->v, p->u)
+    Dim ac As Vect = Vect_Sub(p->w, p->u)
+    Return Vect_Cross(@ab, @ac)
+End Function
+
+Function distPuntoPlano(v As Vect Ptr, p As Plano) As Single
+    Dim tmp_sub As Vect = Vect_Sub(v, p.u)
+    Dim n As Vect = Plano_Normal(@p)
+    Dim num As Single = Vect_Dot(@tmp_sub, @n)
+    Dim den As Single = Vect_Mag(@n)
+    Return num / den
+End Function
+
+Function distPuntoLinea(v As Vect Ptr, f As Linea) As Single
+    Dim sub_fu As Vect = Vect_Sub(f.v, f.u)
+    Dim sub_vu As Vect = Vect_Sub(v, f.u)
+    Dim cross As Vect = Vect_Cross(@sub_fu, @sub_vu)
+    Return Vect_Mag(@cross) / Vect_Mag(@sub_fu)
+End Function
+
+Function distPuntoPunto(u As Vect Ptr, v As Vect Ptr) As Single
+    Dim tmp_sub As Vect = Vect_Sub(u, v)
+    Return Vect_Mag(@tmp_sub)
+End Function
+
+Function isAbove(v As Vect Ptr, p As Plano) As Integer
+    Dim tmp_sub As Vect = Vect_Sub(v, p.u)
+    Dim n As Vect = Plano_Normal(@p)
+    Return (Vect_Dot(@tmp_sub, @n) > EPS)
+End Function
+
+' Initialize globals
+Sub preConvexHulls()
+    Redim FAC(0)
+    FAC(0) = Callocate(Sizeof(Faceta))  ' dummy facet
+    G_TIME = 0
+End Sub
+
+' DFS to accumulate area
+Sub dfsArea(h As ConvexHulls3d Ptr, nf As Integer)
+    If FAC(nf)->vistime = G_TIME Then Exit Sub
+    FAC(nf)->vistime = G_TIME
+
+    Dim nrm As Vect = Plano_Normal(@FAC(nf)->p)
+    h->surfacearea += Vect_Mag(@nrm) / 2.0
+
+    For i As Integer = 0 To 2
+        dfsArea(h, FAC(nf)->n(i))
+    Next
+End Sub
+
+' GetSurfaceArea returns (and caches) the hull surface area
+Function GetSurfaceArea(h As ConvexHulls3d Ptr) As Single
+    If h->surfacearea > EPS Then Return h->surfacearea
+
+    G_TIME += 1
+    dfsArea(h, h->index)
+    Return h->surfacearea
+End Function
+
+' Recursively find the horizon around point p
+Function getHorizon(nf As Integer, p As Vect Ptr, resfdel() As Integer) As Integer
+    FAC(nf)->vistime = G_TIME
+    FAC(nf)->isdel = 1
+
+    Redim Preserve resfdel(Ubound(resfdel) + 1)
+    resfdel(Ubound(resfdel)) = nf
+
+    Dim s As Integer = 0
+
+    For i As Integer = 0 To 2
+        Dim nei As Integer = FAC(nf)->n(i)
+
+        If FAC(nei)->vistime = G_TIME Then Continue For
+
+        If isAbove(p, FAC(nei)->p) Then
+            Dim result As Integer = getHorizon(nei, p, resfdel())
+            s += result
+        Else
+            s += 1
+
+            Redim Preserve FAC(Ubound(FAC) + 1)
+            FAC(Ubound(FAC)) = Callocate(Sizeof(Faceta))
+            FAC(Ubound(FAC))->id = Ubound(FAC)
+
+            Dim newf As Integer = Ubound(FAC)
+
+            Redim Preserve resfnew(Ubound(resfnew) + 1)
+            resfnew(Ubound(resfnew)) = newf
+        End If
+    Next
+
+    Return s
+End Function
+
+Sub AsignarPuntoFacetaa(nf As Integer, v As Vect Ptr)
+    Dim i As Integer = 0
+    While pts(nf, i) <> 0 And i < MAXN
+        i += 1
+    Wend
+
+    If i < MAXN Then pts(nf, i) = v
+End Sub
+
+Sub ActualizarCola()
+    If Ubound(que) >= 1 Then
+        Dim tmp() As Integer
+        Redim tmp(Ubound(que) - 1)
+        For i As Integer = 0 To Ubound(tmp)
+            tmp(i) = que(i + 1)
+        Next
+        Redim que(Ubound(tmp))
+        For i As Integer = 0 To Ubound(tmp)
+            que(i) = tmp(i)
+        Next
+    Else
+        Redim que(-1)
+    End If
+End Sub
+
+' Build the initial tetrahedron
+Function getStart(punto() As Vect Ptr, totp As Integer) As ConvexHulls3d Ptr
+    Dim As Vect Ptr pt(5), s(3)
+    Dim As Integer i, j
+
+    For i = 0 To 5
+        pt(i) = punto(1)
+    Next
+
+    ' pick extreme coords
+    For i = 1 To totp
+        Dim v As Vect Ptr = punto(i)
+        If v->x > pt(0)->x Then pt(0) = v
+        If v->x < pt(1)->x Then pt(1) = v
+        If v->y > pt(2)->y Then pt(2) = v
+        If v->y < pt(3)->y Then pt(3) = v
+        If v->z > pt(4)->z Then pt(4) = v
+        If v->z < pt(5)->z Then pt(5) = v
+    Next
+
+    ' Take the two points with the largest distance
+    s(0) = pt(0): s(1) = pt(1)
+    For i = 0 To 5
+        For j = i + 1 To 5
+            If distPuntoPunto(pt(i), pt(j)) > distPuntoPunto(s(0), s(1)) Then
+                s(0) = pt(i): s(1) = pt(j)
+            End If
+        Next
+    Next
+
+    ' Take the point farthest from the line connecting the two points
+    Dim L As Linea
+    L.u = s(0): L.v = s(1)
+    s(2) = pt(0)
+    For i = 0 To 5
+        If distPuntoLinea(pt(i), L) > distPuntoLinea(s(2), L) Then s(2) = pt(i)
+    Next
+
+    ' Take the point farthest from the face
+    Dim basePlano As Plano
+    basePlano.u = s(0): basePlano.v = s(1): basePlano.w = s(2)
+    s(3) = punto(1)
+    For i = 1 To totp
+        If Abs(distPuntoPlano(punto(i), basePlano)) > Abs(distPuntoPlano(s(3), basePlano)) Then
+            s(3) = punto(i)
+        End If
+    Next
+
+    ' Ensure that the constructed face faces outwards
+    If distPuntoPlano(s(3), basePlano) < 0 Then Swap s(1), s(2)
+
+    ' Make 4 facets
+    Dim f(3) As Integer
+    For i = 0 To 3
+        Redim Preserve FAC(Ubound(FAC) + 1)
+        FAC(Ubound(FAC)) = Callocate(Sizeof(Faceta))
+        FAC(Ubound(FAC))->id = Ubound(FAC)
+        f(i) = Ubound(FAC)
+    Next
+
+    FAC(f(0))->p.u = s(0): FAC(f(0))->p.v = s(2): FAC(f(0))->p.w = s(1)
+    FAC(f(1))->p.u = s(0): FAC(f(1))->p.v = s(1): FAC(f(1))->p.w = s(3)
+    FAC(f(2))->p.u = s(1): FAC(f(2))->p.v = s(2): FAC(f(2))->p.w = s(3)
+    FAC(f(3))->p.u = s(2): FAC(f(3))->p.v = s(0): FAC(f(3))->p.w = s(3)
+
+    FAC(f(0))->n(0) = f(3): FAC(f(0))->n(1) = f(2): FAC(f(0))->n(2) = f(1)
+    FAC(f(1))->n(0) = f(0): FAC(f(1))->n(1) = f(2): FAC(f(1))->n(2) = f(3)
+    FAC(f(2))->n(0) = f(0): FAC(f(2))->n(1) = f(3): FAC(f(2))->n(2) = f(1)
+    FAC(f(3))->n(0) = f(0): FAC(f(3))->n(1) = f(1): FAC(f(3))->n(2) = f(2)
+
+
+    ' Assign point set space to four faces
+    For i = 0 To MAXN
+        For j = 0 To MAXN
+            pts(i, j) = NULL
+        Next
+    Next
+
+    ' Assign points to four faces
+    For i = 1 To totp
+        Dim v As Vect Ptr = punto(i)
+        If Vect_Eq(v, s(0)) Or Vect_Eq(v, s(1)) Or Vect_Eq(v, s(2)) Or Vect_Eq(v, s(3)) Then Continue For
+
+        For j = 0 To 3
+            If isAbove(v, FAC(f(j))->p) Then
+                AsignarPuntoFacetaa(f(j), v)
+                Exit For
+            End If
+        Next
+    Next
+
+    ' Return the initial simplex, using a face as index
+    Dim hull As ConvexHulls3d Ptr = Callocate(Sizeof(ConvexHulls3d))
+    hull->index = f(0)
+    Return hull
+End Function
+
+'' The main QuickHull3D loop
+Function quickHull3d(punto() As Vect Ptr, totp As Integer) As ConvexHulls3d Ptr
+    Dim As Integer i, j, k
+    Dim hull As ConvexHulls3d Ptr = getStart(punto(), totp)
+
+    ' Add the face of initial simplex to queue
+    Redim que(0)
+    que(0) = hull->index
+    For i = 0 To 2
+        Redim Preserve que(Ubound(que) + 1)
+        que(Ubound(que)) = FAC(hull->index)->n(i)
+    Next
+
+    ' snew saves index face of the final convex hull
+    Dim snew As Integer = 0
+
+    While Ubound(que) >= 0
+        Dim nf As Integer = que(0)
+        ActualizarCola()
+
+        ' Skip if the current face has been deleted
+        If FAC(nf)->isdel Then  Continue While
+
+        ' Find the farthest point from the face
+        Dim p As Vect Ptr = NULL
+        For i = 0 To MAXN
+            If pts(nf, i) <> 0 Then
+                p = pts(nf, i)
+                Exit For
+            End If
+        Next
+
+        If p = NULL Then
+            If FAC(nf)->isdel = 0 Then snew = nf
+            Continue While
+        End If
+
+        ' Find the horizon
+        G_TIME += 1
+        Redim resfdel(0)
+        resfdel(0) = 0
+        Redim resfdel(-1)
+
+        Redim resfnew(0)
+        resfnew(0) = 0
+        Redim resfnew(-1)
+
+        ' The current face must be deleted, so start dfs from current face
+        Dim s As Integer = getHorizon(nf, p, resfdel())
+
+        For i = 0 To Ubound(resfdel)
+            Dim fid As Integer = resfdel(i)
+
+            For j = 0 To MAXN
+                Dim pt As Vect Ptr = pts(fid, j)
+                If pt = NULL Then Continue For
+
+                If Vect_Eq(pt, p) Then Continue For
+
+                ' reassign them
+                For k = 0 To Ubound(resfnew)
+                    Dim nfid As Integer = resfnew(k)
+                    If isAbove(pt, FAC(nfid)->p) Then
+                        AsignarPuntoFacetaa(nfid, pt)
+                        Exit For
+                    End If
+                Next
+            Next
+        Next
+
+        ' enqueue new faces
+        For i = 0 To Ubound(resfnew)
+            Redim Preserve que(Ubound(que) + 1)
+            que(Ubound(que)) = resfnew(i)
+        Next
+    Wend
+
+    If snew = 0 And Ubound(FAC) > 0 Then
+        For i = 1 To Ubound(FAC)
+            If FAC(i) <> NULL And FAC(i)->isdel = 0 Then
+                snew = i
+                Exit For
+            End If
+        Next
+    End If
+
+    hull->index = snew
+    Return hull
+End Function
+
+Sub main()
+    Dim As Integer i
+    preConvexHulls()
+
+    ' Example: a unit tetrahedron
+    Dim As Vect Ptr punto(1 To 4)
+    For i = 1 To 4
+        punto(i) = Callocate(Sizeof(Vect))
+    Next
+
+    punto(1)->x = 0: punto(1)->y = 0: punto(1)->z = 0
+    punto(2)->x = 1: punto(2)->y = 0: punto(2)->z = 0
+    punto(3)->x = 0: punto(3)->y = 1: punto(3)->z = 0
+    punto(4)->x = 0: punto(4)->y = 0: punto(4)->z = 1
+
+    Dim As ConvexHulls3d Ptr hull = quickHull3d(punto(), 4)
+    Print Using "##.###"; GetSurfaceArea(hull)
+
+    ' Free memory
+    For i = 1 To 4
+        Deallocate(punto(i))
+    Next
+    For i = 0 To Ubound(FAC)
+        If FAC(i) <> NULL Then Deallocate(FAC(i))
+    Next
+    Deallocate(hull)
+End Sub
+
+main()
+
+Sleep

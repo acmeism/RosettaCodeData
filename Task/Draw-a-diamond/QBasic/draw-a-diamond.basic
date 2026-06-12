@@ -1,0 +1,94 @@
+DECLARE SUB ThickLine (x1!, y1!, x2!, y2!, fg!, w!)
+
+SCREEN 12 ' (640x480, 16 colores)
+CLS
+
+bg = 15 ' white
+fg = 9 ' lightblue
+thk = 2 ' thickness
+
+LINE (0, 0)-(639, 479), bg, BF ' Fondo
+
+' Mathematical center (600 / 2 = 300)
+cx = 320 ' center
+y1 = 100 ' top part
+y2 = 180 ' wide part
+y3 = 360 ' bottom tip
+
+' --- DIAMOND DRAWING ---
+' Symmetrical ing around the cx axis
+ThickLine cx - 80, y1, cx + 80, y1, fg, thk ' Top
+ThickLine cx + 80, y1, cx + 160, y2, fg, thk ' Upper right
+ThickLine cx + 160, y2, cx, y3, fg, thk ' Lower right
+ThickLine cx, y3, cx - 160, y2, fg, thk ' Lower left
+ThickLine cx - 160, y2, cx - 80, y1, fg, thk ' Upper left
+
+' Inner edges (facets) aligned to the center line
+ThickLine cx - 160, y2, cx + 160, y2, fg, thk ' Girdle line
+ThickLine cx - 80, y1, cx, y3, fg, thk ' Inner left diagonal
+ThickLine cx + 80, y1, cx, y3, fg, thk ' Inner right diagonal
+END
+
+SUB ThickLine (x1!, y1!, x2!, y2!, fg, w!)
+    dx! = x2! - x1!
+    dy! = y2! - y1!
+    L! = SQR(dx! * dx! + dy! * dy!)
+    IF L! = 0 THEN EXIT SUB
+
+    dx! = dx! / L!
+    dy! = dy! / L!
+
+    ' Perpendicular vector
+    px! = -dy! * w!
+    py! = dx! * w!
+
+    ' Four vertices of the rectangle
+    xA! = x1! + px!
+    yA! = y1! + py!
+    xB! = x1! - px!
+    yB! = y1! - py!
+    xC! = x2! - px!
+    yC! = y2! - py!
+    xD! = x2! + px!
+    yD! = y2! + py!
+
+    ' Fill the polygon manually (scanline)
+    yMin! = yA!
+    IF yB! < yMin! THEN yMin! = yB!
+    IF yC! < yMin! THEN yMin! = yC!
+    IF yD! < yMin! THEN yMin! = yD!
+
+    yMax! = yA!
+    IF yB! > yMax! THEN yMax! = yB!
+    IF yC! > yMax! THEN yMax! = yC!
+    IF yD! > yMax! THEN yMax! = yD!
+
+    yMin% = INT(yMin!)
+    yMax% = INT(yMax!)
+
+    DIM xs(1 TO 4), ys(1 TO 4), inter(1 TO 4)
+    FOR y% = yMin% TO yMax%
+        xs(1) = xA!: ys(1) = yA!
+        xs(2) = xB!: ys(2) = yB!
+        xs(3) = xC!: ys(3) = yC!
+        xs(4) = xD!: ys(4) = yD!
+
+        n% = 0
+        FOR i% = 1 TO 4
+            IF i% = 4 THEN j% = 1 ELSE j% = i% + 1
+            IF (ys(i%) <= y% AND ys(j%) >= y%) OR (ys(j%) <= y% AND ys(i%) >= y%) THEN
+                IF ys(i%) <> ys(j%) THEN
+                    n% = n% + 1
+                    inter(n%) = xs(i%) + (y% - ys(i%)) * (xs(j%) - xs(i%)) / (ys(j%) - ys(i%))
+                END IF
+            END IF
+        NEXT
+
+        IF n% >= 2 THEN
+            x1s! = inter(1)
+            x2s! = inter(2)
+            IF x1s! > x2s! THEN SWAP x1s!, x2s!
+            LINE (x1s!, y%)-(x2s!, y%), fg
+        END IF
+    NEXT
+END SUB

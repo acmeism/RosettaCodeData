@@ -1,0 +1,104 @@
+with javascript_semantics
+requires("0.8.2")
+function bcd(string a, b, op)
+    -- first, take care of different lengths
+    integer c = 0, d = length(a)-length(b)
+    if    d<0 then a = repeat('0',-d)&a
+    elsif d>0 then b = repeat('0', d)&b end if
+    if op="le" then
+        return a<=b
+    elsif op="sub" then
+        -- return "a"-"b" (as a string)
+        -- (assumes a>=b, which it always will be here,
+        --- protected as it is by a bcd(b,a,"le") call.)
+        for i=length(a) to 1 by -1 do
+            d = a[i]-b[i]-c
+            c = d<0
+            a[i] = d+c*10+'0'
+        end for
+        a = trim_head(a,"0") -- (note: "" equ "0")
+        return a
+    end if
+    return 9/0  -- unknown op
+end function
+
+function bcd_xp20x(string p, integer x)
+    -- returns x*(p*20+x)
+    integer c = 0, d, m = 1
+    p &= x+'0'
+    for i=length(p) to 1 by -1 do
+        d = (p[i]-'0')*m*x+c
+        p[i] = remainder(d,10)+'0'
+        c = floor(d/10)
+        m = 2
+    end for
+    if c then
+        p = (remainder(c,10)+'0')&p
+        c = floor(c/10)
+        if c then ?9/0 end if -- loop rqd?
+    end if
+    return p
+end function
+
+function spigot_sqrt(string s, integer maxlen=50)
+    -- returns the square root of a positive string number to any precision
+    if find('-',s) or s="" then ?9/0 end if
+    integer dot = find('.',s)
+    if dot=0 then dot = length(s)+1 end if
+    if remainder(dot,2)=0 then s = "0"&s end if
+    dot += 1
+    string res = "", p = "", c = ""
+    integer i = 1
+    while true do -- (until (i>length && carry=0) or > maxlen)
+        if (i<=length(s) and s[i]='.')
+        or (i >length(s) and dot) then
+            res &= "."
+            dot = 0
+            i += 1
+        end if
+        c &= iff(i<=length(s)?s[i]:'0') &
+             iff(i<length(s)?s[i+1]:'0')
+        for x=9 to 0 by -1 do
+            string y = bcd_xp20x(p,x)
+            if bcd(y,c,"le") then
+                c = bcd(c,y,"sub")
+                res &= x+'0'
+                p &= x+'0'
+                exit
+            end if
+            if x=0 then ?9/0 end if -- (sanity check)
+        end for
+        i += 2
+        if (c="" and i>length(s)) or length(res)>maxlen then exit end if
+    end while
+    return res
+end function
+
+procedure spigot_test(string s, integer maxlen=50)
+    string fmt = "Square root%s of %s:%s %s\n",
+           res = spigot_sqrt(s, maxlen), fnd = "", lf = ""
+    if length(res)>=maxlen then
+        fnd = sprintf(" (first %d digits)",maxlen)
+        lf = "\n "
+        res = trim_tail(join_by(res,1,100,"","\n  "))
+    end if
+    printf(1,fmt,{fnd,s,lf,res})
+end procedure
+
+constant tests = {"152.2756","15241.383936",{"0.2",80},"10.89","625",
+                  "0","0.0001","0.00000009",{"20000",99},{"2",500}}
+papply(false,spigot_test,tests)
+
+--stress test:
+
+requires("1.0.0") -- (mpfr_set_default_prec[ision] has been renamed)
+include mpfr.e
+mpfr_set_default_precision(-100) -- 100 d.p precision
+mpfr pi = mpfr_init()
+mpfr_const_pi(pi)
+string ps = mpfr_get_fixed(pi,100),
+       rs = spigot_sqrt(ps,102) -- (<=101 is not enough)
+mpfr_set_str(pi,rs)
+mpfr_mul(pi,pi,pi)
+rs = mpfr_get_fixed(pi,100)
+printf(1,"Pi (builtin) vs spigot_sqrt(pi) squared:\n  %s\n  %s\n",{ps,rs})

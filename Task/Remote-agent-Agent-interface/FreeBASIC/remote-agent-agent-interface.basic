@@ -1,0 +1,402 @@
+REM  AgentAPI.bas
+
+#include once "win/winsock2.bi"
+
+Enum EventType
+    EVENT_NONE = 0
+    EVENT_SECTOR = 1
+    EVENT_BALL = 2
+    EVENT_ERROR = 3
+    EVENT_GAMEOVER = 4
+End Enum
+
+Enum ColorType
+    COLOR_NONE = 0
+    COLOR_RED = 1
+    COLOR_GREEN = 2
+    COLOR_YELLOW = 3
+    COLOR_BLUE = 4
+End Enum
+
+Enum ErrorType
+    ERROR_NONE = 0
+    ERROR_BUMPED_WALL = 1
+    ERROR_SECTOR_FULL = 2
+    ERROR_AGENT_FULL = 3
+    ERROR_SECTOR_EMPTY = 4
+    ERROR_AGENT_EMPTY = 5
+End Enum
+
+Function ColorToString(colorVal As ColorType) As String
+    Select Case colorVal
+        Case COLOR_RED
+            Return "red"
+        Case COLOR_GREEN
+            Return "green"
+        Case COLOR_YELLOW
+            Return "yellow"
+        Case COLOR_BLUE
+            Return "blue"
+        Case Else
+            Return "none"
+    End Select
+End Function
+
+Type Event
+    eventType As EventType
+    colorType As ColorType
+    errorType As ErrorType
+End Type
+
+Type AgentAPI
+    Private:
+        sock As SOCKET
+        events(100) As Event ' Buffer for events
+        eventCount As Integer
+        sectorColor As ColorType
+        ballColor As ColorType
+        isConnected As Boolean
+        lastErrorType As ErrorType ' To track the last error
+
+    Public:
+        Declare Constructor(host As String, port As Integer)
+        Declare Constructor(Byref rhs As Const AgentAPI) ' Copy constructor
+        Declare Destructor()
+        Declare Sub Log(message As String)
+
+    ' Commands
+    Declare Function ForwardStep() As Boolean
+    Declare Function TurnRight() As Boolean
+    Declare Function TurnLeft() As Boolean
+    Declare Function GetBall() As Boolean
+    Declare Function DropBall() As Boolean
+
+    ' Event handling
+    Declare Function ProcessEvents() As Boolean
+    Declare Sub ReadEvents()
+
+    ' Behavior - to be implemented by subclasses
+    Declare Sub Behavior()
+
+    ' Getters
+    Declare Function GetSectorColor() As ColorType
+    Declare Function GetBallColor() As ColorType
+    Declare Function GetLastError() As ErrorType
+End Type
+
+' Constructor - connects to the server
+Constructor AgentAPI(host As String, port As Integer)
+    Dim As WSADATA wsaData
+    Dim As sockaddr_in serverAddr
+    Dim As hostent Ptr hostInfo
+
+    ' Initialize Winsock
+    WSAStartup(MAKEWORD(2, 2), @wsaData)
+
+    sock = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0)
+    If sock = INVALID_SOCKET Then
+        Log("Failed to create socket")
+        Exit Constructor
+    End If
+
+    ' Set up server address
+    serverAddr.sin_family = AF_INET
+    serverAddr.sin_port = htons(port)
+
+    ' Resolve hostname
+    hostInfo = gethostbyname(host)
+    If hostInfo = NULL Then
+        Log("Unknown host")
+        closesocket(sock)
+        Exit Constructor
+    End If
+
+    ' Copy IP address
+    serverAddr.sin_addr.s_addr = *Cast(Ulong Ptr, hostInfo->h_addr_list[0])
+
+    ' Connect to server
+    If connect(sock, Cast(sockaddr Ptr, @serverAddr), Sizeof(sockaddr_in)) = SOCKET_ERROR Then
+        Log("Connection failed")
+        closesocket(sock)
+        Exit Constructor
+    End If
+
+    ' Set non-blocking mode
+    Dim nonBlocking As u_long = 1
+    ioctlsocket(sock, FIONBIO, @nonBlocking)
+
+    ' Initial handshake
+    Dim As String * 1 buffer
+    Dim As Integer bytesRead
+    Dim As Double startTime = Timer
+
+    ' Wait for 'A' from server
+    Do
+        bytesRead = recv(sock, Strptr(buffer), 1, 0)
+        If bytesRead > 0 Andalso buffer = "A" Then Exit Do
+
+        ' Timeout after 5 seconds
+        If Timer - startTime > 5 Then
+            Log("Handshake timeout")
+            closesocket(sock)
+            Exit Constructor
+        End If
+
+        Sleep 10
+    Loop
+
+    ' Send 'A' back
+    send(sock, "A", 1, 0)
+
+    isConnected = True
+    sectorColor = COLOR_NONE
+    ballColor = COLOR_NONE
+    eventCount = 0
+    lastErrorType = ERROR_NONE ' Initialize the last error type
+
+    Log("Connected to " & host & ":" & Str(port))
+End Constructor
+
+' Copy constructor - creates a copy of another AgentAPI instance
+Constructor AgentAPI(Byref rhs As Const AgentAPI)
+    ' Copy all the necessary fields
+    This.sock = rhs.sock
+    This.eventCount = rhs.eventCount
+    This.sectorColor = rhs.sectorColor
+    This.ballColor = rhs.ballColor
+    This.isConnected = rhs.isConnected
+    This.lastErrorType = rhs.lastErrorType
+
+    ' Copy events array
+    For i As Integer = 0 To 100
+        This.events(i) = rhs.events(i)
+    Next
+End Constructor
+
+' Destructor - closes the connection
+Destructor AgentAPI()
+    If isConnected Then
+        closesocket(sock)
+        WSACleanup()
+        isConnected = False
+    End If
+End Destructor
+
+Sub AgentAPI.Log(message As String)
+    Print "AgentAPI: " & message
+End Sub
+
+Function AgentAPI.ForwardStep() As Boolean
+    If Not isConnected Then Return True
+
+    Log("action: forward")
+    send(sock, "^", 1, 0)
+
+    ReadEvents()
+    Return ProcessEvents()
+End Function
+
+Function AgentAPI.GetLastError() As ErrorType
+    Return lastErrorType
+End Function
+
+Function AgentAPI.TurnRight() As Boolean
+    If Not isConnected Then Return True
+
+    Log("action: turn right")
+    send(sock, ">", 1, 0)
+
+    ReadEvents()
+    Return ProcessEvents()
+End Function
+
+Function AgentAPI.TurnLeft() As Boolean
+    If Not isConnected Then Return True
+
+    Log("action: turn left")
+    send(sock, "<", 1, 0)
+
+    ReadEvents()
+    Return ProcessEvents()
+End Function
+
+Function AgentAPI.GetBall() As Boolean
+    If Not isConnected Then Return True
+
+    Log("action: get ball")
+    send(sock, "@", 1, 0)
+
+    ReadEvents()
+    Return ProcessEvents()
+End Function
+
+' Drop a ball
+Function AgentAPI.DropBall() As Boolean
+    If Not isConnected Then Return True
+
+    Log("action: drop ball")
+    send(sock, "!", 1, 0)
+
+    ReadEvents()
+    Return ProcessEvents()
+End Function
+
+Sub AgentAPI.ReadEvents()
+    Dim As String * 1 buffer
+    Dim As Integer bytesRead
+    Dim As Double startTime = Timer
+    Dim As Boolean done = False
+
+    eventCount = 0
+
+    ' Read events until we get a '.' or timeout
+    Do
+        bytesRead = recv(sock, Strptr(buffer), 1, 0)
+
+        If bytesRead > 0 Then
+            Select Case buffer
+            Case "."  ' End of events
+                done = True
+
+            Case "+"  ' Game over
+                events(eventCount).eventType = EVENT_GAMEOVER
+                eventCount += 1
+
+            Case "R"  ' Red sector
+                events(eventCount).eventType = EVENT_SECTOR
+                events(eventCount).colorType = COLOR_RED
+                eventCount += 1
+
+            Case "G"  ' Green sector
+                events(eventCount).eventType = EVENT_SECTOR
+                events(eventCount).colorType = COLOR_GREEN
+                eventCount += 1
+
+            Case "Y"  ' Yellow sector
+                events(eventCount).eventType = EVENT_SECTOR
+                events(eventCount).colorType = COLOR_YELLOW
+                eventCount += 1
+
+            Case "B"  ' Blue sector
+                events(eventCount).eventType = EVENT_SECTOR
+                events(eventCount).colorType = COLOR_BLUE
+                eventCount += 1
+
+            Case "r"  ' Red ball
+                events(eventCount).eventType = EVENT_BALL
+                events(eventCount).colorType = COLOR_RED
+                eventCount += 1
+
+            Case "g"  ' Green ball
+                events(eventCount).eventType = EVENT_BALL
+                events(eventCount).colorType = COLOR_GREEN
+                eventCount += 1
+
+            Case "y"  ' Yellow ball
+                events(eventCount).eventType = EVENT_BALL
+                events(eventCount).colorType = COLOR_YELLOW
+                eventCount += 1
+
+            Case "b"  ' Blue ball
+                events(eventCount).eventType = EVENT_BALL
+                events(eventCount).colorType = COLOR_BLUE
+                eventCount += 1
+
+            Case "|"  ' Bumped wall error
+                events(eventCount).eventType = EVENT_ERROR
+                events(eventCount).errorType = ERROR_BUMPED_WALL
+                eventCount += 1
+
+            Case "S"  ' Sector full error
+                events(eventCount).eventType = EVENT_ERROR
+                events(eventCount).errorType = ERROR_SECTOR_FULL
+                eventCount += 1
+
+            Case "A"  ' Agent full error
+                events(eventCount).eventType = EVENT_ERROR
+                events(eventCount).errorType = ERROR_AGENT_FULL
+                eventCount += 1
+
+            Case "s"  ' Sector empty error
+                events(eventCount).eventType = EVENT_ERROR
+                events(eventCount).errorType = ERROR_SECTOR_EMPTY
+                eventCount += 1
+
+            Case "a"  ' Agent empty error
+                events(eventCount).eventType = EVENT_ERROR
+                events(eventCount).errorType = ERROR_AGENT_EMPTY
+                eventCount += 1
+            End Select
+        End If
+
+        ' Check for timeout (5 seconds)
+        If Timer - startTime > 5 Then
+            Log("Timeout waiting for events")
+            Exit Do
+        End If
+
+        ' Exit if we've received the end marker
+        If done Then Exit Do
+
+        ' Small delay to prevent CPU hogging
+        Sleep 10
+    Loop While bytesRead >= 0
+End Sub
+
+Function AgentAPI.ProcessEvents() As Boolean
+    Dim gameOver As Boolean = False
+    Dim errorMsg As String = ""
+
+    sectorColor = COLOR_NONE
+    ballColor = COLOR_NONE
+    lastErrorType = ERROR_NONE ' Reset error at start
+
+    For i As Integer = 0 To eventCount - 1
+        Select Case events(i).eventType
+            Case EVENT_SECTOR
+                sectorColor = events(i).colorType
+                Log("event: sector " & ColorToString(sectorColor))
+
+            Case EVENT_BALL
+                ballColor = events(i).colorType
+                Log("event: ball " & ColorToString(ballColor))
+
+            Case EVENT_ERROR
+                lastErrorType = events(i).errorType ' Set the last error
+                Select Case events(i).errorType
+                    Case ERROR_BUMPED_WALL
+                        errorMsg = "bumpedWall"
+                    Case ERROR_SECTOR_FULL
+                        errorMsg = "sectorFull"
+                    Case ERROR_AGENT_FULL
+                        errorMsg = "agentFull"
+                    Case ERROR_SECTOR_EMPTY
+                        errorMsg = "sectorEmpty"
+                    Case ERROR_AGENT_EMPTY
+                        errorMsg = "agentEmpty"
+                End Select
+                Log("event: error " & errorMsg)
+
+            Case EVENT_GAMEOVER
+                gameOver = True
+                Log("event: gameOver")
+        End Select
+    Next
+
+    ' Handle errors
+    If errorMsg <> "" Then Log("Error: " & errorMsg)
+
+    Return gameOver
+End Function
+
+Sub AgentAPI.Behavior()
+    Log("Behavior method not implemented")
+End Sub
+
+Function AgentAPI.GetSectorColor() As ColorType
+    Return sectorColor
+End Function
+
+Function AgentAPI.GetBallColor() As ColorType
+    Return ballColor
+End Function

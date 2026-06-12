@@ -1,0 +1,164 @@
+constant inf = 1e308*1e308
+
+// bellmanFordAlgorithm returns a list of shortest distances from the source vertex to all other vertices,
+// and a boolean indicating whether a negative cycle was detected
+function bellmanFordAlgorithm(integer augmentedVertexCount, sequence edges, integer sourceVertex)
+    sequence distances := repeat(inf, augmentedVertexCount)
+    distances[sourceVertex] = 0.0
+
+    // Relax the edges (augmentedVertexCount - 1) times
+    integer u, v
+    atom weight
+    for i=1 to augmentedVertexCount-1 do
+        bool updated = false
+        for edge in edges do
+            {u,v,weight} = edge
+            if distances[u] != inf and distances[u]+weight < distances[v] then
+                distances[v] = distances[u] + weight
+                updated = true
+            end if
+        end for
+        if not updated then exit end if
+    end for
+
+    // Check for negative cycles in the graph
+    for edge in edges do
+        {u,v,weight} = edge
+        if distances[u] != inf and distances[u]+weight < distances[v] then
+            return {{}, true} // Indicates to the calling method that a negative cycle has been detected
+        end if
+    end for
+
+    return {distances, false}
+end function
+
+// dijkstraAlgorithm returns a list of shortest path distances from the source vertex in the original graph to all other vertices
+function dijkstraAlgorithm(integer vertexCount, sequence reweightedAdjacencies, integer sourceVertex, sequence vals)
+    sequence distances := repeat(inf, vertexCount),
+        finalDistances := repeat(inf, vertexCount)
+    distances[sourceVertex] = 0.0
+
+    integer pq := pq_new()
+    pq_add({sourceVertex,0.0},pq)
+    atom weight
+    integer vertex, v
+
+    while pq_size(pq) do
+        {vertex,weight} = pq_pop(pq)
+        if weight <= distances[vertex] then
+
+            // Store the final shortest path distance, translated back to the distance in the original graph
+            // which prevents processing vertices disconnected from the source vertex
+            if finalDistances[vertex] == inf then
+                if distances[vertex] == inf then // This should not happen, but is included as a safety check
+                    finalDistances[vertex] = inf
+                else
+                    // Translate distance back to its original weight: d(u,v) = d'(u,v) - h[u] + h[v]
+                    finalDistances[vertex] = distances[vertex] - vals[sourceVertex] + vals[vertex]
+                end if
+            end if
+
+            // Relax the edges outgoing from vertex
+            sequence adjList := reweightedAdjacencies[vertex]
+            for pair in adjList do
+                {v,weight} = pair
+                if distances[vertex] != inf and distances[vertex]+weight < distances[v] then
+                    distances[v] = distances[vertex] + weight
+                    pq_add({v,distances[v]},pq)
+                end if
+            end for
+        end if
+    end while
+    pq_destroy(pq)
+
+    // Translate distance back to its original weight for any remaining reachable vertices
+    // This handles cases where a vertex was reachable, but was not the minimum vertex
+    // removed from the priority queue when its final distance was determined.
+    for i=1 to vertexCount do
+        if finalDistances[i] == inf and distances[i] != inf then
+            finalDistances[i] = distances[i] - vals[sourceVertex] + vals[i]
+        end if
+    end for
+
+    return finalDistances
+end function
+
+// johnsonsAlgorithm returns the shortest path between all pairs of vertices in an edge weighted directed graph
+// and a boolean indicating whether a negative cycle was detected
+function johnsonsAlgorithm(sequence graph)
+    integer vertexCount := length(graph)
+    sequence originalEdges := {}
+
+    // Step 0: Build a list of edges for the original graph
+    for i=1 to vertexCount do
+        for j=1 to vertexCount do
+            atom weight := graph[i][j]
+            if i == j then
+                assert(weight==0.0)
+            elsif weight != inf then
+                originalEdges = append(originalEdges, {i, j, weight})
+            end if
+        end for
+    end for
+
+    // Step 1: Form the augmented graph
+    // Add a new vertex with index 'vertexCount' and having 0-weight edges to all the original vertices
+    sequence augmentedEdges := deep_copy(originalEdges)
+    for i=1 to vertexCount do
+        augmentedEdges = append(augmentedEdges, {vertexCount+1, i, 0.0})
+    end for
+
+    // Step 2: Invoke the Bellman-Ford Algorithm starting from the new vertex
+    {sequence hValues, bool hasNegativeCycle} := bellmanFordAlgorithm(vertexCount+1, augmentedEdges, vertexCount+1)
+
+    if hasNegativeCycle then
+        return {{}, true} // A negative cycle was detected by the Bellman-Ford Algorithm
+    end if
+
+    sequence vals := hValues[1..vertexCount] // Remove the value for the augmented vertex
+
+    // Step 3: Reweight the edges
+    sequence reweightedAdjacencies := repeat({},vertexCount)
+    integer u, v
+    atom weight
+    for edge in originalEdges do
+        {u,v,weight} = edge
+        // Ensure the 'vals' are valid before reweighting
+        if vals[u] == inf or vals[v] == inf then
+            // This can happen if the original graph was not strongly connected to the augmented vertex.
+            // While not strictly an error for Johnson's Algorithm, because paths might still exist between
+            // reachable nodes, it means the reweighting might involve INF.
+            // Computation can proceed since Dijkstra's Algorithm can handle INF.
+            printf(1,"Warning: invalid hValues detected by the Bellman-Ford Algorithm.\n")
+        end if
+
+        atom reweight := weight + vals[u] - vals[v]
+        reweightedAdjacencies[u] = append(reweightedAdjacencies[u], {v, reweight})
+    end for
+
+    // Step 4: Invoke Dijkstra's Algorithm starting from each vertex on the reweighted graph
+    sequence allPairsShortestPaths := repeat(0, vertexCount)
+    for u=1 to vertexCount do
+        allPairsShortestPaths[u] = dijkstraAlgorithm(vertexCount, reweightedAdjacencies, u, vals)
+    end for
+
+    // Step 5: Return the result matrix
+    return {allPairsShortestPaths, false}
+end function
+
+// The element (i, j) is the weight of the edge from vertex i to vertex j.
+// inf, for infinity, means that there is no edge from vertex i to vertex j.
+sequence graph := {{0.0,-5.0, 2.0, 3.0},
+                   {inf, 0.0, 4.0, inf},
+                   {inf, inf, 0.0, 1.0},
+                   {inf, inf, inf, 0.0}}
+
+{sequence result, bool hasNegativeCycle} := johnsonsAlgorithm(graph)
+
+if hasNegativeCycle then
+    printf(1,"A negative cycle was detected in the graph.\n")
+else
+    printf(1,"All pairs shortest paths:\n")
+    printf(1,"The element (i, j) is the shortest path between vertex i and vertex j.\n")
+    pp(result,{pp_Nest,1})
+end if

@@ -1,0 +1,40 @@
+SUB EuclideanRhythm (m, n)
+    DIM r$(n)
+    apio = 1
+    afin = m
+    bpio = m + 1
+    bfin = n
+    FOR i = 1 TO m
+        r$(i) = "1"
+    NEXT i
+    FOR i = m + 1 TO n
+        r$(i) = "0"
+    NEXT i
+    WHILE afin > apio AND bfin > bpio
+        apos = apio
+        bpos = bpio
+        WHILE apos <= afin AND bpos <= bfin
+            r$(apos) = r$(apos) + r$(bpos)
+            apos = apos + 1
+            bpos = bpos + 1
+        WEND
+        IF bpos < bfin THEN
+            bpio = bpos
+        ELSE
+            bpio = apos
+            bfin = afin
+            afin = apos - 1
+        END IF
+    WEND
+    result$ = ""
+    FOR i = apio TO afin
+        result$ = result$ + r$(i)
+    NEXT i
+    FOR i = bpio TO bfin
+        result$ = result$ + r$(i)
+    NEXT i
+    PRINT result$
+END SUB
+
+CALL EuclideanRhythm(5, 13)
+CALL EuclideanRhythm(3, 8)

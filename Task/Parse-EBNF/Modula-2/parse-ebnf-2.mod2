@@ -1,0 +1,168 @@
+IMPLEMENTATION MODULE EBNFScanner;
+
+FROM  ASCII        IMPORT  LF;
+FROM  InOut        IMPORT  Read, Write, WriteLn, WriteInt, WriteBf, EOF;
+
+VAR   ch                   : CHAR;
+
+MODULE LineHandler;
+
+  IMPORT   LF, EOF, ch, Ino, Read, Write, WriteLn, WriteInt, WriteBf;
+  EXPORT   GetCh, MarkError, SkipLine;
+
+  CONST    LineWidth = 100;
+
+  VAR      cc        : INTEGER;
+           cc1       : INTEGER;
+           cc2       : INTEGER;
+           line      : ARRAY [0..LineWidth - 1] OF CHAR;
+
+  PROCEDURE GetLine;
+
+  BEGIN
+    IF  cc2 > 0  THEN
+      WriteLn;
+      cc2 := 0
+    END;
+    Read (ch);
+    IF  EOF ()  THEN
+      line [0] := 177C;
+      cc1 := 1
+    ELSE
+      INC (Ino);
+      WriteInt (Ino, 5);
+      Write (' ');
+      cc1 := 0;
+      LOOP
+        Write (ch);
+        line [cc1] := ch;
+        INC (cc1);
+        IF  ch = LF  THEN  EXIT  END;
+        Read (ch)
+      END
+    END
+  END GetLine;
+
+
+    PROCEDURE GetCh;
+
+    BEGIN
+      WHILE  cc = cc1  DO
+        cc := 0;
+        GetLine
+      END;
+      ch := line [cc];
+      INC (cc)
+    END GetCh;
+
+
+    PROCEDURE MarkError (n  : INTEGER);
+
+    BEGIN
+      IF  cc2 = 0  THEN
+        Write ('*');
+        cc2 := 3;
+        REPEAT
+          Write (' ');
+          DEC (cc2)
+        UNTIL  cc2 = 0;
+      END;
+      WHILE  cc2 < cc  DO
+        Write (' ');
+        INC (cc2)
+      END;
+      Write ('^');
+      WriteInt (n, 1);
+      INC (cc2, 2)
+    END MarkError;
+
+    PROCEDURE SkipLine;
+
+    BEGIN
+      WHILE  ch # LF  DO  GetCh  END;
+      GetCh
+    END SkipLine;
+
+  BEGIN          (* BEGIN of LineHandler        *)
+    cc  := 0;
+    cc1 := 0;
+    cc2 := 0
+  END LineHandler;
+
+PROCEDURE GetSym;
+
+VAR     i          : CARDINAL;
+
+BEGIN
+  WHILE  ch <= ' '  DO  GetCh  END;
+  IF  ch = '/'  THEN
+    SkipLine;
+    WHILE  ch <= ' '  DO  GetCh  END
+  END;
+  IF  (CAP (ch) <= 'Z') AND (CAP (ch) >= 'A')  THEN
+    i := 0;
+    sym := literal;
+    REPEAT
+      IF  i < IdLength  THEN
+        id [i] := ch;
+        INC (i)
+      END;
+      IF  ch > 'Z' THEN  sym := ident  END;
+      GetCh
+    UNTIL  (CAP (ch) < 'A') OR (CAP (ch) > 'Z');
+    id [i] := ' '
+  ELSIF  ch = "'"  THEN
+    i := 0;
+    GetCh;
+    sym := literal;
+    WHILE  ch # "'"  DO
+      IF  i < IdLength  THEN
+        id [i] := ch;
+        INC (i)
+      END;
+      GetCh
+    END;
+    GetCh;
+    id [i] := ' '
+    WHILE  ch # "'"  DO
+      IF  i < IdLength  THEN
+        id [i] := ch;
+        INC (i)
+      END;
+      GetCh
+    END;
+    GetCh;
+    id [i] := ' '
+  ELSIF  ch = '"'  THEN
+    i := 0;
+    GetCh;
+    sym := literal;
+    WHILE  ch # '"'  DO
+      IF  i < IdLength  THEN
+        id [i] := ch;
+        INC (i)
+      END;
+      GetCh
+    END;
+    GetCh;
+    id [i] := ' '
+  ELSIF  ch = '='  THEN  sym := eql;   GetCh
+  ELSIF  ch = '('  THEN  sym := lpar;  GetCh
+  ELSIF  ch = ')'  THEN  sym := rpar;  GetCh
+  ELSIF  ch = '['  THEN  sym := lbk;   GetCh
+  ELSIF  ch = ']'  THEN  sym := rbk;   GetCh
+  ELSIF  ch = '{'  THEN  sym := lbr;   GetCh
+  ELSIF  ch = '}'  THEN  sym := rbr;   GetCh
+  ELSIF  ch = '|'  THEN  sym := bar;   GetCh
+  ELSIF  ch = '.'  THEN  sym := period;  GetCh
+  ELSIF  ch = 177C THEN  sym := other;  GetCh
+  ELSE
+    sym := other;
+    GetCh
+  END
+END GetSym;
+
+BEGIN
+  Ino := 0;
+  ch := ' '
+END EBNFScanner.

@@ -1,0 +1,509 @@
+-- demo\rosetta\hexapawn.exw
+include pGUI.e
+
+-- A board is held as eg {"WWW","...","BBB"} (nb displayed upside down)
+-- A move is held as {{{y1,x1},{y2,x2}},colour} where x/y are 1..3.
+
+enum BOARD, MOVES, BLACK, WHITE
+-- The above correspond to board_canvas .. white_canvas.
+-- BOARD|MOVES also apply within each of the above, that is
+-- data[BOARD][BOARD], data[BOARD][MOVES], data[MOVES][BOARD],
+-- etc are all valid uses, however data[BOARD][BLACK] isn't.
+
+sequence data = {{{},{}},   -- BOARD    -- (current)
+                 {{},{}},   -- MOVES    -- (game log)
+                 {{},{}},   -- BLACK    -- (training data)
+                 {{},{}}}   -- WHITE    -- (training data)
+
+-- data[BOARD][BOARD] is always a sequence of length 1, for consistency,
+--                    whereas [other][BOARD] can contain 0..19 of them,
+--                    where that 19 is just from the highest yet seen.
+-- data[BOARD][MOVES] is {} or one move, depending on the mouse hover.
+-- data[MOVES][MOVES] has one move per board, except last which is {}.
+-- data[BLACK/WHITE][MOVES] can contain 0-3 possible moves, obviously.
+
+bool game_over = false
+integer bw = 0, ww = 0  -- win counts
+
+enum HUMAN, COMPUTER
+
+-- The next five values flip on every move:
+integer player, opponent,           -- 'W' <==> 'B'
+        player_type, opponent_type, -- HUMAN/COMPUTER
+        traindx = WHITE             -- or BLACK, top-level index to data
+
+function possible_moves(sequence board)
+    sequence moves = {}
+    integer height = length(board),
+            width = length(board[1]),
+            direction = iff(player='W'?+1:-1)
+    for row=1 to height do
+        for col=1 to width do
+            if board[row][col]=player then
+                integer rd = row+direction
+                if rd<1 or rd>height then ?9/0 end if -- game_over??
+                for tgt=max(1,col-1) to min(col+1,width) do
+                    if board[rd][tgt]==iff(tgt==col?'.':opponent) then
+                        moves = append(moves,{{{row,col},{rd,tgt}},CD_DARK_GREY})
+                    end if
+                end for
+            end if
+        end for
+    end for
+    return moves
+end function
+
+-- We use mirroring to approximately halve the training data set sizes.
+-- (every possible board/move has an equivalent mirror, some idential)
+
+function mirror(sequence board)
+-- flip each row, eg {".WW","W..","BBB"} <=> {"WW.","..W","BBB"}
+    for i=1 to length(board) do
+        board[i] = reverse(board[i])
+    end for
+    return board
+end function
+
+function mirror_move(sequence move)
+-- from/to x := 4-x; y's and colour unchanged.
+    integer {{{y1,x1},{y2,x2}},colour} = move
+    move = {{{y1,4-x1},{y2,4-x2}},colour}
+    return move
+end function
+
+function find_board(sequence board)
+--
+-- retrieve an index to the training data (created if rqd)
+-- also returns bools flip (move must flip too then), and
+-- is_mirror (ie the training data deserves two updates)
+--
+-- (Also used to init training data, ie show the
+--  starting board, with all moves valid/grey.)
+--
+    sequence mb = mirror(board)
+    bool is_mirror = (mb==board), flip = false
+    if mb<board then
+        board = mb
+        flip = true
+    end if
+    integer k = find(board,data[traindx][BOARD])
+    if k=0 then
+        sequence moves = possible_moves(board)
+        data[traindx][BOARD] &= {board}
+        data[traindx][MOVES] &= {moves}
+        k = length(data[traindx][BOARD])
+    end if
+    return {k,flip,is_mirror}
+end function
+
+procedure train(integer mdx)
+--
+-- Learn something from losing a game.
+-- player, traindx should already be set.
+--
+-- nb learn both/propagate are technically not in the original spec,
+--    which confiscates max one bead per round. Obviously you could
+--    instead hunt for one earlier move when moves[m][2]==CD_RED,
+--    and simply play more games to complete the training.
+--
+    data[MOVES][MOVES][mdx][1][2] = CD_RED  -- (just the game log)
+    sequence board = data[MOVES][BOARD][mdx],
+             move = data[MOVES][MOVES][mdx][1]
+    {integer k, bool flip, bool is_mirror} = find_board(board)
+    sequence moves = data[traindx][MOVES][k]
+    if flip then move = mirror_move(move) end if
+    integer m = find(move[1],vslice(moves,1))
+    if moves[m][2]!=CD_RED then
+        moves[m][2] = CD_RED
+        if is_mirror then -- (learn both)
+            m = find(mirror_move(move)[1],vslice(moves,1))
+            moves[m][2] = CD_RED
+        end if
+        data[traindx][MOVES][k] = moves
+        if mdx>2 and sum(sq_ne(vslice(moves,2),CD_RED))=0 then
+            train(mdx-2) -- (propagate)
+        end if
+    end if
+end procedure
+
+procedure play_move(sequence move)
+    if length(move) then
+        move[2] = CD_DARK_GREY
+        integer {{{y1,x1},{y2,x2}}/*,colour*/} = move
+        data[BOARD][BOARD][1][y1][x1] = '.'
+        data[BOARD][BOARD][1][y2][x2] = player
+        data[MOVES][MOVES][$] = {move}  -- (fill in game log)
+        data[MOVES][BOARD] &= data[BOARD][BOARD]
+        data[MOVES][MOVES] &= {{{}}}
+        {player, opponent} = {opponent, player}
+        {player_type, opponent_type} = {opponent_type, player_type}
+        traindx = WHITE+BLACK - traindx -- (toggle b/w)
+        sequence board = data[BOARD][BOARD][1]
+        if y2!=2 -- (must be "third row" then, ie 1|3)
+        or not find(player,flatten(board))
+        or possible_moves(board)={} then
+            game_over = true
+            if player='W' then bw += 1 else ww +=1 end if
+            train(length(data[MOVES][MOVES])-2)
+        else
+            {} = find_board(board)
+        end if
+    end if
+end procedure
+
+procedure opponent_play()
+--
+-- does nothing if opponent is HUMAN
+--
+    if not game_over
+    and player_type=COMPUTER then
+        sequence board = data[BOARD][BOARD][1]
+        {integer k, bool flip, bool is_mirror} = find_board(board)
+        sequence moves = data[traindx][MOVES][k], not_red = {}
+        for m=1 to length(moves) do
+            if moves[m][2]!=CD_RED then
+                not_red = append(not_red,moves[m])
+            end if
+        end for
+        if length(not_red) then moves = not_red end if
+        sequence move = moves[rand(length(moves))]
+        if flip then move = mirror_move(move) end if
+        play_move(move)
+    end if
+end procedure
+
+procedure new_game()
+    data[BOARD] = {{{"WWW","...","BBB"}},{{}}}
+    data[MOVES] = data[BOARD]
+    game_over = false
+    {player,opponent} = "WB"
+    {player_type,opponent_type} = {HUMAN,COMPUTER} -- (or any)
+    traindx = WHITE
+    {} = find_board(data[BOARD][BOARD][1])  -- (init training data)
+end procedure
+
+procedure train_rec()
+--
+-- Note this might require some more looping if train() is changed
+-- to respect max-one-per-round original rules, as mentioned above
+--
+    sequence board = data[BOARD][BOARD][1],
+             moves = possible_moves(board),
+             plopt = {player, opponent, traindx, data[MOVES]},
+             bwww = {bw,ww}
+    for i=1 to length(moves) do
+        play_move(moves[i])
+        if not game_over then train_rec() end if
+        game_over = false
+        data[BOARD][BOARD][1] = board
+        {player, opponent, traindx, data[MOVES]} = plopt
+    end for
+    {bw,ww} = bwww
+end procedure
+
+Ihandle dlg
+
+-- saved from draw for mouse hover checks:
+sequence board_centres = {}
+integer board_radius2 = 0
+
+procedure draw_board(cdCanvas cddbuffer, integer dx, i, px, py, mx)
+    sequence board = data[dx][BOARD][i],
+             centres = board    -- (fully overwritten in draw pieces step)
+    integer diameter = floor(mx/5),
+            gap = floor(mx/8),  -- (squares are twice the gap)
+            rhs = 7*gap         -- (lhs==gap, rhs/lhs==top/btm)
+    --
+    -- draw grid lines
+    --
+    cdCanvasSetForeground(cddbuffer,CD_GREY)
+    cdCanvasLineWidth(cddbuffer,1)
+    for l=1 to 7 by 2 do
+        integer l3 = l*gap
+        cdCanvasLine(cddbuffer, px+gap, py+l3, px+rhs, py+l3)
+        cdCanvasLine(cddbuffer, px+l3, py+gap, px+l3, py+rhs)
+    end for
+    --
+    -- draw pieces
+    --
+    for r=1 to length(board) do
+        for c=1 to length(board[r]) do
+            integer cx = px+2*c*gap,
+                    cy = py+2*r*gap
+            centres[r][c] = {cx,cy}
+            integer piece = board[r][c]
+            if piece!='.' then
+                cdCanvasSetForeground(cddbuffer,iff(piece='B'?CD_BLACK:CD_WHITE))
+                cdCanvasSector(cddbuffer, cx, cy, diameter, diameter, 0, 360)
+                cdCanvasSetForeground(cddbuffer,CD_BLACK)
+                cdCanvasArc(cddbuffer, cx, cy, diameter, diameter, 0, 360)
+            end if
+        end for
+    end for
+    if dx=BOARD then
+        -- save for motion_cb
+        board_centres = centres
+        board_radius2 = gap*gap
+    end if
+    --
+    -- draw arrows
+    --
+    cdCanvasLineWidth(cddbuffer,2)
+    sequence arrows = data[dx][MOVES][i]
+    for i=1 to length(arrows) do
+        if length(arrows[i])=0 then exit end if
+        integer {{{x1,y1},{x2,y2}},colour} = arrows[i]
+        {x1,y1} = centres[x1][y1]
+        {x2,y2} = centres[x2][y2]
+        if y1=y2 then ?9/0 end if   -- horizontal??
+        integer ax = iff(x1<x2?-1:+1),
+                ay = iff(y1<y2?-1:+1)
+        cdCanvasSetForeground(cddbuffer,colour)
+        if x1!=x2 then -- diagonal:
+            cdCanvasLine(cddbuffer,x1,y1,x2+ax,y2+ay)
+            cdCanvasLine(cddbuffer,x2+ax,y2,x2+ax,y2+ay*6)
+            cdCanvasLine(cddbuffer,x2,y2+ay,x2+ax*6,y2+ay)
+        else          -- vertical:
+            cdCanvasLine(cddbuffer,x1,y1,x2,y2+ay)
+            cdCanvasLine(cddbuffer,x2-ax,y2+ay,x2+ax*4,y2+ay*6)
+            cdCanvasLine(cddbuffer,x2+ax,y2+ay,x2-ax*4,y2+ay*6)
+        end if
+    end for
+end procedure
+
+function redraw_cb(Ihandle ih, integer /*posx*/, integer /*posy*/)
+    integer dx = IupGetInt(ih,"DATA"),
+            {cw,ch} = IupGetIntInt(ih, "DRAWSIZE")
+    --
+    -- first, calculate the best nw*nh way to fit them all in:
+    --
+    integer nw = 1, nh = 1
+    while nw*nh<length(data[dx][1]) do
+        if (cw/(nw+1))>(ch/(nh+1)) then
+            nw += 1
+        else
+            nh += 1
+        end if
+    end while
+    integer mx = min(floor(cw/nw), floor(ch/nh))
+    --
+    -- now draw all the boards
+    --
+    cdCanvas cddbuffer = IupGetAttributePtr(ih,"DBUFFER")
+    IupGLMakeCurrent(ih)
+    cdCanvasActivate(cddbuffer)
+    cdCanvasClear(cddbuffer)
+    integer px = floor((cw-nw*mx)/2), -- (set margin)
+            py = floor((ch-nh*mx)/2), --      ""
+            this_row = 0
+    py = ch-mx-py -- (start at the top)
+    for i=1 to length(data[dx][1]) do
+        draw_board(cddbuffer,dx,i,px,py,mx)
+        px += mx
+        this_row += 1
+        if this_row>=nw then
+            this_row = 0
+            px = floor((cw-nw*mx)/2)
+            py -= mx
+        end if
+    end for
+    cdCanvasFlush(cddbuffer)
+    return IUP_DEFAULT
+end function
+
+function map_cb(Ihandle ih)
+    IupGLMakeCurrent(ih)
+    atom res = IupGetDouble(NULL, "SCREENDPI")/25.4
+    cdCanvas cddbuffer = cdCreateCanvas(CD_GL, "10x10 %g", {res})
+    IupSetAttributePtr(ih,"DBUFFER",cddbuffer)
+    cdCanvasSetBackground(cddbuffer, CD_PARCHMENT)
+    return IUP_DEFAULT
+end function
+
+function canvas_resize_cb(Ihandle canvas)
+    cdCanvas cddbuffer = IupGetAttributePtr(canvas,"DBUFFER")
+    integer {canvas_width, canvas_height} = IupGetIntInt(canvas, "DRAWSIZE")
+    atom res = IupGetDouble(NULL, "SCREENDPI")/25.4
+    cdCanvasSetAttribute(cddbuffer, "SIZE", "%dx%d %g", {canvas_width, canvas_height, res})
+    return IUP_DEFAULT
+end function
+
+function check_position(integer px, py)
+--
+-- check if x,y is on (a 45 degree sector of player's piece of) a legal move.
+-- notes: a result of {{1,1},{2,2},CD_GREEN} means bottom left takes centre.
+--        perfectly fine to invoke for either the black or white player.
+--        this can get invoked when board_centres still=={} (returns {}).
+--
+    if not game_over
+    and player_type=HUMAN
+    and board_centres!={} then -- (when started with mouse cursor on-board)
+        integer height = length(board_centres),
+                width = length(board_centres[1]),
+                direction = iff(player='W'?+1:-1)
+        for y=1 to height do
+            integer yd = y+direction
+            if yd>=1 and yd<=height then
+                for x=1 to width do
+                    sequence c = sq_sub(board_centres[4-y][x],{px,py})
+                    integer {cx,cy} = sq_mul(c,{1,direction})
+                    if cy>0 and (cx*cx+cy*cy)<=board_radius2 then
+                        atom angle = -arctan(cx/cy)*CD_RAD2DEG
+                        if angle>=-67.5 and angle<=67.5 then
+                            -- within one of three 45 degree sectors:
+                            -- >22.5 is a move right,
+                            -- 22.5..-22.5 is a move up,
+                            -- <-22.5 is a move left
+                            sequence board = data[BOARD][BOARD][1]
+                            integer move = floor((angle+22.5)/45), -- (-1/0/+1)
+                                    tgt = iff(move=0?'.':opponent),
+                                    xm = x+move
+                            if xm>=1 and xm<=width
+                            and board[y][x]=player
+                            and board[yd][xm]==tgt then
+                                return {{{y,x},{yd,xm}},CD_GREEN}
+                            end if
+                        end if
+                        return {}   -- (we may as well quit now)
+                    end if
+                end for
+            end if
+        end for
+    end if
+    return {}
+end function
+
+function motion_cb(Ihandle board_canvas, integer x, y, atom /*pStatus*/)
+    data[BOARD][MOVES][1] = {check_position(x,y)}
+    IupUpdate(board_canvas)
+    return IUP_CONTINUE
+end function
+
+procedure redraw_all()
+    Ihandle frame = IupGetAttributePtr(dlg,"BOARD_FRAME")
+    string title = iff(game_over?sprintf("%c wins (Black:%d, White:%d)",{opponent,bw,ww}):"Board")
+    IupSetAttribute(frame, "TITLE", title)
+    IupUpdate(IupGetAttributePtr(dlg,"BOARD_CANVAS"))
+    IupUpdate(IupGetAttributePtr(dlg,"MOVES_CANVAS"))
+    IupUpdate(IupGetAttributePtr(dlg,"WHITE_CANVAS"))
+    IupUpdate(IupGetAttributePtr(dlg,"BLACK_CANVAS"))
+end procedure
+
+function button_cb(Ihandle /*board_canvas*/, integer button, pressed, x, y, atom /*pStatus*/)
+    if button=IUP_BUTTON1 and not pressed then      -- (left button released)
+        play_move(check_position(x,y))
+        opponent_play()
+        redraw_all()
+    end if
+    return IUP_CONTINUE
+end function
+
+function new_game_cb(Ihandle /*ih*/)
+    new_game()
+    redraw_all()
+    return IUP_DEFAULT
+end function
+
+function train_cb(Ihandle /*ih*/)
+    sequence pott = {player_type, opponent_type}
+    new_game()
+    train_rec()
+    {player_type, opponent_type} = pott -- (restore)
+    redraw_all()
+    return IUP_DEFAULT
+end function
+
+function exit_cb(Ihandle /*ih*/)
+    return IUP_CLOSE
+end function
+
+constant help_text = """
+Hexapawn may be the simplest game for which a self-learning game AI
+is not completely and utterly trivial, or at least non-obvious.
+
+Pieces can move forward into an empty square or diagonally to take
+an opponent's piece (no initial double or en passant moves).
+The game is over if a piece reaches the third row, all opponent
+pieces are captured, or the opponent has no valid move.
+White always goes first.
+
+Hover the mouse over a (45 degree sector of) a piece until an arrow
+appears (if that's valid), then click.
+
+Either or both players can be computer or human (the machine learns
+from both). Note that when both are computer, mouse clicks (anywhere
+on the board canvas) are still needed before it makes a move.
+
+The "Train" option performs an exhaustive search of all possible moves.
+Note the results may turn out slightly different if you manually
+teach it a few moves first. Once fully trained, white cannot possibly win.
+Interestingly, it never learns anything about winning moves, it just
+avoids losing moves, which is enough to make it (/black) unbeatable.
+
+In the training data, red arrows indicate losing moves, and grey ones
+still potential winners. Red arrows in the game log indicate what has
+just been learnt from playing(/losing) the last game.
+
+The human-player games quickly become a test to see how fast you
+can decipher/fill the training data, which is made slightly more
+difficult (for a human) by board/move mirroring. How many games can
+you win, and how few to prove that white will (eventually) always
+lose? My records are 14 and 3 respectively, however on the latter
+you will get/need a few more wins on the way to finishing the full
+training of it.
+
+Enhancing this game to handle larger boards and other games such as
+noughts and crosses/tic-tac-toe and/or checkers/draughts (etc) is
+left as an exercise for the reader.
+"""
+
+function help_cb(Ihandln /*ih*/)
+    IupMessage("Hexapawn",help_text)
+    return IUP_DEFAULT
+end function
+
+function key_cb(Ihandle /*dlg*/, atom c)
+    if c=K_ESC then return IUP_CLOSE end if
+    if c=K_F1 then return help_cb(NULL) end if
+    return IUP_CONTINUE
+end function
+
+procedure main()
+    IupOpen()
+    Ihandle board_canvas = IupGLCanvas("DATA=%d,RASTERSIZE=50x50",{BOARD}),
+            moves_canvas = IupGLCanvas("DATA=%d,RASTERSIZE=50x50",{MOVES}),
+            black_canvas = IupGLCanvas("DATA=%d,RASTERSIZE=50x50",{BLACK}),
+            white_canvas = IupGLCanvas("DATA=%d,RASTERSIZE=50x50",{WHITE}),
+            board_frame = IupFrame(board_canvas,"TITLE=Board"),
+            moves_frame = IupFrame(moves_canvas,"TITLE=\"Game log\""),
+            black_frame = IupFrame(black_canvas,"TITLE=Black"),
+            white_frame = IupFrame(white_canvas,"TITLE=White"),
+            left = IupSplit(board_frame,moves_frame,"ORIENTATION=HORIZONTAL,MINMAX=100:900"),
+            right = IupVbox({black_frame,white_frame}),
+            full = IupSplit(left,right,"ORIENTATION=VERTICAL,MINMAX=100:900")
+    dlg = IupDialog(full,"TITLE=Hexapawn,RASTERSIZE=800x800")
+    IupSetAttributePtr(dlg,"BOARD_FRAME",board_frame)
+    IupSetAttributePtr(dlg,"BOARD_CANVAS",board_canvas)
+    IupSetAttributePtr(dlg,"MOVES_CANVAS",moves_canvas)
+    IupSetAttributePtr(dlg,"WHITE_CANVAS",white_canvas)
+    IupSetAttributePtr(dlg,"BLACK_CANVAS",black_canvas)
+    Ihandles c4 = {board_canvas, moves_canvas, black_canvas, white_canvas}
+    IupSetCallbacks(c4,{"ACTION",Icallback("redraw_cb"),
+                        "MAP_CB",Icallback("map_cb"),
+                        "RESIZE_CB", Icallback("canvas_resize_cb")})
+    IupSetCallbacks(board_canvas, {"MOTION_CB", Icallback("motion_cb"),
+                                   "BUTTON_CB", Icallback("button_cb")})
+
+    Ihandle main_menu = IupMenu({IupMenuItem("&New game",Icallback("new_game_cb")),
+                                 IupMenuItem("&Train",Icallback("train_cb")),
+                                 IupMenuItem("&Help (F1)",Icallback("help_cb")),
+                                 IupMenuItem("E&xit", Icallback("exit_cb"))})
+    IupSetAttributeHandle(dlg,"MENU",main_menu)
+    IupSetCallback(dlg, "K_ANY", Icallback("key_cb"))
+    new_game()
+    IupShowXY(dlg,IUP_CENTER,IUP_CENTER)
+    IupMainLoop()
+    IupClose()
+end procedure
+
+main()

@@ -1,0 +1,82 @@
+int     Offset, Length, Limit, Byte;
+char    FileName(80);
+
+func    GetByte;        \Return a byte from input file
+int     Return;
+[Return:= Byte;
+Byte:= ChIn(3);         \one-byte look-ahead detects EOF
+return Return;
+];
+
+proc    DumpHex(I);     \Show line of hex and its ASCII, starting at offset I
+int     I, J;
+char    Line(16);
+[HexOut(0, I);  Text(0, "  ");
+SetHexDigits(2);
+for J:= 0 to 15 do
+        [Line(J):= GetByte;
+        if GetErr and I+J < Limit then Limit:= I+J;
+        if I+J < Limit then
+                HexOut(0, Line(J))
+        else    Text(0, "  ");
+        ChOut(0, ^ );
+        if (J&7) = 7 then ChOut(0, ^ );
+        ];
+SetHexDigits(8);        \restore default number of digits
+ChOut(0, ^|);           \display corresponding ASCII characters
+for J:= 0 to 15 do
+    if I+J < Limit then
+        ChOut(0, if Line(J)<=$1F or Line(J)>=$7F then ^. else Line(J));
+ChOut(0, ^|);  CrLf(0);
+];
+
+func    OpenInFile;     \Open file for input; return 'true' if success
+int     FD;             \file descriptor
+[FD:= FOpen(FileName, 0);
+FSet(FD, ^i);           \associate device 3 with file; use small buffer (i)
+OpenI(3);
+return GetErr = 0;
+];
+
+func    GetFileName;    \Get FileName from command line, and set any switches
+int     C, I;           \returns 'true' if no errors
+[FileName(0):= 0;
+C:= ChIn(8);
+loop    [while C = $20 do C:= ChIn(8);  \skip leading spaces (for MS-DOS)
+        if C = ^- then
+                [case ChIn(8) of
+                  ^s:   Offset:= IntIn(8);
+                  ^n:   Length:= IntIn(8)
+                other   return false;           \Error
+                Backup;         \in case number was terminated by CR or EOF
+                C:= ChIn(8);
+                ]
+        else if C = $0D\CR\ or C = $1A\EOF\ then quit
+        else    [I:= 0;
+                repeat  FileName(I):= C;
+                        I:= I+1;
+                        C:= ChIn(8);
+                until   C <= $20;
+                FileName(I):= 0;        \terminate string
+                ];
+        ];
+return true;
+];
+
+int     I;
+[Trap(false);                   \don't abort program on errors
+Offset:= 0;  Length:= -1>>1;
+if not GetFileName then
+        [Text(0, "Unrecognized switch. Use -s offset, -n length");  exit];
+if not OpenInFile(FileName) then
+        [Text(0, "File not found");  exit];
+Byte:= ChIn(3);                 \look ahead
+Limit:= Offset + Length;
+if Limit < 0 then Limit:= -1>>1;
+for I:= 0 to Offset-1 do        \skip any offset bytes
+        [GetByte;  if GetErr then exit];
+repeat  DumpHex(I);
+        I:= I + 16;
+until   I >= Limit;
+HexOut(0, Limit);  CrLf(0);
+]

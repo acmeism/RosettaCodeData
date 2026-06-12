@@ -1,0 +1,156 @@
+with javascript_semantics
+include timedate.e
+function to_ka(string s) return apply(split(s)[1..2],to_number) end function
+constant UNIX_EPOCH = parse_date_string("1970-01-01",{"YYYY-MM-DD"}),
+          NTP_EPOCH = parse_date_string("1900-01-01",{"YYYY-MM-DD"}),
+          TAI_EPOCH = parse_date_string("1958-01-01",{"YYYY-MM-DD"}),
+          GPS_EPOCH = parse_date_string("1980-01-06",{"YYYY-MM-DD"}),
+        -- from (eg) https://data.iana.org/time-zones/tzdb/leap-seconds.list
+        --  (or from task description, expires on 28 June 2025)
+       leap_seconds = """
+2272060800      10      # 1 Jan 1972
+2287785600      11      # 1 Jul 1972
+2303683200      12      # 1 Jan 1973
+2335219200      13      # 1 Jan 1974
+2366755200      14      # 1 Jan 1975
+2398291200      15      # 1 Jan 1976
+2429913600      16      # 1 Jan 1977
+2461449600      17      # 1 Jan 1978
+2492985600      18      # 1 Jan 1979
+2524521600      19      # 1 Jan 1980
+2571782400      20      # 1 Jul 1981
+2603318400      21      # 1 Jul 1982
+2634854400      22      # 1 Jul 1983
+2698012800      23      # 1 Jul 1985
+2776982400      24      # 1 Jan 1988
+2840140800      25      # 1 Jan 1990
+2871676800      26      # 1 Jan 1991
+2918937600      27      # 1 Jul 1992
+2950473600      28      # 1 Jul 1993
+2982009600      29      # 1 Jul 1994
+3029443200      30      # 1 Jan 1996
+3076704000      31      # 1 Jul 1997
+3124137600      32      # 1 Jan 1999
+3345062400      33      # 1 Jan 2006
+3439756800      34      # 1 Jan 2009
+3550089600      35      # 1 Jul 2012
+3644697600      36      # 1 Jul 2015
+3692217600      37      # 1 Jan 2017
+""",
+   {tdkeys, tdadjs} = columnize(apply(split(leap_seconds,"\n"),to_ka))
+
+function ntp_to_tai(atom ntp_secs)
+    atom tai = ntp_secs + timedate_diff(TAI_EPOCH,NTP_EPOCH)
+    if ntp_secs >= tdkeys[1] then
+        if ntp_secs >= tdkeys[$] then
+            tai += tdadjs[$]
+        else
+            atom pa = 0
+            for i,k in tdkeys do
+                if k > ntp_secs then
+                    tai += pa
+                    exit
+                end if
+                pa = tdadjs[i]
+            end for
+        end if
+    end if
+    return tai
+end function
+
+function tai_to_ntp(atom tai_secs)
+    atom ntp = tai_secs + timedate_diff(NTP_EPOCH,TAI_EPOCH),
+         tk1 = tdkeys[1]
+    if ntp >= tk1 then
+        atom delta, pk, pa
+        if ntp >= tdkeys[$] then
+            delta = tdadjs[$]
+        else
+            for i,k in tdkeys do
+                if k > ntp then
+                    delta = pa
+                    exit
+                end if
+                pk = k
+                pa = tdadjs[i]
+            end for
+        end if
+
+        if ntp - delta < tk1 then
+            ntp = tk1 - 1 + (ntp - floor(ntp))
+        elsif ntp - delta < pk then
+            ntp = ntp - delta + 1
+        else
+            ntp -= delta
+        end if
+    end if
+-- hmmm...
+--?{tai_secs,ntp_to_tai(ntp)}
+--assert(tai_secs == ntp_to_tai(ntp))
+    return ntp
+end function
+
+function tai_to_gps(atom tai)
+    return tai + timedate_diff(GPS_EPOCH,TAI_EPOCH) - 19
+end function
+
+function gps_to_tai(atom gps)
+    return gps - timedate_diff(GPS_EPOCH,TAI_EPOCH) + 19
+end function
+
+printf(1,"%11s %24s %17s %19s %19s\n%s\n",{"UTC","Unix","NTP","TAI","GPS",repeat('_',100)})
+string s
+timedate td
+atom unix, ntp, tai, gps
+
+procedure printem(string set)
+    if set="s" then
+        td = parse_date_string(s,{"YYYY-MM-DD'T'hh:mm:ss"})
+    else
+        if set="unix" then
+            td = adjust_timedate(UNIX_EPOCH,unix)
+        elsif set="ntp" or set="tai" then
+            td = adjust_timedate(NTP_EPOCH,ntp)
+        end if
+        if td[DT_MSEC] then
+            s = format_timedate(td,"YYYY-MM-DD'T'hh:mm:ss.ms")
+        else
+            s = format_timedate(td,"YYYY-MM-DD'T'hh:mm:ss")
+        end if
+    end if
+    unix = timedate_diff(UNIX_EPOCH,td)
+    ntp = timedate_diff(NTP_EPOCH,td)
+    if set!="tai" then
+        tai = ntp_to_tai(ntp)
+    end if
+    gps = tai_to_gps(tai)
+    printf(1,"%-23s %17.4F %17.4F %19.4F %19.4F\n",{s,unix,ntp,tai,gps})
+end procedure
+
+for s in {"0001-01-01T00:00:00", "1900-01-01T00:00:00", "1958-01-01T00:00:00",
+          "1970-01-01T00:00:00", "1980-01-06T00:00:00", "1989-12-31T00:00:00",
+          "1990-01-01T00:00:00", "2025-06-01T00:00:00", "2050-01-01T00:00:00"} do
+--        "1990-01-06T00:00:00", -- (matches Python [typo])
+--        "1900-01-01T00:00:07.36"} do -- see note
+    printem("s")
+end for
+
+for unix in {1810753809.806, 154956295.688, 780673454.121} do
+    printem("unix")
+end for
+
+for ntp in {2871676795, 2335219189, 3029443171} do
+    printem("ntp")
+end for
+
+for tai in {996796823, 996796824, 996796825, 996796826} do
+--for tai in {996796823, 996796824, 996796825, 996796826,
+--      1293840030, 1293840031, 1293840032, 1293840033} do
+    ntp = tai_to_ntp(tai)
+    printem("tai")
+end for
+
+for gps in {996796804.250, 996796805.5, 996796806.750, 996796807.9999} do
+    ntp = tai_to_ntp(gps_to_tai(gps))
+    printem("ntp")
+end for

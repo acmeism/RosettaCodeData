@@ -1,0 +1,213 @@
+Const NULL As Any Ptr = 0
+
+Type State
+    label As String * 1
+    edge1 As State Ptr
+    edge2 As State Ptr
+End Type
+
+Function createState(label As String, e1 As State Ptr = NULL, e2 As State Ptr = NULL) As State Ptr
+    Dim As State Ptr s = New State
+    s->label = label
+    s->edge1 = e1
+    s->edge2 = e2
+    Return s
+End Function
+
+Sub addState(state As State Ptr, states() As State Ptr, count As Integer)
+    If state = NULL Then Exit Sub
+
+    For i As Integer = 0 To count - 1
+        If states(i) = state Then Exit Sub
+    Next
+
+    states(count) = state
+    count += 1
+
+    If state->label = "" Then
+        addState(state->edge1, states(), count)
+        addState(state->edge2, states(), count)
+    End If
+End Sub
+
+Type NFA
+    initial As State Ptr
+    accept As State Ptr
+End Type
+
+Function createNFA(initial As State Ptr, accept As State Ptr) As NFA Ptr
+    Dim As NFA Ptr nfa = New NFA
+    nfa->initial = initial
+    nfa->accept = accept
+    Return nfa
+End Function
+
+Type StateSet
+    states(1023) As State Ptr
+    count As Integer = 0
+End Type
+
+Sub addToStateSet(Byref st As StateSet, s As State Ptr)
+    If st.count >= 1024 Then Exit Sub
+    For i As Integer = 0 To st.count - 1
+        If st.states(i) = s Then Exit Sub
+    Next
+    st.states(st.count) = s
+    st.count += 1
+End Sub
+
+Function containsState(Byref st As StateSet, s As State Ptr) As Boolean
+    For i As Integer = 0 To st.count - 1
+        If st.states(i) = s Then Return True
+    Next
+    Return False
+End Function
+
+Sub clearStateSet(Byref st As StateSet)
+    st.count = 0
+End Sub
+
+Sub addStateWithEpsilon(state As State Ptr, Byref st As StateSet)
+    If state = NULL Orelse containsState(st, state) Then Exit Sub
+
+    addToStateSet(st, state)
+    If state->label = "" Then
+        addStateWithEpsilon(state->edge1, st)
+        addStateWithEpsilon(state->edge2, st)
+    End If
+End Sub
+
+'Convert infix to postfix notation
+Function shunt(infix As String) As String
+    Dim As String postfix = "", stack = ""
+
+    For i As Integer = 1 To Len(infix)
+        Dim As String c = Mid(infix, i, 1)
+        Select Case c
+        Case "("
+            stack = "(" + stack
+        Case ")"
+            While Len(stack) > 0 Andalso Left(stack, 1) <> "("
+                postfix += Left(stack, 1)
+                stack = Mid(stack, 2)
+            Wend
+            If Len(stack) > 0 Then stack = Mid(stack, 2)
+        Case "*", "+", "?", ".", "|"
+            Dim As Integer prec
+            Select Case c
+            Case "*": prec = 60
+            Case "+": prec = 55
+            Case "?": prec = 50
+            Case ".": prec = 40
+            Case "|": prec = 20
+            End Select
+
+            While Len(stack) > 0 Andalso Left(stack, 1) <> "("
+                Dim As Integer topPrec
+                Select Case Left(stack,1)
+                Case "*": topPrec = 60
+                Case "+": topPrec = 55
+                Case "?": topPrec = 50
+                Case ".": topPrec = 40
+                Case "|": topPrec = 20
+                End Select
+
+                If prec <= topPrec Then
+                    postfix += Left(stack, 1)
+                    stack = Mid(stack, 2)
+                Else
+                    Exit While
+                End If
+            Wend
+            stack = c + stack
+        Case Else
+            postfix += c
+        End Select
+    Next
+    Return postfix + stack
+End Function
+
+' Function to match string against regex
+Function matchRegex(infix As String, text As String) As Boolean
+    Dim As String postfix = shunt(infix)
+    Dim As NFA Ptr nfaStack(1023)
+    Dim As Integer nfaTop = 0
+
+    For i As Integer = 1 To Len(postfix)
+        Dim As String c = Mid(postfix, i, 1)
+        Select Case c
+        Case "*"
+            Dim As NFA Ptr nfa = nfaStack(nfaTop - 1)
+            Dim As State Ptr initial = createState("")
+            Dim As State Ptr accept = createState("")
+
+            initial->edge1 = nfa->initial
+            initial->edge2 = accept
+            nfa->accept->edge1 = nfa->initial
+            nfa->accept->edge2 = accept
+
+            nfaStack(nfaTop - 1) = createNFA(initial, accept)
+
+        Case "."
+            nfaTop -= 1
+            Dim As NFA Ptr nfa2 = nfaStack(nfaTop)
+            Dim As NFA Ptr nfa1 = nfaStack(nfaTop - 1)
+            nfa1->accept->edge1 = nfa2->initial
+            nfaStack(nfaTop - 1) = createNFA(nfa1->initial, nfa2->accept)
+
+        Case "|"
+            nfaTop -= 1
+            Dim As NFA Ptr nfa2 = nfaStack(nfaTop)
+            Dim As NFA Ptr nfa1 = nfaStack(nfaTop - 1)
+            Dim As State Ptr initial = createState("")
+            Dim As State Ptr accept = createState("")
+
+            initial->edge1 = nfa1->initial
+            initial->edge2 = nfa2->initial
+            nfa1->accept->edge1 = accept
+            nfa2->accept->edge1 = accept
+
+            nfaStack(nfaTop - 1) = createNFA(initial, accept)
+
+        Case Else ' Literal character
+            Dim As State Ptr initial = createState(c)
+            Dim As State Ptr accept = createState("")
+            initial->edge1 = accept
+            nfaStack(nfaTop) = createNFA(initial, accept)
+            nfaTop += 1
+        End Select
+    Next
+
+    Dim As NFA Ptr nfa = nfaStack(0)
+    Dim As StateSet current, sgte
+
+    addStateWithEpsilon(nfa->initial, current)
+
+    For i As Integer = 1 To Len(text)
+        Dim As String c = Mid(text, i, 1)
+        clearStateSet(sgte)
+
+        For j As Integer = 0 To current.count - 1
+            If current.states(j)->label = c Then
+                addStateWithEpsilon(current.states(j)->edge1, sgte)
+            End If
+        Next
+
+        current = sgte
+    Next
+
+    Return containsState(current, nfa->accept)
+End Function
+
+'Test the implementation
+Dim As String patterns(3) = {"a.b.c*", "a.(b|d).c*", "(a.(b|d))*", "a.(b.b)*.c"}
+Dim As String tests(5) = {"", "abc", "abbc", "abcc", "abad", "abbbc"}
+
+For i As Integer = 0 To 3
+    For j As Integer = 0 To 5
+        Print Iif(matchRegex(patterns(i), tests(j)), "True  ", "False "); patterns(i); " "; tests(j)
+    Next
+    Print
+Next
+
+Sleep

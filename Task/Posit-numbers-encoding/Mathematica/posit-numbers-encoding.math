@@ -1,0 +1,74 @@
+(*
+ * Copyright © 2017 John L . Gustafson
+ *
+ * Permission is hereby granted, free of charge to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction including without limitation the
+ * rights to use copy, modify, merge, publish, distribute, sub - license,
+ * and/or sell copies of the Software and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions :
+ *
+ * This copyright and permission notice shall be included in all copies or
+ * substantial portions of the software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OR CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ *)
+
+setpositenv[{n_Integer /; n >= 2, e_Integer /; e >= 0}] := (
+  {nbits, es} = {n, e};
+  npat = 2^nbits;
+  useed = 2^2^es;
+  {minpos, maxpos} = {useed^(-nbits + 2), useed^(nbits - 2)};
+  qsize = Power[2, Ceiling[Log[2, (nbits - 2) 2^(es + 2) + 5]]];
+  qextra = qsize - (nbits - 2) 2^(es + 2);
+  )
+positableQ[x_] := (Abs[x] == ∞ || x ∈ Reals)
+x2p[x_ /; positableQ[x]] := Module[
+  {i, p, e = 2^(es - 1), y = Abs[x]},
+  Which[
+   (* First, take care of the two exception values: *)
+   y == 0, 0, (* all 0 bits s *)
+   y == ∞, BitShiftLeft[1, nbits - 1], (* 1 followed by all 0 bits *)
+   True,
+   If[
+    y >= 1, (* Northeast quadrant: *)
+    p = 1; i = 2; (* Shift in 1s from the right and scale down. *)
+
+    While[y >= useed &&
+      i < nbits, {p, y, i} = {2 p + 1, y/useed, i + 1}];
+    p = 2 p; i++,
+    (* Else, southeast quadrant: *)
+    p = 0; i = 1; (* Shift in 0s from the right and scale up. *)
+
+    While[y < 1 && i <= nbits, {y, i} = {y useed, i + 1}];
+    If[i >= nbits, p = 2; i = nbits + 1, p = 1; i++]
+    ];(* Extract exponent bits: *)
+
+   While[e > 1/2 && i <= nbits, p = 2 p;
+    If[y >= 2^e, y /= 2^e; p++]; e /= 2; i++];
+   y--; (* Fraction bits; subtract the hidden bit *)
+
+   While[y > 0 && i <= nbits, y = 2 y;
+    p = 2 p + ⌊y⌋;
+    y -= ⌊y⌋; i++];
+   p *= 2^(nbits + 1 - i); i++;(* Round to nearest; tie goes to even *)
+
+    i = BitAnd[p, 1]; p = ⌊p/2⌋;
+   p = Which[
+     i == 0, p, (* closer to lower value *)
+     y == 1 || y == 0,
+     p + BitAnd[p, 1], (* tie goes to nearest even *)
+     True,
+     p + 1 (* closer to upper value *)];
+
+   Mod[If[x < 0, npat - p, p], npat (* Simulate 2's complement *)]
+   ]
+  ]
+setpositenv[{8,2}];
+x2p @ Pi

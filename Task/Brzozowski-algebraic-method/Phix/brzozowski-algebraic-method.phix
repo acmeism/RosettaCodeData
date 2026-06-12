@@ -1,0 +1,82 @@
+constant empty = "0",
+         epsilon = "1"
+
+// [confuse not with union builtin]
+function onion(object a, b) return {a,"+",b} end function
+function concat(object a, b) return {"(",a,")(",b,")"} end function
+function star(object a)       return {"(",a,")*"} end function
+
+function is_onion(sequence e) return not string(e) and e[2]="+" end function
+function is_concat(sequence e) return not string(e) and e[3]=")(" end function
+function is_star(sequence e)    return not string(e) and e[3]=")*" end function
+
+function brzozowski(sequence a, b)
+    for n=length(a) to 1 by -1 do
+        object star_ann = star(a[n,n])
+        b[n] = concat(star_ann, b[n])
+        for j=1 to n-1 do
+            a[n,j] = concat(star_ann, a[n,j])
+        end for
+        for i=1 to n-1 do
+            b[i] = onion(b[i], concat(a[i,n], b[n]))
+            for j=1 to n-1 do
+                a[i,j] = onion(a[i,j], concat(a[i,n], a[n,j]))
+            end for
+        end for
+    end for
+    return b[1]
+end function
+
+function re_to_string(object o)
+    if not string(o) then
+        for i,oi in o do
+            o[i] = re_to_string(oi)
+        end for
+        o = join(o,"")
+    end if
+    return o
+end function
+
+function simple(object e)
+    if not string(e) then
+        if is_onion(e) then
+            object lhs = simple(e[1]),
+                   rhs = simple(e[3])
+            if lhs=empty then return rhs end if
+            if lhs=rhs or rhs=empty then return lhs end if
+            if is_onion(lhs) then return simple(onion(lhs[1],onion(lhs[3],rhs))) end if
+            return onion(lhs,rhs)
+        elsif is_concat(e) then
+            object lhs = simple(e[2]),
+                   rhs = simple(e[4])
+            if lhs=epsilon then return rhs end if
+            if rhs=epsilon then return lhs end if
+            if lhs=empty or rhs=empty then return empty end if
+            if is_concat(lhs) then return simple(concat(lhs[2],concat(lhs[4],rhs))) end if
+            return concat(lhs,rhs)
+        else
+            assert(is_star(e))
+            object f = simple(e[2])
+            if f=empty or f=epsilon then return epsilon end if
+            return star(f)
+        end if
+    end if
+    return e
+end function
+
+function simplify(object e)
+    do
+        object prev = e
+        e = simple(e)
+    until e = prev
+    return e
+end function
+
+constant a = {{empty,"a","b"},
+              {"b",empty,"a"},
+              {"a","b",empty}},
+         b = {epsilon,empty,empty},
+        re = brzozowski(a, b),
+         s = simplify(re)
+printf(1,"%s\n\n which simplifies to:\n\n%s\n",{re_to_string(re),
+                                                re_to_string(s)})

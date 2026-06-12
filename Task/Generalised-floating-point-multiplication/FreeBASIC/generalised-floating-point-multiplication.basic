@@ -1,0 +1,324 @@
+#include once "big_int/big_integer.bi"
+#define floor(x) ((x*2.0-0.5) Shr 1)
+
+Type BTReal
+    value As BigInt
+    scale As Integer
+End Type
+
+Function Pow3(k As Integer) As BigInt
+    Dim r As BigInt = 1
+    For i As Integer = 1 To k
+        r *= 3
+    Next i
+    Return r
+End Function
+
+' Trit -> char
+Function CharOfTrit(t As Integer) As String
+    Select Case t
+    Case 1  : Return "+"
+    Case 0  : Return "0"
+    Case -1 : Return "-"
+    End Select
+    Return "0"
+End Function
+
+' Char -> trit
+Function TritOf(ch As String) As Integer
+    Select Case ch
+    Case "+" : Return 1
+    Case "0" : Return 0
+    Case "-" : Return -1
+    End Select
+    Return 0
+End Function
+
+Function BTFromString(s As String) As BTReal
+    Dim res As BTReal
+    Dim dotPos As Integer = Instr(s, ".")
+    Dim As String intPart, fracPart
+    Dim As Integer i, t
+
+    If dotPos = 0 Then
+        intPart = s
+        fracPart = ""
+    Else
+        intPart = Left(s, dotPos - 1)
+        fracPart = Mid(s, dotPos + 1)
+    End If
+
+    Dim v As BigInt = 0
+
+    ' whole part
+    For i = 1 To Len(intPart)
+        t = TritOf(Mid(intPart, i, 1))
+        v = v * 3 + t
+    Next i
+
+    ' fractional part
+    Dim sc As Integer = 0
+    For i = 1 To Len(fracPart)
+        t = TritOf(Mid(fracPart, i, 1))
+        v = v * 3 + t
+        sc += 1
+    Next i
+
+    res.value = v
+    res.scale = sc
+    Return res
+End Function
+
+Function BTFromInt(n As Long) As BTReal
+    Dim r As BTReal
+    r.scale = 0
+    r.value = n
+    Return r
+End Function
+
+Function BTFromDouble(x As Double, maxFrac As Integer) As BTReal
+    Dim i As Integer
+    Dim neg As Integer = 0
+    If x < 0 Then
+        neg = 1
+        x = -x
+    End If
+
+    Dim n As Long = Fix(x)
+    Dim fracc As Double = x - n
+
+    Redim trits(0) As Integer
+    Dim nt As Integer = 0
+
+    If n = 0 Then
+        ' nothing, it remains empty, we will add fraction
+    Else
+        Dim tmp As Long = n
+        Redim tlist(0) As Integer
+        Dim k As Integer = 0
+
+        While tmp <> 0
+            Dim q As Long = tmp \ 3
+            Dim r As Long = tmp - q * 3
+            Dim t As Integer = r
+            If t = 2 Then
+                t = -1
+                q += 1
+            End If
+            If k = Ubound(tlist) Then Redim Preserve tlist(k + 8)
+            tlist(k) = t
+            k += 1
+            tmp = q
+        Wend
+
+        Redim trits(k - 1)
+        For i = 0 To k - 1
+            trits(i) = tlist(k - 1 - i)
+        Next i
+        nt = k
+    End If
+
+    Dim fracStart As Integer = nt
+    For i = 1 To maxFrac
+        fracc *= 3.0
+        Dim t As Integer = Cint(floor(fracc + 0.5))
+        If t > 1 Then t = 1
+        If t < -1 Then t = -1
+        fracc -= t
+        If nt = Ubound(trits) + 1 Then Redim Preserve trits(nt + 8)
+        trits(nt) = t
+        nt += 1
+    Next i
+
+    Dim v As BigInt = 0
+    For i = 0 To nt - 1
+        v = v * 3 + trits(i)
+    Next i
+
+    If neg = 1 Then v = -v
+
+    Dim r As BTReal
+    r.value = v
+    r.scale = nt - fracStart
+    Return r
+End Function
+
+Sub BTAlignScales(Byref a As BTReal, Byref b As BTReal, Byref aa As BTReal, Byref bb As BTReal)
+    aa = a
+    bb = b
+    If aa.scale > bb.scale Then
+        Dim d As Integer = aa.scale - bb.scale
+        bb.value = bb.value * Pow3(d)
+        bb.scale = aa.scale
+    Elseif bb.scale > aa.scale Then
+        Dim d As Integer = bb.scale - aa.scale
+        aa.value = aa.value * Pow3(d)
+        aa.scale = bb.scale
+    End If
+End Sub
+
+Function BTAdd(Byref a As BTReal, Byref b As BTReal) As BTReal
+    Dim aa As BTReal, bb As BTReal
+    BTAlignScales(a, b, aa, bb)
+    Dim r As BTReal
+    r.value = aa.value + bb.value
+    r.scale = aa.scale
+    Return r
+End Function
+
+Function BTSub(Byref a As BTReal, Byref b As BTReal) As BTReal
+    Dim aa As BTReal, bb As BTReal
+    BTAlignScales(a, b, aa, bb)
+    Dim r As BTReal
+    r.value = aa.value - bb.value
+    r.scale = aa.scale
+    Return r
+End Function
+
+Function BTMul(Byref a As BTReal, Byref b As BTReal) As BTReal
+    Dim r As BTReal
+    r.value = a.value * b.value
+    r.scale = a.scale + b.scale
+    Return r
+End Function
+
+Function BTLimitFrac(Byref a As BTReal, maxFrac As Integer) As BTReal
+    Dim r As BTReal = a
+    If r.scale > maxFrac Then
+        Dim d As Integer = r.scale - maxFrac
+        Dim p As BigInt = Pow3(d)
+        r.value = r.value \ p
+        r.scale = maxFrac
+    End If
+    Return r
+End Function
+
+Function BTToString(Byref a As BTReal) As String
+    Dim v As BigInt = a.value
+    Dim sc As Integer = a.scale
+
+    If v = 0 Then
+        If sc > 0 Then
+            Return "0." & String(sc, "0")
+        Else
+            Return "0"
+        End If
+    End If
+
+    Dim neg As Integer = 0
+    If v < 0 Then
+        neg = 1
+        v = -v
+    End If
+
+    Redim trits(0) As Integer
+    Dim As Integer i, n = 0
+
+    While v <> 0
+        Dim q As BigInt = v \ 3
+        Dim r As BigInt = v - q * 3
+        Dim t As Integer = Cint(Val(Str(r)))
+        If t = 2 Then
+            t = -1
+            q = q + 1
+        End If
+        If n = Ubound(trits) Then Redim Preserve trits(n + 8)
+        trits(n) = t
+        n += 1
+        v = q
+    Wend
+
+    If neg = 1 Then
+        For i = 0 To n - 1
+            trits(i) = -trits(i)
+        Next i
+    End If
+
+    Dim s As String = ""
+    For i = n - 1 To 0 Step -1
+        s &= CharOfTrit(trits(i))
+    Next i
+
+    If sc > 0 Then
+        If sc >= Len(s) Then
+            Dim zeros As Integer = sc - Len(s)
+            s = String(zeros, "0") & s
+        End If
+        Dim posDot As Integer = Len(s) - sc
+        s = Left(s, posDot) & "." & Mid(s, posDot + 1)
+    End If
+
+    Return s
+End Function
+
+Function BTToDouble(Byref a As BTReal) As Double
+    Dim As Integer i, neg
+    Dim As String s = Str(a.value)
+    If Left(s,1) = "+" Then neg = 0: s = Mid(s,2)
+    If Left(s,1) = "-" Then neg = 1: s = Mid(s,2)
+
+    Dim As Double x = 0.0
+    For i = 1 To Len(s)
+        Dim As Integer d = Asc(Mid(s,i,1)) - Asc("0")
+        If d < 0 Or d > 9 Then Exit For
+        x = x * 10.0 + d
+    Next i
+    If neg = 1 Then x = -x
+
+    Dim As Double f = 1.0
+    If a.scale > 0 Then
+        For i = 1 To a.scale
+            f /= 3.0
+        Next i
+    End If
+
+    Return x * f
+End Function
+
+Sub TestCase1()
+    Const maxFrac = 81
+
+    Dim a As BTReal = BTFromString("+-0++0+.+-0++0+")
+    Dim b As BTReal = BTFromDouble(-436.436, maxFrac)
+    Dim c As BTReal = BTFromString("+-++-.+-++-")
+
+    Dim b_minus_c As BTReal = BTSub(b, c)
+    Dim prod As BTReal = BTMul(a, b_minus_c)
+    prod = BTLimitFrac(prod, maxFrac)
+
+    Print "Test case 1"
+    Print "a = "; BTToString(a); " = "; BTToDouble(a)
+    Print "b = "; BTToString(b); " = "; BTToDouble(b)
+    Print "c = "; BTToString(c); " = "; BTToDouble(c)
+    Print
+    Print "a * (b - c) = "; BTToString(prod); "="; BTToDouble(prod)
+End Sub
+
+Sub TestCase2()
+    Dim As Integer i, j
+    Print !"Test case 2\n"; Spc(10); "Multiplication 27 x 12 (balanced ternary)"
+    Print " x |";
+    For j = 1 To 12
+        Print Using "    (##)|"; j;
+    Next
+    Print
+
+    For i = 1 To 27
+        Print Using "## |"; i;
+        For j = 1 To 12
+            Dim x As BTReal = BTFromInt(i)
+            Dim y As BTReal = BTFromInt(j)
+            Dim p As BTReal = BTMul(x, y)
+            Dim s As String = BTToString(p)
+            Print Using " \     \|"; s;
+        Next
+        Print
+    Next
+End Sub
+
+' Main program
+TestCase1()
+Print
+TestCase2()
+
+Sleep

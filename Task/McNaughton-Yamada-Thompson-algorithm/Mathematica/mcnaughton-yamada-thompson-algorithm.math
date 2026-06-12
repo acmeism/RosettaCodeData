@@ -1,0 +1,167 @@
+(* Initialize global variables *)
+ClearAll[createState, setEdge1, setEdge2, shunt, compileRegex, followes, matchRegex];
+stateCounter = 0;
+stateList = <||>;
+
+(* Function to create a new state *)
+createState[label_: Null] := Module[{id},
+  id = "state" <> ToString[++stateCounter];
+  stateList[id] = <|"label" -> label, "edge1" -> Null, "edge2" -> Null|>;
+  id
+];
+
+(* Functions to set edges for a state *)
+setEdge1[stateID_, edgeID_] := (stateList[stateID, "edge1"] = edgeID);
+setEdge2[stateID_, edgeID_] := (stateList[stateID, "edge2"] = edgeID);
+
+(* Function to convert infix regex to postfix using the Shunting Yard algorithm *)
+shunt[infix_String] := Module[{specials, postfix = "", stack = {}, cList, c},
+  specials = <|"*" -> 60, "+" -> 55, "?" -> 50, "." -> 40, "|" -> 20|>;
+  cList = Characters[infix];
+  Do[
+    c = cList[[i]];
+    If[c == "(",
+      AppendTo[stack, c],
+      If[c == ")",
+        While[stack =!= {} && Last[stack] != "(",
+          postfix = postfix <> Last[stack];
+          stack = Most[stack];
+        ];
+        If[stack =!= {},
+          stack = Most[stack]; (* Remove "(" *)
+        ],
+        If[KeyExistsQ[specials, c],
+          While[stack =!= {} && KeyExistsQ[specials, Last[stack]] && specials[c] <= specials[Last[stack]],
+            postfix = postfix <> Last[stack];
+            stack = Most[stack];
+          ];
+          AppendTo[stack, c],
+          postfix = postfix <> c
+        ]
+      ]
+    ],
+    {i, Length[cList]}
+  ];
+  While[stack =!= {},
+    postfix = postfix <> Last[stack];
+    stack = Most[stack];
+  ];
+  postfix
+];
+
+(* Function to compile postfix regex into an NFA *)
+compileRegex[postfix_String] := Module[{nfaStack = {}, cList, c, initial, accept, nfa1, nfa2},
+  cList = Characters[postfix];
+  Do[
+    c = cList[[i]];
+    Switch[c,
+      "*",
+      nfa1 = Last[nfaStack]; nfaStack = Most[nfaStack];
+      initial = createState[];
+      accept = createState[];
+      setEdge1[initial, nfa1["initial"]];
+      setEdge2[initial, accept];
+      setEdge1[nfa1["accept"], nfa1["initial"]];
+      setEdge2[nfa1["accept"], accept];
+      AppendTo[nfaStack, <|"initial" -> initial, "accept" -> accept|>],
+
+      ".",
+      nfa2 = Last[nfaStack]; nfaStack = Most[nfaStack];
+      nfa1 = Last[nfaStack]; nfaStack = Most[nfaStack];
+      setEdge1[nfa1["accept"], nfa2["initial"]];
+      AppendTo[nfaStack, <|"initial" -> nfa1["initial"], "accept" -> nfa2["accept"]|>],
+
+      "|",
+      nfa2 = Last[nfaStack]; nfaStack = Most[nfaStack];
+      nfa1 = Last[nfaStack]; nfaStack = Most[nfaStack];
+      initial = createState[];
+      accept = createState[];
+      setEdge1[initial, nfa1["initial"]];
+      setEdge2[initial, nfa2["initial"]];
+      setEdge1[nfa1["accept"], accept];
+      setEdge1[nfa2["accept"], accept];
+      AppendTo[nfaStack, <|"initial" -> initial, "accept" -> accept|>],
+
+      "+",
+      nfa1 = Last[nfaStack]; nfaStack = Most[nfaStack];
+      initial = createState[];
+      accept = createState[];
+      setEdge1[initial, nfa1["initial"]];
+      setEdge1[nfa1["accept"], nfa1["initial"]];
+      setEdge2[nfa1["accept"], accept];
+      AppendTo[nfaStack, <|"initial" -> initial, "accept" -> accept|>],
+
+      "?",
+      nfa1 = Last[nfaStack]; nfaStack = Most[nfaStack];
+      initial = createState[];
+      accept = createState[];
+      setEdge1[initial, nfa1["initial"]];
+      setEdge2[initial, accept];
+      setEdge1[nfa1["accept"], accept];
+      AppendTo[nfaStack, <|"initial" -> initial, "accept" -> accept|>],
+
+      _, (* Literal character *)
+      initial = createState[c];
+      accept = createState[];
+      setEdge1[initial, accept];
+      AppendTo[nfaStack, <|"initial" -> initial, "accept" -> accept|>]
+    ],
+    {i, Length[cList]}
+  ];
+  Last[nfaStack]
+];
+
+(* Function to compute the epsilon closure of a state *)
+followes[stateID_] := Module[{states = {}, stack = {stateID}, s},
+  While[stack =!= {},
+    s = Last[stack]; stack = Most[stack];
+    If[! MemberQ[states, s],
+      AppendTo[states, s];
+      If[stateList[s, "label"] === Null,
+        If[stateList[s, "edge1"] =!= Null, AppendTo[stack, stateList[s, "edge1"]]];
+        If[stateList[s, "edge2"] =!= Null, AppendTo[stack, stateList[s, "edge2"]]];
+      ]
+    ]
+  ];
+  states
+];
+
+(* Function to match a string against the regex *)
+matchRegex[infix_String, str_String] := Module[{postfix, nfa, current, nextStates, cList, c},
+  postfix = shunt[infix];
+  stateCounter = 0; (* Reset stateCounter *)
+  stateList = <||>; (* Reset stateList *)
+  nfa = compileRegex[postfix];
+  current = followes[nfa["initial"]];
+  cList = Characters[str];
+  Do[
+    nextStates = {};
+    c = cList[[i]];
+    Do[
+      If[stateList[state, "label"] === c,
+        nextStates = Union[nextStates, followes[stateList[state, "edge1"]]]
+      ],
+      {state, current}
+    ];
+    current = nextStates;
+    ,
+    {i, Length[cList]}
+  ];
+  MemberQ[current, nfa["accept"]]
+];
+
+(* Test cases *)
+infixes = {"a.b.c*", "a.(b|d).c*", "(a.(b|d))*", "a.(b.b)*.c"};
+strings = {"", "abc", "abbc", "abcc", "abad", "abbbc"};
+
+Do[
+  Do[
+    result = matchRegex[infix, str];
+    Print[If[result, "True ", "False "], infix, " ", str];
+    ,
+    {str, strings}
+  ];
+  Print["\n"];
+  ,
+  {infix, infixes}
+];

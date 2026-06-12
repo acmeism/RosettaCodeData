@@ -1,0 +1,117 @@
+Dim Shared As String posic          'current position in source
+Dim Shared As String startpos       'start of source
+Dim Shared As Integer errorPos      'position for error marker
+
+Sub errorMsg(message As String)
+    Print "false  "; startpos
+    Print Space(errorPos + 7); "^ "; message
+End Sub
+
+Function isOperator(s As String) As Boolean
+    Dim ops(2) As String = {"or", "and", "not"}
+    For i As Integer = 0 To Ubound(ops)
+        If Left(posic, Len(ops(i))) = ops(i) Then Return True
+    Next
+    Return False
+End Function
+
+Function expr(level As Integer) As Boolean
+    errorPos = Len(startpos) - Len(posic)
+
+    ' Skip whitespace
+    While Len(posic) > 0 Andalso Instr(" " & Chr(9) & Chr(10) & Chr(13), Left(posic, 1)) > 0
+        posic = Mid(posic, 2)
+        errorPos = Len(startpos) - Len(posic)
+    Wend
+
+    If Left(posic, 1) = "(" Then
+        posic = Mid(posic, 2)
+        If expr(0) = 0 Orelse Left(posic, 1) <> ")" Then
+            errorMsg("missing close paren")
+            Return False
+        End If
+        posic = Mid(posic, 2)
+    Elseif level <= 4 Andalso Left(posic, 3) = "not" Andalso _
+      (Len(posic) = 3 Orelse Instr(" " & Chr(9) & Chr(10) & Chr(13) & "(=<+-*/)", Mid(posic, 4, 1)) > 0) Then
+        posic = Mid(posic, 4)
+        If expr(6) = 0 Then Return False
+    Elseif Left(posic, 2) = "or" Orelse Left(posic, 3) = "and" Orelse Left(posic, 3) = "not" Then
+        errorMsg("expected a primary, found an operator")
+        Return False
+    Elseif Instr("0123456789", Left(posic, 1)) > 0 Then
+        posic = Mid(posic, 2)
+        While Len(posic) > 0 Andalso Instr("0123456789", Left(posic, 1)) > 0
+            posic = Mid(posic, 2)
+        Wend
+    Elseif Instr("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", Left(posic, 1)) > 0 Then
+        posic = Mid(posic, 2)
+        While Len(posic) > 0 Andalso Instr("0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", Left(posic, 1)) > 0
+            posic = Mid(posic, 2)
+        Wend
+    Else
+        errorMsg("expected a primary")
+        Return False
+    End If
+
+    Do
+        errorPos = Len(startpos) - Len(posic)
+        While Len(posic) > 0 Andalso Instr(" " & Chr(9) & Chr(10) & Chr(13), Left(posic, 1)) > 0
+            posic = Mid(posic, 2)
+            errorPos = Len(startpos) - Len(posic)
+        Wend
+
+        If level <= 2 Andalso Left(posic, 2) = "or" Andalso _
+          (Len(posic) = 2 Orelse Instr(" " & Chr(9) & Chr(10) & Chr(13), Mid(posic, 3, 1)) > 0) Then
+            posic = Mid(posic, 3)
+            If expr(3) = 0 Then Return False
+        Elseif level <= 3 Andalso Left(posic, 3) = "and" Andalso _
+          (Len(posic) = 3 Orelse Instr(" " & Chr(9) & Chr(10) & Chr(13), Mid(posic, 4, 1)) > 0) Then
+            posic = Mid(posic, 4)
+            If expr(4) = 0 Then Return False
+        Elseif level <= 4 Andalso (Left(posic, 1) = "=" Orelse Left(posic, 1) = "<") Then
+            posic = Mid(posic, 2)
+            If expr(5) = 0 Then Return False
+        Elseif level = 5 Andalso (Left(posic, 1) = "=" Orelse Left(posic, 1) = "<") Then
+            errorMsg("non-associative")
+            Return False
+        Elseif level <= 6 Andalso (Left(posic, 1) = "+" Orelse Left(posic, 1) = "-") Then
+            posic = Mid(posic, 2)
+            If expr(7) = 0 Then Return False
+        Elseif level <= 7 Andalso (Left(posic, 1) = "*" Orelse Left(posic, 1) = "/") Then
+            posic = Mid(posic, 2)
+            If expr(8) = 0 Then Return False
+        Else
+            Exit Do
+        End If
+    Loop
+
+    Return True
+End Function
+
+Sub parse(source As String)
+    startpos = source
+    posic = source
+
+    If expr(0) = 0 Then Exit Sub
+    If Len(posic) > 0 Then
+        errorMsg("unexpected character following valid parse")
+        Exit Sub
+    End If
+    Color 2 : Print " true  "; : Color 7 : Print source
+End Sub
+
+Dim tests(23) As String = { _
+"3 + not 5", "3 + (not 5)", "(42 + 3", "(42 + 3 some_other_syntax_error", _
+"not 3 < 4 or (true or 3/4+8*5-5*2 < 56) and 4*3 < 12 or not true", _
+"and 3 < 2", "not 7 < 2", "2 < 3 < 4", "2 < foobar - 3 < 4", _
+"2 < foobar and 3 < 4", "4 * (32 - 16) + 9 = 73", "235 76 + 1", _
+"a + b = not c and false", "a + b = (not c) and false", _
+"a + b = (not c and false)", "ab_c / bd2 or < e_f7", "g not = h", "i++", _
+"j & k", "l or _m", "wombat", "WOMBAT or monotreme", _
+"a + b - c * d / e < f and not ( g = h )", "$" }
+
+For i As Integer = 0 To Ubound(tests)
+    parse(tests(i))
+Next
+
+Sleep

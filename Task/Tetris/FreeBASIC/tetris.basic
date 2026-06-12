@@ -1,0 +1,313 @@
+' Rosetta Code problem: https://rosettacode.org/wiki/Tetris
+' by Jjuanhdez, 06/2025
+
+Const FILAS = 20
+Const COLUS = 11
+
+Const KeyLeft  = 75
+Const KeyRight = 77
+Const KeyUp    = 72
+Const KeyDown  = 80
+Const KeyEsc   = 27
+Const KeySpace = 32
+
+Dim Shared As Integer Kolor(0 To 6) = {2, 4, 5, 1, 3, 6, 14}
+Dim Shared As Integer Table(0 To FILAS-1, 0 To COLUS-1)
+Dim Shared As Integer puntos = 0
+Dim Shared As Boolean GameOn = True
+Dim Shared As Double tiempoCaida = 500
+Dim Shared As String msjAyuda
+msjAyuda  = " ESC for quit "
+
+Type Forma
+    array(Any, Any) As Byte
+    ancho As Integer
+    fila As Integer
+    colu As Integer
+    tipo As Integer
+End Type
+
+Dim Shared As Forma actual, sgte
+
+Dim Shared As Byte S_forma(0 To 2, 0 To 2) = {{0,1,1}, {1,1,0}, {0,0,0}}
+Dim Shared As Byte Z_forma(0 To 2, 0 To 2) = {{1,1,0}, {0,1,1}, {0,0,0}}
+Dim Shared As Byte T_forma(0 To 2, 0 To 2) = {{0,1,0}, {1,1,1}, {0,0,0}}
+Dim Shared As Byte L_forma(0 To 2, 0 To 2) = {{0,0,1}, {1,1,1}, {0,0,0}}
+Dim Shared As Byte J_forma(0 To 2, 0 To 2) = {{1,0,0}, {1,1,1}, {0,0,0}}
+Dim Shared As Byte O_forma(0 To 1, 0 To 1) = {{1,1}, {1,1}}
+Dim Shared As Byte I_forma(0 To 3, 0 To 3) = {{0,0,0,0}, {1,1,1,1}, {0,0,0,0}, {0,0,0,0}}
+
+Function crearForma(idForma As Integer) As Forma
+    Dim As Integer i, j
+    Dim As Forma s
+    s.tipo = idForma
+
+    Select Case idForma
+    Case 0
+        s.ancho = 3
+        Redim s.array(0 To 2, 0 To 2)
+        For i = 0 To 2: For j = 0 To 2: s.array(i, j) = S_forma(i, j): Next j, i
+    Case 1
+        s.ancho = 3
+        Redim s.array(0 To 2, 0 To 2)
+        For i = 0 To 2: For j = 0 To 2: s.array(i, j) = Z_forma(i, j): Next j, i
+    Case 2
+        s.ancho = 3
+        Redim s.array(0 To 2, 0 To 2)
+        For i = 0 To 2: For j = 0 To 2: s.array(i, j) = T_forma(i, j): Next j, i
+    Case 3
+        s.ancho = 3
+        Redim s.array(0 To 2, 0 To 2)
+        For i = 0 To 2: For j = 0 To 2: s.array(i, j) = L_forma(i, j): Next j, i
+    Case 4
+        s.ancho = 3
+        Redim s.array(0 To 2, 0 To 2)
+        For i = 0 To 2: For j = 0 To 2: s.array(i, j) = J_forma(i, j): Next j, i
+    Case 5
+        s.ancho = 2
+        Redim s.array(0 To 1, 0 To 1)
+        For i = 0 To 1: For j = 0 To 1: s.array(i, j) = O_forma(i, j): Next j, i
+    Case 6
+        s.ancho = 4
+        Redim s.array(0 To 3, 0 To 3)
+        For i = 0 To 3: For j = 0 To 3: s.array(i, j) = I_forma(i, j): Next j, i
+    End Select
+
+    s.fila = 0
+    s.colu = 0
+    Return s
+End Function
+
+Function copiarForma(Byref shape As Forma) As Forma
+    Dim As Integer i, j
+    Dim As Forma nuevaForma
+    nuevaForma.ancho = shape.ancho
+    nuevaForma.fila = shape.fila
+    nuevaForma.colu = shape.colu
+    nuevaForma.tipo = shape.tipo
+    Redim nuevaForma.array(0 To nuevaForma.ancho-1, 0 To nuevaForma.ancho-1)
+    For i = 0 To nuevaForma.ancho-1
+        For j = 0 To nuevaForma.ancho-1
+            nuevaForma.array(i, j) = shape.array(i, j)
+        Next
+    Next
+    Return nuevaForma
+End Function
+
+Function compruebaPosicion(Byref shape As Forma) As Boolean
+    Dim As Integer i, j, w = shape.ancho
+    For i = 0 To w-1
+        For j = 0 To w-1
+            If shape.array(i, j) <> 0 Then
+                If (shape.colu + j < 0) Or (shape.colu + j >= COLUS) Or (shape.fila + i >= FILAS) Then
+                    Return False
+                Elseif Table(shape.fila + i, shape.colu + j) <> 0 Then
+                    Return False
+                End If
+            End If
+        Next
+    Next
+    Return True
+End Function
+
+Sub nuevaForma()
+    actual = copiarForma(sgte)
+    actual.colu = Int(Rnd * (COLUS - actual.ancho + 1))
+    actual.fila = 0
+    sgte = crearForma(Int(Rnd * 7))
+    If Not compruebaPosicion(actual) Then GameOn = False
+End Sub
+
+Sub rotarForma(Byref shape As Forma)
+    Dim As Integer i, j, w = shape.ancho
+    Dim As Forma tmp = copiarForma(shape)
+    For i = 0 To w-1
+        For j = 0 To w-1
+            shape.array(i, j) = tmp.array(w-1-j, i)
+        Next
+    Next
+End Sub
+
+Sub escribirEnTablero()
+    Dim As Integer i, j, w = actual.ancho
+    For i = 0 To w-1
+        For j = 0 To w-1
+            If actual.array(i, j) <> 0 Then
+                Table(actual.fila + i, actual.colu + j) = actual.tipo + 1
+            End If
+        Next
+    Next
+End Sub
+
+Sub limpiarLineas()
+    Dim As Integer i, j, k, l, sum
+    Dim As Integer cnt = 0
+    For i = 0 To FILAS-1
+        sum = 0
+        For j = 0 To COLUS-1
+            If Table(i, j) <> 0 Then sum += 1
+        Next
+        If sum = COLUS Then
+            cnt += 1
+            For k = i To 1 Step -1
+                For l = 0 To COLUS-1
+                    Table(k, l) = Table(k-1, l)
+                Next
+            Next
+            For l = 0 To COLUS-1
+                Table(0, l) = 0
+            Next
+        End If
+    Next
+    tiempoCaida -= 1
+    If cnt = 4 Then
+        puntos += 500
+        msjAyuda  = "    TETRIS    "
+    Else
+        puntos += 100 * cnt
+        msjAyuda  = " ESC for quit "
+    End If
+End Sub
+
+Sub imprimirSgteForma()
+    Dim As Integer cuadro = 6
+    Dim As Integer w = sgte.ancho
+    Dim As Integer bRow = 2
+    Dim As Integer bCol = COLUS*2 + 4
+    Dim As Integer offsetRow = (4 - w) \ 2
+    Dim As Integer offsetCol = (cuadro \ 2) - w
+    For i As Integer = 0 To 3
+        Locate bRow + i, bCol
+        For j As Integer = 0 To 3
+            If i >= offsetRow And i < offsetRow + w And j >= offsetCol And j < offsetCol + w Then
+                If sgte.array(i - offsetRow, j - offsetCol) <> 0 Then
+                    Color Kolor(sgte.tipo), 0
+                    Print Chr(219); Chr(219);
+                Else
+                    Color 7, 0: Print "  ";
+                End If
+            Else
+                Color 7, 0: Print "  ";
+            End If
+        Next
+    Next
+End Sub
+
+Sub imprimirTablero()
+    Locate 1, 1
+    Dim As Byte Buffer(0 To FILAS-1, 0 To COLUS-1)
+    Dim As Integer ColorBuffer(0 To FILAS-1, 0 To COLUS-1)
+    Dim As Integer i, j
+    Dim As Integer w = actual.ancho
+    For i = 0 To w-1
+        For j = 0 To w-1
+            If actual.array(i, j) <> 0 Then
+                If actual.fila + i >= 0 And actual.fila + i < FILAS And actual.colu + j >= 0 And actual.colu + j < COLUS Then
+                    Buffer(actual.fila + i, actual.colu + j) = actual.array(i, j)
+                    ColorBuffer(actual.fila + i, actual.colu + j) = actual.tipo + 1
+                End If
+            End If
+        Next
+    Next
+
+    Color 7, 0: Print "+"; String(COLUS*2, "-"); "+"
+    For i = 0 To FILAS-1
+        Color 7, 0: Print "|";
+        For j = 0 To COLUS-1
+            Dim As Integer tipoBloque
+            If Buffer(i, j) = 1 Then
+                tipoBloque = ColorBuffer(i, j)
+            Else
+                tipoBloque = Table(i, j)
+            End If
+            If tipoBloque > 0 Then
+                Color Kolor(tipoBloque-1), 0: Print Chr(219); Chr(219);
+            Else
+                Color 8, 0: Print "  ";
+            End If
+        Next
+
+        Color 7, 0: Print "|";
+        Select Case i
+        Case 7 : Print " Score: "
+        Case 8 : Color 15: Print Using " ##### "; puntos: Color 7
+        Case 10: Print msjAyuda
+        Case Else: Print
+        End Select
+    Next
+
+    Color 7, 0: Print "+"; String(COLUS*2, "-"); "+"
+    imprimirSgteForma()
+End Sub
+
+Sub manipularActual(action As String)
+    Dim As Forma tmp = copiarForma(actual)
+    Select Case action
+    Case "abajo"
+        tmp.fila += 1
+        If compruebaPosicion(tmp) <> 0 Then
+            actual.fila += 1
+        Else
+            escribirEnTablero()
+            limpiarLineas()
+            nuevaForma()
+        End If
+    Case "drcha"
+        tmp.colu += 1
+        If compruebaPosicion(tmp) <> 0 Then actual.colu += 1
+    Case "izqda"
+        tmp.colu = tmp.colu - 1
+        If compruebaPosicion(tmp) <> 0 Then actual.colu -= 1
+    Case "rotar"
+        rotarForma(tmp)
+        If compruebaPosicion(tmp) <> 0 Then rotarForma(actual)
+    End Select
+    imprimirTablero()
+End Sub
+
+' Main program
+Randomize Timer
+Screen 12
+Windowtitle "Tetris Game for FreeBASIC"
+puntos = 0
+actual = crearForma(Int(Rnd * 7))
+nuevaForma()
+Dim As Double ultimotick = Timer * 1000
+nuevaForma()
+imprimirTablero()
+
+Do While GameOn
+    Dim As String KBD = Inkey
+    If KBD = Chr(KeyEsc) Then Exit Do
+
+    If KBD = Chr(KeySpace) Then
+        Color 14, 0: Locate FILAS \ 2, (COLUS*2) \ 2: Print "PAUSA"
+        Do: KBD = Inkey: Loop While KBD = ""
+        imprimirTablero()
+        ultimotick = Timer * 1000
+        KBD = ""
+    End If
+
+    If Len(KBD) = 2 Then
+        Select Case Asc(Right(KBD,1))
+        Case KeyLeft
+            manipularActual("izqda")
+        Case KeyRight
+            manipularActual("drcha")
+        Case KeyUp
+            manipularActual("rotar")
+        Case KeyDown
+            manipularActual("abajo")
+        End Select
+    End If
+
+    Dim As Double ahora = Timer * 1000
+    If ahora - ultimotick > tiempoCaida Then
+        ultimotick = ahora
+        manipularActual("abajo")
+    End If
+
+    Sleep 30
+Loop
+Color 10, 0: Locate FILAS \ 2, (COLUS*2) \ 2: Print "GAME OVER"
+Sleep

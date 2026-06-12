@@ -1,0 +1,326 @@
+$define YES 1
+$define NO  &null
+
+record CF (terminated,       # Are there no more terms to memoize?
+           memo,             # Memoized terms.
+           term_gen)         # A co-expression to generate more terms.
+
+record ng8 (a12, a1, a2, a,
+            b12, b1, b2, b)
+
+global golden_ratio
+global silver_ratio
+global sqrt2
+global frac_13_11
+global frac_22_7
+global one, two, three, four
+
+global practically_infinite_number
+global much_too_big_number
+
+procedure r2cf (n, d)
+  return make_cf (create r2cf_generate (n, d))
+end
+
+procedure i2cf (i)
+  return make_cf (create r2cf_generate (i, 1))
+end
+
+procedure cf_add (x, y)
+  return ng8_apply (ng8 (0, 1, 1, 0, 0, 0, 0, 1), x, y)
+end
+
+procedure cf_sub (x, y)
+  return ng8_apply (ng8 (0, 1, -1, 0, 0, 0, 0, 1), x, y)
+end
+
+procedure cf_mul (x, y)
+  return ng8_apply (ng8 (1, 0, 0, 0, 0, 0, 0, 1), x, y)
+end
+
+procedure cf_div (x, y)
+  return ng8_apply (ng8 (0, 1, 0, 0, 0, 0, 1, 0), x, y)
+end
+
+procedure main ()
+  initial {
+    initialize_global_CF ()
+  }
+
+  show ("golden ratio", golden_ratio, "(1 + sqrt(5))/2")
+  show ("silver ratio", silver_ratio, "(1 + sqrt(2))")
+  show ("sqrt(2)", sqrt2, "silver ratio minus 1")
+  show ("13/11", frac_13_11)
+  show ("22/7", frac_22_7, "approximately pi")
+  show ("1", one)
+  show ("2", two)
+  show ("3", three)
+  show ("4", four)
+
+  show ("(1 + 1/sqrt(2))/2",
+        ng8_apply (ng8(0, 1, 0, 0, 0, 0, 2, 0),
+                   silver_ratio, sqrt2),
+        "method 1")
+  show ("(1 + 1/sqrt(2))/2",
+        ng8_apply (ng8(1, 0, 0, 1, 0, 0, 0, 8),
+                   silver_ratio, silver_ratio),
+        "method 2")
+  show ("(1 + 1/sqrt(2))/2",
+        cf_mul (cf_add (one, (cf_div (one, sqrt2))), r2cf (1, 2)),
+        "method 3")
+
+  show ("sqrt(2) + sqrt(2)", cf_add (sqrt2, sqrt2));
+  show ("sqrt(2) - sqrt(2)", cf_sub (sqrt2, sqrt2));
+  show ("sqrt(2) * sqrt(2)", cf_mul (sqrt2, sqrt2));
+  show ("sqrt(2) / sqrt(2)", cf_div (sqrt2, sqrt2));
+end
+
+procedure initialize_global_CF ()
+  golden_ratio := make_cf (create generate_constant (1))
+  silver_ratio := make_cf (create generate_constant (2))
+  frac_13_11 := r2cf (13, 11)
+  frac_22_7 := r2cf (22, 7)
+  one := i2cf (1)
+  two := i2cf (2)
+  three := i2cf (3)
+  four := i2cf (4)
+  sqrt2 := cf_sub (silver_ratio, one)
+  return
+end
+
+procedure show (expression, cf, note)
+  writes (right (expression, 19), " =>  ")
+  if /note then
+    write (cf2string (cf))
+  else
+    write (left (cf2string (cf), 48), note)
+  return
+end
+
+procedure make_cf (gen)
+  return CF (NO, [], gen)
+end
+
+# Get a continued fraction's ith term, or fail if there is no such
+# term.
+procedure cf_get_term (cf, i)
+
+  local j, term
+
+  if *cf.memo <= i then {
+    if \cf.terminated then {
+      fail
+    } else {
+      every j := *cf.memo to i do {
+        if \ (term := @cf.term_gen) then {
+          put (cf.memo, term)
+        } else {
+          cf.terminated := YES
+          fail
+        }
+      }
+    }
+  }
+  return cf.memo[i + 1]
+end
+
+# Generate a continued fraction's terms, with &null as "infinity".
+procedure cf_generate (cf)
+  local i, term
+
+  i := 0
+    while term := cf_get_term (cf, i) do {
+      suspend term
+      i +:= 1
+    }
+  repeat suspend &null
+end
+
+# A co-expression that generates a continued fraction's terms, with
+# &null as "infinity".
+procedure cf2coexpression (cf)
+  return create cf_generate (cf)
+end
+
+# Make a human-readable string from a continued fraction.
+procedure cf2string (cf, max_terms)
+  local s, i, done, term
+  static separators
+
+  initial {
+    separators := ["", ";", ","]
+  }
+
+  /max_terms := 20
+
+  s := "["
+  i := 0
+  done := NO
+  while /done do {
+    if not (term := cf_get_term (cf, i)) then {
+      s ||:= "]"
+      done := YES
+    } else if i = max_terms then {
+      s ||:= ",...]"
+      done := YES
+    } else {
+      s ||:= separators[min (i + 1, 3)] || term
+      i +:= 1
+    }
+  }
+  return s
+end
+
+# Make a CF that applies the operation.
+procedure ng8_apply (ng8, x, y)
+  return make_cf (create ng8_generate (ng8, x, y))
+end
+
+# A generator that applies a bihomographic function. A return of &null
+# means "infinity".
+procedure ng8_generate (ng, x, y)
+  local xsource, ysource
+  local a12, a1, a2, a
+  local b12, b1, b2, b
+  local r12, r1, r2, r
+  local n1, n2, n
+  local absorb_term_from
+  local term
+  local new_a12, new_a1, new_a2, new_a
+  local new_b12, new_b1, new_b2, new_b
+
+  xsource := make_source (x)
+  ysource := make_source (y)
+
+  a12 := ng.a12;  a1 := ng.a1;  a2 := ng.a2;  a := ng.a
+  b12 := ng.b12;  b1 := ng.b1;  b2 := ng.b2;  b := ng.b
+
+  repeat {
+    absorb_term_from := &null
+    if b12 = b1 = b2 = b = 0 then {
+      suspend &null           # "Infinity".
+    } else if b2 = b = 0 then {
+      absorb_term_from := 'x'
+    } else if b2 = 0 | b = 0 then {
+      absorb_term_from := 'y'
+    } else if b1 = 0 then {
+      absorb_term_from := 'x'
+    } else if b12 ~= 0 & term := (a12/b12 = a1/b1 = a2/b2 = a/b) then {
+      suspend infinitized (term)
+      r12 := a12 % b12
+      r1 := a1 % b1
+      r2 := a2 % b2
+      r := a % b
+      a12 := b12;  a1 := b1;  a2 := b2;  a := b
+      b12 := r12;  b1 := r1;  b2 := r2;  b := r
+    } else {
+      # Put numerators over a common denominator.
+      n1 := a1 * b2 * b
+      n2 := a2 * b1 * b
+      n := a * b1 * b2
+      if abs (n1 - n) > abs (n2 - n) then
+          absorb_term_from := 'x'
+      else
+          absorb_term_from := 'y'
+    }
+
+    if \absorb_term_from === 'x' then {
+      term := @xsource
+      new_a2 := a12;  new_a := a1
+      new_b2 := b12;  new_b := b1
+      if \term then {
+        new_a12 := a2 + (a12 * term)
+        new_a1  := a  + (a1  * term)
+        new_b12 := b2 + (b12 * term)
+        new_b1  := b  + (b1  * term)
+        if too_big (new_a12 | new_a1 | new_a2 | new_a |
+                    new_b12 | new_b1 | new_b2 | new_b) then
+            {
+              # All further terms are forced to "infinity".
+              xsource := make_source (&null)
+              new_a12 := a12;  new_a1 := a1
+              new_b12 := b12;  new_b1 := b1
+            }
+      }
+      a12 := new_a12;  a1 := new_a1;  a2 := new_a2;  a := new_a
+      b12 := new_b12;  b1 := new_b1;  b2 := new_b2;  b := new_b
+    }
+    else if \absorb_term_from === 'y' then {
+      term := @ysource
+      new_a1 := a12;  new_a := a2
+      new_b1 := b12;  new_b := b2
+      if \term then {
+        new_a12 := a1 + (a12 * term)
+        new_a2  := a  + (a2  * term)
+        new_b12 := b1 + (b12 * term)
+        new_b2  := b  + (b2  * term)
+        if too_big (new_a12 | new_a1 | new_a2 | new_a |
+                    new_b12 | new_b1 | new_b2 | new_b) then
+            {
+              # All further terms are forced to "infinity".
+              ysource := make_source (&null)
+              new_a12 := a12;  new_a2 := a2
+              new_b12 := b12;  new_b2 := b2
+            }
+      }
+      a12 := new_a12;  a1 := new_a1;  a2 := new_a2;  a := new_a
+      b12 := new_b12;  b1 := new_b1;  b2 := new_b2;  b := new_b
+    }
+  }
+end
+
+procedure make_source (cf)
+  local source
+
+  if /cf then {
+    # Generate only "infinite" terms.
+    source := create generate_constant (&null)
+  } else if type(cf) == "co-expression" then {
+    # Already a co-expression.
+    source := cf
+  } else {
+    # Use a continued fraction as a co-expression.
+    source := cf2coexpression (cf)
+  }
+  return source
+end
+
+procedure infinitized (term)
+  initial {
+    /practically_infinite_number := 2^64
+  }
+  if abs (term) >= abs (practically_infinite_number) then {
+    term := &null
+  }
+  return term
+end
+
+procedure too_big (num)
+  initial {
+    /much_too_big_number := 2^512
+  }
+  if abs (num) < abs (much_too_big_number) then fail
+  return num
+end
+
+procedure generate_constant (constant)
+  repeat suspend constant
+end
+
+procedure r2cf_generate (n, d)
+  local remainder
+  repeat {
+    if d = 0 then {
+      suspend &null
+    } else {
+      suspend (n / d)
+      remainder := n % d
+      n := d
+      d := remainder
+    }
+  }
+end
+
+procedure min (x, y)
+  return (if x < y then x else y)
+end

@@ -1,0 +1,15 @@
+mensaje$ = "If Peter Piper picked a pack of pickled peppers" + ", how many pickled peppers did Peter Piper pick?"
+textofinal$ = ""
+
+FOR i = 1 TO LEN(mensaje$)
+    c$ = MID$(mensaje$, i, 1)
+    SELECT CASE c$
+    CASE "a", "e", "i", "o", "u", "A", "E", "I", "O", "U"
+        REM Continue For
+    CASE ELSE
+        textofinal$ = textofinal$ + c$
+    END SELECT
+NEXT i
+
+PRINT textofinal$
+END

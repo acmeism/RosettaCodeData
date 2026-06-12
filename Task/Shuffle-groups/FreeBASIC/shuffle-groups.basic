@@ -1,0 +1,176 @@
+Type ShuffleGroup
+    As Ulongint nbase     ' base number
+    As Integer  size      ' total group size (base + witnesses)
+    As Uinteger witnesses(1 To 9)   ' multipliers 2..9
+End Type
+
+Function sortedDigitsDesc(Byval n As Ulongint) As String
+    Dim As Ubyte digits(19) = Any
+    Dim As Integer lon = 0, i, j
+    Dim As String result
+
+    Do While n > 0
+        digits(lon) = Cbyte(n Mod 10 + 48)  ' Direct ASCII
+        lon += 1
+        n \= 10
+    Loop
+
+    For i = 0 To lon-2
+        For j = i+1 To lon-1
+            If digits(i) < digits(j) Then Swap digits(i), digits(j)
+        Next
+    Next
+
+    result = String(lon, 0)
+    For i = 0 To lon-1
+        Mid(result, i+1, 1) = Chr(digits(i))
+    Next
+    Return result
+End Function
+
+Sub shuffle(Byval n As Ulongint, Byval l As Ulongint, Byref cnt As Integer, group() As Uinteger)
+    cnt = 0
+    If (n Mod 10) = 0 Then Exit Sub  '  -> If n is a multiple of 10, there is no group
+
+    Dim As String s = sortedDigitsDesc(n)
+    Dim As Ulongint m
+
+    cnt = 1
+    Redim group(0)
+    group(0) = n
+
+    For i As Integer = 2 To 9
+        m = n * i
+        If m > l Then Exit For
+        ' If the ordered digits match, we add the multiplier
+        If sortedDigitsDesc(m) = s Then
+            cnt += 1
+            Redim Preserve group(cnt - 1)
+            group(cnt - 1) = i
+        End If
+    Next i
+
+    If cnt <= 1 Then
+        cnt = 0
+        Erase group
+    End If
+End Sub
+
+Sub generateShuffleGroups(Byval maxGroups As Integer, groups() As ShuffleGroup)
+    Dim As Integer e = 3, found = 0, cnt, i
+    Dim As Ulongint n, l, startN, endN
+    Dim As Uinteger tmpGrp()
+    Dim As ShuffleGroup sg
+
+    Redim groups(maxGroups)
+
+    Do While found <= maxGroups
+        l = 10^(e+1)
+        startN = 10^e
+        endN = 5 * startN
+
+        n = startN
+        Do While n <= endN And found <= maxGroups
+            shuffle(n, l, cnt, tmpGrp())
+            If cnt > 1 Then
+                sg.nbase = tmpGrp(0)
+                sg.size = cnt
+                For i = 1 To cnt - 1
+                    sg.witnesses(i) = tmpGrp(i)
+                Next i
+                groups(found) = sg
+                found += 1
+            End If
+            n += 1
+        Loop
+
+        e += 1
+    Loop
+End Sub
+
+Sub printGroup(Byval idx As Integer, Byref sg As ShuffleGroup)
+    Print Using "###### ########## "; idx; sg.nbase;
+    For i As Integer = 1 To sg.size - 1
+        Print " "; sg.witnesses(i);
+    Next i
+    Print
+End Sub
+
+Sub countByWitnesses(Byval upTo As Integer, groups() As ShuffleGroup, stats() As Integer)
+    Dim As Integer i, j, w
+    Dim As Integer counts(8)
+
+    For i = 0 To upTo
+        If groups(i).size > 1 Then
+            w = groups(i).size - 1
+            If w >= 1 And w <= 8 Then counts(w) += 1
+        End If
+    Next
+    Redim stats(17)
+    j = 0
+    For i = 1 To 8  ' ignores 0 witnesses
+        If counts(i) > 0 Then
+            stats(j) = i       ' witnesses
+            stats(j+1) = counts(i) ' count
+            j += 2
+        End If
+    Next i
+End Sub
+
+' Main program
+Dim As ShuffleGroup groups()
+Dim As Integer i, k, stats(17)
+
+' 1. FIRST 20 GROUPS
+Print !"First twenty shuffle groups\n index     number  group"
+generateShuffleGroups(19, groups())
+For i = 0 To 19
+    printGroup(i, groups(i))
+Next i
+
+' 2. MORE THAN 4 WITNESSES
+Print !"\nFirst shuffle group with more than 4 witnesses\n index     number  group"
+generateShuffleGroups(144, groups())
+k = 144  ' We already know it's at 144
+printGroup(k, groups(k))
+
+countByWitnesses(k, groups(), stats())
+Print !"\nFor the first"; k+1; " shuffle groups, there are:"
+For i = 0 To 15 Step 2
+    If stats(i+1) = 0 Then Exit For
+    Print stats(i+1); " with"; stats(i); " witness";
+    If stats(i) <> 1 Then Print "es";
+    Print
+Next
+
+' 3. EXACTLY 3 WITNESSES
+Print !"\nFirst shuffle group with exactly 3 witnesses\n index     number  group"
+generateShuffleGroups(808, groups())
+k = 808
+printGroup(k, groups(k))
+
+countByWitnesses(k, groups(), stats())
+Print !"\nFor the first"; k+1; " shuffle groups, there are:"
+For i = 0 To 15 Step 2
+    If stats(i+1) = 0 Then Exit For
+    Print stats(i+1); " with"; stats(i); " witness";
+    If stats(i) <> 1 Then Print "es";
+    Print
+Next
+
+' 4. EXACTLY 4 WITNESSES
+Print !"\nFirst shuffle group with exactly 4 witnesses\n index     number  group"
+generateShuffleGroups(126852, groups())
+k = 126852
+printGroup(k, groups(k))
+
+countByWitnesses(k, groups(), stats())
+Print !"\nFor the first"; k+1; " shuffle groups, there are:"
+For i = 0 To 15 Step 2
+    If stats(i+1) = 0 Then Exit For
+    Print stats(i+1); " with"; stats(i); " witness";
+    If stats(i) <> 1 Then Print "es";
+    Print
+Next
+
+Sleep

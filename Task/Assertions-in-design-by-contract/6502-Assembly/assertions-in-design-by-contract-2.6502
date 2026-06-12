@@ -1,0 +1,46 @@
+tempPC_Lo equ $20 ;an arbitrary zero page address set aside for debugging
+tempPC_Hi equ $21 ;this must be one byte higher than the previous address.
+
+foo:
+LDA #$7F
+CLC
+ADC #$01
+BVC continue
+BRK
+byte $02  ;put your desired error code here
+continue:
+;rest of program
+
+IRQ:
+PHA
+TXA
+PHA
+TYA
+PHA          ;push all.
+TSX          ;loads the stack pointer into X.
+LDA $0104,X  ;read the break flag. Normally this would be at offset $0101,X, but since we pushed the three registers we had to add 3.
+AND #$10
+BNE debug    ;if the break flag is set, you got here because of a BRK command.
+;else, this was a normal IRQ.
+
+
+;rest of program
+
+debug:
+;we need the pushed PC, minus 1.
+LDA $0105,X  ;get the low program counter byte
+SEC
+SBC #1
+STA tempPC_Lo
+LDA $0106,X
+SBC #0
+STA tempPC_Hi
+LDY #0
+LDA (tempPC),y  ;get the error code that was stored immediately after the BRK
+;now do whatever you want with that info, such as display a relevant error message to the screen etc.
+
+
+;rest of program
+
+org $FFFA
+dw NMI,RESET,IRQ

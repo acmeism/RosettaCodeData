@@ -1,0 +1,129 @@
+Function replaceStr(text As String, find As String, repl As String) As String
+    Dim As String result = text
+    Dim As Integer posic = Instr(result, find)
+
+    While posic > 0
+        result = Left(result, posic - 1) & repl & Mid(result, posic + Len(find))
+        posic = Instr(posic + Len(repl), result, find)
+    Wend
+
+    Return result
+End Function
+
+Function escapeHTML(text As String) As String
+    Dim As String result = text
+    result = replaceStr(result, "&", "&amp;")
+    result = replaceStr(result, "<", "&lt;")
+    result = replaceStr(result, ">", "&gt;")
+    result = replaceStr(result, """", "&quot;")
+    result = replaceStr(result, "'", "&#39;")
+    Return result
+End Function
+
+Function startsWith(text As String, pattern As String) As Boolean
+    Return Left(Trim(text), Len(pattern)) = pattern
+End Function
+
+Function isWhitespace(c As String) As Boolean
+    Return c = " " Or c = Chr(9)
+End Function
+
+Function splitParagraphs(text As String) As String Ptr
+    Static As String paragraphs(1000)
+    Static As Integer cnt = 0
+
+    Dim As String temp = ""
+    Dim As Boolean wasEmpty = True
+
+    For i As Integer = 1 To Len(text)
+        Dim As String c = Mid(text, i, 1)
+        If c = Chr(10) Then
+            If Len(Trim(temp)) > 0 Then
+                wasEmpty = False
+                paragraphs(cnt) = temp
+                cnt += 1
+                temp = ""
+            Elseif Not wasEmpty Then
+                wasEmpty = True
+            End If
+        Else
+            temp &= c
+        End If
+    Next
+
+    If Len(Trim(temp)) > 0 Then
+        paragraphs(cnt) = temp
+        cnt += 1
+    End If
+
+    paragraphs(cnt) = Chr(0)  'Mark end
+    Return @paragraphs(0)
+End Function
+
+' Sample text
+Dim Shared As String sampleText
+sampleText = "     Sample Text" & Chr(10) & Chr(10) & _
+"This is an example of converting plain text to HTML which demonstrates extracting a title and escaping certain characters within bulleted and numbered lists." & Chr(10) & Chr(10) & _
+"* This is a bulleted list with a less than sign (<)" & Chr(10) & Chr(10) & _
+"* And this is its second line with a greater than sign (>)" & Chr(10) & Chr(10) & _
+"A 'normal' paragraph between the lists." & Chr(10) & Chr(10) & _
+"1. This is a numbered list with an ampersand (&)" & Chr(10) & Chr(10) & _
+"2. ""Second line"" in double quotes" & Chr(10) & Chr(10) & _
+"3. 'Third line' in single quotes" & Chr(10) & Chr(10) & _
+"That's all folks."
+
+' Test code
+Dim As String Ptr paragraphs = splitParagraphs(escapeHTML(sampleText))
+Dim As Integer i = 0
+Dim As String title = "Untitled"
+Dim As Boolean blist = False, nlist = False
+
+If isWhitespace(Left((*paragraphs), 1)) Then
+    title = Trim(*paragraphs)
+    i = 1
+End If
+Function isDigit(c As String) As Boolean
+    Return (c >= "0" And c <= "9")
+End Function
+
+
+Print "<html>"
+Print "<head><title>"; title; "</title></head>"
+Print "<body>"
+
+While Len(paragraphs[i])
+    Dim As String para = Trim(paragraphs[i])
+
+    If startsWith(para, "*") Then
+        If Not blist Then
+            blist = True
+            Print "<ul>"
+        End If
+        Print "  <li>"; Trim(Mid(para, 2)); "</li>"
+    Elseif blist Then
+        blist = False
+        Print "</ul>"
+    End If
+
+    If isDigit(Left(para, 1)) Andalso startsWith(para, Left(para, 1) & ".") Then
+        If Not nlist Then
+            nlist = True
+            Print "<ol>"
+        End If
+        Print "  <li>"; Trim(Mid(para, 3)); "</li>"
+    Elseif nlist Then
+        nlist = False
+        Print "</ol>"
+    End If
+
+    If Not blist Andalso Not nlist Andalso Not startsWith(para, "*") Andalso Not (isDigit(Left(para, 1)) Andalso startsWith(para, Left(para, 1) & ".")) Then
+        Print "<p>"; para; "</p>"
+    End If
+
+    i += 1
+Wend
+
+If blist Then Print "</ul>"
+If nlist Then Print "</ol>"
+Print "</body>"
+Print "</html>"

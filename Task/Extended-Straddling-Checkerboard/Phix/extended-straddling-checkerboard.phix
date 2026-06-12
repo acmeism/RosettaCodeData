@@ -1,0 +1,100 @@
+with javascript_semantics
+constant emap = new_dict(),
+         dmap = new_dict(),
+         ewds = new_dict(),
+         dwds = new_dict(),
+         spc = "90", dot = "91", fsl = "98"
+for d in {{"AEINOT",-1},{"BCDFGHJKLM",69},{"PQRSUVWXYZ",79},{" .",89}} do
+    integer k = d[2]
+    for i,ch in d[1] do
+        string ik = sprintf("%d",i+k)
+        setd(ch,ik,emap)
+        setd(ik,ch,dmap)
+    end for
+end for
+for d in {{"ACK","92"},{"REQ","93"},{"MSG","94"},{"RV","95"},
+          {"GRID","96"},{"SEND","97"},{"SUPP","99"}} do
+    string {k,v} = d
+    setd(k,v,ewds)
+    setd(v,k,dwds)
+end for
+
+function encode(string s)
+    string res = ""
+    sequence words = split(upper(s))
+    integer wc = length(words)
+    for i=1 to wc do
+        string wrd = words[i], a = ""
+        if getd_index(wrd,ewds) then
+            a = getd(wrd,ewds)
+        elsif getd_index(wrd[1..-2]) and wrd[$] == '.' then
+            a = getd(wrd[1..-2],ewds) & dot
+        elsif begins("CODE",wrd) then
+            a = "6" & wrd[5..$]
+        else
+            bool figs = false
+            for c in wrd do
+                if find(c,"0123456789") then -- (efigs)
+                    if not figs then figs = true; a &= fsl end if
+--                  a &= repeat(c,3)
+                    a &= repeat(c,2)
+                elsif not getd_index(c,emap) then
+                    throw("Message contains unrecognized character %c.",{c})
+                else
+                    if figs then figs = false; a &= fsl end if
+                    a &= getd(c,emap)
+                end if
+            end for
+            if figs and i<=wc-1 then a &= fsl end if
+        end if
+        res &= a
+        if i <= wc-1 then res &= spc end if
+    end for
+    return res
+end function
+
+function decode(string s)
+    string res = ""
+    integer sc = length(s), figs = false, i = 1
+    while i <= sc do
+        integer c = s[i]
+        if figs then
+            if s[i..i+1] != fsl then
+                res &= c
+--              i += 3
+                i += 2
+            else
+                figs = false
+                i += 2
+            end if
+        elsif find(c,"012345") then -- row 1
+            res &= getd(c&"",dmap)
+            i += 1
+        elsif c == '6' then
+            res &= "CODE" & s[i+1..i+3]
+            i += 4
+        elsif c == '7'
+           or c == '8' then
+            res &= getd(s[i..i+1],dmap)
+            i += 2
+        elsif c == '9' then
+            integer d = s[i+1]
+            if d == '0' then
+                res &= " "
+            elsif d == '1' then
+                res &= "."
+            elsif d == '8' then
+                figs = not figs
+            else
+                res &= getd(s[i..i+1],dwds)
+            end if
+            i += 2
+        end if
+    end while
+    return res
+end function
+
+constant msg = "Admin ACK your MSG. CODE291 SEND further 2000 SUPP to HQ by 1 March",
+         enc = encode(msg),
+         unc = decode(enc)
+printf(1,"Message:\n%s\n\nEncoded:\n%s\n\nDecoded:\n%s\n",{msg,enc,unc})

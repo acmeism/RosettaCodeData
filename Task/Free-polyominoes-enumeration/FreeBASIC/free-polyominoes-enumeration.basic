@@ -1,0 +1,272 @@
+Const NULL As Any Ptr = 0
+
+Type Punto
+    x As Integer
+    y As Integer
+End Type
+
+Type Polyomino
+    points(Any) As Punto
+    count As Integer
+End Type
+
+Type PointSet
+    points(Any) As Punto
+    count As Integer
+End Type
+
+Function RotatePoint90(p As Punto) As Punto
+    Dim As Punto result = Type(p.y, -p.x)
+    Return result
+End Function
+
+Function RotatePoint180(p As Punto) As Punto
+    Dim As Punto result = Type(-p.x, -p.y)
+    Return result
+End Function
+
+Function RotatePoint270(p As Punto) As Punto
+    Dim As Punto result = Type(-p.y, p.x)
+    Return result
+End Function
+
+Function ReflectPoint(p As Punto) As Punto
+    Dim As Punto result = Type(-p.x, p.y)
+    Return result
+End Function
+
+Function GetContiguousPoints(p As Punto) As Polyomino
+    Dim As Polyomino result
+    Redim result.points(3)
+    result.count = 4
+
+    result.points(0) = Type(p.x - 1, p.y)
+    result.points(1) = Type(p.x + 1, p.y)
+    result.points(2) = Type(p.x, p.y - 1)
+    result.points(3) = Type(p.x, p.y + 1)
+
+    Return result
+End Function
+
+Sub FindMinima(poly As Polyomino, Byref minx As Integer, Byref miny As Integer)
+    minx = poly.points(0).x
+    miny = poly.points(0).y
+
+    For i As Integer = 1 To poly.count - 1
+        If poly.points(i).x < minx Then minx = poly.points(i).x
+        If poly.points(i).y < miny Then miny = poly.points(i).y
+    Next
+End Sub
+
+Function TranslateToOrigin(poly As Polyomino) As Polyomino
+    Dim As Integer i, j, minx, miny
+    FindMinima(poly, minx, miny)
+
+    Dim As Polyomino result
+    result.count = poly.count
+    Redim result.points(poly.count - 1)
+
+    For i = 0 To poly.count - 1
+        result.points(i).x = poly.points(i).x - minx
+        result.points(i).y = poly.points(i).y - miny
+    Next
+
+    ' Sort points
+    For i = 0 To result.count - 2
+        For j = i + 1 To result.count - 1
+            If (result.points(i).x > result.points(j).x) Or _
+            (result.points(i).x = result.points(j).x And result.points(i).y > result.points(j).y) Then
+            Swap result.points(i), result.points(j)
+        End If
+    Next
+Next
+
+Return result
+End Function
+
+Function GetRotationsAndReflections(poly As Polyomino) As Polyomino Ptr
+    Dim As Integer i, j
+    Dim As Polyomino Ptr result = Callocate(8 * Sizeof(Polyomino))
+
+    For i = 0 To 7
+        result[i].count = poly.count
+        Redim result[i].points(poly.count - 1)
+    Next
+
+    ' Copy original
+    For j = 0 To poly.count - 1
+        result[0].points(j) = poly.points(j)
+    Next
+
+    ' Generate rotations and reflections
+    For j = 0 To poly.count - 1
+        result[1].points(j) = RotatePoint90(poly.points(j))
+        result[2].points(j) = RotatePoint180(poly.points(j))
+        result[3].points(j) = RotatePoint270(poly.points(j))
+        result[4].points(j) = ReflectPoint(poly.points(j))
+        result[5].points(j) = ReflectPoint(RotatePoint90(poly.points(j)))
+        result[6].points(j) = ReflectPoint(RotatePoint180(poly.points(j)))
+        result[7].points(j) = ReflectPoint(RotatePoint270(poly.points(j)))
+    Next
+
+    Return result
+End Function
+
+Function PolyToString(poly As Polyomino) As String
+    Dim As String result = ""
+    For i As Integer = 0 To poly.count - 1
+        result &= "(" & poly.points(i).x & "," & poly.points(i).y & ") "
+    Next
+    Return result
+End Function
+
+Function GetCanonical(poly As Polyomino) As Polyomino
+    Dim As Polyomino Ptr rr = GetRotationsAndReflections(poly)
+    Dim As Polyomino minr = TranslateToOrigin(rr[0])
+    Dim As String mins = PolyToString(minr)
+
+    For i As Integer = 1 To 7
+        Dim As Polyomino r = TranslateToOrigin(rr[i])
+        Dim As String s = PolyToString(r)
+        If s < mins Then
+            minr = r
+            mins = s
+        End If
+    Next
+
+    Deallocate(rr)
+    Return minr
+End Function
+
+Function NewPoints(poly As Polyomino) As Polyomino
+    Dim As Punto points(poly.count * 4)
+    Dim As Integer pointCnt = 0
+    Dim As Integer i, j, k
+
+    ' Add all contiguous points
+    For i = 0 To poly.count - 1
+        Dim As Polyomino cont = GetContiguousPoints(poly.points(i))
+        For j = 0 To cont.count - 1
+            Dim As Boolean exists = False
+            ' Check if point exists in original poly
+            For k = 0 To poly.count - 1
+                If poly.points(k).x = cont.points(j).x Andalso poly.points(k).y = cont.points(j).y Then
+                    exists = True
+                    Exit For
+                End If
+            Next
+            ' Check if point already in set
+            If Not exists Then
+                For k = 0 To pointCnt - 1
+                    If points(k).x = cont.points(j).x Andalso points(k).y = cont.points(j).y Then
+                        exists = True
+                        Exit For
+                    End If
+                Next
+                If Not exists Then
+                    points(pointCnt) = cont.points(j)
+                    pointCnt += 1
+                End If
+            End If
+        Next
+    Next
+
+    Dim As Polyomino result
+    result.count = pointCnt
+    Redim result.points(pointCnt - 1)
+    For i = 0 To pointCnt - 1
+        result.points(i) = points(i)
+    Next
+    Return result
+End Function
+
+Function GenerateRank(n As Integer) As Polyomino Ptr
+    ' Known correct values for free polyominoes
+    Static As Integer expectedCnts(1 To 10) = {1, 2, 6, 19, 63, 216, 760, 2725, 9910, 36446}
+    Dim As Integer i, j, k
+
+    If n < 1 Then Return NULL
+
+    If n = 1 Then
+        Dim As Polyomino Ptr result = Callocate(2 * Sizeof(Polyomino))
+        result[0].count = 1
+        Redim result[0].points(0)
+        result[0].points(0) = Type(0, 0)
+        result[1].count = 0
+        Return result
+    End If
+
+    ' Allocate space based on known counts
+    Dim As Polyomino Ptr prev = GenerateRank(n - 1)
+    Dim As Polyomino Ptr result = Callocate((expectedCnts(n) + 1) * Sizeof(Polyomino))
+    Dim As Integer resultCnt = 0
+
+    ' Process each previous polyomino
+    For i = 0 To expectedCnts(n-1) - 1
+        Dim As Polyomino newPointsPoly = NewPoints(prev[i])
+
+        ' Try adding each new point
+        For j = 0 To newPointsPoly.count - 1
+            Dim As Polyomino newPoly
+            newPoly.count = prev[i].count + 1
+            Redim newPoly.points(newPoly.count - 1)
+
+            ' Copy existing points
+            For k = 0 To prev[i].count - 1
+                newPoly.points(k) = prev[i].points(k)
+            Next
+
+            ' Add new point and get canonical form
+            newPoly.points(newPoly.count - 1) = newPointsPoly.points(j)
+            Dim As Polyomino canonical = GetCanonical(newPoly)
+
+            ' Check uniqueness
+            Dim As Boolean unique = True
+            For k = 0 To resultCnt - 1
+                If PolyToString(result[k]) = PolyToString(canonical) Then
+                    unique = False
+                    Exit For
+                End If
+            Next
+
+            If unique Then
+                result[resultCnt] = canonical
+                resultCnt += 1
+            End If
+        Next
+    Next
+
+    result[resultCnt].count = 0
+    Deallocate(prev)
+    Return result
+End Function
+
+Sub main()
+    Const As Integer n = 5
+    Print "All free polyominoes of rank "; n; ":"
+
+    Dim As Polyomino Ptr polys = GenerateRank(n)
+
+    For i As Integer = 0 To 62 ' 63 polyominoes for rank 5
+        If polys[i].count = 0 Then Exit For
+        Print PolyToString(polys[i])
+    Next
+    Deallocate(polys)
+
+    Print
+    Print "Number of free polyominoes of ranks 1 to 10:"
+    For i As Integer = 1 To 10
+        Dim As Polyomino Ptr r = GenerateRank(i)
+        Dim As Integer cnt = 0
+        While r[cnt].count > 0
+            cnt += 1
+        Wend
+        Print cnt;
+        Deallocate(r)
+    Next
+    Print
+End Sub
+
+main()
+
+Sleep

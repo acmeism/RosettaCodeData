@@ -1,0 +1,76 @@
+(fn string.split [self sep]
+  "Tokenize a string using the given separator."
+  (let [pattern (string.format "([^%s]+)" sep)
+        fields {}]
+    (self:gsub pattern (fn [c] (tset fields (+ 1 (length fields)) c)))
+    fields))
+
+(fn read-file [filename]
+  "Read a file as a string. Doesn't do any error checking."
+  (with-open [fin (io.open filename)]
+    (fin:read :a)))
+
+(fn random-key [table]
+  "Pick a random key from a non-sequential table."
+  ;Collect keys into sequential table.
+  (let [keys (icollect [k _ (pairs table)] k)]
+
+    ;Return a random key.
+    (. keys (math.random (length keys)))))
+
+(fn cat-tables [t1 t2]
+  "Concatenate two sequential tables into a new table."
+  ;Copy table 1 to create a result table.
+  (var result [(table.unpack t1)])
+
+  ;Append each item of table 2 into the result.
+  (each [_ v (ipairs t2)]
+    (table.insert result v))
+
+  ;Return the result.
+  result)
+
+(fn make-rule [str context]
+  "Make a rule table for a given string and context length."
+  (var key "")
+  (var rule {})
+  (let [words (str:split " ")]
+
+    ;Loop through word list.
+    (each [index word (ipairs [(table.unpack words (+ 1 context))])]
+
+      ;Join previous words into key.
+      (set key (table.concat words " " index (+ index (- context 1))))
+
+      ;Append word to existing key or add to a new key.
+      (if (. rule key)
+          (table.insert (. rule key) word)
+          (tset rule key [word]))))
+
+  ;Return final rule.
+  rule)
+
+(fn make-string [rule size]
+  "Make a string from a rule table up to the given size. May break early."
+  (var result [])
+  (var words [])
+  (var old-words (: (random-key rule) :split " "))
+  (var key (table.concat old-words " "))
+
+  ;Loop until early break or size reached.
+  (for [i 1 size :until (= nil (. rule key))]
+
+    ;Add to the result a random word from the list words for that key.
+    (set words (. rule key))
+    (table.insert result (. words (math.random (length words))))
+
+    ;Shift the key to the next word.
+    (set old-words (cat-tables [(table.unpack old-words 2)]
+                               [(. result (length result))]))
+    (set key (table.concat old-words " ")))
+
+  ;Return the final string.
+  (table.concat result " "))
+
+;;; Test the generator.
+(print (make-string (make-rule (read-file "alice_oz.txt") 2) 300))

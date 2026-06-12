@@ -1,0 +1,155 @@
+[Riordan numbers - Rosetta Code
+ EDSAC program (Initial Orders 2)
+ Estimates log_10 of Riordan numbers for large argument (up to 2^34 - 3).]
+
+[From OEIS A005043, with changed notation. Asymptotic formula for
+ the Riordan number R(n) as n tends to infinity:
+   R(n) = (3^(n+2)/(sqrt(3*n*pi)*(8*n)))*(1 - 21/(16*n) + O(1/n^2)).
+ Using log_e(1 - x) = -x + O(x^2) for small x, we get
+   log_10(R(n)) = (n + 2)*log_10(3) - log_10(8*sqrt(3*pi)) - (3/2)*log_10(n)
+                        - log_10(e)*(21/(16*n) + O(1/n^2))
+ The logarithm subroutines in the EDSAC library all return logs to base 2.
+ We use L1, which returns L1(x) = (1/32)*log_2(x), where 2^-32 <= x < 1.
+ Recalling that EDSAC represents a 35-bit integer n as n/(2^34), we get
+   log_10(R(n)) = (n + 2)*log_10(3) - A - 48*log_10(2)*L1(n/(2^34))
+                        - log_10(e)*f(n)
+ where A = log_10(8*sqrt(3*pi)) + 51*log_10(2) = 16.742755...
+ and f(n) = 21/(16*n) + O(1/n^2). By applying this formula with values of n
+ for which R(n) is known exactly, we can empirically improve f(n) to
+    21/(16*n) - 61/(128*n^2) + (273/1024*n^3) - 4891/(16384*n^4) + O(1/n^5).]
+
+      [Arrange the storage]
+          T45K P56F     [H: subroutine to calculate Riordan number]
+          T54K P104F    [C: 35-bit constants, even address]
+          T47K P130F    [M: main routine]
+          T48K P192F    [& (Delta): library subroutine D6 for division]
+          T49K P228F    [L: library subroutine L1 for logarithm]
+          T46K P266F    [N: library subroutine P7 to print 35-bit integer]
+          T50K P302F    [X: library subroutine P1 to print fraction]
+
+[Library subroutine R2: reads constants at load time and is then ovewritten.
+ Since library subroutine R5, for decimal fractions, seems to be unavailable
+ (lost?), R2 is used to read in values as 35-bit integers (i.e. times 2^34).
+ WWG says maximum is 10 digits, but 11 is OK provided input is less than 2^34.]
+          T56K
+          GK T20F VD L8F A40D UD TF I40F A40F S39F G@ S2F G23F A5@ T5@ E4@ E13Z
+          T#C           [tell R2 where to store constants]
+2F8196880740F17003659824F16F12760439398F15514967838F
+9792723132F3555691137F1989146886F2227316259F999#
+          TZ
+    [0] [35-bit integer 2]
+    [2] [log_10(3), high 35 bits]
+    [4] [log_10(3), low 35 bits]
+    [6] [constant A (above), integer part]
+    [8] [constant A (above), fractional part]
+   [10] [3*log_10(2)]
+   [12] [log_10(e)*(21/16)]
+   [14] [log_10(e)*(61/128)]
+   [16] [log_10(e)*(273/1024)]
+   [18] [log_10(e)*(4891/16384)]
+
+[Library subroutine M3, prints header at load time and is then overwritten.
+ This header leaves teleprinter on figures.]
+      PFGKIFAFRDLFUFOFE@A6FG@E8FEZPF
+      !!!!!!!!!*N!!!!!!!EST#M*!LOG#10K*R#K*N#LL@&#..PZ
+
+[============ H parameter: Subroutine for log_10 of Riordan number ============
+ Input:  0D = index n as 35-bit integer, 4 <= n <= 2^34 - 3
+ Output: 4D = integer part of log_10(Riordan(n))
+         6D = fractional part]
+          E25K TH GK
+          A3F T46@      [plant return link as usual]
+          AD U10D       [save n in 10D]
+          U6D           [pass n to logarithm subroutine in 6D]
+          A#C T12D      [save n + 2 in 12D]
+          A7@ GL        [call logarithm subroutine, result in 0D]
+          AD T14D       [save value of L1 for use be;ow]
+
+         [acc := f(n), 4th degree polynomial in 1/n, Horner's method]
+          A#C RD TD     [division: 0D := 1]
+          A10D T4D      [4D := n]
+          A16@ G&       [call division routine, 0D := 1/n]
+          HD            [mult reg := 1/n]
+          V18#C S16#C T10D [re-use 10D as workspace]
+          V10D A14#C T10D
+          V10D S12#C T10D
+          V10D
+
+          H12D          [mult reg := n + 2]
+          S8#C          [subtract fractional part of constant A]
+          V4#C          [add (n + 2) times low 34 bits of log_10(3)]
+  [Now we want to (1) subtract 48*log_10(2)*L1, (2) shift 34 right.
+   But 48*log_10(2) is outside EDSAC range, so to get same result we
+   (1) shift 4 right, (2) subtract 3*log_10(2)*L1, (3) shift 30 right.]
+          R4F           [shift acc 4 bits right]
+          H10#C         [mult reg := 3*log_10(2)]
+          N14D          [subtract 3*log_10(2)*L1 (where L1 was saved above)]
+          RF RF         [shift 15 + 15 bits right]
+          S6#C          [subtract high part of constant]
+          H12D          [mult reg := n + 2]
+          V2#C          [add (n + 2) times high 34 bits of log_10(3)]
+          U4D S4D       [return integer part, and remove it]
+          LF LF L64F    [shift 13 + 13 + 8 = 34 bits left]
+          T6D           [return fractional part]
+   [46]   ZF            [(planted) jump back to caller]
+[====================== M parameter: Main routine ======================]
+          E25K TM GK
+          T#Z PF        [load time: clear sandwich bit in 35-bit constant]
+          TZ            [load time: resume normal loading]
+    [0]   P4D PF        [35-bit constant 9]
+    [2]   PF PF
+    [4]   PF PF
+    [6]   P10F          [number of arguments to do (in address field)]
+    [7]   PF
+    [8]   MF            [dot (in figures mode)]
+    [9]   !F            [space]
+   [10]   @F            [carriage return]
+   [11]   &F            [line feed]
+   [12]   K4086F
+[Enter with acc = 0]
+   [13]   T2#@          [argument := 0]
+          S6@
+   [15]   T7@
+          A2#@ L1F A2#@ LD [arg*10]
+          A#@ U2#@
+          TD            [pass arg to print subroutine]
+          A23@ GN       [print arg]
+          O9@ O9@
+          A2#@
+          TD            [pass in 0D]
+          A29@ GH       [call Riordan subroutine]
+          A6D T4#@      [save frac part of result]
+          A4D TD        [pass int part in 0D]
+          A35@ GN O8@   [print it, followed by dot]
+          A4#@ TD       [pass frac part in 0D]
+          A40@ GX P10F  [print it to 10 decimals]
+          O10@ O11@
+          A7@ A2F       [inc negative count of arguments]
+          G15@          [loop until count = 0]
+          O12@          [print null to flush printer buffer]
+          ZF            [halt the machine]
+[============================= L parameter ================================
+ Library subroutine L1, copied from WWG, 1951, pp 139-140.
+ 38 locations.  0D := (1/32)*log_2(6D).]
+          E25K TL
+    GKA3FT33@E11@IFP1024FP512FA3@LDT6DADS4@TDS3@A6DG6@T8FS5@
+    T4DH6DV6DS3@E34@A3@LDYFT6DA4DADTDA4DRDYFG17@EFA3@YFT6DE29@
+[============================= & parameter =============================]
+[Library subroutine D6. Sets 0D := 0D/4D, divisor not 0 or -1]
+          E25K T&
+          GK A3F T34@ S4D E13@ T4D SD TD E2@ T4D AD LD TD A4D LD E8@ RD U4D LD A35@ T6D E25@ U8D N8D A6D T6D H6D S6D N4D A4D YF G21@ SD VD TD EF W1526D
+[============================= N parameter =============================]
+[Library subroutine P7; prints integer N in range 0 < N < 10^10.
+ Number is passed in 0D; output is 10 characters padded left with spaces.]
+          E25K TN
+    GKA3FT26@H28#@NDYFLDT4DS27@TFH8@S8@T1FV4DAFG31@SFLDUFOFFFSF
+    L4FT4DA1FA27@G11@T28#ZPFT27ZP1024FP610D@524D!FO30@SFL8FE22@
+[============================= X parameter =============================]
+[Library subroutine P1: print non-negative fraction in 0D, without '0.'
+ Number of decimals follows subroutine call, e.g. P9F for 9 decimals.]
+          E25K TX GK
+    GKA18@U17@S20@T5@H19@PFT5@VDUFOFFFSFL4FTDA5@A2FG6@EFU3FJFM1F
+[======================= M parameter again =============================]
+          E25K TM GK
+          E13Z          [define entry point]
+          PF            [acc = 0 on entry]

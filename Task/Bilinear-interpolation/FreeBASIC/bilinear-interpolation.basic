@@ -1,0 +1,107 @@
+Function readPPM(nombre As String, Byref ancho As Integer, Byref alto As Integer, image() As Ubyte) As Boolean
+    Dim As Integer ff
+    Dim As String t, dcol
+
+    If nombre = "" Then
+        Print "No PPM file name indicated."
+        Return False
+    End If
+
+    ff = Freefile
+    Open nombre For Binary As #ff
+    If Err Then
+        Print "File "; nombre; " not found."
+        Return False
+    End If
+
+    Line Input #ff, t
+    If t <> "P6" Then
+        Print "File is NOT PPM P6 type."
+        Close #ff
+        Return False
+    End If
+
+    Do
+        Line Input #ff, t
+    Loop While Left(t, 1) = "#"
+
+    Dim As Integer posic = 1
+    While Mid(t, posic, 1) = " "
+        posic += 1
+    Wend
+    ancho = Val(Mid(t, posic))
+
+    While Mid(t, posic, 1) <> " "
+        posic += 1
+    Wend
+    While Mid(t, posic, 1) = " "
+        posic += 1
+    Wend
+    alto = Val(Mid(t, posic))
+
+    Line Input #ff, dcol
+
+    Redim image(0 To ancho * alto * 3 - 1)
+    Get #ff, , image()
+
+    Close #ff
+    Return True
+End Function
+
+#define lerp(s, e, t)  s + (e - s) * t
+
+Function blerp(c00 As Single, c10 As Single, c01 As Single, c11 As Single, tx As Single, ty As Single) As Single
+    Return lerp(lerp(c00, c10, tx), lerp(c01, c11, tx), ty)
+End Function
+
+Sub scale(image() As Ubyte, ancho As Integer, alto As Integer, scaleX As Single, scaleY As Single, result() As Ubyte)
+    Dim As Integer newAncho = Int(ancho * scaleX)
+    Dim As Integer newAlto = Int(alto * scaleY)
+    Redim result(0 To newAncho * newAlto * 3 - 1)
+
+    Dim As Integer x, y, k, gx, gy, gxi, gyi
+    Dim As Single gxf, gyf
+    Dim As Ubyte c00, c10, c01, c11
+
+    For y = 0 To newAlto - 1
+        For x = 0 To newAncho - 1
+            gx = x * (ancho - 1) / newAncho
+            gy = y * (alto - 1) / newAlto
+            gxi = Int(gx)
+            gyi = Int(gy)
+            gxf = gx - gxi
+            gyf = gy - gyi
+
+            For k = 0 To 2
+                c00 = image((gyi * ancho + gxi) * 3 + k)
+                c10 = image((gyi * ancho + gxi + 1) * 3 + k)
+                c01 = image(((gyi + 1) * ancho + gxi) * 3 + k)
+                c11 = image(((gyi + 1) * ancho + gxi + 1) * 3 + k)
+                result((y * newAncho + x) * 3 + k) = Int(blerp(c00, c10, c01, c11, gxf, gyf))
+            Next k
+        Next x
+    Next y
+End Sub
+
+Dim As Integer ancho, alto
+Dim image() As Ubyte
+
+If readPPM("lena.ppm", ancho, alto, image()) Then
+    Dim result() As Ubyte
+    scale(image(), ancho, alto, 1.6, 1.6, result())
+
+    Dim newAncho As Integer = Int(ancho * 1.6)
+    Dim newAlto As Integer = Int(alto * 1.6)
+
+    Screenres newAncho, newAlto, 32
+    Windowtitle ("Bilinear interpolation")
+    For y As Integer = 0 To newAlto - 1
+        For x As Integer = 0 To newAncho - 1
+            Pset (x, y), Rgb(result((y * newAncho + x) * 3), result((y * newAncho + x) * 3 + 1), result((y * newAncho + x) * 3 + 2))
+        Next x
+    Next y
+Else
+    Print "Error loading PPM file."
+End If
+
+Sleep

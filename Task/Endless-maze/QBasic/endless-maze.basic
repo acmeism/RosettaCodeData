@@ -1,0 +1,98 @@
+CONST MAXN = 1000
+DIM x(MAXN) AS INTEGER
+DIM y(MAXN) AS INTEGER
+DIM e(4 * MAXN) AS INTEGER
+
+xp = 127
+yp = 127
+a = 0
+na = 0
+RANDOMIZE TIMER
+f = INT(RND * 4)
+
+DO
+    a = na
+    FOR n = 0 TO na - 1
+        IF x(n) = xp AND y(n) = yp THEN
+            a = n
+            EXIT FOR
+        END IF
+    NEXT n
+
+    IF a = na THEN
+        IF na < MAXN THEN
+            x(na) = xp
+            y(na) = yp
+
+            FOR n = 0 TO 3
+                e(4 * na + n) = INT(RND * 2)
+            NEXT n
+
+            FOR n = 0 TO na - 1
+                IF x(n) = x(na) + 1 AND y(n) = y(na) THEN
+                    e(4 * na + 0) = e(4 * n + 2)
+                ELSEIF x(n) = x(na) AND y(n) = y(na) + 1 THEN
+                    e(4 * na + 1) = e(4 * n + 3)
+                ELSEIF x(n) = x(na) - 1 AND y(n) = y(na) THEN
+                    e(4 * na + 2) = e(4 * n + 0)
+                ELSEIF x(n) = x(na) AND y(n) = y(na) - 1 THEN
+                    e(4 * na + 3) = e(4 * n + 1)
+                END IF
+            NEXT n
+
+            na = na + 1
+        ELSE
+            PRINT "Max array size reached."
+            END
+        END IF
+    END IF
+
+    PRINT "Paths:";
+    DIM paths$(3)
+    paths$(0) = " ahead"
+    paths$(1) = " right"
+    paths$(2) = " back"
+    paths$(3) = " left"
+
+    FOR n = 0 TO 3
+        IF e(4 * a + ((f + n) MOD 4)) = 1 THEN PRINT paths$(n);
+    NEXT n
+    PRINT
+
+    d = -1
+    DO WHILE d < 0
+        INPUT "> ", entry$
+        entry$ = LCASE$(entry$)
+
+        SELECT CASE entry$
+            CASE "ahead"
+                d = (f + 0) MOD 4
+            CASE "right"
+                d = (f + 1) MOD 4
+            CASE "back"
+                d = (f + 2) MOD 4
+            CASE "left"
+                d = (f + 3) MOD 4
+            CASE "quit"
+                END
+            CASE ELSE
+                PRINT "Invalid input."
+                d = -1
+        END SELECT
+
+        IF d >= 0 THEN
+            SELECT CASE d
+                CASE 0
+                    IF e(4 * a + 0) = 1 THEN xp = xp + 1: f = d ELSE d = -1
+                CASE 1
+                    IF e(4 * a + 1) = 1 THEN yp = yp + 1: f = d ELSE d = -1
+                CASE 2
+                    IF e(4 * a + 2) = 1 THEN xp = xp - 1: f = d ELSE d = -1
+                CASE 3
+                    IF e(4 * a + 3) = 1 THEN yp = yp - 1: f = d ELSE d = -1
+            END SELECT
+        END IF
+
+        IF d < 0 THEN PRINT "No path."
+    LOOP
+LOOP

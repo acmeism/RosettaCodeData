@@ -1,0 +1,129 @@
+100H: /* FIND THE PYTHAGOREAN TRIPLET A, B, C WHERE A + B + C = 1000        */
+
+   /* CP/M BDOS SYSTEM CALL                                                 */
+   BDOS: PROCEDURE( FN, ARG ); DECLARE FN BYTE, ARG ADDRESS; GOTO 5; END;
+   /* I/O ROUTINES                                                          */
+   PRINT$CHAR:   PROCEDURE( C ); DECLARE C BYTE;    CALL BDOS( 2, C ); END;
+   PRINT$STRING: PROCEDURE( S ); DECLARE S ADDRESS; CALL BDOS( 9, S ); END;
+   PRINT$NL:     PROCEDURE;   CALL PRINT$STRING( .( 0DH, 0AH, '$' ) ); END;
+
+   /* LONG MULTIPLICATION                                                   */
+   /* LARGE INTEGERS ARE REPRESENTED BY ARRAYS OF BYTES WHOSE VALUES ARE    */
+   /* A SINGLE DECIMAL DIGIT OF THE NUMBER                                  */
+   /* THE LEAST SIGNIFICANT DIGIT OF THE LARGE INTEGER IS IN ELEMENT 1      */
+   /* ELEMENT 0 CONTAINS THE NUMBER OF DIGITS THE NUMBER HAS                */
+   DECLARE LONG$INTEGER  LITERALLY '(21)BYTE';
+   DECLARE DIGIT$BASE    LITERALLY '10';
+   /* PRINTS A LONG INTEGER                                                 */
+   PRINT$LONG$INTEGER: PROCEDURE( N$PTR );
+      DECLARE N$PTR ADDRESS;
+      DECLARE N BASED N$PTR LONG$INTEGER;
+      DECLARE ( D, F ) BYTE;
+      F = N( 0 );
+      DO D = 1 TO N( 0 );
+         CALL PRINT$CHAR( N( F ) + '0' );
+         F = F - 1;
+      END;
+   END PRINT$LONG$INTEGER;
+   /* SETS A LONG$INTEGER TO A 16-BIT VALUE                                 */
+   SET$LONG$INTEGER: PROCEDURE( LN, N );
+      DECLARE ( LN, N ) ADDRESS;
+      DECLARE V ADDRESS;
+      DECLARE LN$PTR ADDRESS, LN$BYTE  BASED LN$PTR BYTE;
+      DECLARE LN$0   ADDRESS, LN$0BYTE BASED LN$0   BYTE;
+      LN$0, LN$PTR = LN;
+      LN$0BYTE     = 1;
+      LN$PTR       = LN$PTR + 1;
+      LN$BYTE      = ( V := N ) MOD DIGIT$BASE;
+      DO WHILE( ( V := V / DIGIT$BASE ) > 0 );
+         LN$PTR   = LN$PTR   + 1;
+         LN$BYTE  = V MOD DIGIT$BASE;
+         LN$0BYTE = LN$0BYTE + 1;
+      END;
+   END SET$LONG$INTEGER;
+   /* IMPLEMENTS LONG MULTIPLICATION, C IS SET TO A * B                     */
+   /*     C CAN BE THE SAME LONG$INTEGER AS A OR B                          */
+   LONG$MULTIPLY: PROCEDURE( A$PTR, B$PTR, C$PTR );
+      DECLARE ( A$PTR, B$PTR, C$PTR ) ADDRESS;
+      DECLARE ( A BASED A$PTR, B BASED B$PTR, C BASED C$PTR ) LONG$INTEGER;
+      DECLARE MRESULT LONG$INTEGER;
+      DECLARE RPOS    BYTE;
+
+      /* MULTIPLIES THE LONG INTEGER IN B BY THE INTEGER A, THE RESULT      */
+      /*     IS ADDED TO C, STARTING FROM DIGIT START                       */
+      /*     OVERFLOW IS IGNORED                                            */
+      MULTIPLY$ELEMENT: PROCEDURE( A, B$PTR, C$PTR, START );
+         DECLARE ( B$PTR, C$PTR )                 ADDRESS;
+         DECLARE ( A, START )                     BYTE;
+         DECLARE ( B BASED B$PTR, C BASED C$PTR ) LONG$INTEGER;
+         DECLARE ( CDIGIT, D$CARRY, BPOS, CPOS )  BYTE;
+         D$CARRY = 0;
+         CPOS    = START;
+         DO BPOS = 1 TO B( 0 );
+            CDIGIT = C( CPOS ) + ( A * B( BPOS ) ) + D$CARRY;
+            IF CDIGIT < DIGIT$BASE THEN D$CARRY = 0;
+            ELSE DO;
+               /* HAVE DIGITS TO CARRY                                      */
+               D$CARRY = CDIGIT  /  DIGIT$BASE;
+               CDIGIT  = CDIGIT MOD DIGIT$BASE;
+            END;
+            C( CPOS ) = CDIGIT;
+            CPOS = CPOS + 1;
+         END;
+         C( CPOS ) = D$CARRY;
+         /* REMOVE LEADING ZEROS BUT IF THE NUMBER IS 0, KEEP THE FINAL 0   */
+         DO WHILE( CPOS > 1 AND C( CPOS ) = 0 );
+            CPOS = CPOS - 1;
+         END;
+         C( 0 ) = CPOS;
+      END MULTIPLY$ELEMENT ;
+      /* THE RESULT WILL BE COMPUTED IN MRESULT, ALLOWING A OR B TO BE C    */
+      DO RPOS = 1 TO LAST( MRESULT ); MRESULT( RPOS ) = 0; END;
+      /* MULTIPLY BY EACH DIGIT AND ADD TO THE RESULT                       */
+      DO RPOS = 1 TO A( 0 );
+         IF A( RPOS ) <> 0 THEN DO;
+            CALL MULTIPLY$ELEMENT( A( RPOS ), B$PTR, .MRESULT, RPOS );
+         END;
+      END;
+      /* RETURN THE RESULT IN C                                             */
+      DO RPOS = 0 TO MRESULT( 0 ); C( RPOS ) = MRESULT( RPOS ); END;
+   END;
+
+   /* INTEGER SUARE ROOT: BASED ON THE ONE IN THE PL/M FOR FROBENIUS NUMBERS */
+   SQRT: PROCEDURE( N )ADDRESS;
+      DECLARE ( N, X0, X1 ) ADDRESS;
+      IF N <= 3 THEN DO;
+          IF N = 0 THEN X0 = 0; ELSE X0 = 1;
+          END;
+      ELSE DO;
+         X0 = SHR( N, 1 );
+         DO WHILE( ( X1 := SHR( X0 + ( N / X0 ), 1 ) ) < X0 );
+            X0 = X1;
+         END;
+      END;
+      RETURN X0;
+   END SQRT;
+
+   /* FIND THE PYTHAGORIAN TRIPLET                                          */
+   DECLARE ( A, B, C, M, N, M2, N2, SQRT$1000 ) ADDRESS;
+   DECLARE ( LA, LB, LC, ABC ) LONG$INTEGER;
+   SQRT$1000 = SQRT( 1000 );
+   DO N = 1 TO SQRT$1000;             /* M AND N MUST HAD DIFFERENT PARITY, */
+      DO M = N + 1 TO SQRT$1000 BY 2;             /* I.E. ONE ODD, ONE EVEN */
+         /* NOTE: A = M2 - N2, B = 2MN, C = M2 + N2                         */
+         /* A + B + C = M2 - N2 + 2MN + M2 + N2 = 2( M2 + MN ) = 2M( M + N )*/
+         IF ( M * ( M + N ) ) = 500 THEN DO;
+            M2 = M * M;
+            N2 = N * N;
+            CALL SET$LONG$INTEGER( .A, M2 - N2 );
+            CALL SET$LONG$INTEGER( .B, 2 * M * N );
+            CALL SET$LONG$INTEGER( .C, M2 + N2 );
+            CALL LONG$MULTIPLY( .A,   .B, .ABC );
+            CALL LONG$MULTIPLY( .ABC, .C, .ABC );
+            CALL PRINT$LONG$INTEGER( .ABC );
+            CALL PRINT$NL;
+         END;
+      END;
+   END;
+
+EOF

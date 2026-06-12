@@ -1,0 +1,336 @@
+Const NULL As Any Ptr = 0	' o usar #include "crt.bi"
+
+' Basic Directed Graph class using adjacency lists.
+' Vertices are assumed to be integers from 0 to v-1.
+
+' ===== Digraph Implementation =====
+Type Edge
+    dest As Integer
+End Type
+
+Type AdjList
+    edges As Integer
+    capacity As Integer
+    list As Edge Ptr
+End Type
+
+Type Digraph
+    v As Integer        ' number of vertices
+    e As Integer        ' number of edges
+    adj As AdjList Ptr  ' adjacency lists
+End Type
+
+' Creates a new digraph with v vertices
+Function CreateDigraph(v As Integer) As Digraph Ptr
+    If v < 0 Then
+        Print "Number of vertices must be non-negative"
+        Return NULL
+    End If
+
+    Dim As Digraph Ptr g = Allocate(Sizeof(Digraph))
+    g->v = v
+    g->e = 0
+
+    ' Create adjacency lists
+    g->adj = Allocate(v * Sizeof(AdjList))
+    For i As Integer = 0 To v - 1
+        g->adj[i].edges = 0
+        g->adj[i].capacity = 4  ' Initial capacity
+        g->adj[i].list = Allocate(4 * Sizeof(Edge))
+    Next
+
+    Return g
+End Function
+
+' Adds the directed edge v->w to the digraph
+Sub AddEdge(g As Digraph Ptr, v As Integer, w As Integer)
+    ' Validate vertices
+    If v < 0 Or v >= g->v Or w < 0 Or w >= g->v Then
+        Print "Invalid vertex in AddEdge: " & v & " -> " & w
+        Return
+    End If
+
+    ' Resize if needed
+    With g->adj[v]
+        If .edges >= .capacity Then
+            .capacity *= 2
+            .list = Reallocate(.list, .capacity * Sizeof(Edge))
+        End If
+
+        .list[.edges].dest = w
+        .edges += 1
+    End With
+    g->e += 1
+End Sub
+
+' String representation of the digraph
+Sub PrintDigraph(g As Digraph Ptr)
+    Print g->v & " vertices, " & g->e & " edges"
+    For v As Integer = 0 To g->v - 1
+        Print Iif(v < 10, " ", "") & v & ": ";
+        For i As Integer = 0 To g->adj[v].edges - 1
+            Print g->adj[v].list[i].dest & " ";
+        Next
+        Print
+    Next
+End Sub
+
+' Free memory used by the digraph
+Sub FreeDigraph(g As Digraph Ptr)
+    If g = NULL Then Return
+
+    For i As Integer = 0 To g->v - 1
+        Deallocate(g->adj[i].list)
+    Next
+    Deallocate(g->adj)
+    Deallocate(g)
+End Sub
+
+' ===== Stack Implementation =====
+Type Stack
+    items As Integer Ptr
+    size As Integer
+    capacity As Integer
+End Type
+
+Function CreateStack(initialCapacity As Integer = 10) As Stack
+    Dim As Stack s
+    s.capacity = initialCapacity
+    s.size = 0
+    s.items = Allocate(s.capacity * Sizeof(Integer))
+    Return s
+End Function
+
+Sub PushStack(s As Stack Ptr, item As Integer)
+    If s->size >= s->capacity Then
+        s->capacity *= 2
+        s->items = Reallocate(s->items, s->capacity * Sizeof(Integer))
+    End If
+    s->items[s->size] = item
+    s->size += 1
+End Sub
+
+Function PopStack(s As Stack Ptr) As Integer
+    If s->size <= 0 Then Return -1
+    s->size -= 1
+    Return s->items[s->size]
+End Function
+
+Function PeekStack(s As Stack Ptr) As Integer
+    If s->size <= 0 Then Return -1
+    Return s->items[s->size - 1]
+End Function
+
+Function IsEmptyStack(s As Stack Ptr) As Boolean
+    Return s->size <= 0
+End Function
+
+Sub FreeStack(s As Stack Ptr)
+    Deallocate(s->items)
+    s->size = 0
+    s->capacity = 0
+End Sub
+
+' ===== Gabow SCC Implementation =====
+Type GabowSCC
+    marked As Boolean Ptr     ' marked[v] = has v been visited?
+    id As Integer Ptr         ' id[v] = id of strong component containing v
+    preorder As Integer Ptr   ' preorder[v] = preorder of v
+    preCounter As Integer     ' preorder number counter
+    sccCount As Integer       ' number of strongly connected components
+    stack1 As Stack           ' stores vertices in order of visitation
+    stack2 As Stack           ' auxiliary stack for finding SCC roots
+End Type
+
+' Private method containing 'depth first search' core logic for Gabow's algorithm
+Sub DFS(scc As GabowSCC Ptr, g As Digraph Ptr, v As Integer)
+    Dim As Integer w, i
+    scc->marked[v] = True
+    scc->preorder[v] = scc->preCounter
+    scc->preCounter += 1
+
+    PushStack(@scc->stack1, v)
+    PushStack(@scc->stack2, v)
+
+    ' Process all adjacent vertices
+    With g->adj[v]
+        For i = 0 To .edges - 1
+            w = .list[i].dest
+
+            If Not scc->marked[w] Then
+                DFS(scc, g, w)
+            Elseif scc->id[w] = -1 Then
+                ' Pop vertices from stack2 until top has preorder number <= preorder[w]
+                While Not IsEmptyStack(@scc->stack2) Andalso _
+                    scc->preorder[PeekStack(@scc->stack2)] > scc->preorder[w]
+                    PopStack(@scc->stack2)
+                Wend
+            End If
+        Next
+    End With
+
+    ' If v is the root of an SCC
+    If Not IsEmptyStack(@scc->stack2) Andalso PeekStack(@scc->stack2) = v Then
+        PopStack(@scc->stack2)
+
+        ' Pop vertices from stack1 until v is popped; assign them the current SCC id
+        Do
+            w = PopStack(@scc->stack1)
+            scc->id[w] = scc->sccCount
+            If w = v Then Exit Do
+        Loop
+
+        scc->sccCount += 1
+    End If
+End Sub
+
+' Creates a GabowSCC to compute the strong components of the digraph
+Function CreateGabowSCC(g As Digraph Ptr) As GabowSCC Ptr
+    Dim As Integer i, v
+    Dim As GabowSCC Ptr scc = Allocate(Sizeof(GabowSCC))
+
+    ' Allocate and initialize arrays
+    scc->marked = Allocate(g->v * Sizeof(Boolean))
+    scc->id = Allocate(g->v * Sizeof(Integer))
+    scc->preorder = Allocate(g->v * Sizeof(Integer))
+
+    ' Initialize arrays with default values
+    For i = 0 To g->v - 1
+        scc->marked[i] = False
+        scc->id[i] = -1
+        scc->preorder[i] = -1
+    Next
+
+    scc->preCounter = 0
+    scc->sccCount = 0
+    scc->stack1 = CreateStack(g->v)  ' Pre-allocate with expected size
+    scc->stack2 = CreateStack(g->v)  ' Pre-allocate with expected size
+
+    ' Run DFS from each unvisited vertex
+    For v = 0 To g->v - 1
+        If Not scc->marked[v] Then DFS(scc, g, v)
+    Next
+
+    Return scc
+End Function
+
+' Returns the number of strong components
+Function Count(scc As GabowSCC Ptr) As Integer
+    Return scc->sccCount
+End Function
+
+' Returns whether or not vertices v and w are in the same strong component
+Function StronglyConnected(scc As GabowSCC Ptr, v As Integer, w As Integer, vertexCount As Integer) As Boolean
+    If v < 0 Or v >= vertexCount Or w < 0 Or w >= vertexCount Then Return False
+    Return scc->id[v] <> -1 Andalso scc->id[v] = scc->id[w]
+End Function
+
+' Returns the component id of the strong component containing vertex v
+Function GetId(scc As GabowSCC Ptr, v As Integer, vertexCount As Integer) As Integer
+    If v < 0 Or v >= vertexCount Then Return -1
+    Return scc->id[v]
+End Function
+
+' Free memory used by the GabowSCC
+Sub FreeGabowSCC(scc As GabowSCC Ptr)
+    If scc = NULL Then Return
+
+    Deallocate(scc->marked)
+    Deallocate(scc->id)
+    Deallocate(scc->preorder)
+    FreeStack(@scc->stack1)
+    FreeStack(@scc->stack2)
+    Deallocate(scc)
+End Sub
+
+' ===== Main Program =====
+Sub main()
+    Dim As Integer i, j, m, v, componentId
+    ' Create graph with 13 vertices
+    Dim As Integer numVertices = 13
+    Dim As Digraph Ptr g = CreateDigraph(numVertices)
+
+    ' Define edges
+    Dim As Integer edges(21, 1) => { _
+    {4, 2}, {2, 3}, {3, 2}, {6, 0}, {0, 1}, {2, 0}, {11, 12}, _
+    {12, 9}, {9, 10}, {9, 11}, {8, 9}, {10, 12}, {0, 5}, {5, 4}, _
+    {3, 5}, {6, 4}, {6, 9}, {7, 6}, {7, 8}, {8, 7}, {5, 3}, {0, 6} }
+
+    ' Add edges to graph
+    For i = 0 To 21
+        AddEdge(g, edges(i, 0), edges(i, 1))
+    Next
+
+    Print "Constructed Digraph:"
+    PrintDigraph(g)
+
+    ' Compute SCCs
+    Dim As GabowSCC Ptr scc = CreateGabowSCC(g)
+
+    m = Count(scc)
+    Print !"\n" & m & " strongly connected components"
+
+    ' Group vertices by component ID
+    Type Component
+        vertices As Integer Ptr
+        size As Integer
+        capacity As Integer
+    End Type
+
+    Dim As Component Ptr components = Allocate(m * Sizeof(Component))
+    ' Initialize components with reasonable initial capacity
+    For i = 0 To m - 1
+        components[i].size = 0
+        components[i].capacity = 4
+        components[i].vertices = Allocate(4 * Sizeof(Integer))
+    Next
+
+    ' Add vertices to their components
+    For v = 0 To g->v - 1
+        componentId = GetId(scc, v, g->v)
+        If componentId <> -1 Then
+            With components[componentId]
+                ' Resize if needed
+                If .size >= .capacity Then
+                    .capacity *= 2
+                    .vertices = Reallocate(.vertices, .capacity * Sizeof(Integer))
+                End If
+
+                .vertices[.size] = v
+                .size += 1
+            End With
+        Else
+            Print "Warning: Vertex " & v & " has no SCC ID assigned."
+        End If
+    Next
+
+    Print !"\nComponents:"
+    For i = 0 To m - 1
+        Print "Component " & i & ": ";
+        For j = 0 To components[i].size - 1
+            Print components[i].vertices[j] & " ";
+        Next
+        Print
+    Next
+
+    ' Example usage of strongly_connected and get_id
+    Print !"\nConnectivity checks:"
+    Print "Vertices 0 and 3 strongly connected?  " & StronglyConnected(scc, 0, 3, g->v)
+    Print "Vertices 0 and 7 strongly connected?  " & StronglyConnected(scc, 0, 7, g->v)
+    Print "Vertices 9 and 12 strongly connected? " & StronglyConnected(scc, 9, 12, g->v)
+    Print "ID of vertex 5: " & GetId(scc, 5, g->v)
+    Print "ID of vertex 8: " & GetId(scc, 8, g->v)
+
+    ' Free memory
+    For i = 0 To m - 1
+        Deallocate(components[i].vertices)
+    Next
+    Deallocate(components)
+
+    FreeGabowSCC(scc)
+    FreeDigraph(g)
+End Sub
+
+main()
+
+Sleep

@@ -1,0 +1,241 @@
+'   ********************************************************************
+'   **                                                                **
+'   **    parseAndRun.bas  v26b  tenochtitlanuk    November 2012      **
+'   **                                                                **
+'   **      select a LB solution from RC site & run it locally        **
+'   **                                                                **
+'   ********************************************************************
+'retrieve proper temporary path and filename to save downloaded HTML:
+Source$ = GetTempFileName$("htm")
+'nomainwin
+
+'   Download main RC LB page which has current tasks on it. Save as 'source.html'
+'   run "C:\Program Files\Mozilla Firefox\firefox.exe http://rosettacode.org/wiki/Category:Liberty_BASIC"   'testing routine
+print " Fetching current RC page of completed Liberty BASIC RC solutions."
+'result = DownloadToFile( "http://rosettacode.org/wiki/Category:Liberty_BASIC", "E:\source.html")
+result = DownloadToFile( "http://rosettacode.org/wiki/Category:Liberty_BASIC", Source$)
+
+if result <>0 then  print "Error downloading LB solved tasks.": end else print: print " Displaying solved tasks.": print
+
+'   Load source into a string. Go through and save in a 2D array all topic titles
+'       and the appropriate web addresses to find them.
+'open "E:\source.html" for input as #f
+open Source$ for input as #f
+    html$ = input$( #f, lof( #f))
+close #f
+kill Source$   'remove temp file
+
+dim solutions$( 500, 2)
+
+global count
+count   =1
+first   =0
+last    =0
+reading =0
+
+'   The first topic is the '100 doors' so skip all html jump ref's earlier than this.
+do
+    r$ =getHtmlSection$( html$, first, last)
+    if instr( r$, "/rosettacode.org/mw/index.php") then exit do '   We've read all LB solved tasks.
+    if r$ ="wiki/100_doors" then reading =1
+
+    if reading =1 then   '   we can start recording path & name
+        solutions$( count, 1) ="http://rosettacode.org/" +r$ +"#Liberty_BASIC"
+
+        special =instr( r$, "%2B"):    if special <>0 then r$ =left$( r$, special -1) +"+" +mid$( r$, special +3)
+        special =instr( r$, "%27"):    if special <>0 then r$ =left$( r$, special -1) +"'" +mid$( r$, special +3)
+        special =instr( r$, "%C3%A8"): if special <>0 then r$ =left$( r$, special -1) +chr$( 232) +mid$( r$, special +6)
+        solutions$( count, 0) =mid$( r$, 6)  '   we want the bit beyond '/wiki/'
+        if instr(  solutions$( count, 0), "/") then
+            newName$ =""
+            for ii =1 to len(  solutions$( count, 0) )
+                n$ =mid$( solutions$( count, 0), ii, 1)
+                if n$ ="/" then n$ ="_"
+                newName$ =newName$ +n$
+            next ii
+            solutions$( count, 0) =newName$
+        end if
+        print count, solutions$( count, 0)'; tab( 60); solutions$( count, 1)
+        count =count +1
+    end if
+loop until 0
+print: print count -1; " tasks solved in LB."
+
+'input " Choose task # "; R                                              '   Choose a page to try.
+for R =1 to 283
+print
+print " Choosing a task at random viz #"; R; " out of "; count -1; " completed in LB."
+print " Task is "; chr$( 34); solutions$( R, 0); chr$( 34)
+print
+
+'********************run "C:\Program Files\Mozilla Firefox\firefox.exe " +solutions$( R, 1)
+
+'   Fetch the RC task page with all the sol'ns including LB one.
+print " Downloading the page for this task."
+result = DownloadToFile( solutions$( R, 1), "rx.html")
+
+if result <>0 then  print "Error downloading.": end
+
+print " Now finding the LB section of the html code."   '   Now finding the appropriate LB section on this topic.
+
+open "rx.html" for input as #r
+    L =lof( #r)
+    print " Length of source html of this topic's page is "; L
+    t$ =input$( #r, L)
+close #r
+
+preamble$ =">Liberty BASIC</a></span></h2>" +chr$( 10)
+
+lP =len( preamble$)
+print " Finding the preamble string at ";
+beg =instr( t$, preamble$)' +len( preamble$)
+print beg
+
+lookFor$ ="source" +chr$( 34) +">"
+beg =instr( t$, lookFor$, beg)    '   get to start of BASIC code.
+beg =beg +len( lookFor$)
+
+print " Found LB section at "; beg;
+
+fin =instr( t$, "</pre>", beg)
+print " and ending at "; fin
+
+print " Chopping off unwanted earlier & later sections of html source."
+t$ =mid$( t$, beg, fin -beg)    '   discard earlier & later parts of html code.
+
+open solutions$( R, 0) +".txt" for output as #LbText
+    #LbText t$;
+close #LbText
+
+L =len( t$)
+
+print " Relevant html code LB section being parsed for LB BASIC code."
+
+'   Read the rest of the LB code section to </pre> section ..
+LB$  =""
+j    =1
+
+print " Dropping html tags & translating html entities."
+print
+print " LB code follows."
+print
+
+do
+    nxtChr$  =mid$( t$, j, 1)
+    select case '   _______________________________________________________________________________________________________
+        case ( nxtChr$ =chr$( 10)) or ( nxtChr$ =chr$( 13))
+            j =L
+            print "End reached- CRLF"
+
+        case nxtChr$ ="<"                                                           '   we've found a html tag. Omit.
+            'print " Starting a tag with a <";
+            item$ ="<"
+            do                                                                      '   keep looking until find a '>' or finish...
+                j =j +1
+                nxtChr$  =mid$( t$, j, 1)
+                item$ =item$ +nxtChr$
+            loop until nxtChr$ =">"
+            'print " Closing a tag with a >."
+            if item$ ="</pre>" then j =L                                            '   end reached
+            if item$ ="<br />" then LB$ =LB$ +chr$( 10)                             '   code for CRLF
+            if item$ ="<br/>" then LB$ =LB$ +chr$( 10)                             '   code for CRLF, now
+            if j <>L then j =j +1
+
+        case nxtChr$ ="&"                                                           '   we've found an html entity.
+                                                                                    '   replace with plain-text equivalents.
+            'print " html entity starting with & ";
+            select case '   ..............................................................................
+                case mid$( t$, j+1, 5) ="quot;"
+                    LB$ =LB$ +chr$( 34): j =j +6                                    '   &guot;    "
+                case mid$( t$, j+1, 3) ="gt;"
+                    LB$ =LB$ +">": j =j +4                                          '   >      >
+                case mid$( t$, j+1, 3) ="lt;"
+                    LB$ =LB$ +"<": j =j +4                                          '   <      <
+                case right$( mid$( t$, j, 5), 1) =";"
+                    v =val( mid$( t$, j +2, 2)): j =j +5                            '   2-digit character-code
+                    if v =39 then LB$ =LB$ +chr$( 39) else LB$ =LB$ +chr$( v)       '       eg '  ( 40,41)   '()
+                case right$( mid$( t$, j, 6), 1) =";"                               '   3-digit character-code
+                    v =val( mid$( t$, j +2, 3))
+                    if v =160 then v =32    'print "Hard space!"                    '   convert   hard- to soft-space.
+                    j =j +6: LB$ =LB$ +chr$( v)
+            end select  '   ..............................................................................
+            'print " and finishing with ;"
+        case else  '   not an html entity nor a tag. Use as-is unless it's the final hard-space plus semi-colon..
+            if mid$( t$, j +1, 5) ="#160;" and mid$( t$, j +5, 6) ="</pre>" then j =L else LB$ =LB$ +nxtChr$: j =j +1
+
+    end select  '   _________________________________________________________________________________________________________
+    scan
+loop until j >= fin -beg -4
+
+print: print LB$
+
+open solutions$( R, 0) +".bas" for output as #LB
+    #LB LB$;
+close #LB
+
+print
+print " Done"
+
+timer 5000, [on2]
+wait
+[on2]
+timer 0
+
+'   Run with LB.
+'   *************************************run chr$( 34) +"C:\Program Files\Liberty BASIC v4.04\liberty.exe" +chr$( 34) +" -R E:\" +solutions$( R, 0) +".bas"
+next R
+end
+    '   **************************************************************
+Function DownloadToFile( urlfile$, localfile$)
+    open "URLmon" for dll as #url
+    calldll #url, "URLDownloadToFileA",_
+    0 as long,_         'null
+    urlfile$ as ptr,_   'url to download
+    localfile$ as ptr,_ 'save file name
+    0 as long,_         'reserved, must be 0
+    0 as long,_         'callback address, can be 0
+    DownloadToFile as ulong  '0=success
+    close #url
+end function
+end
+
+function getHtmlSection$( string$, byref first, last)
+    a                    =instr(  string$, "<a href=" +chr$( 34), first)
+        if a =0 then getHtmlSection$ ="  Sorry! html link not found": exit function
+    b                    =instr(  string$, chr$( 34), a +9)
+    getHtmlSection$      =mid$(   string$, a +10, b -a -10)
+    first                =b +1
+            '   Reset value of "first" so that in the next call to
+            '   getHtmlSection$( the next html link can be found
+end function
+
+function GetTempFileName$(prefix$)
+    TempPath$=GetTempPath$()
+    TempFile$ = space$(256)+chr$(0)
+
+    calldll #kernel32, "GetTempFileNameA",_
+    TempPath$ as ptr,_  'directory for temp file
+    prefix$ as ptr,_    'desired prefix for temp filename
+    0 as ulong,_        '0=file created,nonzero=you must create file
+    TempFile$ as ptr,_  'string buffer to hold qualified path and filename
+    result as ulong     'nonzero=success
+
+    'TempFile$ holds complete path and filename info
+    GetTempFileName$ = TempFile$
+    end function
+
+Function GetTempPath$()
+    CallDLL #kernel32, "GetTempPathA",_
+    0 as long,_
+    _NULL as long,_
+    length as long
+
+    buf$ = space$(length)
+
+    CallDLL #kernel32, "GetTempPathA",_
+    length as long,_
+    buf$ as ptr,_
+    ret as long
+
+    GetTempPath$ = buf$
+End Function

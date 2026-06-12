@@ -1,0 +1,62 @@
+Dim Shared includedFiles() As String
+Dim Shared includedCount As Integer = 0
+
+Function isIncluded(filename As String) As Boolean
+    For i As Integer = 0 To includedCount - 1
+        If Lcase(includedFiles(i)) = Lcase(filename) Then Return True
+    Next
+    Return False
+End Function
+
+Sub addIncluded(filename As String)
+    Redim Preserve includedFiles(includedCount)
+    includedFiles(includedCount) = filename
+    includedCount += 1
+End Sub
+
+Sub processFile(filename As String, Byref outFile As Integer)
+    Dim inFile As Integer = Freefile()
+    Dim As String linea, trimmedLine, incFile
+    Dim As Integer firstQuote, lastQuote
+
+    Open filename For Input As #inFile
+    If Err <> 0 Then
+        Print "Error: Could not open file '" & filename & "'"
+        End
+    End If
+
+    While Not Eof(inFile)
+        Line Input #inFile, linea
+        trimmedLine = Ltrim(linea)
+
+        If Left(trimmedLine, 8) = "#include" Then
+            firstQuote = Instr(trimmedLine, """")
+            lastQuote = Instrrev(trimmedLine, """")
+
+            If firstQuote > 0 And lastQuote > firstQuote Then
+                incFile = Mid(trimmedLine, firstQuote + 1, lastQuote - firstQuote - 1)
+
+                If Not isIncluded(incFile) Then
+                    addIncluded(incFile)
+                    processFile(incFile, outFile)
+                End If
+                Continue While
+            End If
+        End If
+
+        Print #outFile, linea
+    Wend
+
+    Close #inFile
+End Sub
+
+' Test program
+Dim As String inputFile = Command(1)
+Dim As String outputFile = Command(2)
+
+Dim As Integer outFileNum = Freefile()
+Open outputFile For Output As #outFileNum
+processFile(inputFile, outFileNum)
+Close #outFileNum
+
+Print "Preprocessing complete. File generated: "; outputFile

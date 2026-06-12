@@ -1,0 +1,17 @@
+"amaroid <--> diorama
+degener <--> reneged
+deifier <--> reified
+deliver <--> reviled
+dessert <--> tressed
+desserts <--> stressed
+deviler <--> relived
+dioramas <--> samaroid
+gateman <--> nametag
+leveler <--> relevel
+pat-pat <--> tap-tap
+redrawer <--> rewarder
+reknits <--> stinker
+relever <--> reveler
+reliver <--> reviler
+revotes <--> setover
+sallets <--> stellas"

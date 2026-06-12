@@ -1,0 +1,87 @@
+(* Solve the Traveling Salesman Problem using the Held-Karp algorithm.
+   dist is a 2D square matrix of pairwise distances.
+   Returns {minCost, tour} where tour is a list of node indices (0-based),
+   starting and ending at 0. *)
+
+heldKarp[dist_] := Module[
+  {n, nSubsets, inf, dp, parent, fullMask, minCost, last, cost,
+   prevMask, path, mask, curr, prev},
+
+  inf = 2^31 - 1;
+  n = Length[dist];
+  nSubsets = 2^n;
+
+  (* dp[[mask+1, j]] = min cost to reach subset 'mask' ending at node j (1-based j) *)
+  dp     = ConstantArray[inf, {nSubsets, n}];
+  parent = ConstantArray[-1,  {nSubsets, n}];
+
+  (* Base case: start at node 1 (0-based node 0), mask = 1 *)
+  dp[[2, 1]] = 0;
+
+  (* Iterate over all odd masks (those containing node 0) *)
+  Do[
+    If[OddQ[mask],
+      Do[
+        If[BitAnd[mask, BitShiftLeft[1, j - 1]] != 0,
+          prevMask = BitXor[mask, BitShiftLeft[1, j - 1]];
+          Do[
+            If[BitAnd[prevMask, BitShiftLeft[1, k - 1]] != 0,
+              cost = dp[[prevMask + 1, k]] + dist[[k, j]];
+              If[cost < dp[[mask + 1, j]],
+                dp[[mask + 1, j]] = cost;
+                parent[[mask + 1, j]] = k - 1; (* store as 0-based *)
+              ]
+            ],
+            {k, 1, n}
+          ]
+        ],
+        {j, 2, n}
+      ]
+    ],
+    {mask, 1, nSubsets - 1}
+  ];
+
+  (* Close the tour: return to node 1 (0-based node 0) *)
+  fullMask = nSubsets - 1;
+  minCost  = inf;
+  last     = 0;
+
+  Do[
+    cost = dp[[fullMask + 1, j]] + dist[[j, 1]];
+    If[cost < minCost,
+      minCost = cost;
+      last = j - 1  (* store as 0-based *)
+    ],
+    {j, 2, n}
+  ];
+
+  (* Reconstruct path *)
+  path = {};
+  mask = fullMask;
+  curr = last;  (* 0-based *)
+
+  While[curr != 0,
+    AppendTo[path, curr];
+    prev = parent[[mask + 1, curr + 1]];  (* curr+1 converts to 1-based *)
+    mask = BitXor[mask, BitShiftLeft[1, curr]];
+    curr = prev;
+  ];
+
+  AppendTo[path, 0];           (* add start node *)
+  path = Reverse[path];        (* reverse to get 0 -> ... -> last *)
+  AppendTo[path, 0];           (* return to 0 *)
+
+  {minCost, path}
+]
+
+(* Test *)
+distMatrix = {
+  {0,  2,  9, 10},
+  {1,  0,  6,  4},
+  {15, 7,  0,  8},
+  {6,  3, 12,  0}
+};
+
+{cost, tour} = heldKarp[distMatrix];
+Print["Minimum tour cost: ", cost];
+Print["Tour: ", tour];

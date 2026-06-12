@@ -1,0 +1,279 @@
+constant verbose = false -- different/random every time, like all other entries
+
+enum X, Y, ID -- point
+enum U, V, W -- edge
+
+procedure printList(sequence container, string name, fmt)
+    -- Helper Function to print vectors/lists
+    if verbose then
+        printf(1,"%s: [%s]\n",{name,join(container,", ",fmt:=fmt)})
+    end if
+end procedure
+
+procedure printGraph(sequence graph, string name)
+    if verbose then
+        integer n := length(graph)
+        sequence lines = {}
+        for i=1 to n do
+            sequence s = {}
+            for j=1 to n do
+                if i != j then
+                    s = append(s,sprintf("%d: %.2f", {j, graph[i][j]}))
+                end if
+            end for
+            lines = append(lines,sprintf("  %d: {%s}",{i,join(s,", ")}))
+        end for
+        printf(1,"%s: {\n%s\n}\n", {name,join(lines,",\n")})
+    end if
+end procedure
+
+function getLength(sequence p1, p2)
+    -- Euclidean Distance
+    atom dx := p1[X] - p2[X],
+         dy := p1[Y] - p2[Y]
+    return sqrt(dx*dx + dy*dy)
+end function
+
+function buildGraph(sequence data)
+    -- Build Complete Graph (Adjacency Matrix)
+    integer n := length(data)
+    sequence graph = repeat(repeat(0,n),n)
+    for i,di in data do
+        for j,dj in data from i+1 do // Only calculate upper triangle + diagonal is 0
+            atom dist := getLength(di, dj)
+            graph[i][j] = dist
+            graph[j][i] = dist // Symmetric graph
+        end for
+    end for
+    return graph
+end function
+
+sequence parent, rank
+
+function find_parent(integer i)
+    -- A utility function to find the set of an element i (uses path compression technique)
+    if parent[i] == i then return i end if
+    integer result = find_parent(parent[i])
+    parent[i] = result -- Path compression
+    return result
+end function
+
+procedure unite(integer i, j)
+    -- A function that performs union __by rank__ of two sets x and y
+    integer i_root = find_parent(i),
+            j_root = find_parent(j)
+    if i_root!=j_root then
+        // Union by rank
+        -- Attach smaller rank tree under root of high rank tree
+        if rank[i_root] < rank[j_root] then
+            parent[i_root] = j_root
+        elsif rank[i_root] > rank[j_root] then
+            parent[j_root] = i_root
+        else
+            -- If ranks are the same, make one as root and increment its rank
+            parent[j_root] = i_root
+            rank[i_root] += 1
+        end if
+    end if
+end procedure
+
+function minimumSpanningTree(sequence graph)
+    -- Minimum Spanning Tree (Kruskal's Algorithm)
+    integer n := length(graph)
+    if n == 0 then return {} end if
+    sequence edges = {}
+    for i=1 to n do
+        for j=i+1 to n do // Avoid duplicates and self-loops
+            edges = append(edges, {i, j, graph[i][j]})
+        end for
+    end for
+    // Sort edges by weight
+    edges = sort_columns(edges,{W})
+
+    sequence mst := {}
+    parent = tagset(n)
+    rank = repeat(0,n)
+    integer edgesCount := 0
+    for edge in edges do
+        integer {u,v} = edge
+        if find_parent(u) != find_parent(v) then
+            mst = append(mst, edge)
+            unite(u, v)
+            edgesCount += 1
+            if edgesCount == n-1 then // Optimization: MST has n-1 edges
+                exit
+            end if
+        end if
+    end for
+    return mst
+end function
+
+function findOddVertexes(sequence mst, integer n)
+    -- Find Vertices with Odd Degree in MST
+    sequence degree := repeat(0,n)
+    for edge in mst do
+        integer {u,v} = edge
+        degree[u] += 1
+        degree[v] += 1
+    end for
+
+    sequence oddVertices := find_all(true,apply(degree,odd))
+    return oddVertices
+end function
+
+function minimumWeightMatching(sequence mst, graph, oddVertices)
+    -- Minimum Weight Matching (Greedy Heuristic)
+    // Create a copy to allow modification while iterating
+    // and Shuffle for randomness
+    sequence currentOdd := shuffle(oddVertices)
+
+    // Keep track of vertices already matched in this phase
+    sequence matched := repeat(false, length(graph))
+    sequence result := deep_copy(mst)
+
+    for i,v in currentOdd do
+        if not matched[v] then
+            atom minLength
+            integer closestU := -1
+
+            // Find the closest unmatched odd vertex
+            for j,u in currentOdd from i+1 do
+                if not matched[u] then
+                    if closestU=-1 or graph[v][u] < minLength then
+                        minLength = graph[v][u]
+                        closestU = u
+                    end if
+                end if
+            end for
+            if closestU != -1 then
+                // Add the matching edge to the MST list (now a multigraph)
+                result = append(result, {v, closestU, minLength})
+                matched[v] = true
+                matched[closestU] = true // Mark both as matched
+            end if
+        end if
+    end for
+    return result
+end function
+
+function findEulerianTour(sequence matchedMst, integer n)
+    -- Find Eulerian Tour (Hierholzer's Algorithm)
+    if length(matchedMst) == 0 then return {} end if
+    // Build adjacency list representation of the multigraph (MST + matching)
+
+    sequence adj := repeat({},n)
+    integer edgeUsed := new_dict()
+
+    for edge in matchedMst do
+        integer {u,v} = edge
+        adj[u] = append(adj[u], {v, edge})
+        adj[v] = append(adj[v], {u, edge})
+        setd(edge,false,edgeUsed)
+    end for
+
+    sequence tour := {},
+      currentPath := {}
+
+    // Start at any vertex with edges (e.g., the first vertex of the first edge)
+    integer startNode := matchedMst[1][U]
+    currentPath &= startNode
+
+    while length(currentPath) > 0 do
+        integer currentNode := currentPath[$],
+                foundEdge := false
+
+        // Find an unused edge from the current node
+        for i=1 to  length(adj[currentNode]) do
+            {integer neighbor, sequence edge} := adj[currentNode][i]
+            if not getd(edge,edgeUsed) then
+                setd(edge,true,edgeUsed) // Mark edge as used
+
+                // Push neighbor onto stack and move to it
+                currentPath &= neighbor
+                foundEdge = true
+                exit // Move to the neighbor
+            end if
+        end for
+
+        // If no unused edge was found from currentNode, backtrack
+        if not foundEdge then
+            tour &= currentPath[$]
+            currentPath = currentPath[1..-2]
+        end if
+    end while
+    tour = reverse(tour)
+    return tour
+end function
+
+procedure tsp(sequence data)
+    -- Main TSP Function (Christofides Approximation)
+    integer n := length(data)
+    if n>1 then
+        // Build a graph
+        sequence G := buildGraph(data)
+        //printGraph(G, "Graph")
+
+        // Build a minimum spanning tree
+        sequence MSTree := minimumSpanningTree(G)
+        printList(MSTree, "MSTree", "(%d, %d, %.2f)")
+
+        // Find odd degree vertices
+        sequence oddVertexes := findOddVertexes(MSTree, n)
+        printList(oddVertexes, "Odd vertexes in MSTree","%d")
+
+        // Add minimum weight matching edges (using greedy heuristic)
+        // Note: This returns a new slice containing MST + matching edges
+        sequence MSTreeWithMatching := minimumWeightMatching(MSTree, G, oddVertexes)
+        printList(MSTreeWithMatching, "Minimum weight matching (MST + Matching Edges)","(%d, %d, %.2f)")
+
+        // Find an Eulerian tour in the combined graph
+        sequence eulerianTour := findEulerianTour(MSTreeWithMatching, n)
+        printList(eulerianTour, "Eulerian tour","%d")
+
+        // Create Hamiltonian Circuit by Skipping Visited Nodes
+        if length(eulerianTour) == 0 then
+            printf(1,"Error: Eulerian tour could not be found.\n")
+            return
+        end if
+
+        atom len := 0
+        sequence path := {},
+              visited := repeat(false,n)
+        integer current := eulerianTour[1]
+        path &= current
+        visited[current] = true
+        for v in eulerianTour from 2 do
+            if not visited[v] then
+                path &= v
+                visited[v] = true
+                len += G[current][v] // Add distance from previous node in path
+                current = v             // Update current node in path
+            end if
+        end for
+
+        // Add the edge back to the start
+        len += G[current][path[1]]
+        path = append(path, path[1]) // Complete the cycle
+
+        printList(path, "Result path","%d")
+        printf(1,"Result length of the path: %.2f\n", len)
+    end if
+end procedure
+
+sequence raw = {{1380, 939}, {2848, 96}, {3510, 1671}, {457, 334}, {3888, 666}, {984, 965}, {2721, 1482},
+                {1286, 525}, {2716, 1432}, {738, 1325}, {1251, 1832}, {2728, 1698}, {3815, 169}, {3683, 1533},
+                {1247, 1945}, {123, 862}, {1234, 1946}, {252, 1240}, {611, 673}, {2576, 1676}, {928, 1700},
+                {53, 857}, {1807, 1711}, {274, 1420}, {2574, 946}, {178, 24}, {2678, 1825}, {1795, 962},
+                {3384, 1498}, {3520, 1079}, {1256, 61}, {1424, 1728}, {3913, 192}, {3085, 1528}, {2573, 1969},
+                {463, 1670}, {3875, 598}, {298, 1513}, {3479, 821}, {2542, 236}, {3955, 1743}, {1323, 280},
+                {3447, 1830}, {2936, 337}, {1621, 1830}, {3373, 1646}, {1393, 1368}, {3874, 1318}, {938, 955},
+                {3022, 474}, {2482, 1183}, {3854, 923}, {376, 825}, {2519, 135}, {2945, 1622}, {953, 268},
+                {2628, 1479}, {2097, 981}, {890, 1846}, {2139, 1806}, {2421, 1007}, {2290, 1810}, {1115, 1052},
+                {2588, 302}, {327, 265}, {241, 341}, {1917, 687}, {2991, 792}, {2573, 599}, {19, 674},
+                {3911, 1673}, {872, 1559}, {2863, 558}, {929, 1766}, {839, 620}, {3893, 102}, {2178, 1619},
+                {3822, 899}, {378, 1048}, {1178, 100}, {2599, 901}, {3416, 143}, {2961, 1605}, {611, 1384},
+                {3113, 885}, {2597, 1830}, {2586, 1286}, {161, 906}, {1429, 134}, {742, 1025}, {1625, 1651},
+                {1187, 706}, {1787, 1009}, {22, 987}, {3640, 43}, {3756, 882}, {776, 392}, {1724, 1642},
+                {198, 1810}, {3950, 1558}}
+-- set_rand(-1240037098.0) -- uncomment to replicate result below)
+tsp(split_by(flatten(columnize({raw,tagset(length(raw)-1,0)})),3))

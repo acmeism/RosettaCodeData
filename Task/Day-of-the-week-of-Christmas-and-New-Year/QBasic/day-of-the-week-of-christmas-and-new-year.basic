@@ -1,0 +1,15 @@
+DIM d$(6)
+FOR i = 0 TO 6: READ d$(i): NEXT i
+FOR i = 1 TO 2
+    READ y, m, d
+    PRINT USING "##/##/#### is a "; m; d; y;
+    IF m <= 2 THEN m = m + 12: y = y - 1
+    J = y \ 100
+    K = y MOD 100
+    d = (d + ((m + 1) * 26) \ 10 + K + K \ 4 + J \ 4 + 5 * J) MOD 7
+    PRINT d$(d)
+NEXT i
+DATA Saturday, Sunday, Monday, Tuesday, Wednesday, Thursday, Friday
+DATA 2021, 12, 25
+DATA 2022, 1, 1
+END

@@ -1,0 +1,328 @@
+/'
+Copyright (c) 2005 Robert Dick <dickrp@ece.northwestern.edu>.
+All rights reserved.
+
+1. This LICENSE AGREEMENT is between Robert Dick ("AUTHOR"), and the
+Individual or Organization ("Licensee") accessing and otherwise using this
+software in source or binary form and its associated documentation.
+
+2. Subject to the terms and conditions of this License Agreement, AUTHOR
+hereby grants Licensee a nonexclusive, royalty-free, world-wide license to
+reproduce, analyze, test, perform and/or display publicly, prepare derivative
+works, distribute, and otherwise use this software alone or in any derivative
+version, provided, however, that AUTHOR's License Agreement and AUTHOR's
+notice of copyright, i.e., "Copyright (c) 2005 Robert Dick; All Rights
+Reserved" are retained with this software, alone, or in any derivative
+version prepared by Licensee.
+
+3. In the event Licensee prepares a derivative work that is based on or
+incorporates this software or any part thereof, and wants to make the
+derivative work available to others as provided herein, then Licensee hereby
+agrees to include in any such work a brief summary of the changes made to
+this work.
+
+4. AUTHOR is making this software available to Licensee on an "AS IS" basis.
+AUTHOR MAKES NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED.  BY WAY OF
+EXAMPLE, BUT NOT LIMITATION, AUTHOR MAKES NO AND DISCLAIMS ANY REPRESENTATION
+OR WARRANTY OF MERCHANTABILITY OR FITNESS FOR ANY PARTICULAR PURPOSE OR THAT
+THE USE OF THIS SOFTWARE WILL NOT INFRINGE ANY THIRD PARTY RIGHTS.
+
+5. AUTHOR SHALL NOT BE LIABLE TO LICENSEE OR ANY OTHER USERS OF THIS SOFTWARE
+FOR ANY INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES OR LOSS AS A RESULT OF
+MODIFYING, DISTRIBUTING, OR OTHERWISE USING THIS SOFTWARE, OR ANY DERIVATIVE
+THEREOF, EVEN IF ADVISED OF THE POSSIBILITY THEREOF.
+
+6. This License Agreement will automatically terminate upon a material breach
+of its terms and conditions.
+
+7. Nothing in this License Agreement shall be deemed to create any
+relationship of agency, partnership, or joint venture between AUTHOR and
+Licensee.  This License Agreement does not grant permission to use AUTHOR
+trademarks or trade name in a trademark sense to endorse or promote products
+or services of Licensee, or any third party.
+
+8. By copying, installing or otherwise using this software, Licensee agrees
+to be bound by the terms and conditions of this License Agreement.
+'/
+
+Type StringArray
+    items(100) As String
+    cnt As Integer
+End Type
+
+Type IntArray
+    items(100) As Integer
+    cnt As Integer
+End Type
+
+Type SetType
+    items(100) As String
+    cnt As Integer
+End Type
+
+' Convert from an integer to a binary string.
+Function b2s(i As Integer, vars As Integer) As String
+    Dim As String s = ""
+    Dim As String t(1) = {"0", "1"}
+    Dim As Integer tmp = i
+
+    For k As Integer = 0 To vars - 1
+        s = t(tmp And 1) & s
+        tmp Shr= 1
+    Next k
+
+    Return s
+End Function
+
+' Return the sum of on bits in s
+Function bitCount(s As String) As Integer
+    Dim As Integer sum = 0
+    For i As Integer = 1 To Len(s)
+        If Mid(s, i, 1) = "1" Then sum += 1
+    Next i
+    Return sum
+End Function
+
+' Return cube merge.  'X' is don't-care.  'null' if merge impossible
+Function merge(i As String, j As String) As String
+    Dim As String s = ""
+    Dim As Integer difCnt = 0
+    Dim As Integer lower = Iif(Len(i) < Len(j), Len(i), Len(j))
+
+    For k As Integer = 1 To lower
+        Dim As String a = Mid(i, k, 1), b = Mid(j, k, 1)
+
+        If ((a = "X" Or b = "X") And a <> b) Then
+            Return ""  ' null equivalent
+        Elseif a <> b Then
+            difCnt += 1
+            s &= "X"
+        Else
+            s &= a
+        End If
+
+        If difCnt > 1 Then Return ""
+    Next k
+
+    Return s
+End Function
+
+Sub addToSet(s As SetType Ptr, item As String)
+    For i As Integer = 0 To s->cnt - 1
+        If s->items(i) = item Then Exit Sub
+    Next i
+
+    s->items(s->cnt) = item
+    s->cnt += 1
+End Sub
+
+Function inSet(s As SetType, item As String) As Boolean
+    For i As Integer = 0 To s.cnt - 1
+        If s.items(i) = item Then Return True
+    Next i
+
+    Return False
+End Function
+
+Sub unionSets(dest As SetType Ptr, src As SetType)
+    For i As Integer = 0 To src.cnt - 1
+        addToSet(dest, src.items(i))
+    Next i
+End Sub
+
+' Compute primes for the given set of cubes and variable count.
+Sub computePrimes(cubes As SetType, vars As Integer, primes As SetType Ptr)
+    Dim As SetType sigma(20)
+    Dim As Integer sigmaCount = 0
+    Dim As Integer i, j, a, b
+
+    For j = 0 To vars
+        sigma(j).cnt = 0
+        For i = 0 To cubes.cnt - 1
+            If bitCount(cubes.items(i)) = j Then addToSet(@sigma(j), cubes.items(i))
+        Next i
+        If sigma(j).cnt > 0 Then sigmaCount = j + 1
+    Next j
+
+    primes->cnt = 0
+
+    While sigmaCount > 0
+        Dim As SetType nsigma(20)
+        Dim As Integer nsigmaCount = 0
+        Dim As SetType redundant
+        redundant.cnt = 0
+
+        For i = 0 To sigmaCount - 2
+            Dim As SetType c1 = sigma(i)
+            Dim As SetType c2 = sigma(i + 1)
+            Dim As SetType nc
+            nc.cnt = 0
+
+            For a = 0 To c1.cnt - 1
+                For b = 0 To c2.cnt - 1
+                    Dim As String m = merge(c1.items(a), c2.items(b))
+                    If m <> "" Then
+                        addToSet(@nc, m)
+                        addToSet(@redundant, c1.items(a))
+                        addToSet(@redundant, c2.items(b))
+                    End If
+                Next b
+            Next a
+
+            nsigma(nsigmaCount) = nc
+            nsigmaCount += 1
+        Next i
+
+        For i = 0 To sigmaCount - 1
+            For j = 0 To sigma(i).cnt - 1
+                If Not inSet(redundant, sigma(i).items(j)) Then
+                    addToSet(primes, sigma(i).items(j))
+                End If
+            Next j
+        Next i
+
+        For i = 0 To nsigmaCount - 1
+            sigma(i) = nsigma(i)
+        Next i
+        sigmaCount = nsigmaCount
+    Wend
+End Sub
+
+' Return the primes selected by the cube selection integer.
+Sub activePrimes(cubesel As Integer, primes As SetType, result As SetType Ptr)
+    result->cnt = 0
+    Dim As String s = b2s(cubesel, primes.cnt)
+
+    For i As Integer = 0 To primes.cnt - 1
+        If Mid(s, i + 1, 1) = "1" Then addToSet(result, primes.items(i))
+    Next i
+End Sub
+
+' Returns a bool: Does the prime cover the minterm?
+Function isCover(prime As String, one As String) As Boolean
+    Dim As Integer lower = Iif(Len(prime) < Len(one), Len(prime), Len(one))
+
+    For i As Integer = 1 To lower
+        Dim As String p = Mid(prime, i, 1), o = Mid(one, i, 1)
+        If p <> "X" And p <> o Then Return False
+    Next i
+
+    Return True
+End Function
+
+' Returns a bool: Does the set of primes cover all minterms?
+Function isFullCover(allPrimes As SetType, ones As SetType) As Boolean
+    For o As Integer = 0 To ones.cnt - 1
+        Dim As Boolean covered = False
+        For p As Integer = 0 To allPrimes.cnt - 1
+            If isCover(allPrimes.items(p), ones.items(o)) Then
+                covered = True
+                Exit For
+            End If
+        Next p
+        If Not covered Then Return False
+    Next o
+
+    Return True
+End Function
+
+' Return the minimal cardinality subset of primes covering all ones.
+Sub unateCover(primes As SetType, ones As SetType, result As SetType Ptr)
+    Dim As Integer minCount = 1000, minSel = 0
+    Dim As SetType active
+
+    For cubesel As Integer = 0 To (1 Shl primes.cnt) - 1
+        activePrimes(cubesel, primes, @active)
+
+        If isFullCover(active, ones) Then
+            Dim As Integer cnt = bitCount(b2s(cubesel, primes.cnt))
+            If cnt < minCount Then
+                minCount = cnt
+                minSel = cubesel
+            End If
+        End If
+    Next cubesel
+
+    activePrimes(minSel, primes, result)
+End Sub
+
+/' Compute minimal two-level sum-of-products form.
+	Arguments are:
+		ones:   list of integer minterms
+		zeros:  list of integer maxterms
+		dc:     list of integers specifying don't-care terms
+
+	For proper operation, either (or both) the 'ones' and 'zeros'
+	parameters must be specified.  If one of these parameters is not
+	specified, it will be computed from the combination of the other
+	parameter and the optional 'dc' parameter.
+
+	The fiber will be aborted if any terms are specified
+	in more than one argument, or if all three arguments are given
+	and not all terms are specified.
+'/
+Sub qm(ones() As Integer, onesCount As Integer, zeros() As Integer, _
+    zerosCount As Integer, dc() As Integer, dcCount As Integer, _
+    result As SetType Ptr)
+
+    Dim As Integer i, maxVal = 0
+    For i = 0 To onesCount - 1
+        If ones(i) > maxVal Then maxVal = ones(i)
+    Next i
+    For i = 0 To zerosCount - 1
+        If zeros(i) > maxVal Then maxVal = zeros(i)
+    Next i
+    For i = 0 To dcCount - 1
+        If dc(i) > maxVal Then maxVal = dc(i)
+    Next i
+
+    Dim As Integer numvars = 0, tmp = maxVal
+    While tmp > 0
+        numvars += 1
+        tmp Shr= 1
+    Wend
+    If numvars = 0 Then numvars = 1
+
+    Dim As Integer elts = 1 Shl numvars
+
+    Dim As SetType onesSet, zerosSet, dcSet
+    onesSet.cnt = 0
+    zerosSet.cnt = 0
+    dcSet.cnt = 0
+
+    For i = 0 To onesCount - 1
+        addToSet(@onesSet, b2s(ones(i), numvars))
+    Next i
+
+    For i = 0 To zerosCount - 1
+        addToSet(@zerosSet, b2s(zeros(i), numvars))
+    Next i
+
+    For i = 0 To dcCount - 1
+        addToSet(@dcSet, b2s(dc(i), numvars))
+    Next i
+
+    Dim As SetType cubes
+    cubes.cnt = 0
+    unionSets(@cubes, onesSet)
+    unionSets(@cubes, dcSet)
+
+    Dim As SetType primes
+    computePrimes(cubes, numvars, @primes)
+
+    unateCover(primes, onesSet, result)
+End Sub
+
+' Main Function
+Dim As Integer ones(2) = {1, 2, 5}
+Dim As Integer zeros(0)
+Dim As Integer dc(1) = {0, 7}
+
+Dim As SetType result
+qm(ones(), 3, zeros(), 0, dc(), 2, @result)
+
+For i As Integer = 0 To result.cnt - 1
+    Print result.items(i); " ";
+Next i
+
+Sleep

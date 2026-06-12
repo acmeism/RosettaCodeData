@@ -1,0 +1,127 @@
+with javascript_semantics
+--
+-- We can check for the presence of any zeroes or duplicate digits as we go.
+-- (Please gloss over the gaff of increasing #digits, which makes the next a rather daft example.)
+-- We can also leave partial results unfinished, for (a bad) example when adding 199 = 2*99+1 to go
+-- from 99*99 = {9,8,0,1} to 100*100 = {1,0,0,0,0} we can simply stop when we see a 0/dup in the
+-- finished part of the result, on {9,8,20,0}, and it won't hurt us at all when adding 201 = 2*100+1
+-- to get the next square. That does mean we need to be a little smarter displaying progress, though.
+-- We can also utilise a partial to avoid overflow and get 16 digits to work properly on 32-bit.
+-- We can also skip +199 if that ain't gona work and +400 on the next iteration instead, iyswim.
+-- We can also use a trivial integer-sized bitmask to check for duplicate digits, which won't hit any
+-- problems (on Phix) up to at least 29 digits, or 61 digits on 64-bit, and start off with bitmask=1
+-- to effectively mean "0 already seen", so that test no longer needs to be a separate check.
+-- Combined, these optimisations improved things from 7 minutes 23s to 4 mins 15s, or about 43%.
+-- Partials only saved 45s, or ~10%, admittedly rather less than hoped for, but still something.
+--
+function aleph(sequence s, integer base)
+    -- convert eg {1,15} to "1F"
+    -- s may be partial: show digits>=base as '?'
+    string res = repeat(' ',length(s))
+    for i,d in s do
+        res[i] = iff(d>=base?'?':d+iff(d<=9?'0':'A'-10))
+    end for
+    return res
+end function
+
+function reformat(sequence rs)
+    sequence {r,s} = rs
+    string root = sprintf("%A",{r}),
+         square = aleph(s,r[1])
+    return sprintf("%s**2 = %s",{root,square})
+end function
+
+procedure penholodigital(integer base)
+    -- search squares of n from eg sqrt(123) for base=4
+    -- (and stop when next square has too many digits)
+    sequence penholodigitals = {}
+    atom n = 0, t1 = time()+1, carry = 0
+    for d=1 to base-1 do n = n*base+d end for -- (eg 123)
+    n = ceil(sqrt(n))-1     assert(integer(n))
+    -- (^^ -1 as we bump square and set zod on first iter)
+    sequence square = repeat(0,base-1)
+    integer div = prime_factors(base-1,true)[$], d, dn = n, mbit
+--  square[$] = n*n  -- 9 out for base of 16 on 32 bit, so:
+    -- for eg 123*123 start off with {1*123,2*123,3*123}
+    for d = base-1 to 1 by -1 do
+        square[d] = remainder(dn,base)*n
+        dn = floor(dn/base)
+    end for
+    bool ndz = mod(n,div)=0,
+         zod -- zero or duplicate digit flag
+    while true do -- (until we get a carry off the end of square)
+        -- add 2n+1 to get the next square (using digitwise maths)
+        carry += 2*n+1
+        n += 1
+        ndz = mod(n,div)=0
+        if ndz then
+            zod = false
+            integer mask = 01 -- (treat 0s as dups)
+            d = base-1
+            while carry and d do
+                atom ch = square[d] + carry
+                carry = floor(ch/base)
+                ch = remainder(ch,base)
+                square[d] = ch
+                d -= 1
+                mbit = power(2,ch)
+                if and_bits(mask,mbit) then
+                    zod = true -- duplicate digit (or 0)
+                    if d then
+                        square[d] += carry
+                        carry = 0
+                        -- theoretically better, but in practice worse:
+--                      carry = carry>((base-square[1])*power(base,d-1))
+                    end if
+                    exit
+                end if
+                mask += mbit
+            end while
+            if carry then exit end if
+            if time()>t1 then
+                integer l = length(penholodigitals),
+                        -- mini-cheat for the progress messages only:
+                        e = {1,0,0,0,2,1,1,10,30,20,23,0,160,419,740}[base-1]
+                string sq = aleph(square,base)
+                progress("scanning base %d, %s (%d/%d found)\r",{base,sq,l,e})
+                t1 = time()+1
+            end if
+            if not zod then
+                while d do -- finish zod checks & clean up any "legacy" partials
+                    atom ch = square[d]
+                    d -= 1
+                    if ch>=base then
+                        carry = floor(ch/base)
+                        ch = remainder(ch,base) -- (nb: needed for mbit below)
+                        square[d+1] = ch
+                        if d=0 then exit end if -- (and any carry quits)
+                        square[d] += carry
+                        carry = 0
+                    end if
+                    mbit = power(2,ch)
+                    if and_bits(mask,mbit) then
+                        zod = true  -- duplicate digit (or 0)
+                        exit
+                    end if
+                    mask += mbit
+                end while
+                if carry then exit end if
+                if not zod then
+                    penholodigitals &= {{{base,n},deep_copy(square)}} -- (fmt later)
+                end if
+            end if
+        end if
+    end while
+    progress("")
+    integer count = length(penholodigitals)
+    if base>12 and count>2 then
+        penholodigitals = extract(penholodigitals,{1,-1})
+    end if
+    penholodigitals = apply(penholodigitals,reformat)
+    string p = iff(count?":\n"&iff(base>12?sprintf("%s .. %s\n",penholodigitals)
+                                          :join_by(penholodigitals,1,3)):"\n"),
+           {is,s} = iff(count=1?{"is",""}:{"are","s"})
+    printf(1,"There %s %d penholodigital%s in base %d%s\n",{is,count,s,base,p})
+end procedure
+integer lim = iff(platform()=JS?14:16)  -- js ~3.8s, desktop(64/32bit) 4/6 mins
+papply(tagset(lim,2),penholodigital)

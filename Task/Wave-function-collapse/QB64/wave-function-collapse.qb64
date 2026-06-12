@@ -1,0 +1,177 @@
+DECLARE FUNCTION WFC! (blocks() AS INTEGER, tdim() AS INTEGER, target() AS INTEGER, tile() AS INTEGER)
+
+Randomize Timer
+
+' Main program
+Dim i As Integer, j As Integer
+Dim blocks(44) As Integer
+Data 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,1,0,0,1,0,0,1,1,0,1,0,0,1,0,1,1,1,0,0,0,0,1,0,1,1,0,0,1,0
+For i = 0 To 44: Read blocks(i): Next
+
+Dim tdims(2) As Integer
+tdims(0) = 5: tdims(1) = 3: tdims(2) = 3
+Dim size(1) As Integer
+size(0) = 8: size(1) = 8
+
+Dim tileSize As Integer
+tileSize = (1 + size(0) * (tdims(1) - 1)) * (1 + size(1) * (tdims(2) - 1))
+Dim tile(tileSize - 1) As Integer
+
+If WFC(blocks(), tdims(), size(), tile()) = 0 Then
+    Print "Failed to generate tile."
+Else
+    For i = 0 To 16
+        For j = 0 To 16
+            If tile(j + i * 17) = 0 Then Print " "; Else Print "#";
+        Next
+        Print
+    Next
+End If
+End
+
+Sub CreateFilledArray (arr() As Integer, size As Integer, value As Integer)
+    Dim i As Integer
+    ReDim arr(size - 1)
+    For i = 0 To size - 1
+        arr(i) = value
+    Next
+End Sub
+
+Function WFC (blocks() As Integer, tdim() As Integer, target() As Integer, tile() As Integer)
+    Dim i As Integer, j As Integer, K As Integer, N As Integer, m As Integer
+    Dim t0 As Integer, t1 As Integer
+
+    N = target(0) * target(1)
+    t0 = target(0)
+    t1 = target(1)
+    Dim adj(4 * N - 1) As Integer
+
+    For i = 0 To t0 - 1
+        For j = 0 To t1 - 1
+            K = j + t1 * i
+            m = 4 * K
+            adj(m) = j + t1 * ((t0 + i - 1) Mod t0) ' above (1)
+            adj(m + 1) = (t1 + j - 1) Mod t1 + t1 * i ' left (3)
+            adj(m + 2) = (j + 1) Mod t1 + t1 * i ' right (5)
+            adj(m + 3) = j + t1 * ((i + 1) Mod t0) ' below (7)
+        Next
+    Next
+
+    Dim td0 As Integer, td1 As Integer, td2 As Integer
+    td0 = tdim(0): td1 = tdim(1): td2 = tdim(2)
+    Dim horz(td0 * td0 - 1) As Integer, vert(td0 * td0 - 1) As Integer
+
+    For i = 0 To td0 - 1
+        For j = 0 To td0 - 1
+            horz(j + i * td0) = 1
+            vert(j + i * td0) = 1
+            For K = 0 To td1 - 1
+                If blocks(0 + td2 * (K + td1 * i)) <> blocks((td2 - 1) + td2 * (K + td1 * j)) Then
+                    horz(j + i * td0) = 0
+                    Exit For
+                End If
+            Next
+            For K = 0 To td2 - 1
+                If blocks(K + td2 * (0 + td1 * i)) <> blocks(K + td2 * ((td2 - 1) + td1 * j)) Then
+                    vert(j + i * td0) = 0
+                    Exit For
+                End If
+            Next
+        Next
+    Next
+
+    Dim stride As Integer
+    stride = (td0 + 1) * td0
+    Dim allow(4 * stride - 1) As Integer
+    For i = 0 To 4 * stride - 1
+        allow(i) = 1
+    Next
+
+    For i = 0 To td0 - 1
+        For j = 0 To td0 - 1
+            allow((i * td0) + j) = vert((j * td0) + i) ' above (north)
+            allow(stride + (i * td0) + j) = horz((j * td0) + i) ' left (west)
+            allow(2 * stride + (i * td0) + j) = horz((i * td0) + j) ' right (east)
+            allow(3 * stride + (i * td0) + j) = vert((i * td0) + j) ' below (south)
+        Next
+    Next
+
+    Dim R(N - 1) As Integer
+    For i = 0 To N - 1
+        R(i) = td0
+    Next
+    Dim todo(N - 1) As Integer
+    Dim wave(N * td0 - 1) As Integer
+    Dim entropy(N - 1) As Integer
+    Dim indices(N - 1)
+    Dim min As Integer
+    min = 0
+    Dim possible(td0 - 1) As Integer
+    Dim c As Integer, d As Integer
+
+    Do
+        c = 0
+        For i = 0 To N - 1
+            If td0 = R(i) Then
+                todo(c) = i
+                c = c + 1
+            End If
+        Next
+
+        If c = 0 Then Exit Do
+
+        min = td0
+        For i = 0 To c - 1
+            entropy(i) = 0
+            For j = 0 To td0 - 1
+                K = 4 * todo(i)
+                wave(i * td0 + j) = allow(td0 * R(adj(K)) + j) And allow(stride + td0 * R(adj(K + 1)) + j) And allow((2 * stride) + td0 * R(adj(K + 2)) + j) And allow((3 * stride) + td0 * R(adj(K + 3)) + j)
+                entropy(i) = entropy(i) + wave(i * td0 + j)
+            Next
+            If entropy(i) < min Then min = entropy(i)
+        Next
+
+        If min = 0 Then
+            WFC = 0
+        End If
+
+        d = 0
+        For i = 0 To c - 1
+            If min = entropy(i) Then
+                indices(d) = i
+                d = d + 1
+            End If
+        Next
+
+        Dim ndx As Integer, ind As Integer
+        ndx = indices(Int(Rnd * d))
+        ind = ndx * td0
+        d = 0
+        For i = 0 To td0 - 1
+            If wave(ind + i) <> 0 Then
+                possible(d) = i
+                d = d + 1
+            End If
+        Next
+
+        R(todo(ndx)) = possible(Int(Rnd * d))
+    Loop
+
+    Dim tileSize As Integer
+    tileSize = (1 + t0 * (td1 - 1)) * (1 + t1 * (td2 - 1))
+    ReDim tile(tileSize - 1)
+
+    Dim i0 As Integer, i1 As Integer, j0 As Integer, j1 As Integer, t As Integer
+    For i0 = 0 To t0 - 1
+        For i1 = 0 To td1 - 1
+            For j0 = 0 To t1 - 1
+                For j1 = 0 To td2 - 1
+                    t = j1 + (td2 - 1) * j0 + (1 + t1 * (td2 - 1)) * (i1 + (td1 - 1) * i0)
+                    tile(t) = blocks(j1 + td2 * (i1 + td1 * R(j0 + t1 * i0)))
+                Next
+            Next
+        Next
+    Next
+
+    WFC = 1
+End Function

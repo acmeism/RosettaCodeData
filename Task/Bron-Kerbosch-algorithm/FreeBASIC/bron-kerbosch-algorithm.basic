@@ -1,0 +1,247 @@
+Type StringSet
+    values(99) As String
+    cnt As Integer
+
+    Declare Sub add_(value As String)
+    Declare Sub remove(value As String)
+    Declare Function isEmpty() As Boolean
+    Declare Function contains(value As String) As Boolean
+    Declare Function copy() As StringSet
+    Declare Function intersect(other As StringSet) As StringSet
+    Declare Function union_(other As StringSet) As StringSet
+    Declare Function except_(other As StringSet) As StringSet
+End Type
+
+Type Graph
+    adjacency(99, 99) As Byte
+    vertices(99) As String
+    vertexCount As Integer
+
+    Declare Sub aditionEdge(v1 As String, v2 As String)
+    Declare Function getNeighbors(vertex As String) As StringSet
+End Type
+
+Type CliqueList
+    cliques(99) As StringSet
+    cnt As Integer
+
+    Declare Sub add_(clique As StringSet)
+End Type
+
+' StringSet methods implementation
+Sub StringSet.add_(value As String)
+    If Not this.contains(value) Then
+        this.values(this.cnt) = value
+        this.cnt += 1
+    End If
+End Sub
+
+Sub StringSet.remove(value As String)
+    Dim As Integer i, j
+    For i = 0 To this.cnt - 1
+        If this.values(i) = value Then
+            For j = i To this.cnt - 2
+                this.values(j) = this.values(j + 1)
+            Next
+            this.cnt -= 1
+            Exit For
+        End If
+    Next
+End Sub
+
+Function StringSet.isEmpty() As Boolean
+    Return this.cnt = 0
+End Function
+
+Function StringSet.contains(value As String) As Boolean
+    For i As Integer = 0 To this.cnt - 1
+        If this.values(i) = value Then Return True
+    Next
+    Return False
+End Function
+
+Function StringSet.copy() As StringSet
+    Dim As StringSet result
+    result.cnt = this.cnt
+    For i As Integer = 0 To this.cnt - 1
+        result.values(i) = this.values(i)
+    Next
+    Return result
+End Function
+
+Function StringSet.intersect(other As StringSet) As StringSet
+    Dim As StringSet result
+    For i As Integer = 0 To this.cnt - 1
+        If other.contains(this.values(i)) Then
+            result.add_(this.values(i))
+        End If
+    Next
+    Return result
+End Function
+
+Function StringSet.union_(other As StringSet) As StringSet
+    Dim As StringSet result = this.copy()
+    For i As Integer = 0 To other.cnt - 1
+        result.add_(other.values(i))
+    Next
+    Return result
+End Function
+
+Function StringSet.except_(other As StringSet) As StringSet
+    Dim As StringSet result
+    For i As Integer = 0 To this.cnt - 1
+        If Not other.contains(this.values(i)) Then
+            result.add_(this.values(i))
+        End If
+    Next
+    Return result
+End Function
+
+' Graph methods implementation
+Sub Graph.aditionEdge(v1 As String, v2 As String)
+    Dim As Integer v1idx = -1, v2idx = -1
+
+    For i As Integer = 0 To this.vertexCount - 1
+        If this.vertices(i) = v1 Then v1idx = i
+        If this.vertices(i) = v2 Then v2idx = i
+    Next
+
+    If v1idx = -1 Then
+        v1idx = this.vertexCount
+        this.vertices(this.vertexCount) = v1
+        this.vertexCount += 1
+    End If
+
+    If v2idx = -1 Then
+        v2idx = this.vertexCount
+        this.vertices(this.vertexCount) = v2
+        this.vertexCount += 1
+    End If
+
+    this.adjacency(v1idx, v2idx) = 1
+End Sub
+
+Function Graph.getNeighbors(vertex As String) As StringSet
+    Dim As StringSet result
+    Dim As Integer vidx = -1, i
+
+    For i = 0 To this.vertexCount - 1
+        If this.vertices(i) = vertex Then
+            vidx = i
+            Exit For
+        End If
+    Next
+
+    If vidx <> -1 Then
+        For i = 0 To this.vertexCount - 1
+            If this.adjacency(vidx, i) = 1 Then
+                result.add_(this.vertices(i))
+            End If
+        Next
+    End If
+
+    Return result
+End Function
+
+' CliqueList methods
+Sub CliqueList.add_(clique As StringSet)
+    this.cliques(this.cnt) = clique
+    this.cnt += 1
+End Sub
+
+' Bron-Kerbosch algorithm
+Sub BronKerbosch(r As StringSet, p As StringSet, x As StringSet, g As Graph, Byref cliques As CliqueList)
+    Dim As Integer i, j
+
+    If p.isEmpty() Andalso x.isEmpty() Then
+        If r.cnt > 2 Then
+            ' Sort the clique before aditioning (simple bubble sort)
+            For i = 0 To r.cnt - 2
+                For j = 0 To r.cnt - 2 - i
+                    If r.values(j) > r.values(j + 1) Then
+                        Swap r.values(j), r.values(j + 1)
+                    End If
+                Next
+            Next
+            cliques.add_(r)
+        End If
+        Return
+    End If
+
+    ' Find pivot
+    Dim As String pivot, v
+    Dim As Integer maxC = -1
+    Dim As StringSet unionSet = p.union_(x)
+
+    For i = 0 To unionSet.cnt - 1
+        v = unionSet.values(i)
+        Dim As StringSet neighbors = g.getNeighbors(v)
+        If neighbors.cnt > maxC Then
+            maxC = neighbors.cnt
+            pivot = v
+        End If
+    Next
+
+    Dim As StringSet pivotNeighbors = g.getNeighbors(pivot)
+    Dim As StringSet candidates = p.except_(pivotNeighbors)
+
+    For i = 0 To candidates.cnt - 1
+        v = candidates.values(i)
+        Dim As StringSet newR = r.copy()
+        newR.add_(v)
+
+        Dim As StringSet neighbors = g.getNeighbors(v)
+        Dim As StringSet newP = p.intersect(neighbors)
+        Dim As StringSet newX = x.intersect(neighbors)
+
+        BronKerbosch(newR, newP, newX, g, cliques)
+
+        p.remove(v)
+        x.add_(v)
+    Next
+End Sub
+
+' Main program
+Sub main()
+    Dim As Integer i, j
+    Dim As Graph g
+
+    ' add_ edges
+    g.aditionEdge("a", "b")
+    g.aditionEdge("b", "a")
+    g.aditionEdge("a", "c")
+    g.aditionEdge("c", "a")
+    g.aditionEdge("b", "c")
+    g.aditionEdge("c", "b")
+    g.aditionEdge("d", "e")
+    g.aditionEdge("e", "d")
+    g.aditionEdge("d", "f")
+    g.aditionEdge("f", "d")
+    g.aditionEdge("e", "f")
+    g.aditionEdge("f", "e")
+
+    Dim As StringSet r, p, x
+    Dim As CliqueList cliques
+
+    ' Initialize p with all vertices
+    For i = 0 To g.vertexCount - 1
+        p.add_(g.vertices(i))
+    Next
+
+    ' Execute algorithm
+    BronKerbosch(r, p, x, g, cliques)
+
+    ' Print results
+    For i = 0 To cliques.cnt - 1
+        Dim As StringSet clique = cliques.cliques(i)
+        For j = 0 To clique.cnt - 1
+            Print clique.values(j);
+            If j < clique.cnt - 1 Then Print ", ";
+        Next
+        Print
+    Next
+End Sub
+
+main()
+
+Sleep

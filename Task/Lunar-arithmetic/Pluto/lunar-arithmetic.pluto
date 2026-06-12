@@ -1,0 +1,125 @@
+$define MOON = "🌙"
+
+local function get_digits(n)
+    if n == 0 then return {0} end
+    local digs = {}
+    while n > 0 do
+        digs:insert(n % 10)
+        n //= 10
+    end
+    return digs:reverse()
+end
+
+local function zero_filled(n)
+    local res = {}
+    for _ = 1, n do res:insert(0) end
+    return res
+end
+
+class Lunar
+    static function zero() return new Lunar(0) end
+    static function one()  return new Lunar(1) end
+    static function nine() return new Lunar(9) end
+
+    public n
+
+    function __construct(n)
+        if not(type(n) == "number" and n % 1 == 0 and n >= 0) then
+            error("Argument must be a non-negative integer.")
+        end
+        self.n = n
+    end
+
+    function is_lunar() return true end
+
+    function _get_ops(other)
+        if type(other) == "number" then
+            other = new Lunar(other)
+        else
+            assert(other:is_lunar())
+        end
+        local op1 = get_digits(self.n)
+        local op2 = get_digits(other.n)
+        local c1 = #op1
+        local c2 = #op2
+        if c1 < c2 then
+            local z1 = zero_filled(c2 - c1)
+            op1 = table.move(op1, 1, #op1, #z1 + 1, z1)
+        else
+            local z2 = zero_filled(c1 - c2)
+            op2 = table.move(op2, 1, #op2, #z2 + 1, z2)
+        end
+        return {op1, op2}
+    end
+
+    function __add(other)
+        local ops = self:_get_ops(other)
+        local res = range(#ops[1]):map(|i| -> math.max(ops[1][i], ops[2][i])):concat("")
+        return new Lunar(tonumber(res))
+    end
+
+    function __mul(other)
+        local ops = self:_get_ops(other)
+        local count = #ops[1]
+        local lunars = {}
+        for _ = 1, count do lunars:insert(nil) end
+        local zeros = ""
+        for i = count, 1, -1 do
+            local num = range(count):map(|j| -> math.min(ops[1][i], ops[2][j])):concat("")
+            if i < count then zeros ..= "0" end
+            lunars[count - i] = new Lunar(tonumber(num .. zeros))
+        end
+        return lunars:reduce(|acc, x| -> acc + x, Lunar.zero())
+    end
+
+    function __eq(other) return self.n == other.n end
+
+    function __lt(other) return self.n < other.n end
+end
+
+local tests = { {976, 348}, {23, 321}, {232, 35}, {123, 32192, 415, 8} }
+for tests as test do
+    local sum  = test:reduce(|acc, x| -> acc + x, Lunar.zero())
+    local prod = test:reduce(|acc, x| -> acc * x, Lunar.nine())
+    print($"Lunar add: {test:concat(" " .. MOON .. "+ ")} = {sum.n}")
+    print($"Lunar mul: {test:concat(" " .. MOON .. "× ")} = {prod.n}\n")
+end
+
+print("First 20 distinct even lunar numbers:")
+local i = 0
+local evens = {}
+while #evens < 20 do
+    local even = new Lunar(i) * 2
+    local is_distinct = true
+    for evens as j do
+        if even == j then
+            is_distinct = false
+            break
+        end
+    end
+    if is_distinct then evens:insert(even) end
+    ++i
+end
+print(evens:map(|e| -> e.n):concat(" "))
+
+print("\nFirst 20 square lunar numbers:")
+print(range(0, 19):map(|j| -> (new Lunar(j) * j).n):concat(" "))
+
+print("\nFirst 20 factorial lunar numbers:")
+local fact = Lunar.one()
+for k = 1, 20 do
+    fact *= k
+    io.write($"{fact.n} ")
+end
+io.write("\n\nFirst number whose lunar square is smaller than the previous: ")
+local prev = Lunar.zero()
+i = 1
+while true do
+    local curr = new Lunar(i) * i
+    if curr < prev then
+        print(i)
+        break
+    end
+    prev = curr
+    i += 1
+end

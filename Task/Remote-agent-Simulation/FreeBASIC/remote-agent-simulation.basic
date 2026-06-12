@@ -1,0 +1,636 @@
+#include once "win/winsock2.bi"
+#include once "crt/stdlib.bi"
+
+Const MAX_CLIENTS = 10
+Const TIMEOUT_MS As Integer = 60000 ' 60 seconds
+
+Dim Shared As Boolean debug = False
+
+' Grid cell types
+Type Cell
+    kolor As String ' R, G, B, Y or empty for wall
+    ball As String  ' r, g, b, y or empty for no ball
+End Type
+
+Enum Direction
+    DIR_NORTH
+    DIR_SOUTH
+    DIR_EAST
+    DIR_WEST
+End Enum
+
+Type ClientConnection
+    sock As SOCKET
+    identity As String
+    grid As Cell Ptr Ptr ' Dynamic 2D array
+    x As Integer
+    y As Integer
+    direcc As Direction
+    carry As String
+    turns As Integer
+    ancho As Integer
+    alto As Integer
+    active As Boolean
+    lastActivity As Double ' For timeout tracking
+End Type
+
+Dim Shared As ClientConnection clients(MAX_CLIENTS-1)
+Dim Shared As Integer clientCount = 0
+
+' Function to pick a random item from a list
+Function Pick(items() As String) As String
+    Return items(Int(Rnd * Ubound(items) + 1))
+End Function
+
+' Function to check if a cell would be closed by putting a wall next to it
+Function WillCloseCell(client As ClientConnection, i As Integer, j As Integer) As Boolean
+    Dim As Integer num = 0
+    Dim As Integer ancho = client.ancho, alto = client.alto
+
+    ' Count non-empty (non-wall) cells around this position
+    If i+1 < ancho Andalso client.grid[i+1][j].kolor <> "" Then num += 1
+    If i-1 >= 0 Andalso client.grid[i-1][j].kolor <> "" Then num += 1
+    If j+1 < alto Andalso client.grid[i][j+1].kolor <> "" Then num += 1
+    If j-1 >= 0 Andalso client.grid[i][j-1].kolor <> "" Then num += 1
+
+    ' If only one exit, it would be closed
+    Return (num = 1)
+End Function
+
+' Function to check if the game is over (all balls match their sectors, none in hand)
+Function IsGameOver(client As ClientConnection) As Boolean
+    Dim As Integer ancho = client.ancho, alto = client.alto
+
+    ' If carrying a ball, game is not over
+    If client.carry <> "" Then Return False
+
+    ' Check all cells
+    For x As Integer = 0 To ancho-1
+        For y As Integer = 0 To alto-1
+            ' If there's a ball that doesn't match its sector, game is not over
+            If client.grid[x][y].ball <> "" Andalso client.grid[x][y].ball <> Lcase(client.grid[x][y].kolor) Then
+                Return False
+            End If
+        Next
+    Next
+
+    ' All balls match or are in correct places
+    Return True
+End Function
+
+' Allocate a 2D grid
+Sub AllocateGrid(client As ClientConnection, ancho As Integer, alto As Integer)
+    ' Allocate rows
+    client.grid = Allocate(ancho * Sizeof(Cell Ptr))
+
+    ' Allocate columns for each row
+    For i As Integer = 0 To ancho-1
+        client.grid[i] = Allocate(alto * Sizeof(Cell))
+    Next
+
+    ' Initialize all cells
+    For i As Integer = 0 To ancho-1
+        For j As Integer = 0 To alto-1
+            client.grid[i][j].kolor = ""
+            client.grid[i][j].ball = ""
+        Next
+    Next
+End Sub
+
+' Free a 2D grid
+Sub FreeGrid(client As ClientConnection)
+    If client.grid = NULL Then Return
+
+    For i As Integer = 0 To client.ancho-1
+        If client.grid[i] <> NULL Then Deallocate(client.grid[i])
+    Next
+
+    Deallocate(client.grid)
+    client.grid = NULL
+End Sub
+
+' Print the grid state (for debugging)
+Sub PrintGrid(clientIndex As Integer)
+    Dim As Integer ancho = clients(clientIndex).ancho
+    Dim As Integer alto = clients(clientIndex).alto
+    Dim As Integer x = clients(clientIndex).x
+    Dim As Integer y = clients(clientIndex).y
+
+    Print "Client " & clients(clientIndex).identity & ": " & _
+    Iif(IsGameOver(clients(clientIndex)), "finished", "running")
+
+    For j As Integer = 0 To alto-1
+        For i As Integer = 0 To ancho-1
+            Dim As String cellStr = ""
+
+            ' Add player marker
+            cellStr &= Iif(i = x Andalso j = y, "*", " ")
+
+            ' Add cell color
+            cellStr &= clients(clientIndex).grid[i][j].kolor
+
+            ' Add ball
+            cellStr &= clients(clientIndex).grid[i][j].ball
+
+            Print cellStr;
+        Next
+        Print
+    Next
+    Print
+End Sub
+
+Sub InitializeClient(clientIndex As Integer, sock As SOCKET, clientHost As String, clientPort As String, ancho As Integer, alto As Integer)
+    Dim As String kolors(3) = {"R", "G", "B", "Y"}
+
+    clients(clientIndex).sock = sock
+    clients(clientIndex).identity = clientHost & ":" & clientPort
+    clients(clientIndex).ancho = ancho
+    clients(clientIndex).alto = alto
+    clients(clientIndex).carry = ""
+    clients(clientIndex).turns = 0
+    clients(clientIndex).active = True
+    clients(clientIndex).lastActivity = Timer
+
+    AllocateGrid(clients(clientIndex), ancho, alto)
+
+    Dim As Integer x, y, i
+    For x = 1 To ancho-2
+        For y = 1 To alto-2
+            clients(clientIndex).grid[x][y].kolor = Pick(kolors())
+        Next
+    Next
+
+    For i = 0 To (ancho*alto)\3
+        Dim As Boolean validPosition = False
+
+        Do
+            x = 1 + Int(Rnd * (ancho-2))
+            y = 1 + Int(Rnd * (alto-2))
+
+            ' Skip if already a wall
+            If clients(clientIndex).grid[x][y].kolor = "" Then Continue Do
+
+            ' Check if placing a wall would close any cells
+            If WillCloseCell(clients(clientIndex), x, y) Then Continue Do
+
+            validPosition = True
+        Loop Until validPosition
+
+        ' Place wall
+        clients(clientIndex).grid[x][y].kolor = ""
+    Next
+
+    ' Sprinkle some balls in
+    For i = 0 To (ancho*alto)\5
+        Dim As Boolean validPosition = False
+
+        ' Find a valid position for a ball (not a wall)
+        Do
+            x = 1 + Int(Rnd * (ancho-2))
+            y = 1 + Int(Rnd * (alto-2))
+
+            ' Skip if it's a wall
+            If clients(clientIndex).grid[x][y].kolor <> "" Then validPosition = True
+        Loop Until validPosition
+
+        ' Place ball (lowercase version of a random color)
+        clients(clientIndex).grid[x][y].ball = Lcase(Pick(kolors()))
+    Next
+
+    ' Select a starting location (not a wall)
+    Do
+        clients(clientIndex).x = 1 + Int(Rnd * (ancho-2))
+        clients(clientIndex).y = 1 + Int(Rnd * (alto-2))
+    Loop Until clients(clientIndex).grid[clients(clientIndex).x][clients(clientIndex).y].kolor <> ""
+
+    Dim directions(3) As Direction = {DIR_NORTH, DIR_SOUTH, DIR_EAST, DIR_WEST}
+    clients(clientIndex).direcc = directions(Int(Rnd * 4))
+
+    ' Send initial handshake
+    send(sock, "A", 1, 0)
+
+    If debug Then
+        Print "Initialized client " & clients(clientIndex).identity
+        PrintGrid(clientIndex)
+    End If
+End Sub
+
+Function HandleForward(clientIndex As Integer) As String
+    Dim As String response = ""
+    Dim As Integer dx = 0, dy = 0
+
+    ' Determine direction of movement
+    Select Case clients(clientIndex).direcc
+        Case DIR_NORTH
+            dy = -1
+        Case DIR_SOUTH
+            dy = 1
+        Case DIR_EAST
+            dx = 1
+        Case DIR_WEST
+            dx = -1
+    End Select
+
+    Dim As Integer newX = clients(clientIndex).x + dx
+    Dim As Integer newY = clients(clientIndex).y + dy
+
+    ' Check if new position is a wall or out of bounds
+    If newX < 0 Orelse newX >= clients(clientIndex).ancho Orelse _
+        newY < 0 Orelse newY >= clients(clientIndex).alto Orelse _
+        clients(clientIndex).grid[newX][newY].kolor = "" Then
+        ' Hit a wall
+        response = "|"
+    Else
+        clients(clientIndex).x = newX
+        clients(clientIndex).y = newY
+        clients(clientIndex).turns += 1
+    End If
+
+    response &= clients(clientIndex).grid[clients(clientIndex).x][clients(clientIndex).y].kolor
+    response &= clients(clientIndex).grid[clients(clientIndex).x][clients(clientIndex).y].ball
+
+    Return response
+End Function
+
+Function HandleLeft(clientIndex As Integer) As String
+    Select Case clients(clientIndex).direcc
+        Case DIR_NORTH
+            clients(clientIndex).direcc = DIR_WEST
+        Case DIR_WEST
+            clients(clientIndex).direcc = DIR_SOUTH
+        Case DIR_SOUTH
+            clients(clientIndex).direcc = DIR_EAST
+        Case DIR_EAST
+            clients(clientIndex).direcc = DIR_NORTH
+    End Select
+
+    clients(clientIndex).turns += 1
+    Return ""
+End Function
+
+Function HandleRight(clientIndex As Integer) As String
+    Select Case clients(clientIndex).direcc
+        Case DIR_NORTH
+            clients(clientIndex).direcc = DIR_EAST
+        Case DIR_EAST
+            clients(clientIndex).direcc = DIR_SOUTH
+        Case DIR_SOUTH
+            clients(clientIndex).direcc = DIR_WEST
+        Case DIR_WEST
+            clients(clientIndex).direcc = DIR_NORTH
+    End Select
+
+    clients(clientIndex).turns += 1
+    Return ""
+End Function
+
+Function HandleGet(clientIndex As Integer) As String
+    Dim As String response = ""
+    Dim As Integer x = clients(clientIndex).x
+    Dim As Integer y = clients(clientIndex).y
+
+    clients(clientIndex).turns += 1
+
+    If clients(clientIndex).grid[x][y].ball = "" Then response &= "s"
+    If clients(clientIndex).carry <> "" Then response &= "A"
+    If response = "" Then
+        clients(clientIndex).carry = clients(clientIndex).grid[x][y].ball
+        clients(clientIndex).grid[x][y].ball = ""
+    End If
+
+    Return response
+End Function
+
+Function HandleDrop(clientIndex As Integer) As String
+    Dim As String response = ""
+    Dim As Integer x = clients(clientIndex).x
+    Dim As Integer y = clients(clientIndex).y
+
+    clients(clientIndex).turns += 1
+
+    If clients(clientIndex).carry = "" Then response &= "a"
+    If clients(clientIndex).grid[x][y].ball <> "" Then response &= "S"
+    If response = "" Then
+        clients(clientIndex).grid[x][y].ball = clients(clientIndex).carry
+        clients(clientIndex).carry = ""
+
+        If IsGameOver(clients(clientIndex)) Then
+            If debug Then PrintGrid(clientIndex)
+            response &= "+"
+        End If
+    End If
+
+    Return response
+End Function
+
+Sub HandleClientAction(clientIndex As Integer)
+    Dim As String * 1 buffer
+    Dim As Integer bytesRead
+    Dim As String response = ""
+
+    bytesRead = recv(clients(clientIndex).sock, Strptr(buffer), 1, 0)
+
+    If bytesRead <= 0 Then
+        ' Client disconnected
+        If debug Then Print "Client " & clients(clientIndex).identity & " disconnected"
+        closesocket(clients(clientIndex).sock)
+        FreeGrid(clients(clientIndex))
+        clients(clientIndex).active = False
+        Return
+    End If
+
+    clients(clientIndex).lastActivity = Timer
+
+    Select Case buffer
+        Case "^" ' Forward
+            response = HandleForward(clientIndex)
+
+        Case "<" ' Turn left
+            response = HandleLeft(clientIndex)
+
+        Case ">" ' Turn right
+            response = HandleRight(clientIndex)
+
+        Case "@" ' Get ball
+            response = HandleGet(clientIndex)
+
+        Case "!" ' Drop ball
+            response = HandleDrop(clientIndex)
+
+        Case Else
+            ' Invalid action
+            If debug Then Print "Client " & clients(clientIndex).identity & " sent invalid action: " & buffer
+            Return
+    End Select
+
+    ' Add end marker and send response
+    response &= "."
+    send(clients(clientIndex).sock, Strptr(response), Len(response), 0)
+
+    If debug Then
+        Print "Client " & clients(clientIndex).identity & " action: " & buffer & ", response: " & response
+    End If
+End Sub
+
+Sub AcceptClient(serverSock As SOCKET, ancho As Integer, alto As Integer)
+    Dim As sockaddr_in clientAddr
+    Dim As Integer addrLen = Sizeof(sockaddr_in)
+    Dim As SOCKET clientSock
+
+    clientSock = accept(serverSock, Cast(sockaddr Ptr, @clientAddr), @addrLen)
+
+    If clientSock = INVALID_SOCKET Then
+        Print "Failed to accept client connection"
+        Return
+    End If
+
+    Dim As String clientHost = *inet_ntoa(clientAddr.sin_addr)
+    Dim As Integer clientPort = ntohs(clientAddr.sin_port)
+
+    ' Find an empty slot
+    Dim As Integer clientIndex = -1
+    For i As Integer = 0 To MAX_CLIENTS-1
+        If Not clients(i).active Then
+            clientIndex = i
+            Exit For
+        End If
+    Next
+
+    If clientIndex = -1 Then
+        Print "No slots available for new client"
+        closesocket(clientSock)
+        Return
+    End If
+
+    InitializeClient(clientIndex, clientSock, clientHost, Str(clientPort), ancho, alto)
+
+    Dim As u_long nonBlocking = 1
+    ioctlsocket(clientSock, FIONBIO, @nonBlocking)
+
+    If debug Then Print "Accepted new client: " & clients(clientIndex).identity
+End Sub
+
+Sub CheckTimeouts()
+    Dim As Double currentTime = Timer
+
+    For i As Integer = 0 To MAX_CLIENTS-1
+        If clients(i).active Then
+            If currentTime - clients(i).lastActivity > (TIMEOUT_MS / 1000) Then
+                If debug Then Print "Client " & clients(i).identity & " timed out"
+
+                closesocket(clients(i).sock)
+                FreeGrid(clients(i))
+                clients(i).active = False
+            End If
+        End If
+    Next
+End Sub
+
+Function WaitForHandshake(clientIndex As Integer) As Boolean
+    Dim buffer As String * 1
+    Dim bytesRead As Integer
+    Dim startTime As Double = Timer
+
+    Dim blocking As u_long = 0
+    ioctlsocket(clients(clientIndex).sock, FIONBIO, @blocking)
+
+    Dim timeout As timeval
+    timeout.tv_sec = 5
+    timeout.tv_usec = 0
+
+    Dim readfds As fd_set
+    readfds.fd_count = 0
+    readfds.fd_array(readfds.fd_count) = clients(clientIndex).sock
+    readfds.fd_count += 1
+
+    ' Wait for data
+    Dim selectResult As Integer
+    selectResult = select_(0, @readfds, NULL, NULL, @timeout)
+
+    If selectResult > 0 Then
+        bytesRead = recv(clients(clientIndex).sock, Strptr(buffer), 1, 0)
+
+        If bytesRead > 0 Andalso buffer = "A" Then
+            Dim nonBlocking As u_long = 1
+            ioctlsocket(clients(clientIndex).sock, FIONBIO, @nonBlocking)
+            Return True
+        End If
+    End If
+
+    If debug Then
+        Print "Client " & clients(clientIndex).identity & " handshake failed"
+    End If
+
+    ' Set socket back to non-blocking
+    Dim nonBlocking As u_long = 1
+    ioctlsocket(clients(clientIndex).sock, FIONBIO, @nonBlocking)
+
+    Return False
+End Function
+
+Sub AddSocketToSet(sock As SOCKET, ByRef fdset As fd_set)
+    For i As Integer = 0 To fdset.fd_count - 1
+        If fdset.fd_array(i) = sock Then Return
+    Next
+
+    If fdset.fd_count < FD_SETSIZE Then
+        fdset.fd_array(fdset.fd_count) = sock
+        fdset.fd_count += 1
+    End If
+End Sub
+
+Function IsSocketInSet(sock As SOCKET, ByRef fdset As fd_set) As Boolean
+    For i As Integer = 0 To fdset.fd_count - 1
+        If fdset.fd_array(i) = sock Then Return True
+    Next
+    Return False
+End Function
+
+Sub RunServer(port As Integer, ancho As Integer, alto As Integer)
+    Dim wsaData As WSADATA
+    Dim serverAddr As sockaddr_in
+    Dim serverSock As SOCKET
+
+    If WSAStartup(MAKEWORD(2, 2), @wsaData) <> 0 Then
+        Print "Failed to initialize Winsock"
+        Return
+    End If
+
+    serverSock = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0)
+    If serverSock = INVALID_SOCKET Then
+        Print "Failed to create server socket"
+        WSACleanup()
+        Return
+    End If
+
+    serverAddr.sin_family = AF_INET
+    serverAddr.sin_addr.s_addr = INADDR_ANY
+    serverAddr.sin_port = htons(port)
+
+    If bind(serverSock, Cast(sockaddr Ptr, @serverAddr), Sizeof(sockaddr_in)) = SOCKET_ERROR Then
+        Print "Failed to bind server socket"
+        closesocket(serverSock)
+        WSACleanup()
+        Return
+    End If
+
+    If listen(serverSock, 5) = SOCKET_ERROR Then
+        Print "Failed to listen on server socket"
+        closesocket(serverSock)
+        WSACleanup()
+        Return
+    End If
+
+    Dim nonBlocking As u_long = 1
+    ioctlsocket(serverSock, FIONBIO, @nonBlocking)
+
+    For i As Integer = 0 To MAX_CLIENTS-1
+        clients(i).active = False
+    Next
+
+    Print "Server started on port " & port & " with grid size " & ancho & "x" & alto
+
+    ' Main server loop
+    Dim As Boolean running = True
+    Dim As fd_set readfds
+    Dim As timeval timeout
+    Dim As Integer i, j
+
+    Do While running
+        readfds.fd_count = 0
+
+        AddSocketToSet(serverSock, readfds)
+
+        For i = 0 To MAX_CLIENTS-1
+            If clients(i).active Then AddSocketToSet(clients(i).sock, readfds)
+        Next
+
+        timeout.tv_sec = 0
+        timeout.tv_usec = 100000 ' 100ms
+
+        Dim As Integer activity = select_(0, @readfds, NULL, NULL, @timeout)
+
+        If activity = SOCKET_ERROR Then
+            Print "Select error"
+            Exit Do
+        End If
+
+        If IsSocketInSet(serverSock, readfds) Then AcceptClient(serverSock, ancho, alto)
+
+        For i = 0 To MAX_CLIENTS-1
+            If clients(i).active Then
+                If IsSocketInSet(clients(i).sock, readfds) Then HandleClientAction(i)
+            End If
+        Next
+
+        CheckTimeouts()
+
+        If Inkey = Chr(27) Then running = False ' ESC key
+
+        ' Small delay to prevent CPU hogging
+        Sleep 10
+    Loop
+
+    ' Cleanup
+    For i = 0 To MAX_CLIENTS-1
+        If clients(i).active Then
+            closesocket(clients(i).sock)
+            FreeGrid(clients(i))
+        End If
+    Next
+
+    closesocket(serverSock)
+    WSACleanup()
+
+    Print "Server shutdown complete"
+End Sub
+
+' Main program
+Sub main()
+    Dim As Integer port, ancho, alto
+
+    debug = (Environ("DEBUG_AGENT_WORLD") <> "")
+
+    ' Get command line arguments
+    If Command(1) <> "" Then
+        port = Val(Command(1))
+    Else
+        port = 12345 ' Default port
+    End If
+
+    If Command(2) <> "" Then
+        ancho = Val(Command(2))
+    Else
+        ancho = 10 ' Default width
+    End If
+
+    If Command(3) <> "" Then
+        alto = Val(Command(3))
+    Else
+        alto = 10 ' Default height
+    End If
+
+    ' Validate parameters
+    If port <= 0 Or port > 65535 Then
+        Print "Invalid port number. Using default port 12345."
+        port = 12345
+    End If
+
+    If ancho < 5 Or ancho > 50 Then
+        Print "Invalid width. Using default width 10."
+        ancho = 10
+    End If
+
+    If alto < 5 Or alto > 50 Then
+        Print "Invalid height. Using default height 10."
+        alto = 10
+    End If
+
+    Randomize Timer
+
+    RunServer(port, ancho, alto)
+End Sub
+
+main()
+
+Sleep

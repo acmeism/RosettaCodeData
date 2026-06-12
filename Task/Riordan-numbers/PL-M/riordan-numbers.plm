@@ -1,0 +1,277 @@
+100H: /* FIND SOME RIORDAN NUMBERS                                           */
+
+   DECLARE FALSE LITERALLY '0';
+   DECLARE TRUE  LITERALLY '0FFH';
+
+   /* CP/M SYSTEM CALL AND I/O ROUTINES                                      */
+   BDOS:      PROCEDURE( FN, ARG ); DECLARE FN BYTE, ARG ADDRESS; GOTO 5; END;
+   PR$CHAR:   PROCEDURE( C ); DECLARE C BYTE;    CALL BDOS( 2, C );  END;
+   PR$STRING: PROCEDURE( S ); DECLARE S ADDRESS; CALL BDOS( 9, S );  END;
+   PR$NL:     PROCEDURE;   CALL PR$CHAR( 0DH ); CALL PR$CHAR( 0AH ); END;
+   PR$NUMBER: PROCEDURE( N ); /* PRINTS A NUMBER IN THE MINIMUN FIELD WIDTH  */
+      DECLARE N ADDRESS;
+      DECLARE V ADDRESS, N$STR ( 6 )BYTE, W BYTE;
+      V = N;
+      W = LAST( N$STR );
+      N$STR( W ) = '$';
+      N$STR( W := W - 1 ) = '0' + ( V MOD 10 );
+      DO WHILE( ( V := V / 10 ) > 0 );
+         N$STR( W := W - 1 ) = '0' + ( V MOD 10 );
+      END;
+      CALL PR$STRING( .N$STR( W ) );
+   END PR$NUMBER;
+
+   DECLARE DEC$LAST LITERALLY '7';           /* SUBSCRIPT OF LAST DIGIT PAIR */
+   DECLARE DEC$LEN  LITERALLY '8';        /* LENGTH OF A 16-DIGIT BCD NUMBER */
+   DECLARE DEC$16   LITERALLY '( DEC$LEN )BYTE';    /* TYPE DECLARATION OF A */
+                                            /* 16-DIGIT BCD NUMBER - 8 BYTES */
+
+   PR$DEC: PROCEDURE( A$PTR );      /* PRINT AN UNSIGNED 16-DIGIT BCD NUMBER */
+      DECLARE A$PTR ADDRESS;
+      DECLARE A BASED A$PTR DEC$16;
+      DECLARE ( D, ZERO$CHAR, I, V ) BYTE;
+      ZERO$CHAR = ' ';
+      DO I = 0 TO DEC$LAST - 1;
+         V = A( I );
+         D = SHR( V AND 0F0H, 4 );
+         IF D = 0 THEN CALL PR$CHAR( ZERO$CHAR );
+                  ELSE CALL PR$CHAR( D + ( ZERO$CHAR := '0' ) );
+         D = V AND 0FH;
+         IF D = 0 THEN CALL PR$CHAR( ZERO$CHAR );
+                  ELSE CALL PR$CHAR( D + ( ZERO$CHAR := '0' ) );
+      END;
+      V = A( DEC$LAST );
+      D = SHR( V AND 0F0H, 4 );
+      IF D = 0 THEN CALL PR$CHAR( ZERO$CHAR );
+               ELSE CALL PR$CHAR( D + '0' );
+      D = V AND 0FH;
+      CALL PR$CHAR( D + '0' );
+   END PR$DEC ;
+
+   /* SETS THE 16-DIGIT BCD VALUE IN A TO 0                                  */
+   INIT$DEC: PROCEDURE( A$PTR );
+      DECLARE A$PTR ADDRESS;
+      DECLARE A BASED A$PTR ( 0 )BYTE;
+      DECLARE I BYTE;
+      DO I = 0 TO DEC$LAST;
+         A( I ) = 0;
+      END;
+   END INIT$DEC ;
+
+   /* SETS THE 16-DIGIT BCD VALUE IN A TO B                                  */
+   SET$DEC: PROCEDURE( A$PTR, B );
+      DECLARE A$PTR ADDRESS, B BYTE;
+      DECLARE A BASED A$PTR DEC$16;
+      DECLARE ( I, P, V, D1, D2 ) BYTE;
+      V = B;
+      P = DEC$LAST;
+      DO I = 0 TO DEC$LAST;
+         IF V = 0
+         THEN A( P ) = 0;
+         ELSE DO;
+            D1 = V MOD 10;
+            D2 = ( V := V / 10 ) MOD 10;
+            A( P ) = SHL( D2, 4 ) OR D1;
+            V = V / 10;
+         END;
+         P = P - 1;
+      END;
+   END SET$DEC ;
+
+   /* ASSIGN THE 16-DIGIT BCD VALUD IN B TO A                                */
+   MOV$DEC: PROCEDURE( A$PTR, B$PTR );
+      DECLARE ( A$PTR, B$PTR ) ADDRESS;
+      DECLARE A BASED A$PTR DEC$16, B BASED B$PTR DEC$16;
+      DECLARE I BYTE;
+      DO I = 0 TO DEC$LAST;
+         A( I ) = B( I );
+      END;
+   END MOV$DEC ;
+
+   /* BCD ADDITION - ADDS B TO A, STORING THE RESULT IN A                    */
+   /*     A AND B MUST HAVE 16 DIGITS                                        */
+   ADD$DEC: PROCEDURE( A$PTR, B$PTR );
+      DECLARE ( A$PTR, B$PTR ) ADDRESS;
+      DECLARE A BASED A$PTR DEC$16, B BASED B$PTR DEC$16;
+      DECLARE ( A0, A1, A2, A3, A4, A5, A6, A7 ) BYTE;
+      DECLARE ( B0, B1, B2, B3, B4, B5, B6, B7 ) BYTE;
+      /* SEPARATE THE DIGIT PAIRS                                            */
+      A0 = A( 0 ); A1 = A( 1 ); A2 = A( 2 ); A3 = A( 3 );
+      A4 = A( 4 ); A5 = A( 5 ); A6 = A( 6 ); A7 = A( 7 );
+      B0 = B( 0 ); B1 = B( 1 ); B2 = B( 2 ); B3 = B( 3 );
+      B4 = B( 4 ); B5 = B( 5 ); B6 = B( 6 ); B7 = B( 7 );
+      /* DO THE ADDITIONS                                                    */
+      A7 = DEC( A7   +  B7 );
+      A6 = DEC( A6 PLUS B6 );
+      A5 = DEC( A5 PLUS B5 );
+      A4 = DEC( A4 PLUS B4 );
+      A3 = DEC( A3 PLUS B3 );
+      A2 = DEC( A2 PLUS B2 );
+      A1 = DEC( A1 PLUS B1 );
+      A0 = DEC( A0 PLUS B0 );
+      /* RETURN THE RESULT                                                   */
+      A( 0 ) = A0; A( 1 ) = A1; A( 2 ) = A2; A( 3 ) = A3;
+      A( 4 ) = A4; A( 5 ) = A5; A( 6 ) = A6; A( 7 ) = A7;
+   END ADD$DEC;
+
+
+
+   /* RETURNS TRUE IF THE 16-DIGIT BCD NUMBER A IS <= B                      */
+   /*    USING BCD SUBTRACTION WITH CARRY - SUBTRACTS A FROM B DISCARDING    */
+   /*    THE RESULT ABD RETURNING TRUE IF THE CARRY FLAG IS CLEAR            */
+   DEC$LE: PROCEDURE( A$PTR, B$PTR )BYTE;
+      DECLARE ( A$PTR, B$PTR,C$PTR ) ADDRESS;
+      DECLARE A BASED A$PTR DEC$16, B BASED B$PTR DEC$16, C BASED C$PTR DEC$16;
+      DECLARE ( A0, A1, A2, A3, A4, A5, A6, A7 ) BYTE;
+      DECLARE ( B0, B1, B2, B3, B4, B5, B6, B7 ) BYTE;
+      DECLARE ( CFLAG, I ) BYTE;
+      /* SEPARATE THE DIGIT PAIRS                                           */
+      A0 = A( 0 ); A1 = A( 1 ); A2 = A( 2 ); A3 = A( 3 );
+      A4 = A( 4 ); A5 = A( 5 ); A6 = A( 6 ); A7 = A( 7 );
+      B0 = B( 0 ); B1 = B( 1 ); B2 = B( 2 ); B3 = B( 3 );
+      B4 = B( 4 ); B5 = B( 5 ); B6 = B( 6 ); B7 = B( 7 );
+      /* SUBTRACTION A FROM B                                               */
+      CFLAG = DEC( B7   -   A7 );
+      CFLAG = DEC( B6 MINUS A6 );
+      CFLAG = DEC( B5 MINUS A5 );
+      CFLAG = DEC( B4 MINUS A4 );
+      CFLAG = DEC( B3 MINUS A3 );
+      CFLAG = DEC( B2 MINUS A2 );
+      CFLAG = DEC( B1 MINUS A1 );
+      CFLAG = DEC( B0 MINUS A0 );
+      CFLAG = CARRY; /* IF THERE'S NO CARRY, B IS > A AND SO A <= B         */
+      RETURN CFLAG = 0;
+   END DEC$LE;
+
+   /* BCD MULTIPLICATION BY AN UNSIGNED INTEGER VIA ETHIOPIAN MULTIPLICATION */
+   /*     MULTIPLIES A BY B, STORES THE RESULT IN A - A MUST HAVE 16 DIGITS  */
+   MUL$DEC: PROCEDURE( A$PTR, B );
+      DECLARE A$PTR ADDRESS, B BYTE;
+      DECLARE V BYTE, R DEC$16, ACCUMULATOR DEC$16;
+      CALL MOV$DEC( .R, A$PTR );
+      V = B;
+      CALL INIT$DEC( .ACCUMULATOR );
+      DO WHILE( V > 0 );
+         IF ( V AND 1 ) = 1 THEN DO;
+            CALL ADD$DEC( .ACCUMULATOR, .R );
+         END;
+         V = SHR( V, 1 );
+         CALL ADD$DEC( .R, .R );
+      END;
+      CALL MOV$DEC( A$PTR, .ACCUMULATOR );
+   END MUL$DEC ;
+
+   /* POWERS OF 2 TABLE FOR THE DIVISION ROUTINE                             */
+   /* 2^54 IS LARGER THAN A 10^16                                            */
+   DECLARE POWERS$OF$2 (  54 /* 16 POINTERS TO 16 DIGIT BCD NUMBERS */
+                       )ADDRESS;
+   DECLARE POWER$DATA  ( 864 /* 54 16-DIGIT BCD NUMBERS */ )BYTE;
+   DO;
+      DECLARE ( P, P$POS ) ADDRESS;
+      DO P = 0 TO LAST( POWER$DATA ); POWER$DATA( P ) = 0; END;
+      POWER$DATA( DEC$LAST ) = 01H;  /* SET LAST DIGIT OF THE 1ST POWER TO 1 */
+      P$POS = 0;
+      DO P = 0 TO LAST( POWERS$OF$2 );
+         POWERS$OF$2( P ) = .POWER$DATA( P$POS );
+         P$POS = P$POS + DEC$LEN;
+      END;
+      DO P = 1 TO LAST( POWERS$OF$2 );
+         CALL MOV$DEC( POWERS$OF$2( P ), POWERS$OF$2( P - 1 ) ); /* NEXT... */
+         CALL ADD$DEC( POWERS$OF$2( P ), POWERS$OF$2( P     ) ); /* POWER   */
+      END;
+   END;
+
+   /* BCD DIVISION BY AN UNSIGNED INTEGER VIA EGYPTIAN DIVISION              */
+   /*     DIVIDES A BY B, STORES THE RESULT IN A - A MUST HAVE 16 DIGITS     */
+   DIV$DEC: PROCEDURE( A$PTR, B );
+      DECLARE A$PTR ADDRESS, B BYTE;
+      DECLARE DOUBLINGS   (  54 /* 16 POINTERS TO 16 DIGIT BCD NUMBERS */
+                          )ADDRESS;
+      DECLARE DOUBLE$DATA ( 864 /* 54 16-DIGIT BCD NUMBERS */ )BYTE;
+      DECLARE ( D, D$POS ) ADDRESS;
+      DECLARE ACCUMULATOR DEC$16, QUOTIENT DEC$16, ACC$PLUS$$DOUBLING DEC$16;
+      DECLARE MORE$DOUBLINGS BYTE;
+      /* CONSTRUCT THE DOUBLINGS TABLE - A*1, A*2, A*3, ETC.                 */
+      CALL SET$DEC( .DOUBLE$DATA, B );
+      DOUBLINGS( 0 ) = .DOUBLE$DATA( 0 );
+      D$POS          = 0;            /* START OF THE FIRST DOUBLINGS ELEMENT */
+      D              = 0;
+      MORE$DOUBLINGS = TRUE;
+      DO WHILE( MORE$DOUBLINGS );
+         D           = D + 1;
+         D$POS = D$POS + DEC$LEN;            /* POSITION TO THE NEXT ELEMENT */
+         DOUBLINGS( D ) = .DOUBLE$DATA( D$POS );
+         CALL MOV$DEC( DOUBLINGS( D ), DOUBLINGS( D - 1 ) );
+         CALL ADD$DEC( DOUBLINGS( D ), DOUBLINGS( D     ) );
+         MORE$DOUBLINGS = DEC$LE( DOUBLINGS( D ), A$PTR )
+                      AND D < LAST( DOUBLINGS );
+      END;
+      /* CONSTRUCT THE ACCUMULATOR AND QUOTIEMT                              */
+      CALL INIT$DEC( .ACCUMULATOR );
+      CALL INIT$DEC( .QUOTIENT    );
+      D = D + 1;
+      DO WHILE( D >= 1 );
+         D = D - 1;
+         CALL MOV$DEC( .ACC$PLUS$DOUBLING, .ACCUMULATOR );
+         CALL ADD$DEC( .ACC$PLUS$DOUBLING, DOUBLINGS( D ) );
+         IF DEC$LE( .ACC$PLUS$DOUBLING, A$PTR ) THEN DO;
+            CALL MOV$DEC( .ACCUMULATOR, .ACC$PLUS$DOUBLING );
+            CALL ADD$DEC( .QUOTIENT,    POWERS$OF$2( D ) );
+         END;
+      END;
+      CALL MOV$DEC( A$PTR, .QUOTIENT );
+   END DIV$DEC ;
+
+   /* TASK                                                                   */
+
+   /* SETS A TO THE RIORDAN NUMBERS 0 .. N - LAST(A) MUST BE N               */
+   RIORDAN: PROCEDURE( N, A$PTR );
+      DECLARE ( N, A$PTR ) ADDRESS;
+      DECLARE A BASED A$PTR ( 0 )ADDRESS;
+      DECLARE I ADDRESS;
+      DECLARE R2 DEC$16, R1 DEC$16;
+      DECLARE TWO$R1 DEC$16, THREE$R2 DEC$16;
+      CALL INIT$DEC( .R2 );
+      CALL INIT$DEC( .R1 );
+      IF N >= 0 THEN DO;
+         R2( LAST( R2 ) ) = 01H;  /* SET LAST DIGIT OF R2 TO 1, I.E., R2 = 1 */
+         CALL MOV$DEC( A( 0 ), .R2 );
+         IF N >= 1 THEN DO;
+            CALL MOV$DEC( A( 1 ), .R1 );
+            DO I = 2 TO N;
+               CALL MOV$DEC( .TWO$R1, .R1 );        /* TWO$R1   = R1 ...     */
+               CALL ADD$DEC( .TWO$R1, .R1 );        /*          * 2          */
+               CALL MOV$DEC( .THREE$R2, .R2 );      /* THREE$R2  = R2 ...    */
+               CALL ADD$DEC( .THREE$R2, .R2 );      /* THREE$R2 += R2 ...    */
+               CALL ADD$DEC( .THREE$R2, .R2 );      /* THREE$R2 += R2 ...    */
+               CALL ADD$DEC( .TWO$R1, .THREE$R2 );  /* TWO$R2 += THREE$R2    */
+               CALL MUL$DEC( .TWO$R1, I - 1 );      /* TWO$R2 *= ( I - 1 )   */
+               CALL DIV$DEC( .TWO$R1, I + 1 );      /* TWO$R1 /= ( I + 1 )   */
+               CALL MOV$DEC( A( I ), .TWO$R1 );     /* A( I )  = TWO$R1      */
+               CALL MOV$DEC( .R2, .R1 );            /* R2 = R1               */
+               CALL MOV$DEC( .R1, A( I ) );         /* R1 = A( I )           */
+            END;
+         END;
+      END;
+   END RIORDAN ;
+
+   /* CONSTRUCT AN ARRAY OF 16 DIGIT BCD NUMBERS                             */
+   DECLARE R ( 32 )ADDRESS;                  /* THE ARRAY OF RIORDAN NUMBERS */
+   DECLARE R$DATA ( 256 /* 32 * 8 */ )BYTE;   /* THE RIORDAN NUMBER'S DIGITS */
+   DECLARE ( I, D$POS ) ADDRESS;
+   D$POS = 0;
+   DO I = 0 TO LAST( R );
+      R( I ) = .R$DATA( D$POS );
+      D$POS  = D$POS + DEC$LEN;
+   END;
+   DO I = 0 TO LAST( R$DATA ); R$DATA( I ) = 0; END;
+
+   /* GET AND PRINT THE RIORDAN NUMBERS                                      */
+   CALL RIORDAN( LAST( R ), .R );
+   DO I = 0 TO LAST( R );
+      CALL PR$CHAR( ' ' );
+      CALL PR$DEC( R( I ) );
+      IF ( I + 1 ) MOD 4 = 0 THEN CALL PR$NL;
+   END;
+
+EOF

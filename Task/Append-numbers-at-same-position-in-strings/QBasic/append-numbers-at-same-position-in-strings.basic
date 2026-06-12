@@ -1,0 +1,25 @@
+DIM i AS INTEGER
+DIM list1(9) AS INTEGER
+DATA 1,2,3,4,5,6,7,8,9
+FOR i = 1 TO 9
+    READ list1(i)
+NEXT i
+DIM list2(9) AS INTEGER
+DATA 10,11,12,13,14,15,16,17,18
+FOR i = 1 TO 9
+    READ list2(i)
+NEXT i
+DIM list3(9) AS INTEGER
+DATA 19,20,21,22,23,24,25,26,27
+FOR i = 1 TO 9
+    READ list3(i)
+NEXT i
+
+DIM catlist(9) AS LONG
+DIM tmp AS STRING
+
+FOR i = 1 TO 9
+    tmp = STR$(list1(i)) + STR$(list2(i)) + STR$(list3(i))
+    catlist(i) = VAL(tmp)
+    PRINT catlist(i); " ";
+NEXT i

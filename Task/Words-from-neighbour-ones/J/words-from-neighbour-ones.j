@@ -1,0 +1,25 @@
+   >(([-.-.)9 <@((=i.9)#&,])\ 9{.&>(#~ 8<#@>)) cutLF fread 'unixdict.txt'
+applicate
+architect
+astronomy
+christine
+christoph
+committee
+composite
+constrict
+construct
+different
+extensive
+greenwood
+implement
+improvise
+intercept
+interpret
+interrupt
+philosoph
+prescript
+receptive
+telephone
+transcend
+transport
+transpose

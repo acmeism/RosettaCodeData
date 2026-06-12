@@ -1,0 +1,162 @@
+(notonline)-->
+For use with [[Chat_server#Phix]]
+ <span style="color: #000080;font-style:italic;">--
+ -- demo\rosetta\IRC_Gateway.exw
+ -- ============================
+ --
+ -- Run ChatServer first, then this, then ChatClient.exw with bViaGateway set to true.
+ --
+ -- Translation between the various IRC protocols left as an exercise for the reader,
+ -- this is just a simple passthrough service.
+ --
+ -- Also this uses a simpler server &lt;--&gt; gateway &lt;--&gt; {clients} model, rather than
+ -- a more sensible server &lt;-&gt; {gateway1 &lt;-&gt; client1, gateway2 &lt;-&gt; client2} model,
+ -- probably easily changed, see the {ci,gi} = connection[i] etc comments below.
+ -- Hence as is this will broadcast eg /nt (name taken) rather than send it to a
+ -- single specific client, which would obviously be better.
+ --</span>
+ <span style="color: #008080;">without</span> <span style="color: #008080;">js</span>
+ <span style="color: #008080;">constant</span> <span style="color: #000000;">dl</span> <span style="color: #0000FF;">=</span> <span style="color: #008000;">`Download rosetta\eulibnet\ from http://phix.x10.mx/pmwiki/pmwiki.php?n=Main.Eulibnet`</span>
+ <span style="color: #7060A8;">assert</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">get_file_type</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"eulibnet"</span><span style="color: #0000FF;">)=</span><span style="color: #004600;">FILETYPE_DIRECTORY</span><span style="color: #0000FF;">,</span><span style="color: #000000;">dl</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">include</span> <span style="color: #000000;">eulibnet</span><span style="color: #0000FF;">/</span><span style="color: #000000;">eulibnet</span><span style="color: #0000FF;">.</span><span style="color: #000000;">ew</span>
+
+ <span style="color: #004080;">atom</span> <span style="color: #000000;">gateway_listconn</span><span style="color: #0000FF;">,</span>
+      <span style="color: #000000;">server_listconn</span>
+ <span style="color: #008080;">constant</span> <span style="color: #000000;">IP</span> <span style="color: #0000FF;">=</span> <span style="color: #008000;">"127.0.0.1"</span><span style="color: #0000FF;">,</span>
+          <span style="color: #000000;">server_port</span> <span style="color: #0000FF;">=</span> <span style="color: #008000;">"29029"</span><span style="color: #0000FF;">,</span>
+          <span style="color: #000000;">gateway_port</span> <span style="color: #0000FF;">=</span> <span style="color: #008000;">"29030"</span><span style="color: #0000FF;">,</span>
+          <span style="color: #000000;">server_address</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">IP</span> <span style="color: #0000FF;">&</span> <span style="color: #008000;">":"</span> <span style="color: #0000FF;">&</span> <span style="color: #000000;">server_port</span><span style="color: #0000FF;">,</span>
+          <span style="color: #000000;">gateway_address</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">IP</span> <span style="color: #0000FF;">&</span> <span style="color: #008000;">":"</span> <span style="color: #0000FF;">&</span> <span style="color: #000000;">gateway_port</span><span style="color: #0000FF;">,</span>
+          <span style="color: #000000;">timeout</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">20</span><span style="color: #0000FF;">,</span>
+          <span style="color: #000000;">MAX_MSG</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">550</span><span style="color: #0000FF;">,</span>
+          <span style="color: #000000;">Escape</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">#1B</span>
+
+ <span style="color: #004080;">sequence</span> <span style="color: #000000;">connections</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{}</span> <span style="color: #000080;font-style:italic;">-- (inbound on the gateway port)
+                           -- (should maybe {inbound,outbound})  </span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #004080;">string</span> <span style="color: #000000;">msg</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">sequence</span> <span style="color: #000000;">args</span><span style="color: #0000FF;">={})</span>
+     <span style="color: #008080;">if</span> <span style="color: #7060A8;">length</span><span style="color: #0000FF;">(</span><span style="color: #000000;">args</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span> <span style="color: #000000;">msg</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">sprintf</span><span style="color: #0000FF;">(</span><span style="color: #000000;">msg</span><span style="color: #0000FF;">,</span><span style="color: #000000;">args</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #7060A8;">printf</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"%s\n"</span><span style="color: #0000FF;">,{</span><span style="color: #000000;">msg</span><span style="color: #0000FF;">})</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">shutDown</span><span style="color: #0000FF;">()</span>
+     <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Shutting down euLibnet..."</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">for</span> <span style="color: #000000;">i</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">1</span> <span style="color: #008080;">to</span> <span style="color: #7060A8;">length</span><span style="color: #0000FF;">(</span><span style="color: #000000;">connections</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">do</span>
+ <span style="color: #000080;font-style:italic;">--DEV/SUG
+ --      integer {ci,gi} = connections[i]
+ --      if net_closeconn(ci) then crash("Error closing client connection!") end if
+ --      if net_closeconn(gi) then crash("Error closing gateway connection!") end if</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">net_closeconn</span><span style="color: #0000FF;">(</span><span style="color: #000000;">connections</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">])</span> <span style="color: #008080;">then</span> <span style="color: #7060A8;">crash</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Error closing connection!"</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">for</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">net_closeconn</span><span style="color: #0000FF;">(</span><span style="color: #000000;">gateway_listconn</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span> <span style="color: #7060A8;">crash</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Error closing gateway_listconn!"</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">net_closeconn</span><span style="color: #0000FF;">(</span><span style="color: #000000;">server_listconn</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span> <span style="color: #7060A8;">crash</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Error closing server_listconn!"</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">net_shutdown</span><span style="color: #0000FF;">()</span> <span style="color: #008080;">then</span> <span style="color: #7060A8;">crash</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Error shutting down euLibnet!"</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #000080;font-style:italic;">--DEV to go if {ci,gi} model adopted... probably</span>
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">sendToAll</span><span style="color: #0000FF;">(</span><span style="color: #004080;">string</span> <span style="color: #000000;">msg</span><span style="color: #0000FF;">)</span>
+     <span style="color: #000080;font-style:italic;">-- Send msg to all clients</span>
+     <span style="color: #008080;">for</span> <span style="color: #000000;">i</span><span style="color: #0000FF;">=</span><span style="color: #000000;">1</span> <span style="color: #008080;">to</span> <span style="color: #7060A8;">length</span><span style="color: #0000FF;">(</span><span style="color: #000000;">connections</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">do</span>
+         <span style="color: #004080;">atom</span> <span style="color: #000000;">ci</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">connections</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]</span>
+         <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Sending to connection %d"</span><span style="color: #0000FF;">,{</span><span style="color: #000000;">ci</span><span style="color: #0000FF;">})</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">net_send_rdm</span><span style="color: #0000FF;">(</span><span style="color: #000000;">ci</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">msg</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span>
+             <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Error sending to connection %d"</span><span style="color: #0000FF;">,{</span><span style="color: #000000;">ci</span><span style="color: #0000FF;">})</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">for</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Initializing euLibnet..."</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">if</span> <span style="color: #000000;">net_init</span><span style="color: #0000FF;">()</span> <span style="color: #008080;">then</span> <span style="color: #7060A8;">crash</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Error initializing euLibnet!"</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"done."</span><span style="color: #0000FF;">)</span>
+ <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Initializing driver..."</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">if</span> <span style="color: #000000;">net_initdriver</span><span style="color: #0000FF;">(</span><span style="color: #000000;">NET_DRIVER_WSOCK_WIN</span><span style="color: #0000FF;">)</span> <span style="color: #0000FF;">!=</span> <span style="color: #000000;">1</span> <span style="color: #008080;">then</span>
+     <span style="color: #7060A8;">crash</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Error initializing WinSock driver!"</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"done."</span><span style="color: #0000FF;">)</span>
+ <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Opening port "</span> <span style="color: #0000FF;">&</span> <span style="color: #000000;">gateway_address</span> <span style="color: #0000FF;">&</span> <span style="color: #008000;">"..."</span><span style="color: #0000FF;">)</span>
+ <span style="color: #000000;">gateway_listconn</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">net_openconn</span><span style="color: #0000FF;">(</span><span style="color: #000000;">NET_DRIVER_WSOCK_WIN</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">gateway_address</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">if</span> <span style="color: #000000;">gateway_listconn</span> <span style="color: #0000FF;">=</span> <span style="color: #004600;">NULL</span> <span style="color: #008080;">then</span>
+     <span style="color: #7060A8;">crash</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Couldn't open connection (gateway already running?)"</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"done."</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">if</span> <span style="color: #000000;">net_listen</span><span style="color: #0000FF;">(</span><span style="color: #000000;">gateway_listconn</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span>
+     <span style="color: #7060A8;">crash</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Error trying to listen to port"</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Listening on port "</span> <span style="color: #0000FF;">&</span> <span style="color: #000000;">gateway_address</span><span style="color: #0000FF;">)</span>
+
+ <span style="color: #000080;font-style:italic;">--DEV some/all probably better as {ci,gi} in connections[i]:</span>
+ <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Opening server connection..."</span><span style="color: #0000FF;">)</span>
+ <span style="color: #000000;">server_listconn</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">net_openconn</span><span style="color: #0000FF;">(</span><span style="color: #000000;">NET_DRIVER_WSOCK_WIN</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">NULL</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">if</span> <span style="color: #000000;">server_listconn</span> <span style="color: #0000FF;">=</span> <span style="color: #004600;">NULL</span> <span style="color: #008080;">then</span>
+     <span style="color: #7060A8;">crash</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Couldn't open connection."</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"done."</span><span style="color: #0000FF;">)</span>
+ <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Attempting to connect to chat server..."</span><span style="color: #0000FF;">)</span>
+ <span style="color: #004080;">integer</span> <span style="color: #000000;">ret</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">net_connect_wait_time</span><span style="color: #0000FF;">(</span><span style="color: #000000;">server_listconn</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">server_address</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">timeout</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">if</span> <span style="color: #000000;">ret</span> <span style="color: #0000FF;"><</span> <span style="color: #000000;">0</span> <span style="color: #008080;">then</span>
+     <span style="color: #7060A8;">crash</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Error trying to establish connection."</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">elsif</span> <span style="color: #000000;">ret</span> <span style="color: #0000FF;">></span> <span style="color: #000000;">0</span> <span style="color: #008080;">then</span>
+     <span style="color: #7060A8;">crash</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Timeout trying to establish connection."</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"done."</span><span style="color: #0000FF;">)</span>
+
+ <span style="color: #000080;font-style:italic;">-- main loop (poll until Escape keyed)</span>
+ <span style="color: #008080;">while</span> <span style="color: #7060A8;">get_key</span><span style="color: #0000FF;">()!=</span><span style="color: #000000;">Escape</span> <span style="color: #008080;">do</span>
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">conn</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">net_poll_listen</span><span style="color: #0000FF;">(</span><span style="color: #000000;">gateway_listconn</span><span style="color: #0000FF;">)</span>
+ <span style="color: #000080;font-style:italic;">--  integer ci = net_poll_listen(gateway_listconn), gi</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">conn</span> <span style="color: #0000FF;">!=</span> <span style="color: #004600;">NULL</span> <span style="color: #008080;">then</span>
+ <span style="color: #000080;font-style:italic;">--DEV make a new gateway connection to the server here...?
+ --       gi = &lt;as server_listconn above?&gt;
+ --       connections = append(connections, {ci,gi})</span>
+          <span style="color: #000000;">connections</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">append</span><span style="color: #0000FF;">(</span><span style="color: #000000;">connections</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">conn</span><span style="color: #0000FF;">)</span>
+          <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"New connection open from "</span> <span style="color: #0000FF;">&</span> <span style="color: #000000;">net_getpeer</span><span style="color: #0000FF;">(</span><span style="color: #000000;">conn</span><span style="color: #0000FF;">))</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+
+     <span style="color: #000080;font-style:italic;">-- Check for messages from clients</span>
+     <span style="color: #008080;">for</span> <span style="color: #000000;">i</span><span style="color: #0000FF;">=</span><span style="color: #000000;">1</span> <span style="color: #008080;">to</span> <span style="color: #7060A8;">length</span><span style="color: #0000FF;">(</span><span style="color: #000000;">connections</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">do</span>
+         <span style="color: #004080;">integer</span> <span style="color: #000000;">ci</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">connections</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]</span>
+ <span style="color: #000080;font-style:italic;">--      {ci,gi} = connections[i]</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">net_query_rdm</span><span style="color: #0000FF;">(</span><span style="color: #000000;">ci</span><span style="color: #0000FF;">)</span> <span style="color: #0000FF;">></span> <span style="color: #000000;">0</span> <span style="color: #008080;">then</span>
+             <span style="color: #000080;font-style:italic;">--Get the message</span>
+             <span style="color: #004080;">sequence</span> <span style="color: #000000;">msg</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">net_receive_rdm</span><span style="color: #0000FF;">(</span><span style="color: #000000;">ci</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">MAX_MSG</span><span style="color: #0000FF;">)</span>
+             <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"received msg \"%s\" of length %d from %d"</span><span style="color: #0000FF;">,{</span><span style="color: #000000;">msg</span><span style="color: #0000FF;">[</span><span style="color: #000000;">2</span><span style="color: #0000FF;">],</span><span style="color: #000000;">msg</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">],</span><span style="color: #000000;">ci</span><span style="color: #0000FF;">})</span>
+             <span style="color: #008080;">if</span> <span style="color: #000000;">msg</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;"><</span> <span style="color: #000000;">0</span> <span style="color: #008080;">then</span> <span style="color: #000080;font-style:italic;">--Exit on error</span>
+                 <span style="color: #0000FF;">{}</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">net_ignore_rdm</span><span style="color: #0000FF;">(</span><span style="color: #000000;">ci</span><span style="color: #0000FF;">)</span>
+                 <span style="color: #7060A8;">crash</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Server error: some data may be lost"</span><span style="color: #0000FF;">)</span>
+             <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+
+             <span style="color: #000000;">msg</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">msg</span><span style="color: #0000FF;">[</span><span style="color: #000000;">2</span><span style="color: #0000FF;">]</span>
+             <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Sending to server"</span><span style="color: #0000FF;">)</span>
+             <span style="color: #008080;">if</span> <span style="color: #000000;">net_send_rdm</span><span style="color: #0000FF;">(</span><span style="color: #000000;">server_listconn</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">msg</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span>
+ <span style="color: #000080;font-style:italic;">--          if net_send_rdm(gi, msg) then</span>
+                 <span style="color: #7060A8;">crash</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Error sending to server"</span><span style="color: #0000FF;">)</span>
+             <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #000080;font-style:italic;">--      &lt;as below but for gi instead of server_listcomm here?&gt;</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">for</span>
+
+     <span style="color: #008080;">if</span> <span style="color: #000000;">net_query_rdm</span><span style="color: #0000FF;">(</span><span style="color: #000000;">server_listconn</span><span style="color: #0000FF;">)</span> <span style="color: #0000FF;">></span> <span style="color: #000000;">0</span> <span style="color: #008080;">then</span> <span style="color: #000080;font-style:italic;">--Check for message
+ --  if net_query_rdm(gi) &gt; 0 then --Check for message</span>
+         <span style="color: #004080;">sequence</span> <span style="color: #000000;">msg</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">net_receive_rdm</span><span style="color: #0000FF;">(</span><span style="color: #000000;">server_listconn</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">MAX_MSG</span><span style="color: #0000FF;">)</span>
+ <span style="color: #000080;font-style:italic;">--      sequence msg = net_receive_rdm(gi, MAX_MSG)</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">msg</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;"><</span> <span style="color: #000000;">0</span> <span style="color: #008080;">then</span>
+            <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"Error receiving message!"</span><span style="color: #0000FF;">)</span>
+            <span style="color: #0000FF;">{}</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">net_ignore_rdm</span><span style="color: #0000FF;">(</span><span style="color: #000000;">server_listconn</span><span style="color: #0000FF;">)</span>
+ <span style="color: #000080;font-style:italic;">--         {} = net_ignore_rdm(gi)</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #000000;">msg</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">msg</span><span style="color: #0000FF;">[</span><span style="color: #000000;">2</span><span style="color: #0000FF;">]</span>
+         <span style="color: #000000;">message</span><span style="color: #0000FF;">(</span><span style="color: #000000;">msg</span><span style="color: #0000FF;">)</span>
+         <span style="color: #000000;">sendToAll</span><span style="color: #0000FF;">(</span><span style="color: #000000;">msg</span><span style="color: #0000FF;">)</span>
+ <span style="color: #000080;font-style:italic;">--DEV maybe instead:
+ --      if net_send_rdm(ci, msg) then
+ --          crash("Error sending to clent")
+ --      end if</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+
+     <span style="color: #7060A8;">sleep</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">while</span>
+ <span style="color: #000000;">shutDown</span><span style="color: #0000FF;">()</span>
+
+ <span style="color: #000080;font-style:italic;">--?"done"
+ --{} = wait_key()</span>
+<!--

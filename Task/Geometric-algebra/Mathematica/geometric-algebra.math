@@ -1,0 +1,100 @@
+(* Clifford Vector representation as a list of 32 components *)
+
+(* Basis vector e(n) - creates a unit vector in the nth basis direction *)
+e[n_] := Module[{v = ConstantArray[0., 32]},
+  v[[BitShiftLeft[1, n] + 1]] = 1.0;
+  v
+]
+
+(* Generate random multivector *)
+randomMultivector[] := RandomReal[{-1, 1}, 32]
+
+(* Generate random vector (linear combination of e(0) through e(4)) *)
+randomVector[] := Sum[RandomReal[] * e[i], {i, 0, 4}]
+
+(* Count number of set bits in binary representation *)
+bitCount[n_] := Module[{count = 0, num = n},
+  While[num != 0,
+    num = BitAnd[num, num - 1];
+    count++
+  ];
+  count
+]
+
+(* Calculate reordering sign for geometric product *)
+reorderingSign[i_, j_] := Module[{ssum = 0, ii = BitShiftRight[i, 1]},
+  While[ii != 0,
+    ssum += bitCount[BitAnd[ii, j]];
+    ii = BitShiftRight[ii, 1]
+  ];
+  If[EvenQ[ssum], 1.0, -1.0]
+]
+
+(* Geometric product of two Clifford vectors *)
+cliffordProduct[v1_List, v2_List] := Module[{result = ConstantArray[0., 32]},
+  Do[
+    If[v1[[i]] != 0.0,
+      Do[
+        If[v2[[j]] != 0.0,
+          Module[{s, k},
+            s = reorderingSign[i - 1, j - 1] * v1[[i]] * v2[[j]];
+            k = BitXor[i - 1, j - 1];
+            result[[k + 1]] += s
+          ]
+        ],
+        {j, 1, 32}
+      ]
+    ],
+    {i, 1, 32}
+  ];
+  result
+]
+
+(* Addition and scalar multiplication *)
+cliffordAdd[v1_List, v2_List] := v1 + v2
+cliffordScale[a_, v_List] := a * v
+
+(* Test function *)
+testCliffordVector[] := Module[{allOrthonormal = True, a, b, c, x},
+  (* Test orthonormality *)
+  Do[
+    If[i < j && !AllTrue[cliffordProduct[e[i], e[j]], # == 0.0 &],
+      allOrthonormal = False
+    ];
+    If[i == j && AllTrue[cliffordProduct[e[i], e[j]], # == 0.0 &],
+      allOrthonormal = False
+    ],
+    {i, 0, 4}, {j, 0, 4}
+  ];
+
+  (*Print["e(i) * e(j) are orthonormal for i, j ∈ [0, 4]: ", allOrthonormal]; *)
+
+  (* Generate test vectors *)
+  a = randomMultivector[];
+  b = randomMultivector[];
+  c = randomMultivector[];
+  x = randomVector[];
+
+  (* Test associativity *)
+  Print["Associativity (a*b)*c ≈ a*(b*c): ",
+    Norm[cliffordProduct[cliffordProduct[a, b], c] -
+         cliffordProduct[a, cliffordProduct[b, c]]] < 10^(-10)];
+
+  (* Test left distributivity *)
+  Print["Left distributivity a*(b+c) ≈ a*b + a*c: ",
+    Norm[cliffordProduct[a, cliffordAdd[b, c]] -
+         cliffordAdd[cliffordProduct[a, b], cliffordProduct[a, c]]] < 10^(-10)];
+
+  (* Test right distributivity *)
+  Print["Right distributivity (a+b)*c ≈ a*c + b*c: ",
+    Norm[cliffordProduct[cliffordAdd[a, b], c] -
+         cliffordAdd[cliffordProduct[a, c], cliffordProduct[b, c]]] < 10^(-10)];
+
+  (* Test if x*x is real (only scalar component non-zero) *)
+  Module[{product = cliffordProduct[x, x]},
+    Print["x*x is real: ", AllTrue[Drop[product, 1], # == 0.0 &]]
+  ];
+]
+
+(* Run the test *)
+testCliffordVector[]

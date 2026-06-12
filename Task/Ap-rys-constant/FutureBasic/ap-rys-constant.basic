@@ -1,0 +1,217 @@
+// ------------------------------------------------------------
+//  Apéry’s constant ζ(3)
+//  Using FutureBasic 7.0.36
+//  November 2025, R.W.
+//
+//  Three series: zeta, Markov/Apéry, Wedeniwski
+//  Output: 100 decimal places
+// ------------------------------------------------------------
+
+include "mpfr.incl"    // MPFR includes GMP
+
+// ------------------------------------------------------------
+//  Config
+// ------------------------------------------------------------
+_kPrecBits          =  400 // MPFR precision in bits (~120+ decimal)
+_kZetaTerms         = 1000  // tasked with 1000 terms
+_kMarkovTerms       =  158 // tasked with  158 terms
+_kWedeniwskiTerms   =   20 // tasked with   20 terms
+_kDigitsOut         =  100 // tasked with  100 decimal places
+CFTimeInterval tim
+
+// ------------------------------------------------------------
+//  MPFR → CFStringRef using FB wrapper mpz_cf2
+//  Assumes x ≈ 1.202… (i.e. result ∈ [1,2)), so
+//  we scale by 10^100, take floor, and format:
+//
+//    I = floor( x * 10^100 )    // integer, 101 digits
+//    "1" "." next 100 digits    // 1.xxx... with 100 decimals
+// ------------------------------------------------------------
+local fn MPFR_ToCF_100Digits( x as mpfr_t ) as CFStringRef
+  mpfr_t tmp
+  mpz_t  zScaled
+  mpz_t  pow10
+  CFStringRef digitsCF
+  CFMutableStringRef m
+  CFStringRef result
+  long slen
+  fn mpfr_init( tmp )
+  mpz_init( zScaled )
+  mpz_init( pow10 )
+  // pow10 = 10^100
+  fn mpz_ui_pow_ui( pow10, 10, 100 )
+  // tmp = pow10 (as mpfr)
+  fn mpfr_set_z( tmp, pow10, MPFR_RNDN )
+  // tmp = x * 10^100
+  fn mpfr_mul( tmp, x, tmp, MPFR_RNDN )
+  // zScaled = floor( tmp )  (trunc toward zero; x > 0 so OK)
+  fn mpfr_get_z( zScaled, tmp, MPFR_RNDZ )
+  // Convert integer to CFString using FB wrapper
+  digitsCF = fn mpz_cf2( zScaled )
+  // Make it mutable so we can pad and insert '.'
+  m = fn CFStringCreateMutableCopy( _kCFAllocatorDefault, 0, digitsCF )
+  // We expect 101 digits; pad with leading zeros if shorter
+  slen = fn CFStringGetLength( m )
+  while slen < 101
+    fn CFStringInsert( m, 0, @"0" )
+    slen = slen + 1
+  wend
+  // Insert decimal point after first digit: "1.xxx..."
+  fn CFStringInsert( m, 1, @"." )
+  result = fn CFStringCreateCopy( _kCFAllocatorDefault, m )
+  // Cleanup
+  CFRelease( m )
+  CFRelease( digitsCF )
+  fn mpfr_clear( tmp )
+  mpz_clear( zScaled )
+  mpz_clear( pow10 )
+end fn = result
+
+// ------------------------------------------------------------
+//  Core computation
+// ------------------------------------------------------------
+local fn ComputeApery
+  // d = zeta-series, a = Markov/Apéry, w = Wedeniwski, t = work
+  mpfr_t d, a, w, t
+  mpz_t  z, pk
+  int    k
+  tim = fn CACurrentMediaTime
+
+  //  MPFR setup
+  fn mpfr_set_default_prec( _kPrecBits )
+
+  fn mpfr_init( d )
+  fn mpfr_init( a )
+  fn mpfr_init( w )
+  fn mpfr_init( t )
+
+  fn mpfr_set_ui( d, 0, MPFR_RNDN )
+  fn mpfr_set_ui( a, 0, MPFR_RNDN )
+  fn mpfr_set_ui( w, 0, MPFR_RNDN )
+  fn mpfr_set_ui( t, 0, MPFR_RNDN )
+
+  // GMP int
+  mpz_init( z )
+  mpz_init( pk )
+
+  // --------------------------------------------------------
+  // Naive ζ(3) = Σ 1/k^3, _kZetaTerms
+  // Not sure why zeta function is included.
+  // It converges too slowly, even at 20,000 terms
+  // you only get 8 digits accuracy. Useless IMHO.
+  // --------------------------------------------------------
+  for k = 1 to _kZetaTerms
+    // t = k^3
+    fn mpfr_ui_pow_ui( t, k, 3, MPFR_RNDN )
+    // t = 1 / k^3
+    fn mpfr_si_div( t, 1, t, MPFR_RNDN )
+    // d += t
+    fn mpfr_add( d, d, t, MPFR_RNDN )
+  next
+
+  // --------------------------------------------------------
+  // Markov / Apéry series, _kMarkovTerms terms
+  //
+  // for k = 1..158:
+  //   term = ( (k!)^2 / ( (2k)! * k^3 ) ) w/ alternating signs
+  //   a = (5/2) * Σ (-1)^(k+1) term
+  // --------------------------------------------------------
+  for k = 1 to _kMarkovTerms
+    // z = (k!)^2
+    fn mpz_fac_ui( z, k )
+    fn mpz_mul( z, z, z )
+    fn mpfr_set_z( t, z, MPFR_RNDN ) // t = (k!)^2
+    fn mpz_fac_ui( z, 2 * k )   // divide by (2k)!
+    fn mpfr_div_z( t, t, z, MPFR_RNDN )
+    fn mpz_ui_pow_ui( z, k, 3 ) // divide by k^3
+    fn mpfr_div_z( t, t, z, MPFR_RNDN )
+    // alternating sign
+    if (k AND 1) == 0
+      fn mpfr_sub( a, a, t, MPFR_RNDN )
+    else
+      fn mpfr_add( a, a, t, MPFR_RNDN )
+    end if
+  next
+  // multiply by 5/2
+  fn mpfr_mul_d( a, a, 5.0 / 2.0, MPFR_RNDN )
+
+  // --------------------------------------------------------
+  //  Wedeniwski series, _kWedeniwskiTerms terms
+  // --------------------------------------------------------
+  for k = 0 to _kWedeniwskiTerms - 1
+    // polynomial in k, in z
+    fn mpz_ui_pow_ui( z, k, 5 )
+    fn mpz_mul_si( z, z, 126392 )    // 126392k^5
+    fn mpz_ui_pow_ui( pk, k, 4 )
+    fn mpz_mul_si( pk, pk, 412708 )  //  422708k^4
+    fn mpz_add( z, z, pk )
+    fn mpz_ui_pow_ui( pk, k, 3 )     //  531578k^3
+    fn mpz_mul_si( pk, pk, 531578 )
+    fn mpz_add( z, z, pk )
+    fn mpz_add_ui( z, z, k * k * 336367 ) //336367k^2
+    fn mpz_add_ui( z, z, k * 104000 )     // 104000k
+    fn mpz_add_ui( z, z, 12463 )
+    fn mpfr_set_z( t, z, MPFR_RNDN )      // t = numerator
+    fn mpz_fac_ui( z, 2 * k + 1 ) // * ( (2k+1)! )^3
+    fn mpz_pow_ui( z, z, 3 )
+    fn mpfr_mul_z( t, t, z, MPFR_RNDN )
+    fn mpz_fac_ui( z, 2 * k )     // * ( (2k)! )^3
+    fn mpz_pow_ui( z, z, 3 )
+    fn mpfr_mul_z( t, t, z, MPFR_RNDN )
+    fn mpz_fac_ui( z, k )         // * (k!)^3
+    fn mpz_pow_ui( z, z, 3 )
+    fn mpfr_mul_z( t, t, z, MPFR_RNDN )
+    fn mpz_fac_ui( z, 3 * k + 2 ) // / (3k+2)!
+    fn mpfr_div_z( t, t, z, MPFR_RNDN )
+    fn mpz_fac_ui( z, 4 * k + 3 ) // / ( (4k+3)! )^3
+    fn mpz_pow_ui( z, z, 3 )
+    fn mpfr_div_z( t, t, z, MPFR_RNDN )
+    // alternating sign, not needed since it's always positive
+    if (k AND 1) == 1
+      fn mpfr_sub( w, w, t, MPFR_RNDN )
+    else
+      fn mpfr_add( w, w, t, MPFR_RNDN )
+    end if
+  next
+  // divide by 24
+  fn mpfr_div_si( w, w, 24, MPFR_RNDN )
+
+  // --------------------------------------------------------
+  //  Format to 100 decimal places and print
+  // --------------------------------------------------------
+  CFStringRef direct, mapery, wdnski
+
+  direct = fn MPFR_ToCF_100Digits( d )
+  mapery = fn MPFR_ToCF_100Digits( a )
+  wdnski = fn MPFR_ToCF_100Digits( w )
+
+  print @"\nZeta ζ(3)  (";_kZetaTerms;@" terms):"
+  print @direct
+  print @"\nMarkov     (";_kMarkovTerms;@" terms ):"
+  print @mapery
+  print @"\nWedeniwski (";_kWedeniwskiTerms;@" terms  ):"
+  print @wdnski
+  printf @"\nElapsed time: %.3f ms", (fn CACurrentMediaTime-tim) * 1000
+
+  // Cleanup
+  fn mpfr_clear( d )
+  fn mpfr_clear( a )
+  fn mpfr_clear( w )
+  fn mpfr_clear( t )
+
+  mpz_clear( z )
+  mpz_clear( pk )
+
+  CFRelease( direct )
+  CFRelease( mapery )
+  CFRelease( wdnski )
+end fn
+
+// ------------------------------------------------------------
+//  Main
+// ------------------------------------------------------------
+window 1, @"Apéry’s constant", (0,0)-(760,300)
+
+fn ComputeApery
+
+HandleEvents

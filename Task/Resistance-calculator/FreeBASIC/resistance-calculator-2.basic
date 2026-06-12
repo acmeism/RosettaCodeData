@@ -1,0 +1,98 @@
+Const NULL As Any Ptr = 0
+
+Type Resistor
+    symbol As String
+    resistance As Double
+    voltage As Double
+    a As Resistor Ptr
+    b As Resistor Ptr
+End Type
+
+Sub push(s() As Resistor Ptr, r As Resistor Ptr)
+    Redim Preserve s(Ubound(s) + 1)
+    s(Ubound(s)) = r
+End Sub
+
+Sub pop(s() As Resistor Ptr, Byref r As Resistor Ptr)
+    r = s(Ubound(s))
+    Redim Preserve s(Ubound(s) - 1)
+End Sub
+
+Function res(r As Resistor Ptr) As Double
+    Select Case r->symbol
+    Case "+"
+        Return res(r->a) + res(r->b)
+    Case "*"
+        Return 1 / (1 / res(r->a) + 1 / res(r->b))
+    Case Else
+        Return r->resistance
+    End Select
+End Function
+
+Sub setVoltage(r As Resistor Ptr, voltage As Double)
+    Select Case r->symbol
+    Case "+"
+        Dim ra As Double = res(r->a)
+        Dim rb As Double = res(r->b)
+        setVoltage(r->a, ra / (ra + rb) * voltage)
+        setVoltage(r->b, rb / (ra + rb) * voltage)
+    Case "*"
+        setVoltage(r->a, voltage)
+        setVoltage(r->b, voltage)
+    End Select
+    r->voltage = voltage
+End Sub
+
+Function current(r As Resistor Ptr) As Double
+    Return r->voltage / res(r)
+End Function
+
+Function effect(r As Resistor Ptr) As Double
+    Return current(r) * r->voltage
+End Function
+
+Sub report(r As Resistor Ptr, level As String)
+    Print Using "###.### ###.### ###.### ###.### & &"; res(r); r->voltage; current(r); effect(r); level; r->symbol
+    If r->a <> NULL Then report(r->a, level + " |")
+    If r->b <> NULL Then report(r->b, level + " |")
+End Sub
+
+Sub splitString(s As String, delim As String, result() As String)
+    Dim As Integer start = 1, endd
+    While start <= Len(s)
+        endd = Instr(start, s, delim)
+        If endd = 0 Then endd = Len(s) + 1
+        Redim Preserve result(Ubound(result) + 1)
+        result(Ubound(result)) = Mid(s, start, endd - start)
+        start = endd + Len(delim)
+    Wend
+End Sub
+
+Sub build(rpn As String, Byref node As Resistor Ptr)
+    Dim As Resistor Ptr s()
+    Dim As String tokens()
+    splitString(rpn, " ", tokens())
+    Dim As Integer i
+    For i = 0 To Ubound(tokens)
+        Dim As Resistor Ptr r = Callocate(1, Sizeof(Resistor))
+        Select Case tokens(i)
+        Case "+", "*"
+            pop(s(), r->b)
+            pop(s(), r->a)
+            r->symbol = tokens(i)
+        Case Else
+            r->resistance = Val(tokens(i))
+            r->symbol = "r"
+        End Select
+        push(s(), r)
+    Next
+    pop(s(), node)
+End Sub
+
+Dim As Resistor Ptr node
+build("10 2 + 6 * 8 + 6 * 4 + 8 * 4 + 8 * 6 +", node)
+setVoltage(node, 18)
+Print "    Ohm   Volt   Ampere    Watt  Network tree"
+report(node, "")
+
+Sleep

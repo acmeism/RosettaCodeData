@@ -1,0 +1,150 @@
+(* Let us do a little quasi-math in ATS, even though this is NOT an
+   intended use of the facilities. However, I DO consider the task a
+   good didactic exercise. *)
+
+
+(* 1. Define the natural numbers, the even numbers, and the odd
+      numbers. I shall do so by recursive "prop". *)
+
+dataprop NATURAL (i : int) =
+| ZERO (0)
+| {0 <= i} S (i + 1) of NATURAL i
+
+(* Even and odd are restrictions on the recursion indices. *)
+propdef EVEN (i : int) = NATURAL (2 * i)
+propdef ODD (i : int) = NATURAL ((2 * i) + 1)
+
+(* To construct a number. *)
+prfn
+make_natural {i : nat} () :<prf> NATURAL i =
+  let
+    prfun
+    loop {i, k : nat | k <= i} .<i - k>.
+         (partial_num : NATURAL k) :<prf>
+        NATURAL i =
+      sif k == i then
+        partial_num
+      else
+        loop (S partial_num)
+  in
+    loop (ZERO ())
+  end
+
+prfn
+make_even {i : nat} () :<prf> EVEN i =
+  make_natural {2 * i} ()
+
+prfn
+make_odd {i : nat} () :<prf> ODD i =
+  make_natural {(2 * i) + 1} ()
+
+(* 2.1 Define addition. *)
+
+prfn
+addition {i, j : nat}
+         (i : NATURAL i,
+          j : NATURAL j) :<prf> NATURAL (i + j) =
+  let
+    prfun
+    add {k : nat | k <= j} .<j - k>.
+        (partial_sum : NATURAL (i + k),
+         shrinking   : NATURAL (j - k)) :<prf>
+        NATURAL (i + j) =
+      case+ shrinking of
+      | ZERO () => partial_sum
+      | S (even_smaller) =>
+        add {k + 1} (S partial_sum, even_smaller)
+
+    prval sum = add {0} (i, j)
+  in
+    sum
+  end
+
+prfn
+addition_relation {i, j : nat} () :<prf>
+    (NATURAL i, NATURAL j, NATURAL (i + j)) =
+  let
+    prval i = make_natural {i} ()
+    prval j = make_natural {j} ()
+  in
+    (i, j, addition (i, j))
+  end
+
+(* 3.1 Prove the sum of evens is even. *)
+
+prfn
+sum_of_evens {i, j : nat} () :<prf>
+    (EVEN i, EVEN j, EVEN (i + j)) =
+  addition_relation {2 * i, 2 * j} ()
+
+(* or *)
+
+prfn
+sum_of_evens2 {i, j : nat} () :<prf>
+    (EVEN i, EVEN j, EVEN (i + j)) =
+  let
+    prval i = make_even {i} ()
+    prval j = make_even {j} ()
+  in
+    (i, j, addition (i, j))
+  end
+
+(* 3.2 Prove addition is associative. *)
+
+prfn
+associativity {i, j, k : nat} () :<prf>
+    ((NATURAL (i + j), NATURAL k, NATURAL (i + j + k)),
+     (NATURAL i, NATURAL (j + k), NATURAL (i + j + k))) =
+  (addition_relation {i + j, k} (),
+   addition_relation {i, j + k} ())
+
+(* 3.3 Prove addition is commutative. *)
+
+prfn
+commutativity {i, j : nat} () :<prf>
+    ((NATURAL i, NATURAL j, NATURAL (i + j)),
+     (NATURAL j, NATURAL i, NATURAL (i + j))) =
+  (addition_relation {i, j} (),
+   addition_relation {j, i} ())
+
+(* 3.4 Try to prove the sum of two evens is odd. *)
+
+#if 0           (* Change to 1 to see the attempted proof rejected. *)
+#then
+prfn
+sum_of_evens_is_odd {i, j : nat} () :<prf>
+    (EVEN i, EVEN j, ODD (i + j)) =
+  (addition_relation {i, j} (),
+   addition_relation {j, i} ())
+#endif
+
+(* 4.1 Prove the sum of evens is not odd. *)
+
+prfn
+sum_of_evens_isnot_odd {i, j : nat} () :<prf>
+    (* Some might--and SHOULD--object to the use of the remainder
+       function here, but ATS is not really made for doing
+       mathematical logic. It is a systems programming language, with
+       some limited proof capability included as a programming aid.
+       If suddenly a better approach occurs to me, I might substitute
+       it. *)
+    [k : nat | k mod 2 <> 1]
+    (EVEN i, EVEN j, NATURAL k) =
+  addition_relation {2 * i, 2 * j} ()
+
+(* 4.2 Try to prove the sum of evens is not even. *)
+
+#if 0           (* Change to 1 to see the attempted proof rejected. *)
+#then
+prfn
+sum_of_evens_isnot_odd {i, j : nat} () :<prf>
+    [k : nat | k mod 2 <> 0]
+    (EVEN i, EVEN j, NATURAL k) =
+  addition_relation {2 * i, 2 * j} ()
+#endif
+
+(* A little main program, for your enjoyment. *)
+
+implement
+main0 () =
+  println! ("Success!")

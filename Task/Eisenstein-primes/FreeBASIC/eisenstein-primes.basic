@@ -1,0 +1,142 @@
+'#include "isprime.bas"
+
+Type Complex
+    real As Double
+    imag As Double
+End Type
+
+Type Eisenstein
+    a As Integer
+    b As Integer
+    norm As Integer
+    n As Complex
+End Type
+
+Dim Shared As Complex OMEGA = Type(-0.5, Sqr(3) * 0.5)
+
+' Eisenstein functions
+Function EisensteinNew(a As Integer, b As Integer) As Eisenstein
+    Dim As Eisenstein e
+    e.a = a
+    e.b = b
+    e.norm = (a * a) - (a * b) + (b * b)
+    e.n.real = a - 0.5 * b
+    e.n.imag = b * Sqr(3) * 0.5
+    Return e
+End Function
+
+Function EisensteinIsPrime(e As Eisenstein) As Integer
+    If e.a = 0 Or e.b = 0 Or e.a = e.b Then
+        Dim As Integer c = Iif(Abs(e.a) > Abs(e.b), Abs(e.a), Abs(e.b))
+        Return IsPrime(c) Andalso (c Mod 3) = 2
+    End If
+    Return IsPrime(e.norm)
+End Function
+
+Sub SortEisenstein(primes() As Eisenstein, first As Integer, last As Integer)
+    Dim As Integer i = first, j = last
+    Dim As Eisenstein pivot = primes((first + last) \ 2)
+
+    Do
+        While (primes(i).norm < pivot.norm) Or _
+            (primes(i).norm = pivot.norm And primes(i).n.imag < pivot.n.imag) Or _
+            (primes(i).norm = pivot.norm And primes(i).n.imag = pivot.n.imag And primes(i).n.real < pivot.n.real)
+            i += 1
+        Wend
+
+        While (primes(j).norm > pivot.norm) Or _
+            (primes(j).norm = pivot.norm And primes(j).n.imag > pivot.n.imag) Or _
+            (primes(j).norm = pivot.norm And primes(j).n.imag = pivot.n.imag And primes(j).n.real > pivot.n.real)
+            j -= 1
+        Wend
+
+        If i <= j Then
+            Swap primes(i), primes(j)
+            i += 1
+            j -= 1
+        End If
+    Loop Until i > j
+
+    If first < j Then SortEisenstein(primes(), first, j)
+    If i < last Then SortEisenstein(primes(), i, last)
+End Sub
+
+' Main program
+Dim As Integer maxRange = 100
+Dim As Integer primeCount = 0
+Dim As Eisenstein primes(maxRange * maxRange * 4)
+
+For a As Integer = -maxRange To maxRange
+    For b As Integer = -maxRange To maxRange
+        Dim As Eisenstein e = EisensteinNew(a, b)
+        If EisensteinIsPrime(e) Then
+            primes(primeCount) = e
+            primeCount += 1
+        End If
+    Next
+Next
+
+' Try to replicate Julia sort order for easy comparison
+SortEisenstein(primes(), 0, primeCount - 1)
+
+' Display first 100 to terminal
+Print "First 100 Eisenstein primes nearest zero:"
+For i As Integer = 0 To 99
+    Print Using " ##.#### + ##.####i "; primes(i).n.real; primes(i).n.imag;
+    If (i + 1) Mod 4 = 0 Then Print
+Next
+
+' Generate points array for plotting
+Type Point2D
+    x As Double
+    y As Double
+End Type
+
+Function GeneratePlotPoints(primes() As Eisenstein, count As Integer) As Point2D Ptr
+    Dim As Point2D Ptr points = Callocate(count * Sizeof(Point2D))
+
+    For i As Integer = 0 To count - 1
+        points[i].x = primes(i).n.real
+        points[i].y = primes(i).n.imag
+    Next
+
+    Return points
+End Function
+
+Dim As Point2D Ptr plotPoints = GeneratePlotPoints(primes(), primeCount)
+
+' Screen setup for plotting
+Screenres 1000, 600, 32
+Windowtitle "Eisenstein primes with norm <= 100"
+Dim As Double scaleX = 3
+Dim As Double scaleY = 3
+Dim As Double offsetX = 520
+Dim As Double offsetY = 280
+
+' Draw axes
+Line (offsetX -480, 20)-(offsetX -480, offsetY +280), Rgb(128,128,128) ' Y axis
+Line (offsetX -480, offsetY +280)-(980, offsetY +280), Rgb(128,128,128) ' X axis
+
+' Draw scale values
+For i As Integer = -50 To 200 Step 25
+    Dim As Integer posY = (offsetY +225) - (i * scaleY)
+    If (i-75) > -100 Then
+        Draw String (offsetX -510, posY -4), Str(i-75)
+        Line (offsetX -482, posY)-(offsetX -478, posY), Rgb(128,128,128)
+    End If
+Next
+
+For i As Integer = -150 To 300 Step 50
+    Dim As Integer posX = (offsetX -450) + (i * scaleX)
+    Draw String (posX -10, offsetY +290), Str(i-150)
+    Line (posX, offsetY +278)-(posX, offsetY +282), Rgb(128,128,128)
+Next
+
+' Plot points with screen coordinate conversion
+For i As Integer = 0 To primeCount - 1
+    Dim As Integer screenX = offsetX + (primes(i).n.real * scaleX)
+    Dim As Integer screenY = offsetY - (primes(i).n.imag * scaleY)
+    Circle (screenX, screenY), .1, Rgb(255,0,0)
+Next
+
+Sleep

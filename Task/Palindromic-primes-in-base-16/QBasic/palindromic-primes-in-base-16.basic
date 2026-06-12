@@ -1,0 +1,39 @@
+DECLARE FUNCTION isPrime! (num!)
+DECLARE FUNCTION Reverse$ (text$)
+
+inicio = 2
+final = 499
+cnt = 0
+
+FOR i = inicio TO final
+    hexi$ = HEX$(i)
+
+    IF isPrime(i) AND hexi$ = Reverse$(hexi$) THEN
+        cnt = cnt + 1
+        PRINT hexi$; "  ";
+    END IF
+NEXT i
+
+PRINT CHR$(10)
+PRINT "Encontrados"; cnt; "primos palindromicos entre"; inicio; "y"; final
+END
+
+FUNCTION isPrime (num)
+    FOR i = 2 TO SQR(num)
+        IF num MOD i = 0 THEN
+            isPrime = 0
+            EXIT FUNCTION
+        END IF
+    NEXT i
+    isPrime = -1
+END FUNCTION
+
+FUNCTION Reverse$ (text$)
+    text2$ = text$
+    lt = LEN(text$)
+    FOR x = 0 TO (lt \ 2) - 1
+        MID$(text2$, x + 1, 1) = MID$(text$, lt - x, 1)
+        MID$(text2$, lt - x, 1) = MID$(text$, x + 1, 1)
+    NEXT x
+    Reverse$ = text2$
+END FUNCTION

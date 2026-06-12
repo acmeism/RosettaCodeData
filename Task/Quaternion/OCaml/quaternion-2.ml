@@ -1,0 +1,11 @@
+type quaternion = { a : float; b : float; c : float; d : float; }
+val norm : quaternion -> float = <fun>
+val floatneg : float -> float = <fun>
+val negative : quaternion -> quaternion = <fun>
+val conjugate : quaternion -> quaternion = <fun>
+val addrq : float -> quaternion -> quaternion = <fun>
+val addq : quaternion -> quaternion -> quaternion = <fun>
+val multrq : float -> quaternion -> quaternion = <fun>
+val multq : quaternion -> quaternion -> quaternion = <fun>
+val qmake : float -> float -> float -> float -> quaternion = <fun>
+val qstring : quaternion -> string = <fun>

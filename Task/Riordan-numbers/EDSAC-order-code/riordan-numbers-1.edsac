@@ -1,0 +1,128 @@
+[Riordan numbers - Rosetta Code
+ EDSAC program (Initial Orders 2)
+ Calculates Riordan numbers by addition only.]
+
+[Arrange the storage]
+  T45K P56F       [H, subroutine to calculate Riordan numbers]
+  T47K P128F      [M, main routine]
+  T51K P192F      [G, subroutine to print 35-bit integer]
+[The next 2 are examples of 'preset parameters'.(Wilkes, Wheeler and Gill)]
+  T46K P27F       [N, how many Riordan numbers are required (in address field)]
+  T55K P256F      [V, address of array of Riordan numbers (in address field)]
+
+[Library subroutine M3, prints header at load time and is then overwritten.
+ This header leaves teleprinter on figures; does not end with CRLF.]
+      PFGKIFAFRDLFUFOFE@A6FG@E8FEZPF
+      *RIORDAN!NUMBERS!WITHIN!EDSAC!RANGE#..PZ
+
+[============ H parameter: Subroutine for Riordan numbers ==================
+ Returns the Riordan numbers R{0}, ..., R{N-1}, where It's assumed that N > 0.
+ Uses the preset N and V parameters (see above).
+ The subroutine is equivalent to the following code:
+   R{0} := 1;
+   for j := 1 to N - 1 do R{j} :=  0;
+   for k := 2 to N - 1 do
+     for j := Min( 2*(k - 1), N - 1) downto k do
+       R{j} := R{j} + R{j-1} + R{j-2});
+ Note that each array element occupies 2 EDSAC addresses.]
+          E25K TH GK
+          A3F T57@        [plant return link as usual]
+          YF YF           [add rounding twice, acc := 35-bit 1]
+    [4]   T#V             [R{0} := 1]
+          A58@ LD         [acc := 2*N]
+          A4@ T4F         [4F := T order for R{N}]
+          A4@             [acc := T order for R{0}]
+   [Loop to clear R{j} for j = 1, ..., N-1]
+   [10]   A61@            [inc address in T order by 2, i.e. inc(j)]
+          S4F E18@        [test for j = N, jump out if so]
+   [13]   A4F             [restore acc after test]
+          T15@
+   [15]   TD              [(planted) clear R{j}]
+          A15@ E10@       [always loop bsck for nrxt j]
+   [18]
+   [End of loop to initialize array R. Here with acc = 0.
+    Location 15 holds T order for R{N-1}. This is used in the code below.]
+          A13@ T25@       [initialize 2-state order (below) to A4F]
+          A4@ U4F         [4F := A order for R{0}]
+          A61@            [acc := A order for R{1}]
+       [Outer loop, equivalent to 'for k := 2 to N - 1']
+   [23]   A61@ T5F        [5F := T order for R{k}, 2 <= k <= N-1]
+  [When 2*k - 2 becomes greater than or equal to N - 1, we shall have
+     Min(2*k - 2, N - 1) = N - 1 for all further k. When that happens,
+     the following order is changed to jump over further comparisons.]
+   [25]   XF              [planted: initially A4F, later jump to location 33.]
+          A62@ U4F        [4F := T order for R{2*k-2}]
+          S15@            [compare wuth T order for R{N-1}]
+          G33@            [jump if 2*k - 2 < N - 1]
+   [2*k - 2 >= N - 1, time to change order at location  25]
+          TF A59@ T25@    [change 2-state order]
+   [33]   A15@            [acc := T order for R{N - 1}]
+       [Inner loop, equivalent to 'for j := Min( 2*(k - 1), N - 1) downto k']
+   [34]   U44@            [plant T order for R{j}]
+          A60@ U41@       [plant A order for R{j}]
+          S61@ U42@       [plant A order for R{j-1}]
+          S61@ T43@       [plant A order for R{j-2}]
+   [41]   AD              [(planted) acc := R{j}]
+   [42]   AD              [(planted) add R{j-1}]
+   [43]   AD              [(planted) add R{j-2}]
+   [44]   TD              [(planted) update R{j}]
+          A44@ S61@       [dec(j) in the preceding T order]
+          S5F G51@        [if j < k then done inner loop, jump to outer loop]
+          A5F E34@        [restore acc after test and loop back]
+       [Here at end of inner loop]
+   [51]   TF              [clear acc]
+          A5F S15@ E57@   [jump to return link if k = N - 1]
+          A15@ E23@       [else restore acc after test and loop back]
+   [57]   ZF              [(planted) jump back to caller]
+   [58]   PN              [how many Riordan numbers are required (i9n address field)]
+   [59]   E33@            [jump order for 2-state order above]
+   [60]   MF              [add to T order to make A order, same address]
+   [61]   P2F             [to change address by 2]
+   [62]   P4F             [to change address by 4]
+[====================== M parameter: Main routine ======================]
+          E25K TM GK
+    [0]   PF              [negative count of Riordan numbers]
+    [1]   P4F             [how many per line in printout]
+    [2]   PF              [positive count of items per line]
+    [3]   A#V             [A order for first Riordan number]
+    [4]   PN              [how many Riordan numbers to print]
+    [5]   P2F             [to inc array index by 1 (inc EDSAC address by 2)]
+    [6]   @F              [carriage return]
+    [7]   &F              [line feed]
+    [8]   !F              [space]
+    [9]   K4096F          [teleprinter null]
+[Enter here with acc = 0]
+   [10]   A10@ GH         [call subroutine to calculate Riordan numbers]
+          A1@ T2@         [number of items in line := max]
+          A3@ T30@        [initialize A order to start of array]
+          S4@             [acc := negative count of Riordan numbers]
+          E41@            [done if count = 0]
+   [18]   T@              [update negative vount of Riordan numbers]
+          A2@ S1@         [is number of items in line = max?]
+          E24@            [if so, jump to print CR LF]
+          A1@ E26@        [else restore acc after test and join common code]
+   [24]   O6@ O7@         [here acc = 0; print CR LF]
+   [26]   A2F T2@         [inc number of items in line]
+          O8@ O8@         [print 2 spaces]
+   [30]   AD TD           [(planted) 0D := Riordan number from array]
+          A32@ GG !10F    [print it]
+          A30@ A5@ T30@   [inc array index]
+          A@ A2F          [inc negative count of Riordan numbeers]
+          G18@            [if not printed all, loop back]
+   [41]   O9@             [done: print null to flush teleprinter buffer]
+          ZF              [halt the machine]
+[============================= G parameter ==================================]
+[Modified from library subroutine P7; prints integer N, for 0 <= N < 10^10.]
+[Prints 0 correctly, and allows caller to specify a minimum width (up to 10).]
+[Input : 0D = integer (not preserved)]
+        [17-bit print control word follows subroutine call,]
+        [e.g. !5F means minimum width 5, pad on left with space.]
+[49 locations; even address; workspace: 0F, 1F, 4D, 6F, 7F]
+          E25K TG
+    GKA48@U4@A27@T35@AFU4@L256FS45@T7FH46#@NDYFLDT4DS45@T1FH21@
+    S21@A45@G21@U4@TFV4DA1FG36@S1FLDU1FO1FF1FS1FL4FT4DAFG18@ZF
+    S1FL8FT4DAFA7FG43@O4@T6FE33@T46#ZPFT45ZP1024FP610D@524DP2F
+[========================= M parameter again ================================]
+          E25K TM GK
+          E10Z            [define entry point]
+          PF              [acc = 0 on entry]

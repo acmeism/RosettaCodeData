@@ -1,0 +1,371 @@
+(* The following can be compiled with "patscc -O3
+   source_file_name.dats", or with your preferred optimizer
+   setting. The ATS compiler generates C that assumes you will do
+   aggressive optimization, say "-O2" or better.
+
+   I like to add GCC's "-std=gnu2x" flag, as well, though I expect
+   this flag will at some point be changed to "-std=gnu23" or
+   similar. Otherwise (with the default patscc settings) you get
+   "-std=c99".
+
+   For adventure, try "patscc -std=gnu2x -Ofast -march=native
+   source_file_name.dats" *)
+
+#include "share/atspre_staload.hats"
+
+(* Some macros that are convenient for type-safe floating point
+   without actually knowing which floating-point type it will
+   be. These macros will work if, in the context where they appear,
+   the typechecker can infer which floating-point type is meant. *)
+macdef one_third = g0i2f 1 / g0i2f 3
+macdef one_half = g0i2f 1 / g0i2f 2
+macdef two_thirds = g0i2f 2 / g0i2f 3
+
+(* We will try to achieve the type-safety of distinguishing between
+   monomial and Bernstein bases at compile time, but without overhead
+   at runtime. (Such type-safety can be partly achieved in many other
+   languages simply by giving the types different names but the same
+   fields. But then you cannot easily have TYPE-SAFE subprograms that
+   work on EITHER type. You could have that with a type hierarchy, but
+   then, typically, you start getting overhead from runtime
+   polymorphism. You could do it by nesting record types within record
+   types, but then you start needing the overhead of pointers to the
+   different nested types. Furthermore, these approaches are all
+   essentially WORKAROUNDS, rather than direct solutions to the
+   problem, which is "how to distinguish between a tuple representing
+   coefficients in ONE basis from the exact same kind of tuple
+   representing coefficients in A DIFFERENT basis, while also treating
+   both as coefficients in SOME basis, such as for addition or scalar
+   multiplication". Here we do that by attaching an object to the
+   tuple AT TYPECHECKING TIME that is entirely left out after
+   typechecking is complete.) *)
+tkindef monoknd = "rosettacode_monomial_poly"
+tkindef bernknd = "rosettacode_bernstein_poly"
+dataprop BASIS (polyknd : tkind) =
+| MONOMIAL_BASIS (monoknd) of ()
+| BERNSTEIN_BASIS (bernknd) of ()
+
+typedef poly_degree2 (polyknd : tkind, coefknd : tkind) =
+  @(BASIS polyknd | g0float coefknd, g0float coefknd,
+                    g0float coefknd)
+typedef poly_degree3 (polyknd : tkind, coefknd : tkind) =
+  @(BASIS polyknd | g0float coefknd, g0float coefknd,
+                    g0float coefknd, g0float coefknd)
+
+(* The :<> below means that the function is proven to terminate, does
+   not raise exceptions, does not access or write to memory it does
+   not "own", etc. In practice, however, such requirements are often
+   masked. The goal of ATS is not formal proof, but bug reduction,
+   easier debugging, avoidance of the need for runtime checks, etc. *)
+fn {coefknd : tkind}            (* Subprogram (1) *)
+mono2bern_degree2 (coefs : poly_degree2 (monoknd, coefknd))
+    :<> poly_degree2 (bernknd, coefknd) =
+(* AN EXAMPLE OF ATS2 TYPE-SAFETY: If you try to call
+   mono2bern_degree2 with Bernstein coefficients (instead of monomial
+   coefficients) as the argument, then, AT COMPILE TIME, you get
+   messages similar to these:
+
+/some_path/bernstein_poly_task.dats: 1051(line=32, offs=31) -- 1052(line=32, offs=32): warning(3): the constraint [S2Eeqeq(S2Eextkind(rosettacode_bernstein_poly); S2Eextkind(rosettacode_monomial_poly))] cannot be translated into a form accepted by the constraint solver.
+/some_path/bernstein_poly_task.dats: 1051(line=32, offs=31) -- 1052(line=32, offs=32): error(3): unsolved constraint: C3NSTRprop(C3TKmain(); S2Eeqeq(S2Eextkind(rosettacode_bernstein_poly); S2Eextkind(rosettacode_monomial_poly)))
+typechecking has failed: there are some unsolved constraints: please inspect the above reported error message(s) for information.
+exit(ATS): uncaught exception: _2tmp_2ATS_2dPostiats_2src_2pats_error_2esats__FatalErrorExn(1025)
+
+   AT RUNTIME, however, both kinds of polynomial coefficients are
+   represented by a plain unboxed tuple (that is, by a C struct) of
+   three numbers, each being of whichever type "g0float coefknd"
+   happens to be ("float", "double", "ldouble", etc.). *)
+  let
+    val+ @(_ | a0, a1, a2) = coefs
+  in
+    @(BERNSTEIN_BASIS () | a0, a0 + (one_half * a1), a0 + a1 + a2)
+  end
+
+fn {coefknd : tkind}            (* Subprogram (2) *)
+evalbern_degree2 (coefs : poly_degree2 (bernknd, coefknd),
+                  t     : g0float coefknd)
+    :<> g0float coefknd =
+  let
+    val+ @(_ | b0, b1, b2) = coefs
+    and s = g0i2f 1 - t
+
+    val b01 = (s * b0) + (t * b1)
+    and b12 = (s * b1) + (t * b2)
+
+    val b012 = (s * b01) + (t * b12)
+  in
+    b012
+  end
+
+fn {coefknd : tkind}            (* Subprogram (3) *)
+mono2bern_degree3 (coefs : poly_degree3 (monoknd, coefknd))
+    :<> poly_degree3 (bernknd, coefknd) =
+  let
+    val+ @(_ | a0, a1, a2, a3) = coefs
+  in
+    @(BERNSTEIN_BASIS () | a0, a0 + (one_third * a1),
+                           a0 + (two_thirds * a1) + (one_third * a2),
+                           a0 + a1 + a2 + a3)
+  end
+
+fn {coefknd : tkind}            (* Subprogram (4) *)
+evalbern_degree3 (coefs : poly_degree3 (bernknd, coefknd),
+                  t     : g0float coefknd)
+    :<> g0float coefknd =
+  let
+    val+ @(_ | b0, b1, b2, b3) = coefs
+    and s = g0i2f 1 - t
+
+    val b01 = (s * b0) + (t * b1)
+    and b12 = (s * b1) + (t * b2)
+    and b23 = (s * b2) + (t * b3)
+
+    val b012 = (s * b01) + (t * b12)
+    and b123 = (s * b12) + (t * b23)
+
+    val b0123 = (s * b012) + (t * b123)
+  in
+    b0123
+  end
+
+fn {coefknd : tkind}            (* Subprogram (5) *)
+bern_degree2_to_3 (coefs : poly_degree2 (bernknd, coefknd))
+    :<> poly_degree3 (bernknd, coefknd) =
+  let
+    val+ @(_ | q0, q1, q2) = coefs
+  in
+    @(BERNSTEIN_BASIS () | q0, (one_third * q0) + (two_thirds * q1),
+                           (two_thirds * q1) + (one_third * q2), q2)
+  end
+
+(* Let us make it easy to print out coefficients. Note that
+   print_poly_degree2 operates TYPE-SAFELY on ANY object of type
+   "poly", without regard to whether it represents monomial
+   coefficients or Bernstein coefficients. In C we might do such a
+   thing by casting a pointer of one type to a pointer of another
+   type, but that is not a TYPE-SAFE operation. *)
+fn {coefknd : tkind}
+print_poly_degree2 {polyknd : tkind}
+                   (coefs : poly_degree2 (polyknd, coefknd))
+    : void =
+  let
+    val+ @(_ | a0, a1, a2) = coefs
+    macdef outf = stdout_ref
+  in
+    fprint_val<string> (outf, "(");
+    fprint_val<g0float coefknd> (outf, a0);
+    fprint_val<string> (outf, ", ");
+    fprint_val<g0float coefknd> (outf, a1);
+    fprint_val<string> (outf, ", ");
+    fprint_val<g0float coefknd> (outf, a2);
+    fprint_val<string> (outf, ")")
+  end
+
+fn {coefknd : tkind}
+print_poly_degree3 {polyknd : tkind}
+                   (coefs : poly_degree3 (polyknd, coefknd))
+    : void =
+  let
+    val+ @(_ | a0, a1, a2, a3) = coefs
+    macdef outf = stdout_ref
+  in
+    fprint_val<string> (outf, "(");
+    fprint_val<g0float coefknd> (outf, a0);
+    fprint_val<string> (outf, ", ");
+    fprint_val<g0float coefknd> (outf, a1);
+    fprint_val<string> (outf, ", ");
+    fprint_val<g0float coefknd> (outf, a2);
+    fprint_val<string> (outf, ", ");
+    fprint_val<g0float coefknd> (outf, a3);
+    fprint_val<string> (outf, ")")
+  end
+
+fn {coefknd : tkind}
+print_mono_degree2 (coefs : poly_degree2 (monoknd, coefknd))
+    : void =
+  begin
+    fprint_val<string> (stdout_ref, "mono ");
+    print_poly_degree2 (coefs)
+  end
+
+fn {coefknd : tkind}
+print_bern_degree2 (coefs : poly_degree2 (bernknd, coefknd))
+    : void =
+  begin
+    fprint_val<string> (stdout_ref, "bern ");
+    print_poly_degree2 (coefs)
+  end
+
+fn {coefknd : tkind}
+print_mono_degree3 (coefs : poly_degree3 (monoknd, coefknd))
+    : void =
+  begin
+    fprint_val<string> (stdout_ref, "mono ");
+    print_poly_degree3 (coefs)
+  end
+
+fn {coefknd : tkind}
+print_bern_degree3 (coefs : poly_degree3 (bernknd, coefknd))
+    : void =
+  begin
+    fprint_val<string> (stdout_ref, "bern ");
+    print_poly_degree3 (coefs)
+  end
+
+overload print with print_mono_degree2
+overload print with print_bern_degree2
+overload print with print_mono_degree3
+overload print with print_bern_degree3
+
+fn {coefknd : tkind}
+evalmono_degree2 (coefs : poly_degree2 (monoknd, coefknd),
+                  t     : g0float coefknd)
+    :<> g0float coefknd =
+  let
+    val+ @(_ | a0, a1, a2) = coefs
+  in
+    a0 + (t * (a1 + (t * a2)))  (* Horner form. *)
+  end
+
+fn {coefknd : tkind}
+evalmono_degree3 (coefs : poly_degree3 (monoknd, coefknd),
+                  t     : g0float coefknd)
+    :<> g0float coefknd =
+  let
+    val+ @(_ | a0, a1, a2, a3) = coefs
+  in
+    a0 + (t * (a1 + (t * (a2 + (t * a3))))) (* Horner form. *)
+  end
+
+fn
+do_examples () : void =
+  let
+    (* I am going to use type "float = g0float fltknd". That is, C
+       single precision. The notation for such a number ends in an
+       "F" or "f", just as in C. *)
+    val pmono2 = @(MONOMIAL_BASIS () | 1.0F, 0.0F, 0.0F)
+    val qmono2 = @(MONOMIAL_BASIS () | 1.0F, 2.0F, 3.0F)
+    val pbern2 = mono2bern_degree2 (pmono2)
+
+    (* ATS often lets you leave out the argument parentheses, as in
+       the following line. However, unlike in OCaml or Standard ML,
+       (where parentheses also are often left out) argument
+       parentheses do NOT indicate that arguments are being passed as
+       a tuple. *)
+    val qbern2 = mono2bern_degree2 qmono2
+
+    (* ATS will often (if it might not be confused with argument
+       parentheses, etc.) let you leave out the "@" in an unboxed
+       tuple. *)
+    val pmono3 = (MONOMIAL_BASIS () | 1.0F, 0.0F, 0.0F, 0.0F)
+    val qmono3 = (MONOMIAL_BASIS () | 1.0F, 2.0F, 3.0F, 0.0F)
+    val rmono3 = (MONOMIAL_BASIS () | 1.0F, 2.0F, 3.0F, 4.0F)
+    val pbern3 = mono2bern_degree3 (pmono3)
+    val qbern3 = mono2bern_degree3 (qmono3)
+    val rbern3 = mono2bern_degree3 (rmono3)
+
+    val pbern3a = bern_degree2_to_3 (pbern2)
+    val qbern3a = bern_degree2_to_3 (qbern2)
+  in
+    println! ("Subprogram (1) examples:");
+    println! ("  ", pmono2, " --> ", pbern2);
+    println! ("  ", qmono2, " --> ", qbern2);
+
+    println! ("Subprogram (2) examples:");
+    let
+      (* The following is written in ATS-isms, showing how to do
+         things (a) in procedural fashion, (b) without an allocator,
+         (c) without runtime checks, and yet (d) without risk of going
+         outside the bounds of an array.
+
+         Figuring out how I am doing all that is left partly as a
+         boring exercise for the reader. (Be warned that the use of
+         for* is not, as far as I know, documented anywhere but in
+         mailing list archives.)
+
+         xs is an array on the stack, and i is a loop variable on the
+         stack or in a register. The for* loop works like a C
+         for-loop, except it is proven to terminate, and it guarantees
+         that xs is never indexed with any value except 0 or 1.
+
+         An alternative would have been to use a regular "for" loop
+         (without the asterisk) and do runtime bounds checks (raising
+         an exception on check failure). The compiler will NOT let you
+         index xs with an out-of-bounds index. *)
+
+      var xs : array (float, 2) = @[float][2] (0.25F, 7.50F)
+      var i : Int
+    in
+      for* {i : nat | i <= 2} .<2 - i>. (i : int i) =>
+           (i := 0; i <> 2; i := i + 1)
+        let
+          val x = xs[i]
+          val ypm = evalmono_degree2 (pmono2, x)
+          and ypb = evalbern_degree2 (pbern2, x)
+        in
+          println! ("  p(", x, ") = ", ypb, " (mono: ", ypm, ")")
+        end;
+      for* {i : nat | i <= 2} .<2 - i>. (i : int i) =>
+           (i := 0; i <> 2; i := i + 1)
+        let
+          val x = xs[i]
+          val yqm = evalmono_degree2 (qmono2, x)
+          and yqb = evalbern_degree2 (qbern2, x)
+        in
+          println! ("  q(", x, ") = ", yqb, " (mono: ", yqm, ")")
+        end
+    end;
+
+    println! ("Subprogram (3) examples:");
+    println! ("  ", pmono3, " --> ", pbern3);
+    println! ("  ", qmono3, " --> ", qbern3);
+    println! ("  ", rmono3, " --> ", rbern3);
+
+    println! ("Subprogram (4) examples:");
+    let
+      var xs : array (float, 2) = @[float][2] (0.25F, 7.50F)
+      var i : Int
+    in
+      for* {i : nat | i <= 2} .<2 - i>. (i : int i) =>
+           (i := 0; i <> 2; i := i + 1)
+        let
+          val x = xs[i]
+          val ypm = evalmono_degree3 (pmono3, x)
+          and ypb = evalbern_degree3 (pbern3, x)
+        in
+          println! ("  p(", x, ") = ", ypb, " (mono: ", ypm, ")")
+        end;
+      for* {i : nat | i <= 2} .<2 - i>. (i : int i) =>
+           (i := 0; i <> 2; i := i + 1)
+        let
+          val x = xs[i]
+          val yqm = evalmono_degree3 (qmono3, x)
+          and yqb = evalbern_degree3 (qbern3, x)
+        in
+          println! ("  q(", x, ") = ", yqb, " (mono: ", yqm, ")")
+        end;
+      for* {i : nat | i <= 2} .<2 - i>. (i : int i) =>
+           (i := 0; i <> 2; i := i + 1)
+        let
+          val x = xs[i]
+          val yrm = evalmono_degree3 (rmono3, x)
+          and yrb = evalbern_degree3 (rbern3, x)
+        in
+          println! ("  r(", x, ") = ", yrb, " (mono: ", yrm, ")")
+        end
+    end;
+
+    println! ("Subprogram (5) examples:");
+    println! ("  ", pbern2, " --> ", pbern3a);
+
+    (* Although ATS is a "semicolon-as-separator" language, the
+       compiler will not complain about the null statement follow this
+       last semicolon. The ATS language's designer usually has put in
+       the semicolon, whereas I, being a bit of a purist, usually
+       leave it out. (And, yes, I do often get errors due to missing
+       semicolons; in ATS one catches that at compile time. And, at my
+       work 30 years ago, we programmed in Turbo/Borland Pascal and we
+       usually put the semicolon in.) *)
+    println! ("  ", qbern2, " --> ", qbern3a);
+  end
+
+implement main0 () = do_examples ()

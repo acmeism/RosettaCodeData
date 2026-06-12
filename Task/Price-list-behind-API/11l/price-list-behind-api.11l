@@ -1,0 +1,40 @@
+V price_list_size = random:(99'000 .< 101'000)
+V price_list = (0 .< price_list_size).map(i -> random:(100'000))
+
+V delta_price = 1
+
+F get_prange_count(startp, endp)
+   R :price_list.filter(r -> Float(r) C @startp .. @endp).len
+
+F get_max_price()
+   R max(:price_list)
+
+F get_5k(Float mn, Float =mx; num = 5'000)
+   ‘Binary search for num items between mn and mx, adjusting mx’
+   V count = get_prange_count(mn, mx)
+   V delta_mx = (mx - mn) / 2
+   L count != num & delta_mx >= :delta_price / 2
+      mx += I count > num {-delta_mx} E +delta_mx
+      mx = Float(mx I/ 1)
+      (count, delta_mx) = (get_prange_count(mn, mx), delta_mx / 2)
+   R (mx, count)
+
+F get_all_5k(mn = 0.0, Float mx = get_max_price(); num = 5'000)
+   ‘Get all non-overlapping ranges’
+   V (partmax, partcount) = get_5k(mn, mx, num)
+   V result = [(mn, partmax, partcount)]
+   L partmax < mx
+      V partmin = partmax + :delta_price
+      (partmax, partcount) = get_5k(partmin, mx, num)
+      assert(partcount > 0, ‘price_list from ’partmin‘ with too many of the same price’)
+      result.append((partmin, partmax, partcount))
+   R result
+
+print(‘Using ’price_list_size‘ random prices from 0 to ’get_max_price())
+V result = get_all_5k()
+print(‘Splits into ’result.len‘ bins of approx 5000 elements’)
+L(mn, mx, count) result
+   print(f:‘  From {mn:8.1} ... {mx:8.1} with {count} items.’)
+
+I price_list.len != sum(result.map((mn, mx, count) -> count))
+   print("\nWhoops! Some items missing:")

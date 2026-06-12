@@ -1,0 +1,169 @@
+Module BankerAlgo {
+      Form 80, 44
+      Cls 5
+      Pen 14
+      Function Request(FromWhere as Inventory, What$, Many as long)  {
+            =FromWhere(What$)-FromWhere(What$+"_Request")-Many>=0
+      }
+      Function RequestPreset(FromWhere as Inventory, What$, Many as long)  {
+            =FromWhere(What$+"_Request")-Many>=0
+      }
+      Function Need(FromWhere as Inventory, What$, Many) {
+            =FromWhere(What$ + "_max")-FromWhere(What$)-Many>=0
+      }
+      \\ code for sub can be found from parent module/function (here parent as in code, not as in call)
+      Function NewProcess {
+            Inventory Process
+            ApplyResources(Process)   ' sub need more arguments and read from current stack
+            =Process
+      }
+      Inventory System, Processes
+      \\ Recource, Max, Available
+      ApplyResources(System, "A", 6, 3,"B", 5,1,"C", 7, 1, "D", 6, 2)
+      \\ Recource, Max, Available
+      Append Processes, "P1":=NewProcess("A", 3, 1, "B", 3, 2, "C", 2, 2, "D", 2,1)
+      Append Processes, "P2":=NewProcess("A", 1, 1, "B", 2, 0, "C", 3, 3, "D", 4,3)
+      Append Processes, "P3":=NewProcess("A", 1, 1, "B", 3, 2, "C", 5, 1, "D", 0,0)
+      Status(True) ' show all process, available resource and max
+      SafeState=True
+      Print "Current Status"
+      RequestResource() ' display Safe State
+      RequestResource("P2", "D", 1) ' display Safe State
+      RequestResource("P1", "A", 1, "D", 1) ' display Safe State
+      RequestResource("P1", "C", 1, "D", 1) ' display Too many resources ...
+      RequestResource("P2", "B", 1) ' display Unsafe State
+      RequestResource("P3", "C", 1)  ' display Safe State
+      Status()
+      \\ Second Example
+      Clear System, Processes
+      ApplyResources(System, "A", 10, 3)
+      Append Processes, "P1":=NewProcess("A", 9, 3)
+      Append Processes, "P2":=NewProcess("A", 4, 2)
+      Append Processes, "P3":=NewProcess("A", 7, 2)
+      Status(True) ' show all process, available resource and max
+      Print "Current Status"
+      RequestResource() ' display Safe State
+      \ Third Example
+      Clear System
+      ApplyResources(System, "A", 10, 2)
+      Return Processes, "P1":=NewProcess("A", 9,4)
+      Status(True) ' show all process, available resource and max
+      Print "Current Status"
+      RequestResource() ' display UnSafe State
+      Sub Respond()
+            If SafeState Then {
+                  Pen 15 {Print "Safe State"}
+            } Else Pen 13 {Print "Unsafe State"}
+      End Sub
+      Sub WaitForKey()
+            Pen 11 {Print "Press a key"}
+            local a$=key$
+      End Sub
+      Sub RequestResource(ProcessName$="" )
+            SafeState=True
+            If ProcessName$="" Then CheckNewState(&SafeState) : Respond() : Print : WaitForKey():Exit Sub
+            Local pro=Processes(ProcessName$), ResourceName$, many as long
+            ClearAllRequest(pro)
+            Local skip=False
+            While Match("SN") {
+                  Read ResourceName$, many
+                  Print  Format$("Claim {1} for type {0} resource ",ResourceName$, many)
+                  If skip Then Continue
+                  If Request(System, ResourceName$, many) Then {
+                        If Need(pro, ResourceName$, many) Then {
+                              Return pro, ResourceName$+"_Request":=many
+                              Return System, ResourceName$+"_Request":=-many
+                        } Else {
+                              Print "Too many Recources "+ResourceName$+" for Process "+ProcessName$  : Skip=True
+                        }
+                  } Else Print "Too many Recources for System" : Skip=True
+                  If Skip Then exit
+            }
+            If skip Else  CheckNewState(&SafeState) : Respond()
+            Print  ' just a new line
+            WaitForKey()
+      End Sub
+      Sub ApplyResources(Where as Inventory, What$, MaxValue, InitialValue)
+            Repeat {
+                  If Not Exist(Where, What$) Then {
+                        Append Where, What$:=InitialValue, What$+"_max":=MaxValue, What$+"_Request":=0
+                  }
+                  If not Match("SNN") Then Exit
+                  Read What$, MaxValue, InitialValue
+            }  Always
+      End Sub
+      Sub ClearAllRequest(Where  as Inventory)
+            Local M=Each(Where)
+            While M {
+                  If Instr(Eval$(M, M^),"_")=0 Then {
+                        Return Where, Eval$(M,M^)+"_Request":=0
+                  }
+            }
+      End Sub
+      Sub PrintResources(Where  as Inventory)
+            Local M=Each(Where)
+            While M {
+                  If Instr(Eval$(M, M^),"_")=0 Then Print Eval$(M, M^)+"="+Eval$(M),
+            }
+            Print
+      Exit Sub
+      Sub PrintMax(Where  as Inventory)
+            Local M=Each(Where)
+            While M {
+                  If Instr(Eval$(M, M^),"_max")>0 Then Print LeftPart$(Eval$(M, M^), "_")+"="+Eval$(M),
+            }
+            Print
+      Exit Sub
+      Sub Status(Ok as boolean=False)
+            Print "Total System Resources"
+            PrintMax(System)
+            Print "Available Resources in System"
+            PrintResources(System)
+            If Not Ok Then WaitForKey(): Exit Sub
+            Local  M=Each(Processes)
+            While M {
+                  Print "Process "+Eval$(M, M^)
+                  PrintResources(Processes(M^!))  ' give index M^ as Key index number (using !)
+                  Print "Maximum Resources for "+Eval$(M, M^)
+                  PrintMax(Processes(M^!))
+            }
+      End Sub
+      Sub CheckNewState(&Ok)
+            local M=Each(Processes), M1, count=len(Processes), alive(0 to count-1)=1
+            Local Z, Recource$, safe as boolean=false
+            While count {
+                  safe=false
+                  While M {
+                        If alive(M^) Then {
+                              Z=Processes(M^!)
+                              M1=Each(Z)
+                              safe=True
+                              While M1 {
+                                    Recource$=Eval$(M1, M1^)
+                                    If Instr(Recource$,"_")=0 Then {
+                                         safe=System(Recource$)+System(Recource$+"_Request") >= Z(Recource$ + "_max") - Z(Recource$)-Z(Recource$ + "_Request")
+		               }
+                                    If not safe Then exit
+                              }
+                              If safe Then {
+                                    print format$("Process {0} is executing", M^+1)
+                                    alive(M^)=0
+                                    count--
+                                    M1=Each(Z)
+                                    While M1 {
+                                          Recource$=Eval$(M1, M1^)
+                                          If Instr(Recource$,"_")=0 Then {
+                                                Return System, Recource$+"_Request":= System(Recource$+"_Request") + Z(Recource$) + Z(Recource$+"_Request")
+                                                Return Z, Recource$+"_Request":=0
+                                          }
+                                    }
+                              }
+                        }
+                  }
+                  If safe Else exit
+            }
+            Ok=safe
+            ClearAllRequest(System)
+      End Sub
+}
+BankerAlgo

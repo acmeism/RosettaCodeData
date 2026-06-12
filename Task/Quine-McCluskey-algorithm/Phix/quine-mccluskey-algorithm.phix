@@ -1,0 +1,142 @@
+// Return cube merge. 'X' is don't-care. "" if merge impossible.
+function merge(string i, j)
+    string s = ""
+    integer difCnt = 0
+    for k=1 to min(length(i),length(j)) do
+        integer a = i[k],
+                b = j[k]
+        if ((a == 'X' or b == 'X') and a != b) then
+            return ""
+        elsif (a != b) then
+            if difCnt then return "" end if
+            difCnt += 1
+            s &= 'X'
+        else
+            s &= a
+        end if
+    end for
+    return s
+end function
+
+// Compute primes for the given set of cubes and variable count.
+function computePrimes(sequence cubes, integer vars)
+    sequence sigma = repeat({},vars+1), primes = {}
+    for c in cubes do
+        integer bc = filter_count(c,"=",'1')+1
+        sigma[bc] = append(sigma[bc],c)
+    end for
+
+    while length(sigma) do
+        sequence nsigma = {},
+              redundant = {}
+        for i=1 to length(sigma)-1 do
+            sequence c1 = sigma[i],
+                     c2 = sigma[i+1],
+                     nc = {}
+            for a in c1 do
+                for b in c2 do
+                    string m = merge(a, b)
+                    if length(m) then
+                        nc = append(nc,m)
+                        redundant = union(redundant,union({a},{b}))
+                    end if
+                end for
+            end for
+            nsigma = append(nsigma,nc)
+        end for
+        primes = union(primes,difference(union(sigma),redundant,false))
+        sigma = nsigma
+    end while
+    return primes
+end function
+
+// Return the primes selected by the cube selection integer.
+function activePrimes(integer cubesel, sequence primes)
+    sequence res = {}
+    string fmt = sprintf("%%0%db",length(primes)),
+             s = sprintf(fmt,cubesel)
+    for i,p in primes do
+        if s[i]='1' then res = append(res,p) end if
+    end for
+    return res
+end function
+
+// Returns a bool: Does the prime cover the minterm?
+function isCover(string prime, one)
+    for i=1 to min(length(prime),length(one)) do
+        integer p = prime[i],
+                o = one[i]
+        if p!='X' and p != o then return false end if
+    end for
+    return true
+end function
+
+// Returns a bool: Does the set of primes cover all minterms?
+function isFullCover(sequence allPrimes, ones)
+    for o in ones do
+        bool hascover = false
+        for p in allPrimes do
+            if isCover(p, o) then hascover=true; exit end if
+        end for
+        if not hascover then return false end if
+    end for
+    return true
+end function
+
+// Return the minimal cardinality subset of primes covering all ones.
+function unateCover(sequence primes, ones)
+    sequence m
+    bool first = true
+    for cubesel=0 to power(2,length(primes))-1 do
+        sequence ap = activePrimes(cubesel, primes)
+        if isFullCover(ap, ones) then
+            integer bc = count_bits(cubesel)
+            if first or bc < m[1] then
+                m = {bc,cubesel}
+                first = false
+            end if
+        end if
+    end for
+    integer cs = m[2]
+    return activePrimes(cs, primes)
+end function
+
+function deduce(sequence r,a,b,all)
+    if length(r)=0 then
+        r = difference(all,union(a,b),false)
+    end if
+    return r
+end function
+
+/*      Compute minimal two-level sum-of-products form.
+        Arguments are:
+                ones:   list of integer minterms
+                zeros:  list of integer maxterms
+                dncare: list of integers specifying don't-care terms
+
+        For proper operation, either (or both) the 'ones' and 'zeros'
+        parameters must be specified.  If one of these parameters is not
+        specified, it will be computed from the combination of the other
+        parameter and the optional 'dncare' parameter.
+
+        An error occurs if any terms are specified in more than one arg,
+        or if all three are given and not all terms are specified. */
+function qm(sequence ones, zeros={}, dncare={})
+    integer numvars = ceil(log2(max(ones&zeros&dncare)+1)),
+            elts = power(2,numvars)
+    sequence all = tagset(elts-1)
+    string fmt = sprintf("%%0%db",numvars)
+    ones = deduce(ones,zeros,dncare,all)
+    zeros = deduce(zeros,ones,dncare,all)
+    dncare = deduce(dncare,zeros,ones,all)
+    ones = apply(true,sprintf,{{fmt},ones})
+    zeros = apply(true,sprintf,{{fmt},zeros})
+    dncare = apply(true,sprintf,{{fmt},dncare})
+    integer l = length(union({ones,zeros,dncare})),
+            l3 = sum(apply({dncare,zeros,ones},length))
+    assert(l=l3 and l=elts)
+    sequence primes = computePrimes(union(ones,dncare),numvars)
+    return unateCover(primes, ones)
+end function
+
+?qm({1, 2, 5}, {}, {0, 7})

@@ -1,0 +1,28 @@
+namespace path ::tcl::mathop
+
+proc process {data {width 50}} {
+	set len [string length $data]
+	set addrwidth [string length [* [/ $len $width] $width]]
+	for {set i 0} {$i < $len} {incr i $width} {
+		puts "[format %${addrwidth}u $i] [string range $data $i $i+[- $width 1]]"
+	}
+	puts "\nBase count:"
+	foreach base {A C G T} {
+		puts "$base     [regexp -all $base $data]"
+	}
+	puts "Total $len"
+}
+
+
+set test [string cat \
+			  CGTAAAAAATTACAACGTCCTTTGGCTATCTCTTAAACTCCTGCTAAATG \
+			  CTCGTGCTTTCCAATTATGTAAGCGTTCCGAGACGGGGTGGTCGATTCTG \
+			  AGGACAAAGGTCAAGATGGAGCGCATCGAACGCAATAAGGATCATTTGAT \
+			  GGGACGTTTCGTCGACAAAGTCTTGTTTCGAGAGTAACGGCTACCGTCTT \
+			  CGATTCTGCTTATAACACTATGTTCTTATGAAATGGATGTTCTGAGTTGG \
+			  TCAGTCCCAATGTGCGGGGTTTCTTTTAGTACGTCGGGAGTGGTATTATA \
+			  TTTAATTTTTCTATATAGCGATCTGTATTTAAGCAATTCATTTAGGTTAT \
+			  CGCCGCGATGCTCGGTTCGGACCGCCAAGCATCTGGCTCCACTGCTAGTG \
+			  TCCTAAATTTGAATGGCAAACACAAATAAGATTTAGCAATTCGTGTAGAC \
+			  GACCGGGGACTTGCATGATGGGAGCAGCTTTGTTAAACTACGAACGTAAT]
+process $test 50

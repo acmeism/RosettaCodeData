@@ -1,0 +1,278 @@
+with javascript_semantics
+
+constant IOP = 0,  // code for gro, wr0, wr1, put
+         VAR = 1,  // code for variable lookup
+         APP = 2,  // code for applications
+         ABS = 3,  // code for abstractions
+         ROOT = 1  // sentinel kept at stack[1]
+
+sequence nexts, envps, refs, terms, // stack
+         mem                        // memory
+integer ip,         // instruction pointer
+        ep,         // end of code pointer
+        frep,       // freelist
+        contp,      // continuation stack
+        envp        // environment pointer
+
+--constant M = 512 -- grow automatically
+constant M = 50000 -- fixed limit (~safer)
+-- (Programs that are left to run out of memory will tend to
+--  gradually slow the machine, and sometimes even hang it.)
+
+procedure grow_memory()
+  if M!=512 then crash("out of memory") end if
+  -- else 512->1024->2048->4096->8192, etc.
+  mem &= repeat(0,length(mem))
+end procedure
+
+procedure Gc(integer p)
+  // garbage collection (stack only, but not mem)
+  while p>ROOT do
+    refs[p] -= 1
+    if refs[p] then exit end if
+    Gc(nexts[p])
+    nexts[p] = frep
+    frep = p
+    p = envps[p]
+  end while
+end procedure
+
+procedure Var()
+  integer e = envp, t = envp,
+          x = mem[ip+1], i = 1
+  while i<=x and e!=ROOT do
+    e = nexts[e]
+    i += 1
+  end while
+  assert(e!=ROOT,"UNDEFINED VARIABLE %d", {x})
+  ip = terms[e]
+  envp = envps[e]
+  refs[envp] += 1
+  Gc(t)
+end procedure
+
+bool bitmode
+string src, tgt
+integer sdx = 0, b = 0, c
+function nextbit()
+    if b=0 then
+        if sdx>=length(src) then return -1 end if
+        sdx += 1
+        c = src[sdx]
+        b = iff(bitmode?1:8)
+    end if
+    b -= 1
+    return shift_bits(c,b)&&1
+end function
+
+procedure Gro()
+  integer c = nextbit(), sc = ep+1
+  sequence g = iff(c!=-1?{ABS,APP,8,APP,2,VAR,0,ABS,ABS,VAR,even(c)}
+                        :{ABS,ABS,VAR,0})
+  ep += length(g)
+  if ep>=length(mem) then grow_memory() end if
+  mem[sc..ep] = g
+end procedure
+
+string outlog = ""
+integer o = 0, ob = 0
+bool quine8 -- mini-kludge...
+
+procedure Put()
+  integer ch = '1'-odd(ip)
+  ip = 3;
+  if not bitmode then
+    o = o*2+odd(ch)
+    ob += 1
+    if ob<8 then return end if
+    ch = o
+    o = 0
+    ob = 0
+  end if
+  if quine8 then
+    printf(1,"%02x",ch)
+  else
+    puts(1,ch)
+  end if
+  outlog &= ch
+end procedure
+
+procedure Abs()
+  // pops continuation and pushes it to environment
+  integer t = contp
+  contp = nexts[t]
+  nexts[t] = envp
+  envp = t
+  ip += 1
+end procedure
+
+procedure App()
+  // pushes continuation for argument
+  int x = mem[ip+1]
+  integer t = frep, e, term = ip+2+x
+  if t=0 then
+    nexts = append(nexts,0)
+    envps = append(envps,0)
+    refs = append(refs,0)
+    terms = append(terms,0)
+    t = length(terms)
+  end if
+  frep = nexts[t]
+  refs[t] = 1
+  terms[t] = term
+  if term>22 and term!=ep then
+    e = envp
+    refs[e] += 1
+  else
+    e = ROOT
+  end if
+  envps[t] = e
+  nexts[t] = contp
+  contp = t
+  ip += 2
+end procedure
+
+procedure Iop()
+  if ip>=ep then
+    Gro()
+  else
+    Put()   // ip is an element of {6,13,20,21}
+  end if
+  Gc(envp)
+  envp = ROOT
+end procedure
+
+function NeedBit()
+  integer b = nextbit()
+  assert(b!=-1,"UNEXPECTED EOF")
+  return b
+end function
+
+function Parse()
+  integer t, start = ep, p, bit
+  bool need = false
+  while true do
+    if ep+2>=length(mem) then grow_memory() end if
+    bit = nextbit()
+    if bit==-1 then
+      if not need then exit end if
+      crash("UNFINISHED EXPRESSION");
+    elsif bit then
+      t = 0
+      while NeedBit() do t+=1 end while
+      ep += 2
+      mem[ep-1..ep] = {VAR,t}
+      exit
+    elsif NeedBit() then
+      t = ep+1
+      ep += 2;
+      mem[t..t+1] = {APP,Parse()}
+      need = true
+    else
+      ep += 1
+      mem[ep] = ABS
+    end if
+  end while
+  return ep-start
+end function
+
+procedure Krivine(bool soe)
+  ep = 25
+  mem[1..24] = {APP, 21, ABS, APP, 9, VAR, 0, ABS, APP, ABS, APP, 2,
+                VAR, IOP, ABS, APP, 4, APP, 1, VAR, IOP, IOP, 0, APP}
+  mem[25] = Parse()
+  {nexts,envps,refs,terms} = {{0},{0},{1},{0}}
+  {b,frep,contp,envp,ip} = {0,0,0,ROOT,1}
+  while true do
+    integer mip = mem[ip]
+    -- (aside: there is simply no way to exit loop from within
+    --         switch in JavaScript, since break is overloaded,
+    --         hence also banned on desktop/Phix under with js.)
+    if (mip=ABS and not contp)
+    or length(outlog)>length(tgt) then -- (soe all done)
+        exit
+    end if
+    switch mip do
+      case VAR: Var();
+      case APP: App();
+      case ABS: Abs();
+      case IOP: Iop();
+      default:  crash("CORRUPT TERM");
+    end switch
+  end while
+  if not soe then -- (which has a forced early exit)
+    int rc = mem[ip+2]
+    assert(rc=0,"CONTINUATIONS EXHAUSTED")
+  end if
+  printf(1,"\n\n")
+end procedure
+
+constant tests = {{"Quine","000101100100011010000000000001011011110010111100111111011111011010"&
+                           "000101100100011010000000000001011011110010111100111111011111011010",1},
+                  {"Quine8",x"16468005bcbcfdf68016468005bcbcfdf680",1},
+                  {"Sieve of Eratosthenes",
+                   "00010001100110010100011010000000010110000010010001010111110111101001000110100001110"&
+                   "011010000000000101101110011100111111101111000000001111100110111000000101100000110110",
+                   "0011010100010100010100010000010100000100010100010000010000010100000100010100000100010000010"&
+                   "0000001000101000101000100000000000001000100000101000000000101000001000001000100000100000101"&
+                   "0000000001010001010000000000010000000000010001010001000001010000000001000001000001000001010"&
+                   "0000100010100000000010000000000000100010100010000000000000100000100000000010100010000010000"&
+                   "0001000001000001000100000100000001000100000001000000000101000000000101000001000100000100000"&
+                   "0010001010001000000000001000000010001000000010001000001000000000001010000000000000000010000"&
+                   "0100000000010000010000010100000100000000010000010000010100000100000100010100000000000100000"&
+                   "0000101000100000100000101000000000001000100000100000001000000000100000001000000000100000001"&
+                   "0000010000010001000000010000010001000000010001000000000000010000000001000000000001010000000"&
+                   "0010100010100000000010000000000000100010100010000000000000100010100010000000000000000000100"&
+                   "0100000001000000000100000001000100000100000100000000000001000100000100000100000001000001000"&
+                   "00000000100010000010100."},
+                  {"100 doors",
+                   "00010001000101010001101000000101100000110011101100101000110100000000001011111110000001"&
+                   "01111101011001011001000110100001111100110100101111101111000000001011111111110110011001"&
+                   "11111101110000000010111111000000101111101011001101110010101100000010111101100101111001"&
+                   "1110011110110100000000001011011100111011110000000001000000111001110100000000101101110110",
+                   "10010000100000010000000010000000000100000000000010000000000000010000000000000000100000"&
+                   "00000000000001"},
+                  {"342",
+                   "0101000110100000000110000101100111100000100101111101111000010101100000000110000111110"&
+                   "0000010111111011001011111101100101111010011101011110001000000101110010101000110100000"&
+                   "0000010110000101011111101111100000010101111011111011111100001011000000101111111010110"&
+                   "111000000111111000010110111101110011110100000010110000011011000100000101111000111001110",
+                   "11010"},
+                  {"0^0",
+                   "0001010110100000010110111011010",
+                   "1"},
+                  {"Hello, World!",
+                   " Hello, world!\n",2},
+                 }
+for ti,t in tests do
+    printf(1,"%s:\n",{t[1]})
+    src = t[2]
+    bitmode = (src[1]&&#FE)='0'
+    quine8 = ti==2
+    if ti<=2 then
+        if quine8 then
+            for c in src do
+                printf(1,"%02x",c)
+            end for
+        else
+            printf(1,src)
+        end if
+        printf(1," (src)\n")
+    end if
+    object t3 = t[3]
+    if integer(t3) then t3 = src[t3..$] end if
+    bool soe = t3[$]='.'  -- (force an early quit)
+    -- (no point leaving it running if you(/I) can't
+    --  be bothered to verify the output properly...)
+    if soe then t3 = t3[1..$-1] end if
+    tgt = t3
+    {sdx,b,outlog,o,ob} = {0,0,"",0,0}
+    mem = repeat(0,M) -- if M=512, extended as needed (and it will be)
+    Krivine(soe)
+    integer ld = length(outlog)-length(tgt)
+    if ld then
+        assert(soe and ld==1)
+        outlog = outlog[1..$-1]
+    end if
+    assert(outlog==tgt)
+end for

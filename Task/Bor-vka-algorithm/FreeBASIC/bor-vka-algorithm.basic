@@ -1,0 +1,147 @@
+' Structure for edges
+Type Edge
+    u As Integer
+    v As Integer
+    w As Integer
+End Type
+
+' Structure to represent a graph
+Type Graph
+    v As Integer          ' Number of vertices
+    edges(Any) As Edge    ' List of edges [u, v, w]
+End Type
+
+Function GraphNew(vertices As Integer) As Graph
+    Dim As Graph g
+    g.v = vertices
+    Redim g.edges(-1)
+    Return g
+End Function
+
+' Function to add an edge to the graph
+Sub AddEdge(Byref g As Graph, u As Integer, v As Integer, w As Integer)
+    Dim As Integer n = Ubound(g.edges) + 1
+    Redim Preserve g.edges(n)
+    g.edges(n).u = u
+    g.edges(n).v = v
+    g.edges(n).w = w
+End Sub
+
+' A utility function to find the set of an element i
+' (uses path compression technique)
+Function Find(parent() As Integer, i As Integer) As Integer
+    If parent(i) <> i Then parent(i) = Find(parent(), parent(i))
+    Return parent(i)
+End Function
+
+' A function that performs union of two sets x and y
+' (uses union by rank)
+Sub UnionSet(parent() As Integer, rank() As Integer, x As Integer, y As Integer)
+    Dim As Integer x_root = Find(parent(), x)
+    Dim As Integer y_root = Find(parent(), y)
+
+    If x_root = y_root Then Return
+
+    ' Attach smaller rank tree under root of high rank tree
+    If rank(x_root) < rank(y_root) Then
+        parent(x_root) = y_root
+    Elseif rank(x_root) > rank(y_root) Then
+        parent(y_root) = x_root
+    Else
+        ' If ranks are the same, make one as root and increment its rank
+        parent(y_root) = x_root
+        rank(x_root) += 1
+    End If
+End Sub
+
+' The main function to construct MST using Boruvka's algorithm
+Sub BoruvkaMST(g As Graph)
+    Dim As Integer i, u, v, w, set1, set2
+    v = g.v
+    Dim As Integer parent(v - 1)
+    Dim As Integer rank(v - 1)
+
+    ' An array to store the index of the cheapest edge of each subset
+    ' It stores [u, v, w] for each component
+    Dim As Integer cheapest(v - 1, 2) ' [u, v, w]
+
+    ' Initially there are V different trees
+    ' Finally there will be one tree that will be the MST
+    Dim As Integer num_trees = v
+    Dim As Integer mst_weight = 0
+
+    For i = 0 To v - 1
+        parent(i) = i
+        rank(i) = 0
+    Next
+
+    ' Keep combining components (or sets) until all
+    ' components are combined into a single MST
+    While num_trees > 1
+        ' Initialize the cheapest array
+        For i = 0 To v - 1
+            cheapest(i, 0) = -1
+            cheapest(i, 1) = -1
+            cheapest(i, 2) = -1
+        Next
+
+        ' Find the cheapest edge for each component
+        For i = 0 To Ubound(g.edges)
+            u = g.edges(i).u
+            v = g.edges(i).v
+            w = g.edges(i).w
+
+            set1 = Find(parent(), u)
+            set2 = Find(parent(), v)
+
+            ' If two corners of current edge belong to different sets,
+            ' check if current edge is cheaper than previous cheapest edges
+            If set1 <> set2 Then
+                If cheapest(set1, 2) = -1 Orelse w < cheapest(set1, 2) Then
+                    cheapest(set1, 0) = u
+                    cheapest(set1, 1) = v
+                    cheapest(set1, 2) = w
+                End If
+                If cheapest(set2, 2) = -1 Orelse w < cheapest(set2, 2) Then
+                    cheapest(set2, 0) = u
+                    cheapest(set2, 1) = v
+                    cheapest(set2, 2) = w
+                End If
+            End If
+        Next
+
+        ' Consider the picked cheapest edges and add them to the MST
+        For i = 0 To v - 1
+            ' Check if cheapest edge for current set exists
+            If cheapest(i, 2) <> -1 Then
+                u = cheapest(i, 0)
+                v = cheapest(i, 1)
+                w = cheapest(i, 2)
+
+                set1 = Find(parent(), u)
+                set2 = Find(parent(), v)
+
+                If set1 <> set2 Then
+                    mst_weight += w
+                    UnionSet(parent(), rank(), set1, set2)
+                    Print Using "Edge #_-# With weight & included in MST"; u; v; w
+                    num_trees -= 1
+                End If
+            End If
+        Next
+    Wend
+
+    Print !"\nWeight of MST is "; mst_weight
+End Sub
+
+' Main program
+Dim g As Graph = GraphNew(4)
+AddEdge(g, 0, 1, 10)
+AddEdge(g, 0, 2, 6)
+AddEdge(g, 0, 3, 5)
+AddEdge(g, 1, 3, 15)
+AddEdge(g, 2, 3, 4)
+
+BoruvkaMST(g)
+
+Sleep

@@ -1,0 +1,401 @@
+# Mill game
+#
+player$[] = [ "White" "Black" ]
+col[] = [ 999 000 ]
+is_ai[] = [ 0 1 ]
+#
+EMPTY = 0
+PLACE = 0
+MOVE = 1
+MOVETO = 2
+MOVETOA = 3
+CAPTURE = 4
+DO_CAPTURE = 5
+#
+len brd[] 24
+mills[][] = [ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] [ 10 11 12 ] [ 13 14 15 ] [ 16 17 18 ] [ 19 20 21 ] [ 22 23 24 ] [ 1 10 22 ] [ 4 11 19 ] [ 7 12 16 ] [ 2 5 8 ] [ 17 20 23 ] [ 9 13 18 ] [ 6 14 21 ] [ 3 15 24 ] ]
+adj[][] = [ [ 2 10 ] [ 1 3 5 ] [ 2 15 ] [ 5 11 ] [ 2 4 6 8 ] [ 5 14 ] [ 8 12 ] [ 5 7 9 ] [ 8 13 ] [ 1 11 22 ] [ 4 10 12 19 ] [ 7 11 16 ] [ 9 14 18 ] [ 6 13 15 21 ] [ 3 14 24 ] [ 12 17 ] [ 16 18 20 ] [ 13 17 ] [ 11 20 ] [ 17 19 21 23 ] [ 14 20 ] [ 10 23 ] [ 20 22 24 ] [ 15 23 ] ]
+pos[][] = [ [ 12.5 12.5 ] [ 50 12.5 ] [ 87.5 12.5 ] [ 25 25 ] [ 50 25 ] [ 75 25 ] [ 37.5 37.5 ] [ 50 37.5 ] [ 62.5 37.5 ] [ 12.5 50 ] [ 25 50 ] [ 37.5 50 ] [ 62.5 50 ] [ 75 50 ] [ 87.5 50 ] [ 37.5 62.5 ] [ 50 62.5 ] [ 62.5 62.5 ] [ 25 75 ] [ 50 75 ] [ 75 75 ] [ 12.5 87.5 ] [ 50 87.5 ] [ 87.5 87.5 ] ]
+global nmoves win sel_piece phase state turn mfr mto mcapt mani .
+#
+gtextsize 3.5
+proc draw .
+   gbackground 776
+   gcolor 444
+   glinewidth 0.4
+   for i = 1 to 16
+      a = mills[i][1]
+      b = mills[i][3]
+      gline pos[a][1] pos[a][2] pos[b][1] pos[b][2]
+   .
+   gcolor 555
+   for i = 1 to 24
+      gcircle pos[i][1] pos[i][2] 0.8
+   .
+   if sel_piece > 0 and mcapt <> sel_piece
+      p = brd[sel_piece]
+      gcolor col[3 - p]
+      gcircle pos[sel_piece][1] pos[sel_piece][2] 3.2
+   .
+   for i = 1 to 24
+      piece = brd[i]
+      if piece <> 0
+         gcolor col[piece]
+         gcircle pos[i][1] pos[i][2] 2.65
+      .
+   .
+   if mani > 0
+      x = pos[mfr][1] + (pos[mto][1] - pos[mfr][1]) * mani / 20
+      y = pos[mfr][2] + (pos[mto][2] - pos[mfr][2]) * mani / 20
+      gcolor col[turn]
+      gcircle x y 2.65
+   .
+   if sel_piece > 0 and mcapt = sel_piece
+      glinewidth 0.5
+      p = brd[sel_piece]
+      gcolor col[3 - p]
+      x = pos[sel_piece][1]
+      y = pos[sel_piece][2]
+      gline x - 2 y - 2 x + 2 y + 2
+      gline x - 2 y + 2 x + 2 y - 2
+   .
+   gcolor 000
+   if win <> 0
+      gtext 3 94 "Winner: " & player$[win]
+      return
+   .
+   s$ = "Place"
+   if phase = MOVE : s$ = "Move"
+   if is_ai[turn] = 1 : ex$ = " (AI)"
+   gtext 3 94 s$ & ": " & player$[turn] & ex$
+   if phase = PLACE : gtext 85 94 (9 - nmoves div 2) & " left"
+   if is_ai[turn] = 0
+      if state = MOVE and sel_piece > 0
+         gtext 3 4 "Click destination (or reselect piece)"
+      elif state = MOVE
+         gtext 3 4 "Click a piece to move"
+      elif state = CAPTURE
+         gtext 3 4 "Click a " & player$[3 - turn] & " piece to capture"
+      .
+   .
+.
+proc newstate s .
+   state = s
+   if is_ai[turn] = 1
+      h = 1.5
+      if state = PLACE or state = MOVE or state = MOVETO : h = 0.2
+      timer h
+   .
+.
+proc newgame .
+   phase = PLACE
+   win = 0
+   nmoves = 0
+   turn = 1
+   for i to 24 : brd[i] = EMPTY
+   newstate PLACE
+   draw
+.
+newgame
+#
+len mill[] 3 * 16
+len mpos[] 48
+len adjt[] 25 * 25
+proc .
+   for i = 1 to 16 : for j = 1 to 3
+      mill[i * 3 - 3 + j] = mills[i][j]
+   .
+   for m = 1 to 16
+      base = m * 3 - 2
+      for k = 0 to 2
+         pos = mill[base + k]
+         if mpos[pos] = 0
+            mpos[pos] = base
+         else
+            mpos[pos + 24] = base
+         .
+      .
+   .
+   for i to 24 : for a in adj[i][] : adjt[i * 24 + a] = 1
+.
+fastfunc is_adj f t .
+   return adjt[f * 24 + t]
+.
+fastfunc count_p pl .
+   for p in brd[] : if p = pl : c += 1
+   return c
+.
+func has_moves pl .
+   for f = 1 to 24 : if brd[f] = pl
+      for t = 1 to 24 : if brd[t] = EMPTY
+         if is_adj f t = 1 : return 1
+      .
+   .
+.
+fastfunc rate pl en npl dep .
+   if nmoves > 18 and npl <= 2 : return -999 + dep
+   if dep < 6 or (nmoves < 18 or npl > 3) and dep < 10 : return 0 / 0
+   #
+   nen = count_p en
+   for i = 1 step 3 to 48
+      cnt = 0
+      for j = 0 to 2
+         p = mill[i + j]
+         if brd[p] = pl
+            cnt += 1
+         elif brd[p] = en
+            cnt -= 1
+         .
+      .
+      if abs cnt = 3 : r += cnt
+   .
+   ndiff = npl - nen
+   if nmoves > 18 : ndiff *= 2
+   r += ndiff
+   return r
+.
+fastfunc is_mill pos pl .
+   for k to 2
+      b = mpos[pos]
+      if brd[mill[b]] = pl and brd[mill[b + 1]] = pl and brd[mill[b + 2]] = pl
+         return 1
+      .
+      pos += 24
+   .
+   return 0
+.
+#
+fastfunc all_in_mill pl .
+   for i = 1 to 24 : if brd[i] = pl
+      if is_mill i pl = 0 : return 0
+   .
+   return 1
+.
+func legal_move fr to pl .
+   if brd[fr] <> pl : return 0
+   if brd[to] <> EMPTY : return 0
+   if count_p pl = 3 : return 1
+   return is_adj fr to
+.
+func legal_capture pl pos .
+   en = 3 - pl
+   if brd[pos] <> en : return 0
+   if all_in_mill en = 1 : return 1
+   return 1 - is_mill pos en
+.
+proc check_win .
+   if phase = PLACE : return
+   en = 3 - turn
+   cnt = count_p en
+   if cnt < 3 or cnt > 3 and has_moves en = 0
+      win = turn
+   .
+.
+proc prepnext .
+   if nmoves = 18 : phase = MOVE
+   check_win
+   if win > 0 : return
+   turn = 3 - turn
+   newstate phase
+.
+#
+fastfunc minmax pl alpha beta dep .
+   if alpha > 500 and dep = 6 : return alpha
+   en = 3 - pl
+   if dep = 1
+      mcapt = 0
+      mfr = 0
+   .
+   npl = count_p pl
+   r = rate pl en npl dep
+   if r = r : return r
+   nmoves += 1
+   rval = alpha
+   allow_mill = all_in_mill en
+   #
+   if nmoves <= 18
+      #
+      for p = 1 to 24 : if brd[p] = EMPTY
+         brd[p] = pl
+         if is_mill p pl = 1
+            for i = 1 to 24 : if brd[i] = en
+               if allow_mill = 1 or is_mill i en = 0
+                  brd[i] = EMPTY
+                  val = minmax en (-beta) (-rval) (dep + 1)
+                  if -val > rval
+                     rval = -val
+                     if dep = 1
+                        mto = p
+                        mcapt = i
+                     .
+                  .
+                  brd[i] = en
+                  if rval >= beta : break 1
+               .
+            .
+         .
+         brd[p] = EMPTY
+         if rval >= beta : break 1
+      .
+      if rval = alpha
+         p = 12
+         if dep = 1 : p = random 1 24
+         ps = p
+         repeat
+            if brd[p] = EMPTY
+               brd[p] = pl
+               val = minmax en (-beta) (-rval) (dep + 1)
+               if -val > rval
+                  rval = -val
+                  if dep = 1 : mto = p
+               .
+               brd[p] = EMPTY
+            .
+            p = p mod 24 + 1
+            until p = ps or rval >= beta
+         .
+      .
+      #
+   else
+      for f = 1 to 24 : if brd[f] = pl
+         for t = 1 to 24 : if brd[t] = EMPTY
+            if npl = 3 or is_adj f t = 1
+               brd[f] = EMPTY
+               brd[t] = pl
+               if is_mill t pl = 1
+                  for i = 1 to 24 : if brd[i] = en
+                     if allow_mill = 1 or is_mill i en = 0
+                        brd[i] = EMPTY
+                        val = minmax en (-beta) (-rval) (dep + 1)
+                        if -val > rval
+                           rval = -val
+                           if dep = 1
+                              mfr = f
+                              mto = t
+                              mcapt = i
+                           .
+                        .
+                        brd[i] = en
+                        if rval >= beta : break 1
+                     .
+                  .
+               else
+                  val = minmax en (-beta) (-rval) (dep + 1)
+                  if -val > rval
+                     rval = -val
+                     if dep = 1
+                        mfr = f
+                        mto = t
+                        mcapt = 0
+                     .
+                  .
+               .
+               brd[f] = pl
+               brd[t] = EMPTY
+               if rval >= beta : break 1
+            .
+         .
+      .
+      if rval = alpha : rval = -999 + dep
+   .
+   nmoves -= 1
+   return rval
+.
+on timer
+   if state = PLACE or state = MOVE
+      v = minmax turn -9999 9999 1
+      print v
+      nmoves += 1
+      if state = PLACE
+         brd[mto] = turn
+         sel_piece = mto
+         if mcapt > 0
+            newstate CAPTURE
+         else
+            prepnext
+         .
+      else
+         if mfr = 0
+            prepnext
+            return
+         .
+         sel_piece = mfr
+         newstate MOVETOA
+      .
+   elif state = MOVETOA
+      brd[mfr] = EMPTY
+      sel_piece = 0
+      mani += 1
+      if mani >= 20 : state = MOVETO
+      timer 0.05
+   elif state = MOVETO
+      mani = 0
+      brd[mto] = turn
+      if is_ai[turn] = 1 and mcapt > 0 or is_mill hit turn = 1
+         newstate CAPTURE
+      else
+         prepnext
+      .
+   elif state = CAPTURE
+      sel_piece = mcapt
+      newstate DO_CAPTURE
+   elif state = DO_CAPTURE
+      brd[sel_piece] = EMPTY
+      mcapt = 0
+      sel_piece = 0
+      prepnext
+   .
+   draw
+.
+func pdetect x y .
+   r2 = 4.9 * 4.9
+   for i = 1 to 24
+      dx = x - pos[i][1]
+      dy = y - pos[i][2]
+      if dx * dx + dy * dy <= r2 : return i
+   .
+   return 0
+.
+on mouse_down
+   if win > 0
+      newgame
+      return
+   .
+   if is_ai[turn] = 1 : return
+   hit = pdetect mouse_x mouse_y
+   if hit = 0 : return
+   if state = PLACE
+      if brd[hit] = EMPTY
+         brd[hit] = turn
+         sel_piece = hit
+         nmoves += 1
+         if is_mill hit turn = 1
+            newstate CAPTURE
+         else
+            prepnext
+         .
+      .
+   elif state = CAPTURE
+      if legal_capture turn hit = 1
+         brd[hit] = EMPTY
+         check_win
+         if win = 0
+            turn = 3 - turn
+            newstate phase
+         .
+      .
+   elif state = MOVE
+      if brd[hit] = turn
+         sel_piece = hit
+         mfr = hit
+      elif sel_piece <> 0 and legal_move sel_piece hit turn = 1
+         mto = hit
+         sel_piece = 0
+         brd[mfr] = EMPTY
+         state = MOVETOA
+         mani = 0
+         timer 0.1
+      .
+   .
+   draw
+.

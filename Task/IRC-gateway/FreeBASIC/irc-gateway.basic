@@ -1,0 +1,182 @@
+#include once "win/ws2tcpip.bi"
+
+Type SOCKET As Ulongint
+
+#define BUFFER_SIZE 4096
+#define MSG_LENGTH Len(message)
+
+Type IRCMessage
+    prefix As String
+    comando As String
+    params(15) As String
+    paramCount As Integer
+End Type
+
+Type IRCGateway
+    ircSocket As SOCKET
+    chatSocket As SOCKET
+    ircServer As String
+    ircPort As Integer
+    chatServer As String
+    chatPort As Integer
+    nickname As String
+    channel As String
+    connected As Boolean
+
+    Declare Sub Connect()
+    Declare Sub ProcessIRCMessage(msg As String)
+    Declare Sub ProcessChatMessage(msg As String)
+    Declare Sub SendToIRC(msg As String)
+    Declare Sub SendToChat(msg As String)
+End Type
+
+Function ParseIRCMessage(ByRef msg As String) As IRCMessage
+    Static result As IRCMessage
+    Static spacePos As Integer
+
+    ' Parse prefix
+    If Left(msg, 1) = ":" Then
+        spacePos = InStr(msg, " ")
+        result.prefix = Mid(msg, 2, spacePos - 2)
+        msg = Mid(msg, spacePos + 1)
+    End If
+
+    ' Parse command
+    spacePos = InStr(msg, " ")
+    If spacePos = 0 Then
+        result.comando = msg
+        result.paramCount = 0
+        Return result
+    End If
+    result.comando = Left(msg, spacePos - 1)
+    msg = Mid(msg, spacePos + 1)
+
+    ' Parse parameters
+    result.paramCount = 0
+    Do While Len(Str(msg))
+        If Left(msg, 1) = ":" Then
+            result.params(result.paramCount) = Mid(msg, 2)
+            result.paramCount += 1
+            Exit Do
+        End If
+
+        spacePos = InStr(msg, " ")
+        If spacePos = 0 Then
+            result.params(result.paramCount) = msg
+            result.paramCount += 1
+            Exit Do
+        End If
+
+        result.params(result.paramCount) = Left(msg, spacePos - 1)
+        result.paramCount += 1
+        msg = Mid(msg, spacePos + 1)
+    Loop
+
+    Return result
+End Function
+
+Sub IRCGateway.Connect()
+    Dim wsaData As WSADATA
+    WSAStartup(&h0202, @wsaData)
+
+    ircSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0)
+
+    Dim As sockaddr_in ircAddr
+    ircAddr.sin_family = AF_INET
+    ircAddr.sin_addr.s_addr = inet_addr(ircServer)
+    ircAddr.sin_port = htons(ircPort)
+
+    If WSAConnect(ircSocket, Cast(SOCKADDR Ptr, @ircAddr), Sizeof(sockaddr_in), NULL, NULL, NULL, NULL) = 0 Then
+        SendToIRC("NICK " & nickname & Chr(13, 10))
+        SendToIRC("USER " & nickname & " 0 * :IRC Gateway" & Chr(13, 10))
+        SendToIRC("JOIN " & channel & Chr(13, 10))
+        connected = True
+    End If
+
+    chatSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0)
+
+    Dim As sockaddr_in chatAddr
+    chatAddr.sin_family = AF_INET
+    chatAddr.sin_addr.s_addr = inet_addr(chatServer)
+    chatAddr.sin_port = htons(chatPort)
+
+    WSAConnect(chatSocket, Cast(SOCKADDR Ptr, @chatAddr), Sizeof(sockaddr_in), NULL, NULL, NULL, NULL)
+End Sub
+
+Sub IRCGateway.SendToIRC(msg As String)
+    Dim msgLen As Integer = Len(msg)
+    send(ircSocket, Strptr(msg), msgLen, 0)
+End Sub
+
+Sub IRCGateway.SendToChat(msg As String)
+    Dim msgLen As Integer = Len(msg)
+    send(chatSocket, Strptr(msg), msgLen, 0)
+End Sub
+
+Sub IRCGateway.ProcessIRCMessage(msg As String)
+    Dim parsed As IRCMessage = ParseIRCMessage(msg)
+
+    Select Case parsed.comando
+    Case "PRIVMSG"
+        If parsed.paramCount >= 2 Then
+            If parsed.params(0) = channel Then
+                Dim nick As String = Mid(parsed.prefix, 1, Instr(parsed.prefix, "!") - 1)
+                SendToChat(nick & ": " & parsed.params(1) & Chr(13, 10))
+            End If
+        End If
+    Case "PING"
+        SendToIRC("PONG " & parsed.params(0) & Chr(13, 10))
+    End Select
+End Sub
+
+Sub IRCGateway.ProcessChatMessage(msg As String)
+    If Len(msg) > 0 Then SendToIRC("PRIVMSG " & channel & " :" & msg & Chr(13, 10))
+End Sub
+
+' Main program
+Dim As IRCGateway gateway
+With gateway
+    .ircServer = "irc.example.com"
+    .ircPort = 6667
+    .chatServer = "127.0.0.1"
+    .chatPort = 8080
+    .nickname = "GatewayBot"
+    .channel = "#test"
+    .Connect()
+End With
+
+' Main message loop
+Dim As ZString * BUFFER_SIZE buffer
+Dim As fd_set readSet
+Dim As timeval tv
+
+Do While gateway.connected
+    __WSAFDIsSet(gateway.ircSocket, @readSet)
+    __WSAFDIsSet(gateway.chatSocket, @readSet)
+
+    tv.tv_sec = 1
+    tv.tv_usec = 0
+
+    Dim result As Integer = select_(0, @readSet, NULL, NULL, @tv)
+    If result > 0 Then
+        If __WSAFDIsSet(gateway.ircSocket, @readSet) Then
+            Dim bytesReceived As Long = recv(gateway.ircSocket, @buffer, BUFFER_SIZE-1, 0)
+            If bytesReceived > 0 Then
+                buffer[bytesReceived] = 0
+                gateway.ProcessIRCMessage(*Cast(ZString Ptr, @buffer))
+            End If
+        End If
+
+        If __WSAFDIsSet(gateway.chatSocket, @readSet) Then
+            Dim bytesReceived As Long = recv(gateway.chatSocket, @buffer, BUFFER_SIZE-1, 0)
+            If bytesReceived > 0 Then
+                buffer[bytesReceived] = 0
+                gateway.ProcessChatMessage(*Cast(ZString Ptr, @buffer))
+            End If
+        End If
+    End If
+Loop
+
+closesocket(gateway.ircSocket)
+closesocket(gateway.chatSocket)
+WSACleanup()

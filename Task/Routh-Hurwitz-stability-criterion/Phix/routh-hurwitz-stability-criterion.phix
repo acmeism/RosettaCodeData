@@ -1,0 +1,491 @@
+function eval_poly(sequence coeffs, atom z)
+    atom res = 0
+    for i,c in coeffs do
+        res += c*power(z,i-1)
+    end for
+    return res
+end function
+
+function print_poly(sequence s)
+    -- display helper, copied from demo\rosetta\Polynomial_long_division.exw
+    -- eg {0.8,4,3.3,1} => "z^3 + 3.3z^2 + 4z + 0.8"
+    string r = ""
+    for t=length(s) to 1 by -1 do
+        atom st = s[t]
+        if st!=0 then
+            if st=1 and t>1 then
+                r &= iff(r=""? "":" + ")
+            elsif st=-1 and t>1 then
+                r &= iff(r=""?"-":" - ")
+            else
+                if r!="" then
+                    r &= iff(st<0?" - ":" + ")
+                    st = abs(st)
+                end if
+                r &= sprintf("%g",st)
+            end if
+            if t>1 then
+                r &= "z"
+                if t>2 then
+                    r &= sprintf("^%d",t-1)
+                end if
+            end if
+        end if
+    end for
+    if r="" then r="0" end if
+    return r
+end function
+
+// Returns the coefficients of a polynomial following differentiation.
+function diffPoly(sequence coefs)
+    integer c = length(coefs) - 1
+    assert(c>=0 and coefs[$]!=0)
+    if c == 0 then return {0} end if
+    sequence deriv = repeat(0,c)
+    for i=1 to c do
+        deriv[i] = i * coefs[i+1]
+    end for
+    return deriv
+end function
+
+// Attempts to find a real root of a polynomial using Newton's method from
+// an initial guess, a given tolerance, a maximum number of iterations
+// and a given multiplicity (usually 1).
+// If a root is found, it (an atom) is returned otherwise {} is returned.
+// If the root is near an integer checks if the integer is in fact the root.
+function rootPoly(sequence coefs, atom guess=0.001, tol=1e-15, maxIter=100, mult=1)
+    integer deg = length(coefs) - 1
+    if deg == 0 then return {} end if
+    if deg == 1 then return -coefs[1]/coefs[2] end if
+    if deg == 2 and coefs[2]*coefs[2] - 4*coefs[3]*coefs[1] < 0 then return {} end if
+    if eval_poly(coefs, 0) == 0 then return 0 end if
+    atom eps = 0.001
+    sequence deriv = diffPoly(coefs)
+    atom x0 = guess
+    integer iter = 1
+    for iter=1 to maxIter do
+        atom den = eval_poly(deriv, x0)
+        if den == 0 then
+            x0 = iff(x0 >= 0 ? x0 + eps : x0 - eps)
+        else
+            atom num = eval_poly(coefs, x0),
+                 x1 = x0 - num/den * mult
+            if abs(x1-x0) <= tol then
+                atom r = round(x1)
+                if abs(r-x1) <= eps and eval_poly(coefs, r) == 0 then return r end if
+                return x1
+            end if
+            x0 = x1
+        end if
+    end for
+    x0 = round(x0)
+    if eval_poly(coefs, x0) == 0 then return x0 end if
+    return null
+end function
+
+// Assumes real coefficients, highest to lowest order.
+function quadratic(atom a, b, c)
+    atom d = b*b - 4*a*c
+    if d == 0 then
+        // single real root
+        atom root = -b/(a*2)
+        return {root, root}
+    end if
+    if d > 0 then
+        // two real roots
+        atom sr = sqrt(d)
+        d = iff(b<0 ? sr-b : -sr-b)
+        return {d/(2*a), 2*c/d}
+    end if
+    // two complex roots
+    atom den = 1 / (2*a),
+           r = -b*den,
+           i = sqrt(-d) * den
+    return {{r,i},{r,-i}}
+end function
+
+function canonical(sequence c)
+    if c[$] != 0 then return c end if
+    integer newLen = length(c)
+    while newLen > 1 do
+        if c[newLen] != 0 then return c[1..newLen] end if
+        newLen -= 1
+    end while
+    return c[1..1]
+end function
+
+function polydiv(sequence a,b)
+    sequence curr = canonical(a),
+            right = canonical(b),
+           result = {}
+    integer base = length(curr) - length(right)
+    while base >= 0 do
+        atom res = curr[-1] / right[-1]
+        result &= res
+        curr = curr[1..-2]
+        for i=1 to length(right)-1 do
+            curr[base + i] -= res * right[i]
+        end for
+        base -= 1
+    end while
+    sequence quot = reverse(result),
+              rem = canonical(curr)
+    return {quot, rem}
+end function
+
+// Finds the roots of a polynomial.
+// Assumes coeffs are ordered from the lowest to highest degree.
+function polyRoots(sequence coeffs)
+    integer l = length(coeffs)
+    if l<2 then return {} end if
+    if l=2 then return {-coeffs[1]} end if
+    sequence roots = {}
+    while true do
+        if length(coeffs) == 3 then
+            sequence qroots = quadratic(coeffs[3], coeffs[2], coeffs[1])
+            roots &= qroots
+            exit
+        end if
+        object root = rootPoly(coeffs)
+        if root={} then exit end if
+        roots &= root
+        coeffs = polydiv(coeffs,{-root,1})[1]
+    end while
+    return roots
+end function
+
+include complex.e
+
+/* Main code for task. */
+
+// Global epsilon for numerical stability checks (not the replacement epsilon).
+constant DEFAULT_TOLERANCE = 1e-9
+
+// Epsilon value for replacing a zero in the first column.
+constant EPSILON_REPLACEMENT = 0.01
+
+constant inf = 1e308 * 1e308
+
+/*
+    Calculates the Routh-Hurwitz stability table and determines system stability.
+
+    Args:
+        coeffVectorIn(list) : Input vector of system coefficients
+                              (e.g., [an, an-1, ..., a0]).
+        epssReplacement(num): Small value to replace zeros in the first column.
+        tolerance      (num): Tolerance for checking if a number is zero.
+
+    Returns:
+        list: (rhTable, unstablePoles, isStable, message)
+               rhTable (list)     : The Routh-Hurwitz table.
+               unstablePoles (int): Number of right-hand side poles.
+               isStable (bool)    : true if the system is stable, false otherwise.
+               message (string)   : A message describing stability.
+*/
+function routhHurwitz(sequence coeffVector, atom epssReplacement, tolerance)
+    integer cvc = length(coeffVector)
+    assert(cvc and coeffVector==flatten(coeffVector),
+           "coeffVector must be a one dimensional, non-empty list.")
+
+    // Handle all-zero coefficient vector.
+    if max(sq_abs(coeffVector)) < tolerance then
+        integer numCoeffsForTable = iff(cvc > 0 ? cvc : 1),
+                rhColsTrivial = iff(numCoeffsForTable > 0 ? ceil(numCoeffsForTable/2) : 1)
+        sequence zeros = repeat(repeat(0,rhColsTrivial),numCoeffsForTable)
+        string msg = "System has all zero coefficients, "&
+                     "stability is ill-defined (considered unstable)."
+        return {zeros, 0, false, msg}
+    end if
+
+    // Trim leading zeros.
+    for i=1 to cvc do
+        if abs(coeffVector[i]) > tolerance then
+            coeffVector = coeffVector[i..$]
+            cvc = length(coeffVector)
+            exit
+        end if
+        assert(i!=cvc)
+    end for
+
+    if cvc == 1 then  // zeroth order system: P(s) = a0
+        sequence rhTableSingle = {{coeffVector[1]}}
+        // A non-zero constant is stable (no roots, or root at infinity if viewed as 1/P(s)).
+        // A zero constant P(s)=0 has infinite roots, unstable.
+        if abs(coeffVector[1]) < tolerance then
+            return {rhTableSingle, 0, false, "System is P(s)=0, unstable."} // or 1 unstable pole at origin
+        end if
+        return {rhTableSingle, 0, true, "System is stable (0th order, non-zero constant)."}
+    end if
+
+    integer rhTableColumn = max(ceil(cvc/2),1)
+    sequence rhTable = repeat(repeat(0,rhTableColumn),cvc)
+
+    // Row 1.
+    sequence row1Elements = {}
+    for i=1 to cvc by 2 do row1Elements &= coeffVector[i] end for
+    for i,e in row1Elements do rhTable[1][i] = e end for
+
+    // Row 2.
+    if cvc > 1 then
+        sequence row2Elements = {}
+        for i=2 to cvc by 2 do row2Elements &= coeffVector[i] end for
+        if length(row2Elements) then  // check if there are any elements for the second row
+           for i,e in row2Elements do rhTable[2][i] = e end for
+        end if
+        // If cvc is odd, row2Elements.count might be less than rhTableColumn.
+        // If cvc is 1 (e.g. P(s)=s), row2Elements will be empty.
+        // coeffVector = [1,0]. len=2. rh_col=1. R1=[1]. R2=[0]. Correct.
+    end if
+
+    // Calculate other elements of the table.
+    for i=3 to cvc do
+        integer prevRow = i-1,
+            prevPrevRow = i-2
+
+        // Special case: row of all zeros (check rhTable[prevRow]).
+        // Effective number of columns to check for all-zero condition.
+        // For row k, it's roughly rhTableColumn - (k/2).floor.
+        // For simplicity:
+        if max(sq_abs(rhTable[prevRow])) < tolerance then
+            // Auxiliary polynomial is formed from rhTable[prevPrevRow].
+            // Its derivative's coefficients are placed into rhTable[prevRow].
+
+            // Highest power of original polynomial: s^(cvc - 1).
+            // Row prevPrevRow corresponds to s^((cvc -1) - prevPrevRow).
+            // Highest power in aux poly: pAux = (cvc - 1) - prevPrevRow
+            integer highestPowerAuxPoly = cvc-prevPrevRow
+
+            // If highestPowerAuxPoly is 0 (constant term), derivative is 0.
+            // This means rhTable[prevRow] will remain all zeros.
+            // This could indicate multiple roots at origin or more complex jw-axis roots.
+            if highestPowerAuxPoly < 1 then // aux poly is constant or invalid
+                // This implies rhTable[prevPrevRow] was effectively zero or just a0.
+                // If rhTable[prevRow] remains all zero, this is a problem.
+                // The Routh test might break down or indicate severe instability.
+                // For now, let computation proceed; if first element is zero, epss will apply.
+                // But if the whole row is zero again, the next iteration might also hit this.
+                // To prevent issues or signal this degenerate case:
+                if max(sq_abs(rhTable[prevPrevRow..-1])) < tolerance then
+                    return {rhTable, cvc, false, "System unstable: Two consecutive all-zero rows encountered."}
+                end if
+                // If aux poly source is non-zero but leads to zero derivative (e.g. it was a constant)
+                // then the row prevRow remains zero. This is problematic.
+                // The code below will attempt to fill it. If it stays zero, the next loop iteration
+                // will find prevRow (which becomes currentRow - 1) as all zero again.
+                // This recursive all-zero needs a limit or specific handling.
+                // For now, if derivative is zero, the row rhTable[prevRow] is not changed from zeros.
+                // Let it be, next calculations will use zeros or epss.
+            end if
+
+            bool allZerosGeneratedForAuxRow = true
+            for j=1 to rhTableColumn-1 do   // iterate to fill derivative coeffs
+                // Power for term rhTable[prevPrevRow][j] in aux poly is highestPowerAuxPoly - 2 * j.
+                integer powerOfSTerm = highestPowerAuxPoly - 2 * (j-1)
+                if powerOfSTerm >= 0 then  // differentiate valid term
+                    atom coeffVal = rhTable[prevPrevRow][j]
+                    rhTable[prevRow][j] = powerOfSTerm * coeffVal
+                    if abs(rhTable[prevRow][j]) > tolerance then
+                        allZerosGeneratedForAuxRow = false
+                    end if
+                else  // no more terms in aux polynomial
+                    rhTable[prevRow][j] = 0
+                end if
+            end for
+
+            if allZerosGeneratedForAuxRow and highestPowerAuxPoly >= 1 then
+                // This means aux poly was non-trivial (e.g. s^2) but all its coeffs in table were zero.
+                // Or, derivative itself is identically zero (e.g. from P(s)=constant).
+                // This is a critical failure point for Routh array construction.
+                // A truly robust handler might stop here or flag.
+                // However, we assume the derived row is used.
+                // If rhTable[prevRow][1] is zero, the epss replacement will occur later for that element.
+            end if
+        end if
+
+        // Denominator for the current row's calculation.
+        atom denominator = rhTable[prevRow][1]
+
+        if abs(denominator) < tolerance then
+            // This means the first element of the previous row was zero.
+            // It should have been replaced by epssReplacement in its own calculation step.
+            // If it's still zero, it means epssReplacement itself might be zero,
+            // or it was part of an all-zero row whose derivative was also zero at that point.
+            if abs(epssReplacement) < tolerance then    // epsilon itself is zero, cannot recover
+                string msg = "System unstable or ill-defined: Division by zero, "&
+                             sprintf("and epsilon (%g) is zero.",epssReplacement)
+                return {rhTable, cvc, false, msg}
+            end if
+            denominator = epssReplacement  // use epsilon as denominator robustly
+        end if
+
+        for j=1 to rhTableColumn-1 do
+            // rhTable[i][j] = ( (rhTable[prevRow][1] * rhTable[prevPrevRow][j + 1]) -
+            //                    rhTable[prevPrevRow][1] * rhTable[prevRow][j + 1]) / denominator
+
+            // Ensure indices are within bounds for safety.
+            atom valPrevPrevJPlus1 = iff(j < rhTableColumn ? rhTable[prevPrevRow][j + 1] : 0),
+                     valPrevJPlus1 = iff(j < rhTableColumn ? rhTable[prevRow][j + 1] : 0)
+
+            atom numerator = rhTable[prevRow][1] * valPrevPrevJPlus1 -
+                             rhTable[prevPrevRow][1] * valPrevJPlus1
+
+            if abs(denominator) < tolerance then // should have been caught and set to epssReplacement
+                rhTable[i][j] = inf           // should not happen if epssReplacement is non-zero
+            else
+                rhTable[i][j] = numerator / denominator
+            end if
+        end for
+
+        // Special case: zero in the first column of the *newly computed* row (i)
+        if abs(rhTable[i][1]) < tolerance then
+            // Check if this row is entirely zeros. If so, it will be handled by aux poly in next iteration.
+            // Applying epss here would prevent that.
+            rhTable[i][1] = epssReplacement
+        end if
+    end for
+
+    // Compute number of right hand side poles.
+    integer unstablePoles = 0
+    sequence firstColumnValues = repeat(0,length(rhTable))
+    for k=1 to length(rhTable) do firstColumnValues[k] = rhTable[k][1] end for
+
+    for k=1 to cvc-1 do
+        integer signCurr = sign(firstColumnValues[k]),
+                signNext = sign(firstColumnValues[k + 1])
+
+        // If epssReplacement is used, it's positive, so sign is 1.
+        // 0.sign is 0. product signCurr * signNext will be 0, not -1.
+        if (signCurr * signNext == -1) then unstablePoles += 1 end if
+    end for
+
+    bool isStableSystem = (unstablePoles == 0)
+
+    // Refine stability message.
+    // A row of zeros during computation (even if replaced by aux poly) indicates roots on jw-axis
+    // or symmetrically located roots. If unstablePoles is 0 in such a case, it's marginally stable.
+    // We don't distinguish between "stable" vs "marginally stable".
+    string stabilityMessage = iff(isStableSystem ? "System is STABLE."
+                        : sprintf("System is UNSTABLE with %d pole(s) in the RHP.",unstablePoles))
+    return {rhTable, unstablePoles, isStableSystem, stabilityMessage}
+end function
+
+procedure printRouthDetails(sequence coefs, rhTable, string msg, integer unstablePoles,
+                            bool isStable, showRoots, atom tolerance)
+    printf(1,"\nFor coefficient vector: {%s}\n",{join(coefs,",",fmt:="%g")})
+    printf(1,"Routh-Hurwitz Table:\n")
+    if length(rhTable) then
+        sequence rhTablePrint = deep_copy(rhTable)
+        // Replace very small numbers with 0 for cleaner printing.
+        for i=1 to length(rhTablePrint) do
+            for j=1 to length(rhTablePrint[1]) do
+                if abs(rhTablePrint[i][j]) < tolerance * 10 then rhTablePrint[i][j] = 0 end if
+            end for
+        end for
+
+        sequence strTableRows = {}
+        integer maxCharLen = 0
+        for rowIdx=1 to length(rhTablePrint) do
+            sequence strRowElems = {}
+            // Determine effective columns for this row to avoid printing excessive trailing zeros.
+            // For strictness, print all.
+            // Let's print up to the last non-zero element per row for clarity, or at least first element.
+            integer effectiveColsThisRow = length(rhTablePrint[1])
+            // Heuristic: find last significant element in this row.
+            integer lastSigIdx = 0
+            for colIdx=1 to length(rhTablePrint[1]) do
+                if abs(rhTablePrint[rowIdx][colIdx]) > tolerance then lastSigIdx = colIdx end if
+            end for
+            effectiveColsThisRow = max(1, lastSigIdx)
+
+            for colIdx=1 to effectiveColsThisRow do // iterate only over effective columns
+                atom x = rhTablePrint[rowIdx][colIdx]
+                string s = sprintf("%0.4g", x)  // general format, up to 4 significant digits
+                if length(s) > maxCharLen then maxCharLen = length(s) end if
+                strRowElems = append(strRowElems,s)
+            end for
+            strTableRows = append(strTableRows,strRowElems)
+        end for
+
+        string fmt = sprintf("%%%ds",maxCharLen)
+        for sre in strTableRows do
+            printf(1,"%s\n",{join(sre," | ", fmt:=fmt)})
+        end for
+    else
+        printf(1,"(Table generation failed or system trivial/empty)\n")
+    end if
+    printf(1,"\n%s\n",{msg})
+
+    if showRoots then
+        sequence coeffsForRootsFinding = deep_copy(coefs)
+        for i,c in coeffsForRootsFinding do
+            if abs(c) > tolerance then
+                coeffsForRootsFinding = coeffsForRootsFinding[i..-1]
+                exit
+            end if
+            if i == length(coeffsForRootsFinding) then   // all zeros
+                coeffsForRootsFinding = {}
+            end if
+        end for
+
+        if length(coeffsForRootsFinding) > 1 then   // need at least s^1 + a0 = 0
+            sequence sysRootsVal = polyRoots(reverse(coeffsForRootsFinding))
+            if length(sysRootsVal)=0 then
+                printf(1,"\nCould not compute roots (possibly due to polynomial structure).\n")
+                return
+            end if
+            printf(1,"\nRoots of the polynomial:\n")
+            for root in sysRootsVal do
+                if complex(root) and abs(complex_imag(root)) <= tolerance then // treat as real
+                    root = complex_real(root)
+                end if
+                printf(1,"  %0.4s\n", {complex_sprint(root)})
+            end for
+            if length(sysRootsVal) != length(coeffsForRootsFinding) - 1 then
+                printf(1,"Note: unable to find the complex roots.\n")
+            end if
+        elsif length(coeffsForRootsFinding) == 1 and abs(coeffsForRootsFinding[1]) > tolerance then // P(s) = K != 0
+            printf(1,"\nPolynomial is a non-zero constant (0th order), no roots in finite plane.\n")
+        else   // P(s) = 0 or empty
+            printf(1,"\nPolynomial is trivial (e.g., 0 or empty), roots are undefined or infinite.\n")
+        end if
+    end if
+end procedure
+
+constant testCases = {
+    {"Stable: s^3 + 6s^2 + 11s + 6", {1, 6, 11, 6}},
+    {"Unstable: s^3 - 6s^2 + 11s - 6", {1, -6, 11, -6}},
+    {"Marginally Stable (jw-axis, Row of Zeros): s^3 + s^2 + s + 1", {1, 1, 1, 1}},
+    {"Marginally Stable (jw-axis, Row of Zeros): s^2 + 1", {1, 0, 1}},
+    {"Marginally Stable (epsilon case): s^3 + 2s^2 + s + 2", {1, 2, 1, 2}},
+    {"Unstable (row of zeros & RHP): s^5 + 2s^4 + 3s^3 + 6s^2 + 5s + 10", {1, 2, 3, 6, 5, 10}},
+    {"Stable: s + 1", {1, 1}},
+    {"Stable: s^2 + 2s + 1", {1, 2, 1}},
+    {"Unstable: s^2 - 1", {1, 0, -1}},
+    {"Marginally Stable (all jw-axis): s^4 + 3s^2 + 2", {1, 0, 3, 0, 2}},
+    {"All Zero Coefficients", {0, 0, 0}},
+    {"Single Zero Coefficient", {0}},
+    {"Single Non-Zero Coefficient (Stable)", {5}},
+    {"Leading Zeros: 0s^3 + s^2 + 2s + 1", {0, 1, 2, 1}},
+    {"Unstable (2 RHP): s^4 - s^3 - 7s^2 + s + 6", {1, -1, -7, 1, 6}},
+    {"Marginally Stable (Ogata Example): s^6+2s^5+8s^4+12s^3+20s^2+16s+16", {1, 2, 8, 12, 20, 16, 16}},
+    {"Marginally Stable (User Example): s^5+s^4+2s^3+2s^2+s+1", {1, 1, 2, 2, 1, 1}},
+    {"Simplest s", {1, 0}},  //  s=0 -> one pole at origin (marginally stable)
+    {"Order 0: constant", {10}},  // stable
+    {"Order 0: zero", {0}},  // unstable
+    {"Test case leading to problems with aux poly (constant aux poly)", {1, 1, 0, 0}}
+    // ^^: s^3+s^2. R1=[1,0], R2=[1,0]. R3=aux from s^2. dA/ds = 2s. R3=[2,0]. R4=0. R4 gets eps.
+}
+
+bool showAllRootsMain = true
+for dc in testCases do
+    string desc = dc[1]
+    sequence coeffsMain = dc[2]
+    printf(1,"--- Testing Case: %s ---\n",{desc})
+    sequence res = routhHurwitz(coeffsMain, EPSILON_REPLACEMENT, DEFAULT_TOLERANCE),
+         rhTable = res[1]
+    integer unstablePoles = res[2]
+    bool isStable = res[3]
+    string message = res[4]
+    printRouthDetails(coeffsMain, rhTable, message, unstablePoles, isStable, showAllRootsMain, DEFAULT_TOLERANCE)
+    printf(1,"%s\n",{repeat('-',60)})
+end for

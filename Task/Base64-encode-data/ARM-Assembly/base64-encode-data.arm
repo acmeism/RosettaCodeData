@@ -1,0 +1,166 @@
+.section .rodata
+ch64: .ascii "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+example_text: .ascii "Hello World"
+example_base64: .ascii "SGVsbG8gV29ybGQ="
+
+.section .bss
+.lcomm buffer, 64
+
+.section .text
+.global _start
+
+@ int base64_encode(char *d, char *s, int len)
+base64_encode:
+    push {r3-r7}
+    ldr r6, =ch64
+    mov r7, r0
+be_cycle:
+    ldrb r3, [r1]
+    lsr r4, r3, #2
+    ldrb r4, [r6, r4]
+    strb r4, [r0]
+
+    add r0, r0, #1
+    add r1, r1, #1
+    subs r2, r2, #1
+    moveq r4, #0
+    ldrneb r4, [r1]
+
+    and r3, r3, #3
+    lsl r3, r3, #4
+    lsr r5, r4, #4
+    orr r3, r3, r5
+    ldrb r3, [r6, r3]
+    strb r3, [r0]
+
+    add r0, r0, #1
+    add r1, r1, #1
+    beq be_store2
+    subs r2, r2, #1
+    moveq r3, #0
+    ldrneb r3, [r1]
+
+    and r4, r4, #15
+    lsl r4, r4, #2
+    lsr r5, r3, #6
+    orr r4, r4, r5
+    ldrb r4, [r6, r4]
+    strb r4, [r0]
+
+    add r0, r0, #1
+    add r1, r1, #1
+    beq be_store1
+
+    and r3, r3, #0x3f
+    ldrb r3, [r6, r3]
+    strb r3, [r0]
+
+    add r0, r0, #1
+    subs r2, r2, #1
+    beq be_exit
+    bne be_cycle
+be_store2:
+    mov r3, #'='
+    strb r3, [r0]
+    add r0, r0, #1
+be_store1:
+    mov r3, #'='
+    strb r3, [r0]
+    add r0, r0, #1
+be_exit:
+    sub r0, r0, r7
+    pop {r3-r7}
+    mov pc, lr
+
+@ int base64_decode(char *d, char *s, int len)
+base64_decode:
+    push {r3-r6,lr}
+    mov r3, r0
+    mov r6, r0
+bd_cycle:
+    ldrb r0, [r1]
+    bl char_decode
+    add r1, r1, #1
+
+    lsl r4, r0, #2
+    ldrb r0, [r1]
+    bl char_decode
+    add r1, r1, #1
+
+    lsr r5, r0, #4
+    orr r4, r4, r5
+    strb r4, [r3]
+    add r3, r3, #1
+
+    lsl r4, r0, #4
+    ldrb r0, [r1]
+    cmp r0, #'='
+    beq exit
+    bl char_decode
+    add r1, r1, #1
+
+    lsr r5, r0, #2
+    orr r4, r4, r5
+    strb r4, [r3]
+    add r3, r3, #1
+
+    lsl r4, r0, #6
+    ldrb r0, [r1]
+    cmp r0, #'='
+    beq exit
+    bl char_decode
+    add r1, r1, #1
+
+    orr r4, r4, r0
+    strb r4, [r3]
+    add r3, r3, #1
+    subs r2, r2, #4
+    bne bd_cycle
+exit:
+    sub r0, r3, r6
+    pop {r3-r6, pc}
+
+@ char char_decode(char c)
+char_decode:
+    subs r0, r0, #'A'
+    blt cd_digit
+    cmp r0, #25
+    subgt r0, r0, #6
+    mov pc, lr
+cd_digit:
+    adds r0, r0, #17
+    blt cd_ps
+    add r0, r0, #52
+    mov pc, lr
+cd_ps:
+    cmn r0, #5
+    moveq r0, #62
+    movne r0, #63
+    mov pc, lr
+
+_start:
+    ldr r0, =buffer
+    ldr r1, =example_text
+    mov r2, #11
+    bl base64_encode
+
+    mov r2, r0
+    mov r7, #4
+    mov r0, #1
+    ldr r1, =buffer
+    swi #0
+
+    ldr r0, =buffer
+    ldr r1, =example_base64
+    mov r2, #16
+    bl base64_decode
+
+    mov r2, r0
+    mov r7, #4
+    mov r0, #1
+    ldr r1, =buffer
+    swi #0
+
+    mov r7, #1
+    mov r0, #0
+    swi #0

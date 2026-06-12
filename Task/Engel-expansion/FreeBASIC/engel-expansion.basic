@@ -1,0 +1,131 @@
+#define ceil(x) (-((-x*2.0-0.5) Shr 1))
+
+Type BigRational
+    As Double numerador
+    As Double denominador
+End Type
+
+Function BigRationalNew(n As Double, d As Double) As BigRational
+    Dim As BigRational result = Type(n, d)
+    Return result
+End Function
+
+Function BigRationalAdd(a As BigRational, b As BigRational) As BigRational
+    Return BigRationalNew(a.numerador * b.denominador + b.numerador * a.denominador, _
+    a.denominador * b.denominador)
+End Function
+
+Function BigRationalMultiply(a As BigRational, b As BigRational) As BigRational
+    Return BigRationalNew(a.numerador * b.numerador, a.denominador * b.denominador)
+End Function
+
+Function BigRationalSubtract(a As BigRational, b As BigRational) As BigRational
+    Return BigRationalNew(a.numerador * b.denominador - b.numerador * a.denominador, _
+    a.denominador * b.denominador)
+End Function
+
+Function BigRationalInverse(a As BigRational) As BigRational
+    Return BigRationalNew(a.denominador, a.numerador)
+End Function
+
+Function BigRationalCeiling(a As BigRational) As Long
+    Return Clng(Ceil(a.numerador / a.denominador))
+End Function
+
+Function BigRationalToString(a As BigRational) As String
+    Dim As Double value = a.numerador / a.denominador
+    Dim As String result = ""
+
+    ' Get integer part using proper rounding
+    Dim As Double intPart = Fix(Abs(value))
+    ' Get decimal part with high precision
+    Dim As Double decPart = Abs(value) - intPart
+
+    ' Convert integer part
+    result = Str(Int(intPart))
+
+    ' Add decimal places with controlled precision
+    If decPart > 0 Then
+        result &= "."
+        For i As Integer = 1 To 15
+            decPart *= 10
+            Dim As Integer digit = Int(decPart)
+            result &= Trim(Str(digit))
+            decPart -= digit
+            ' Stop if we've reached sufficient precision
+            If decPart < 1e-15 Then Exit For
+        Next
+    End If
+
+    ' Add negative sign if needed
+    If value < 0 Then result = "-" & result
+
+    ' Clean up the result
+    result = Ltrim(result)
+
+    ' Remove trailing zeros
+    While Right(result, 1) = "0" Andalso Instr(result, ".") > 0
+        result = Left(result, Len(result) - 1)
+    Wend
+    ' Remove trailing decimal point if needed
+    If Right(result, 1) = "." Then result = Left(result, Len(result) - 1)
+
+    Return result
+End Function
+
+Sub toEngel(rat As BigRational, engel() As Long)
+    Dim As Integer i = 0
+    Dim As BigRational temp = rat
+
+    While temp.numerador > 1e-10 Andalso i < Ubound(engel)
+        Dim As Long a = BigRationalCeiling(BigRationalInverse(temp))
+        engel(i) = a
+        temp = BigRationalSubtract(BigRationalMultiply(temp, BigRationalNew(a, 1)), BigRationalNew(1, 1))
+        i += 1
+    Wend
+
+    If i < Ubound(engel) Then engel(i) = 0
+End Sub
+
+Function fromEngel(engel() As Long) As BigRational
+    Dim As BigRational sum = BigRationalNew(0, 1)
+    Dim As Double scale = 1.0
+    Dim As Integer i = 0
+
+    While engel(i) <> 0 Andalso i <= Ubound(engel)
+        scale /= engel(i)
+        sum.numerador += scale * sum.denominador
+        sum.denominador = 1
+        i += 1
+    Wend
+
+    Return sum
+End Function
+
+' Main program
+Dim As BigRational rationals(3)
+rationals(0) = BigRationalNew(314159265358979, 1e14)  ' PI
+rationals(1) = BigRationalNew(271828182845904, 1e14)  ' e
+rationals(2) = BigRationalNew(1414213562373095, 1e15) ' Sqrt(2)
+rationals(3) = BigRationalNew(2562890625, 1e8)        ' 1.5^8
+
+For i As Integer = 0 To Ubound(rationals)
+    Dim As Long engel(100)
+
+    Print "Rational number : "; BigRationalToString(rationals(i))
+
+    toEngel(rationals(i), engel())
+
+    Print "Engel expansion :";
+    Dim As Integer terms = 0
+    While engel(terms) <> 0 Andalso terms < 30
+        Print engel(terms);
+        terms += 1
+    Wend
+    Print
+    Print "Number of terms :"; terms
+    Print "Back to rational: "; BigRationalToString(fromEngel(engel()))
+    Print
+Next
+
+Sleep

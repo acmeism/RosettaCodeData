@@ -1,0 +1,30 @@
+row = 0
+
+PRINT "Numbers which count of divisors is prime are:"
+
+FOR n = 1 TO 1000
+    num = 0
+    FOR m = 1 TO n
+        IF n MOD m = 0 THEN num = num + 1
+    NEXT m
+    IF isPrime(num) AND num <> 2 THEN
+        PRINT USING " ##### "; n;
+        row = row + 1
+        IF row MOD 5 = 0 THEN PRINT
+    END IF
+NEXT n
+
+PRINT : PRINT "Found"; row; " numbers"
+Sleep
+END
+
+FUNCTION isPrime (ValorEval)
+    IF ValorEval < 2 THEN isPrime = False
+    IF ValorEval MOD 2 = 0 THEN isPrime = 2
+    IF ValorEval MOD 3 = 0 THEN isPrime = 3
+    d = 5
+    WHILE d * d <= ValorEval
+        IF ValorEval MOD d = 0 THEN isPrime = False ELSE d = d + 2
+    WEND
+    isPrime = True
+END FUNCTION

@@ -1,0 +1,9 @@
+PRINT 1,
+FOR n = 2 TO 100
+    p = 1 + n
+    FOR i = 2 TO n / 2
+        IF n MOD i = 0 THEN p = p + i
+    NEXT i
+    PRINT p,
+NEXT n
+END

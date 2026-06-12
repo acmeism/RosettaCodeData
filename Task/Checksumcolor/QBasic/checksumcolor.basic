@@ -1,0 +1,15 @@
+DECLARE SUB colourhex (s$)
+
+CLS
+colourhex ("#0123456789ABCDEF")
+END
+
+SUB colourhex (s$)
+    FOR i = 1 TO LEN(s$)
+        ch$ = MID$(s$, i, 1)
+        k = INSTR("123456789ABCDEF", ch$)
+        COLOR 15 - k, k
+        PRINT ch$;
+    NEXT
+    COLOR 15, 0    'text_color, background_color
+END SUB

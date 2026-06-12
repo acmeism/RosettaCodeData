@@ -1,0 +1,140 @@
+Type Rule
+    lhs    As String
+    rhsCnt As Integer
+    rhs(0 To 1) As String
+End Type
+
+Type NtSet
+    cnt As Integer
+    nt(0 To 31) As String
+End Type
+
+Sub setAdd(Byref s As NtSet, Byref sym As String)
+    For i As Integer = 0 To s.cnt - 1
+        If s.nt(i) = sym Then Exit Sub
+    Next
+    If s.cnt < 32 Then
+        s.nt(s.cnt) = sym
+        s.cnt += 1
+    End If
+End Sub
+
+Function setContains(Byref s As NtSet, Byref sym As String) As Boolean
+    For i As Integer = 0 To s.cnt - 1
+        If s.nt(i) = sym Then Return True
+    Next
+    Return False
+End Function
+
+Dim Shared As Rule rules(0 To 63)
+Dim Shared As Integer nRules = 0
+
+Sub addRule(Byref lhs As String, Byref a As String, Byref b As String = "")
+    rules(nRules).lhs = lhs
+    If b = "" Then
+        rules(nRules).rhsCnt = 1
+        rules(nRules).rhs(0)  = a
+    Else
+        rules(nRules).rhsCnt = 2
+        rules(nRules).rhs(0)  = a
+        rules(nRules).rhs(1)  = b
+    End If
+    nRules += 1
+End Sub
+
+Sub initGrammar()
+    ' NP -> Det Nom
+    addRule("NP",  "Det", "Nom")
+    ' Nom -> AP Nom | "book" | "orange" | "man"
+    addRule("Nom", "AP", "Nom")
+    addRule("Nom", "book")
+    addRule("Nom", "orange")
+    addRule("Nom", "man")
+    ' AP -> Adv A | "heavy" | "orange" | "tall"
+    addRule("AP",  "Adv", "A")
+    addRule("AP",  "heavy")
+    addRule("AP",  "orange")
+    addRule("AP",  "tall")
+    ' Det -> "a"
+    addRule("Det", "a")
+    ' Adv -> "very" | "extremely"
+    addRule("Adv", "very")
+    addRule("Adv", "extremely")
+    ' A -> "heavy" | "orange" | "tall" | "muscular"
+    addRule("A",   "heavy")
+    addRule("A",   "orange")
+    addRule("A",   "tall")
+    addRule("A",   "muscular")
+End Sub
+
+Function cykParse(Byref sent As String, Byref startSym As String) As Boolean
+    Dim As String w()
+    Redim w(0)
+    Dim As Integer wCnt = 0, posic = 1
+    Dim As Integer i, j, k, r
+
+    While posic <= Len(sent)
+        Dim As Integer sp = Instr(posic, sent, " ")
+        If sp = 0 Then sp = Len(sent) + 1
+        Dim As String token = Trim(Mid(sent, posic, sp - posic))
+        If Len(token) > 0 Then
+            If wCnt = 0 Then
+                w(0) = token
+                wCnt = 1
+            Else
+                Redim Preserve w(wCnt)
+                w(wCnt) = token
+                wCnt += 1
+            End If
+        End If
+        posic = sp + 1
+    Wend
+
+    If wCnt = 0 Then Return False
+
+    Dim As Integer n = wCnt
+    Dim As NtSet t(n-1, n-1)
+
+    For j = 0 To n - 1
+        For r = 0 To nRules - 1
+            If rules(r).rhsCnt = 1 Then
+                If rules(r).rhs(0) = w(j) Then setAdd(t(j,j), rules(r).lhs)
+            End If
+        Next r
+
+        For i = j To 0 Step -1
+            For k = i To j - 1
+                For r = 0 To nRules - 1
+                    If rules(r).rhsCnt = 2 Then
+                        Dim As String B = rules(r).rhs(0)
+                        Dim As String C = rules(r).rhs(1)
+                        If setContains(t(i,k), B) Andalso setContains(t(k+1,j), C) Then
+                            setAdd(t(i,j), rules(r).lhs)
+                        End If
+                    End If
+                Next r
+            Next k
+        Next i
+    Next j
+
+    Return Iif(setContains(t(0, n-1), startSym), True, False)
+End Function
+
+' Main program
+initGrammar()
+
+Dim As String tests(0 To 5) = { _
+"a very heavy orange book", _
+"a very heavy orange", _
+"a heavy orange", _
+"a heavy", _
+"orange", _
+"very heavy orange" }
+
+Dim As String startSym = "NP"
+
+For i As Integer = 0 To 5
+    Print Iif(cykParse(tests(i), startSym) <> 0, "True", "False")
+Next
+
+Sleep

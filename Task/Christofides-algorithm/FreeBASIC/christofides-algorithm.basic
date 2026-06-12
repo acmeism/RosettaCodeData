@@ -1,0 +1,391 @@
+#include "string.bi"
+
+Type Punto
+    x As Double
+    y As Double
+    id As Integer ' Original index
+End Type
+
+Type Edge
+    u    As Integer
+    v    As Integer
+    peso As Double
+End Type
+
+' Euclidean distance
+Function getLength(Byref p1 As Punto, Byref p2 As Punto) As Double
+    Dim As Double dx = p1.x - p2.x
+    Dim As Double dy = p1.y - p2.y
+    Return Sqr(dx * dx + dy * dy)
+End Function
+
+' Union-Find Structure
+Type UnionFind
+    parent(Any) As Integer
+    rank(Any)   As Integer
+End Type
+
+Sub UF_init(Byref uf As UnionFind, Byval n As Integer)
+    Redim uf.parent(0 To n - 1)
+    Redim uf.rank(0 To n - 1)
+    For i As Integer = 0 To n - 1
+        uf.parent(i) = i
+        uf.rank(i) = 0
+    Next
+End Sub
+
+Function UF_find(Byref uf As UnionFind, Byval i As Integer) As Integer
+    If uf.parent(i) <> i Then uf.parent(i) = UF_find(uf, uf.parent(i))
+    Return uf.parent(i)
+End Function
+
+Function UF_unite(Byref uf As UnionFind, Byval i As Integer, Byval j As Integer) As Boolean
+    Dim As Integer rootI = UF_find(uf, i)
+    Dim As Integer rootJ = UF_find(uf, j)
+
+    If rootI = rootJ Then Return False
+
+    If uf.rank(rootI) < uf.rank(rootJ) Then
+        uf.parent(rootI) = rootJ
+    Else
+        uf.parent(rootJ) = rootI
+        If uf.rank(rootI) = uf.rank(rootJ) Then uf.rank(rootI) += 1
+    End If
+    Return True
+End Function
+
+' Sort edges by weight in ascending order
+Sub quickSortEdgesIterative(edges() As Edge, Byval low As Integer, Byval high As Integer)
+    Dim As Integer stack(0 To high - low + 1)
+    Dim As Integer top = -1
+    top += 1 : stack(top) = low
+    top += 1 : stack(top) = high
+
+    Do While top >= 0
+        Dim As Integer h = stack(top) : top -= 1
+        Dim As Integer l = stack(top) : top -= 1
+
+        Dim As Integer i = l, j = h
+        Dim As Double pivot = edges((l + h) \ 2).peso
+
+        Do
+            Do While i <= h And edges(i).peso < pivot : i += 1 : Loop
+            Do While j >= l And edges(j).peso > pivot : j -= 1 : Loop
+            If i <= j Then
+                Swap edges(i), edges(j)
+                i += 1 : j -= 1
+            End If
+        Loop Until i > j
+
+        If l < j Then
+            top += 1 : stack(top) = l
+            top += 1 : stack(top) = j
+        End If
+        If i < h Then
+            top += 1 : stack(top) = i
+            top += 1 : stack(top) = h
+        End If
+    Loop
+End Sub
+
+' Minimum Spanning Tree (Kruskal's Algorithm)
+Sub minimumSpanningTree(graph() As Double, Byval n As Integer, mst() As Edge)
+    Dim As Integer edgeCnt = n * (n - 1) \ 2
+    Dim As Edge edges(edgeCnt - 1)
+
+    Dim As Integer i, j, cnt = 0
+    For i = 0 To n - 2
+        For j = i + 1 To n - 1
+            edges(cnt).u = i : edges(cnt).v = j
+            edges(cnt).peso = graph(i * n + j)
+            cnt += 1
+        Next
+    Next
+
+    ' Sort edges by weight in ascending order
+    quickSortEdgesIterative(edges(), 0, cnt - 1)
+
+    Dim As UnionFind uf
+    UF_init(uf, n)
+
+    Redim mst(0 To n - 2)
+    Dim As Integer mstCnt = 0
+
+    For i = 0 To cnt - 1
+        ' If uniting forms a new connection:
+        If UF_unite(uf, edges(i).u, edges(i).v) Then
+            mst(mstCnt) = edges(i)
+            mstCnt += 1
+            If mstCnt = n - 1 Then Exit For ' optimization: MST has n-1 edges
+        End If
+    Next
+    If mstCnt < n - 1 Then
+        If mstCnt > 0 Then
+            Redim Preserve mst(0 To mstCnt - 1)
+        Else
+            Erase mst
+        End If
+    End If
+End Sub
+
+' Find Vertices with Odd Degree in MST
+Sub findOddVertices(oddVertices() As Integer, mst() As Edge, Byval n As Integer)
+    Dim As Integer degrees(0 To n - 1)
+    Dim As Integer i
+    For i = 0 To n - 1 : degrees(i) = 0 : Next
+
+    For i = 0 To Ubound(mst)
+        degrees(mst(i).u) += 1
+        degrees(mst(i).v) += 1
+    Next
+
+    Dim As Integer cnt = 0
+    For i = 0 To n - 1
+        If degrees(i) Mod 2 <> 0 Then cnt += 1
+    Next
+
+    If cnt = 0 Then
+        Erase oddVertices
+        Exit Sub
+    End If
+
+    Redim oddVertices(0 To cnt - 1)
+    Dim As Integer k = 0
+    For i = 0 To n - 1
+        If degrees(i) Mod 2 <> 0 Then
+            oddVertices(k) = i : k += 1
+        End If
+    Next
+End Sub
+
+' Note: This modifies the mst array by adding matching edges
+Sub minimumWeightMatching(mst() As Edge, graph() As Double, Byval n As Integer, oddVertices() As Integer)
+    If Lbound(oddVertices) > Ubound(oddVertices) Then Exit Sub
+
+    Dim As Integer nOdd = Ubound(oddVertices) + 1
+    If nOdd < 2 Then Exit Sub
+
+    ' Simple shuffle
+    Dim As Integer i, j
+    Randomize Timer
+    For i = nOdd - 1 To 1 Step -1
+        j = Int(Rnd * (i + 1))
+        Swap oddVertices(i), oddVertices(j)
+    Next
+
+    Dim As Integer matched(0 To nOdd - 1)
+    For i = 0 To nOdd - 1 : matched(i) = 0 : Next
+
+    Dim As Integer initialSize = Ubound(mst) + 1
+    Dim As Integer extra = nOdd \ 2
+    Redim Preserve mst(0 To initialSize + extra - 1)
+
+    Dim As Integer writePos = initialSize
+    For i = 0 To nOdd - 1
+        If matched(i) <> 0 Then Continue For
+
+        Dim As Double minPeso = 1e300
+        Dim As Integer bestJ = -1
+
+        For j = i + 1 To nOdd - 1
+            If matched(j) = 0 Then
+                Dim As Double w = graph(oddVertices(i) * n + oddVertices(j))
+                If w < minPeso Then
+                    minPeso = w : bestJ = j
+                End If
+            End If
+        Next
+
+        If bestJ <> -1 Then
+            mst(writePos).u = oddVertices(i)
+            mst(writePos).v = oddVertices(bestJ)
+            mst(writePos).peso = minPeso
+            writePos += 1
+            matched(i) = 1 : matched(bestJ) = 1
+        End If
+    Next
+
+    If writePos <= Ubound(mst) Then
+        If writePos > 0 Then
+            Redim Preserve mst(0 To writePos - 1)
+        Else
+            Erase mst
+        End If
+    End If
+End Sub
+
+' Find Eulerian Tour (Hierholzer's Algorithm)
+Sub findEulerianTour(matchedMST() As Edge, Byval n As Integer, tour() As Integer)
+    If Lbound(matchedMST) > Ubound(matchedMST) Then
+        Erase tour
+        Exit Sub
+    End If
+
+    ' Build adjacency list
+    Dim As Integer adjSize = (Ubound(matchedMST) + 1) * 2
+    Dim As Integer adj(0 To n - 1, 0 To adjSize - 1)
+    Dim As Integer adjCnt(0 To n - 1)
+
+    Dim As Integer i, u, v
+    For i = 0 To n - 1 : adjCnt(i) = 0 : Next
+
+    For i = 0 To Ubound(matchedMST)
+        With matchedMST(i)
+            adj(.u, adjCnt(.u)) = .v : adjCnt(.u) += 1
+            adj(.v, adjCnt(.v)) = .u : adjCnt(.v) += 1
+        End With
+    Next
+
+    ' Hierholzer's algorithm
+    Dim As Integer stack(0 To adjSize)
+    Dim As Integer stackPtr = 0
+    Dim As Integer tourTmp(0 To adjSize)
+    Dim As Integer tourSize = 0
+
+    stack(stackPtr) = matchedMST(0).u : stackPtr += 1
+
+    Do While stackPtr > 0
+        u = stack(stackPtr - 1)
+        If adjCnt(u) > 0 Then
+            v = adj(u, adjCnt(u) - 1)
+            adjCnt(u) -= 1
+            stack(stackPtr) = v : stackPtr += 1
+        Else
+            stackPtr -= 1
+            tourTmp(tourSize) = u : tourSize += 1
+        End If
+    Loop
+
+    ' The tour is constructed in reverse order by Hierholzer's algorithm (invertir tour)
+    Redim tour(0 To tourSize - 1)
+    For i = 0 To tourSize - 1
+        tour(i) = tourTmp(tourSize - 1 - i)
+    Next
+End Sub
+
+' Main TSP Function (Christofides Approximation)
+Sub tsp(dato() As Punto)
+    Print !"Building graph...\n"
+    Dim As Integer n = Ubound(dato) + 1
+    Dim As Double graph(0 To n * n - 1)
+
+    Dim As Integer i, j
+    For i = 0 To n - 2
+        Dim As Integer baseI = i * n
+        For j = i + 1 To n - 1
+            Dim As Double dist = getLength(dato(i), dato(j))
+            graph(baseI + j) = dist
+            graph(j * n + i) = dist
+        Next
+    Next
+
+    Print !"Finding Minimum Spanning Tree..."
+    Dim As Edge mst()
+    minimumSpanningTree(graph(), n, mst())
+
+    Print "MSTree: [";
+    For i = 0 To Ubound(mst)
+        With mst(i)
+            If i > 0 Then Print ", ";
+            Print "(" & .u & ", " & .v & ", " & Format(.peso, "0.00") & ")";
+        End With
+    Next
+    Print "]"
+
+    Print !"\nFinding odd degree vertices..."
+    Dim As Integer oddVertices()
+    findOddVertices(oddVertices(), mst(), n)
+    Print "Odd vertices: [";
+    If Lbound(oddVertices) <= Ubound(oddVertices) Then
+        For i = 0 To Ubound(oddVertices)
+            If i > 0 Then Print ",";
+            Print oddVertices(i);
+        Next
+    End If
+    Print "]"
+
+    Print !"\nFinding Minimum Weight Matching (greedy)..."
+    minimumWeightMatching(mst(), graph(), n, oddVertices())
+    Print "Minimum weight matching (MST + Matching Edges): [";
+    For i = 0 To Ubound(mst)
+        If i > 0 Then Print ", ";
+        Print "(" & mst(i).u & ", " & mst(i).v & ", " & Format(mst(i).peso, "0.00") & ")";
+    Next
+    Print "]"
+
+    Print !"\nFinding Eulerian Tour..."
+    Dim As Integer eulerTour()
+    findEulerianTour(mst(), n, eulerTour())
+    Print "Eulerian tour: [";
+    If Lbound(eulerTour) <= Ubound(eulerTour) Then
+        For i = 0 To Ubound(eulerTour)
+            If i > 0 Then Print ",";
+            Print eulerTour(i);
+        Next
+    End If
+    Print "]"
+
+    Print !"\nCreating Hamiltonian path (shortcutting)..."
+    Dim As Integer path(0 To n)
+    Dim As Integer visited(0 To n - 1)
+    Dim As Double length = 0.0
+    Dim As Integer pathLen = 0, last = -1
+
+    For i = 0 To n - 1 : visited(i) = 0 : Next
+
+    If Lbound(eulerTour) <= Ubound(eulerTour) Then
+        For i = 0 To Ubound(eulerTour)
+            Dim As Integer v = eulerTour(i)
+            If visited(v) = 0 Then
+                path(pathLen) = v
+                If last <> -1 Then length += graph(last * n + v)
+                last = v : visited(v) = 1 : pathLen += 1
+            End If
+        Next
+    End If
+
+    If pathLen > 0 Then
+        length += graph(last * n + path(0))
+        path(pathLen) = path(0)
+    End If
+
+    Print "Result path: [";
+    For i = 0 To pathLen
+        If i > 0 Then Print "-> ";
+        Print Chr(8) & path(i);
+    Next
+    Print "]"
+
+    Print Using "Result length of the path: #####.##"; length
+End Sub
+
+' Input Data (100 points)
+Dim As Punto dataPoints(0 To 99)
+Dim As Double x, y
+Dim As Integer idx = 0
+
+Data 1380,939,2848,96,3510,1671,457,334,3888,666,984,965,2721,1482,1286,525
+Data 2716,1432,738,1325,1251,1832,2728,1698,3815,169,3683,1533,1247,1945,123,862
+Data 1234,1946,252,1240,611,673,2576,1676,928,1700,53,857,1807,1711,274,1420
+Data 2574,946,178,24,2678,1825,1795,962,3384,1498,3520,1079,1256,61,1424,1728
+Data 3913,192,3085,1528,2573,1969,463,1670,3875,598,298,1513,3479,821,2542,236
+Data 3955,1743,1323,280,3447,1830,2936,337,1621,1830,3373,1646,1393,1368,3874,1318
+Data 938,955,3022,474,2482,1183,3854,923,376,825,2519,135,2945,1622,953,268
+Data 2628,1479,2097,981,890,1846,2139,1806,2421,1007,2290,1810,1115,1052,2588,302
+Data 327,265,241,341,1917,687,2991,792,2573,599,19,674,3911,1673,872,1559
+Data 2863,558,929,1766,839,620,3893,102,2178,1619,3822,899,378,1048,1178,100
+Data 2599,901,3416,143,2961,1605,611,1384,3113,885,2597,1830,2586,1286,161,906
+Data 1429,134,742,1025,1625,1651,1187,706,1787,1009,22,987,3640,43,3756,882
+Data 776,392,1724,1642,198,1810,3950,1558
+
+' Convert raw data to Point objects, using index as ID
+While idx <= 99
+    Read x, y
+    dataPoints(idx).x = x : dataPoints(idx).y = y : dataPoints(idx).id = idx
+    idx += 1
+Wend
+
+' Runs TSP
+tsp(dataPoints())
+
+Sleep

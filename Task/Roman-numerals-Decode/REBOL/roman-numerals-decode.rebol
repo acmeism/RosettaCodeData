@@ -4,7 +4,7 @@ Rebol [
     url:   https://rosettacode.org/wiki/Roman_numerals-Decode
 ]
 
-roman-to-arabic: function/with [
+roman-to-arabic: function [
     "Converts a Roman numeral string to its Arabic integer value; returns NONE on invalid input"
     roman [string!] "Roman numeral string (e.g. {XIV})"
 ][
@@ -12,24 +12,20 @@ roman-to-arabic: function/with [
     parse roman [
         some [
             copy roman: [
-              #"I" [ #"V" | #"X" | none]
-            | #"X" [ #"L" | #"C" | none]
-            | #"C" [ #"D" | #"M" | none]
-            | #"V" | #"L" | #"D" | #"M"
+              #"I" [ #"V" (a: 4  )| #"X" (a: 9  )| none (a: 1  )]
+            | #"X" [ #"L" (a: 40 )| #"C" (a: 90 )| none (a: 10 )]
+            | #"C" [ #"D" (a: 400)| #"M" (a: 900)| none (a: 100)]
+            | #"V" (a: 5)
+            | #"L" (a: 50)
+            | #"D" (a: 500)
+            | #"M" (a: 1000)
             ](
-                arabic: arabic + table/:roman
+                arabic: arabic + a
             )
         ]
         end | (return none)
     ]
     arabic
-][
-    table: #[
-        "I"  1  "IV" 4   "V"  5
-        "IX" 9   "X" 10  "XL" 40  "L" 50
-        "XC" 90  "C" 100 "CD" 400 "D" 500
-        "CM" 900 "M" 1000
-    ]
 ]
 
 ;; tests:

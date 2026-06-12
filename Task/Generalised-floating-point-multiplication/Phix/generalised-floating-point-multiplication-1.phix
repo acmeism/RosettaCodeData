@@ -1,0 +1,461 @@
+-- demo\rosetta\Generic_multiplication.exw
+constant MAX_DP = 81
+
+constant binary = "01",
+         ternary = "012",
+         balancedternary = "-0+",
+         decimal = "0123456789",
+         hexadecimal = "0123456789ABCDEF",
+         septemvigesimal = "0123456789ABCDEFGHIJKLMNOPQ",
+--       heptavintimal   = "0123456789ABCDEFGHKMNPRTVXZ", -- ??
+--       wonky_donkey_26 = "0ABCDEFGHIJKLMNOPQRSTUVWXY",
+--       wonky_donkey_27 = "0ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+         balanced_base27 = "ZYXWVUTSRQPON0ABCDEFGHIJKLM",
+         base37 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+--
+--Note: I have seen some schemes where balanced-base-27 uses
+--====  the same character set as septemvigesimal, with 'D'
+--      representing 0, and wonky_donkey_27 with 'M'==0(!).
+--      These routines do not support that directly, except
+--      (perhaps) via a simple mapping on all inputs/outputs.
+--      It may be possible to add a defaulted parameter such
+--      as zero='0' - left as an exercise for the reader.
+--      Admittedly that balanced_base27 is entirely my own
+--      invention, just for this specific task.
+--
+
+function b2dec(string b, alphabet)
+--
+-- convert string b back into a normal (decimal) atom,
+--  eg b2dec("+0-",balancedternary) yields 8
+--
+    atom res = 0
+    integer base = length(alphabet),
+            zdx = find('0',alphabet)
+    bool signed = (zdx=1 and b[1]='-')
+    if signed then b = b[2..$] end if
+    integer len = length(b),
+            ndp = find('.',b)
+    if ndp!=0 then
+        b[ndp..ndp] = "" -- remove '.'
+        ndp = len-ndp
+    end if
+    for i=1 to length(b) do
+        res = base*res+find(b[i],alphabet)-zdx
+    end for
+    if ndp!=0 then res /= power(base,ndp) end if
+    if signed then res = -res end if
+    return res
+end function
+
+function negate(string b, alphabet)
+--
+-- negate b (can be balanced or unbalanced)
+--
+    if alphabet[1]='0' then
+        -- traditional: add/remove a leading '-'
+        -- eg "-123" <==> "123"
+        if b!="0" then
+            if b[1]='-' then
+                b = b[2..$]
+            else
+                b = "-"&b
+            end if
+        end if
+    else
+        -- balanced: mirror [non-0] digits
+        -- eg "-0+" (ie -8) <==> "+0-" (ie +8)
+        for i=1 to length(b) do
+            if b[i]!='.' then
+                b[i] = alphabet[-find(b[i],alphabet)]
+            end if
+        end for
+    end if
+    return b
+end function
+
+function b_trim(string b)
+-- (common code)
+    -- trim trailing ".000"
+    if find('.',b) then
+        b = trim_tail(trim_tail(b,'0'),'.')
+    end if
+    -- trim leading zeroes, but not "0.nnn" -> ".nnn"
+    -- [hence we cannot use the standard trim_head()]
+    while length(b)>1 and b[1]='0' and b[2]!='.' do
+        b = b[2..$]
+    end while
+    return b
+end function
+
+function b_carry(integer digit, base, idx, string n, alphabet)
+-- (common code, for balanced number systems only)
+    integer carry = iff(digit>base?+1:iff(digit<1?-1:0))
+    if carry then
+        for i=idx to 0 by -1 do
+            if n[i]!='.' then
+                integer k = find(n[i],alphabet)
+                if k<base then
+                    n[i] = alphabet[k+1]
+                    exit
+                end if
+                n[i]=alphabet[1]
+            end if
+        end for
+        digit -= base*carry
+    end if
+    return {digit,n}
+end function
+
+function b2b(string n, alphabet, alphabet2)
+--
+-- convert a string from alphabet to alphabet2,
+--  eg b2b("8",decimal,balancedternary) yields "+0-",
+--   & b2b("+0-",balancedternary,decimal) yields "8",
+--
+    string res = "0", m = ""
+    if n!="0" then
+        integer base = length(alphabet),
+                base2 = length(alphabet2),
+                zdx = find('0',alphabet),
+                zdx2 = find('0',alphabet2),
+                carry = 0, q, r, digit
+        bool negative = ((zdx=1 and n[1]='-') or
+                         (zdx!=1 and find(n[1],alphabet)<zdx))
+        if negative then n = negate(n,alphabet) end if
+        integer ndp = find('.',n)
+        if ndp!=0 then
+            {n,m} = {n[1..ndp-1],n[ndp+1..$]}
+        end if
+        res = ""
+        while length(n) do
+            q = 0
+            for i=1 to length(n) do
+                --
+                -- this is a digit-by-digit divide (/mod) loop
+                -- eg for hex->decimal we would want:
+                --  this loop/modrem("FFFF",10) --> "1999" rem 5,
+                --  this loop/modrem("1999",10) --> "28F" rem 3,
+                --  this loop/modrem("28F",10) --> "41" rem 5,
+                --  this loop/modrem("41",10) --> "6" rem 5,
+                --  this loop/modrem("6",10) --> "0" rem 6,
+                -- ==> res:="65535" (in 5 full iterations over n).
+                --
+                digit = find(n[i],alphabet)-zdx
+                q = q*base+digit
+                r = mod(q,base2)
+                digit = floor(q/base2)+zdx
+                if zdx!=1 then
+                    {digit,n} = b_carry(digit,base,i-1,n,alphabet)
+                end if
+                n[i] = alphabet[digit]
+                q = r
+            end for
+            r += zdx2
+            if zdx2!=1 then
+                r += carry
+                carry = iff(r>base2?+1:iff(r<1?-1:0))
+                r -= base2*carry
+            end if
+            res = alphabet2[r]&res
+            n = trim_head(n,'0')
+        end while
+        if carry then
+            res = alphabet2[carry+zdx2]&res
+        end if
+        if length(m) then
+            res &= '.'
+            ndp = 0
+            if zdx!=1 then
+                -- convert fraction to unbalanced, to simplify the (other-base) multiply.
+                integer lm = length(m)
+                string alphanew = base37[1..length(alphabet)]
+                m = b2b(m,alphabet,alphanew) -- (nb: no fractional part!)
+                m = repeat('0',lm-length(m))&m -- zero-pad if required
+                alphabet = alphanew
+                zdx = 1
+            end if
+            while length(m) and ndp<MAX_DP do
+                q = 0
+                for i=length(m) to 1 by -1 do
+                    --
+                    -- this is a digit-by-digit multiply loop
+                    -- eg for [.]"1415" decimal->decimal we
+                    -- would repeatedly multiply by 10, giving
+                    -- 1 and "4150", then 4 and "1500", then
+                    -- 1 and "5000", then 5 and "0000". We
+                    -- strip zeroes between each output digit
+                    -- & obviously normally alphabet in!=out.
+                    --
+                    digit = find(m[i],alphabet)-zdx
+                    q += digit*base2
+                    r = mod(q,base)+zdx
+                    q = floor(q/base)
+                    m[i] = alphabet[r]
+                end for
+                digit = q + zdx2
+                if zdx2!=1 then
+                    {digit,res} = b_carry(digit,base2,length(res),res,alphabet2)
+                end if
+                res &= alphabet2[digit]
+                m = trim_tail(m,'0')
+                ndp += 1
+            end while
+        end if
+        res = b_trim(res)
+        if negative then res = negate(res,alphabet2) end if
+    end if
+    return res
+end function
+
+function atm2b(atom d, string alphabet)
+--
+-- convert d to a string in the specified base,
+--   eg atm2b(65535,hexadecimal) => "FFFF"
+--
+-- As a standard feature of phix, you can actually specify
+-- d in any number base between 2 and 36, eg 0(13)168 is
+-- equivalent to 255 (see test\t37misc.exw for more), but
+-- not (yet) in balanced number bases, or with fractions,
+-- except (of course) for normal decimal fractions.
+--
+-- Note that eg b2b("-436.436",decimal,balancedternary) is
+-- more acccurate that atm2b(-436.436,balancedternary) due
+-- to standard IEEE 754 floating point limitations.
+-- For integers, discrepancies only creep in for values
+-- outside the range +/-9,007,199,254,740,992 (on 32-bit).
+-- However, this is much simpler and faster than b2b().
+--
+    integer base = length(alphabet),
+            zdx = find('0',alphabet),
+            carry = 0
+    bool neg = d<0
+    if neg then d = -d end if
+    string res = ""
+    integer whole = floor(d)
+    d -= whole
+    while true do
+        integer ch = mod(whole,base) + zdx
+        if zdx!=1 then
+            ch += carry
+            carry = iff(ch>base?+1:iff(ch<1?-1:0))
+            ch -= base*carry
+        end if
+        res = alphabet[ch]&res
+        whole = floor(whole/base)
+        if whole=0 then exit end if
+    end while
+    if carry then
+        res = alphabet[carry+zdx]&res
+        carry = 0
+    end if
+    if d!=0 then
+        res &= '.'
+        integer ndp = 0
+        while d!=0 and ndp<MAX_DP do
+            d *= base
+            integer digit = floor(d) + zdx
+            d -= digit
+            if zdx!=1 then
+                {digit,res} = b_carry(digit,base,length(res),res,alphabet)
+            end if
+            res &= alphabet[digit]
+            ndp += 1
+        end while
+    end if
+    if neg then res = negate(res,alphabet) end if
+    return res
+end function
+
+-- negative numbers in addition and subtraction
+-- (esp. non-balanced) are treated as follows:
+-- for -ve a:   (-a)+b == b-a;      (-a)-b == -(a+b)
+-- for -ve b:   a+(-b) == a-b;      a-(-b) == a+b
+-- for a>b:     a-b == -(b-a)  [avoid running off end]
+
+forward function b_sub(string a, b, alphabet)
+
+function b_add(string a, b, alphabet)
+    integer base = length(alphabet),
+            zdx = find('0',alphabet),
+            carry = 0, da, db, digit
+    if zdx=1 then
+        if a[1]='-' then    -- (-a)+b == b-a
+            return b_sub(b,negate(a,alphabet),alphabet)
+        end if
+        if b[1]='-' then    -- a+(-b) == a-b
+            return b_sub(a,negate(b,alphabet),alphabet)
+        end if
+    end if
+    integer adt = find('.',a),
+            bdt = find('.',b)
+    if adt or bdt then
+        -- remove the '.'s and zero-pad the shorter as needed
+        --   (thereafter treat them as two whole integers)
+        -- eg "1.23"+"4.5" -> "123"+"450" (leaving adt==2)
+        if adt then adt = length(a)-adt+1;  a[-adt..-adt] = "" end if
+        if bdt then bdt = length(b)-bdt+1;  b[-bdt..-bdt] = "" end if
+        if bdt>adt then
+            a &= repeat('0',bdt-adt)
+            adt = bdt
+        elsif adt>bdt then
+            b &= repeat('0',adt-bdt)
+        end if
+    end if
+    if length(a)<length(b) then
+        {a,b} = {b,a}   -- ensure b is the shorter
+    end if
+    for i=-1 to -length(a) by -1 do
+        da = iff(i<-length(a)?0:find(a[i],alphabet)-zdx)
+        db = iff(i<-length(b)?0:find(b[i],alphabet)-zdx)
+        digit = da + db + carry + zdx
+        carry = iff(digit>base?+1:iff(digit<1?-1:0))
+        a[i] = alphabet[digit-carry*base]
+        if i<-length(b) and carry=0 then exit end if
+    end for
+    if carry then
+        a = alphabet[carry+zdx]&a
+    end if
+    if adt then
+        a[-adt+1..-adt] = "."
+    end if
+    a = b_trim(a)
+    return a
+end function
+
+function a_smaller(string a, b, alphabet)
+-- return true if a is smaller than b
+-- if not balanced then both are +ve
+    if length(a)!=length(b) then ?9/0 end if -- sanity check
+    for i=1 to length(a) do
+        integer da = find(a[i],alphabet),
+                db = find(b[i],alphabet),
+                c = compare(da,db)
+        if c!=0 then return c<0 end if
+    end for
+    return false -- (=, which is not <)
+end function
+
+function b_sub(string a, b, alphabet)
+    integer base = length(alphabet),
+            zdx = find('0',alphabet),
+            carry = 0, da, db, digit
+    if zdx=1 then
+        if a[1]='-' then    -- (-a)-b == -(a+b)
+            return negate(b_add(negate(a,alphabet),b,alphabet),alphabet)
+        end if
+        if b[1]='-' then    -- a-(-b) == a+b
+            return b_add(a,negate(b,alphabet),alphabet)
+        end if
+    end if
+    integer adt = find('.',a),
+            bdt = find('.',b)
+    if adt or bdt then
+        -- remove the '.'s and zero-pad the shorter as needed
+        --   (thereafter treat them as two whole integers)
+        -- eg "1.23"+"4.5" -> "123"+"450" (leaving adt==2)
+        if adt then adt = length(a)-adt+1;  a[-adt..-adt] = "" end if
+        if bdt then bdt = length(b)-bdt+1;  b[-bdt..-bdt] = "" end if
+        if bdt>adt then
+            a &= repeat('0',bdt-adt)
+            adt = bdt
+        elsif adt>bdt then
+            b &= repeat('0',adt-bdt)
+        end if
+    end if
+    bool bNegate = false
+    if length(a)<length(b)
+    or (length(a)=length(b) and a_smaller(a,b,alphabet)) then
+        bNegate = true
+        {a,b} = {b,a}   -- ensure b is the shorter/smaller
+    end if
+    for i=-1 to -length(a) by -1 do
+        da = iff(i<-length(a)?0:find(a[i],alphabet)-zdx)
+        db = iff(i<-length(b)?0:find(b[i],alphabet)-zdx)
+        digit = da - (db + carry) + zdx
+        carry = digit<=0
+        a[i] = alphabet[digit+carry*base]
+        if i<-length(b) and carry=0 then exit end if
+    end for
+    if carry then
+        ?9/0    -- should have set bNegate above...
+    end if
+    if adt then
+        a[-adt+1..-adt] = "."
+    end if
+    a = b_trim(a)
+    if bNegate then
+        a = negate(a,alphabet)
+    end if
+    return a
+end function
+
+function b_mul(string a, b, alphabet)
+    integer base = length(alphabet),
+            zdx = find('0',alphabet),
+            dpa = find('.',a),
+            dpb = find('.',b),
+            ndp = 0
+    if dpa then ndp += length(a)-dpa; a[dpa..dpa] = "" end if
+    if dpb then ndp += length(b)-dpb; b[dpb..dpb] = "" end if
+    string pos = a, res = "0"
+    if zdx!=1 then
+        -- balanced number systems
+        string neg = negate(pos,alphabet)
+        for i=length(b) to 1 by -1 do
+            integer m = find(b[i],alphabet)-zdx
+            while m do
+                res = b_add(res,iff(m<0?neg:pos),alphabet)
+                m += iff(m<0?+1:-1)
+            end while
+            pos &= '0'
+            neg &= '0'
+        end for
+    else
+        -- non-balanced (normal) number systems
+        bool negative = false
+        if a[1]='-' then a = a[2..$]; negative = true end if
+        if b[1]='-' then b = b[2..$]; negative = not negative end if
+        for i=length(b) to 1 by -1 do
+            integer m = find(b[i],alphabet)-zdx
+            while m>0 do
+                res = b_add(res,pos,alphabet)
+                m -= 1
+            end while
+            pos &= '0'
+        end for
+        if negative then res = negate(res,alphabet) end if
+    end if
+    if ndp then
+        res[-ndp..-ndp-1] = "."
+    end if
+    res = b_trim(res)
+    return res
+end function
+
+-- [note 1] not surprisingly, the decimal output is somewhat cleaner/shorter when
+--          the decimal string inputs for a and c are used, whereas tests 1/2/5/7
+--          (the 3-based ones) look much better with all ternary string inputs.
+
+procedure test(string name, alphabet)
+--string a = b2b("523.2391403749428",decimal,alphabet),         -- [see note 1]
+string a = b2b("+-0++0+.+-0++0+",balancedternary,alphabet),
+       b = b2b("-436.436",decimal,alphabet),
+--     b = b2b("-++-0--.--0+-00+++-",balancedternary,alphabet),
+--     c = b2b("65.26748971193416",decimal,alphabet),           -- [see note 1]
+       c = b2b("+-++-.+-++-",balancedternary,alphabet),
+       d = b_add(b,c,alphabet),
+       r = b_mul(a,d,alphabet)
+    printf(1,"%s\n%s\n",{name,repeat('=',length(name))})
+    printf(1,"      a = %.16g  %s\n",{b2dec(a,alphabet),a})
+    printf(1,"      b = %.16g  %s\n",{b2dec(b,alphabet),b})
+    printf(1,"      c = %.16g  %s\n",{b2dec(c,alphabet),c})
+--  printf(1,"      d = %.16g  %s\n",{b2dec(d,alphabet),d})
+    printf(1,"a*(b-c) = %.16g  %s\n\n",{b2dec(r,alphabet),r})
+end procedure
+test("balanced ternary", balancedternary)
+test("balanced base 27", balanced_base27)
+test("decimal", decimal)
+test("binary", binary)
+test("ternary", ternary)
+test("hexadecimal", hexadecimal)

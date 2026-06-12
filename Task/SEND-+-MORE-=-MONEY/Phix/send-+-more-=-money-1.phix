@@ -1,0 +1,104 @@
+atom t0 = time()
+constant mp = new_dict() -- keys 'A'..'Z', values 0..9
+sequence front, -- 1 if wordstart, else 0, for (0|1)..9
+         multh, -- multiplier hash, see below
+         used
+
+-- mp ends up holding the (first) acceptable solution.
+-- Letters which start any word cannot be 0 (in the rules).
+-- In SEND+MORE=MONEY, 'E' is 100 + 1 - 10 = 91 from the
+-- three places E occurs in the puzzle, stored in multh.
+-- Hence sum(letter_values*multh)==0 means it is solved.
+-- Obviously used stops us using digits more than once.
+
+function solve_rec(string uniq, int i, atom s)
+    -- Aside: integer s is fine on 64-bit, but reaches
+    --  a high of 13,304,757,742 & crashes on 32-bit.
+    if i > length(uniq) then return s==0 end if
+    integer chdx = uniq[i]-'A'+1
+    for v=front[chdx] to 9 do
+        if not used[v+1] then
+            used[v+1] = true
+            if solve_rec(uniq,i+1,s+v*multh[chdx]) then
+                setd(uniq[i],v,mp)
+                return true
+            end if
+            used[v+1] = false
+        end if
+    end for
+    return false
+end function
+
+function solve(string puzzle)
+    destroy_dict(mp,true) -- empty, but keep
+    used = repeat(false,10) -- nb [1..10] for 0..9
+    multh = repeat(0,26) -- see above
+    front = repeat(0,26) -- 1 if 1st in any word
+    string uniq = ""
+    sequence words = split_any(puzzle," +=\n")
+    for iw,word in words do
+        front[word[1]-'A'+1] = 1
+        integer l = length(word),
+                m = iff(iw=length(words)?-1:+1)
+        for i,ch in word do
+            multh[ch-'A'+1] += m*power(10,l-i)
+            if not find(ch,uniq) then
+                uniq &= ch
+            end if
+        end for
+    end for
+    if not solve_rec(uniq,1,0) then
+        return "no solution"
+    end if
+    for i,ch in puzzle do
+        if ch>='A' and ch<='Z' then
+            puzzle[i] = getd(ch,mp)+'0'
+        end if
+    end for
+    return puzzle
+end function
+
+constant tests = {
+    "SEND + MORE == MONEY",
+    "I + BB == ILL",
+    "A == B",
+    "ACA + DD == BD",
+    "A + A + A + A + A + A + A + A + A + A + A + B == BCC",
+    "AS + A == MOM",
+    "NO + NO + TOO == LATE",
+    "HE + SEES + THE == LIGHT",
+    "AND + A + STRONG + OFFENSE + AS + A + GOOD == DEFENSE",
+    "SIX + SEVEN + SEVEN = TWENTY",
+    "THIS+A+FIRE+THEREFORE+FOR+ALL+HISTORIES+I+TELL+A+TALE+THAT+"&
+     "FALSIFIES+ITS+TITLE+TIS+A+LIE+THE+TALE+OF+THE+LAST+FIRE+"&
+     "HORSES+LATE+AFTER+THE+FIRST+FATHERS+FORESEE+THE+HORRORS+THE+"&
+     "LAST+FREE+TROLL+TERRIFIES+THE+HORSES+OF+FIRE+THE+TROLL+RESTS+"&
+     "AT+THE+HOLE+OF+LOSSES+IT+IS+THERE+THAT+SHE+STORES+ROLES+OF+"&
+     "LEATHERS+AFTER+SHE+SATISFIES+HER+HATE+OFF+THOSE+FEARS+A+TASTE+"&
+     "RISES+AS+SHE+HEARS+THE+LEAST+FAR+HORSE+THOSE+FAST+HORSES+THAT+"&
+     "FIRST+HEAR+THE+TROLL+FLEE+OFF+TO+THE+FOREST+THE+HORSES+THAT+"&
+     "ALERTS+RAISE+THE+STARES+OF+THE+OTHERS+AS+THE+TROLL+ASSAILS+AT+"&
+     "THE+TOTAL+SHIFT+HER+TEETH+TEAR+HOOF+OFF+TORSO+AS+THE+LAST+HORSE"&
+     "+FORFEITS+ITS+LIFE+THE+FIRST+FATHERS+HEAR+OF+THE+HORRORS+THEIR+"&
+     "FEARS+THAT+THE+FIRES+FOR+THEIR+FEASTS+ARREST+AS+THE+FIRST+FATHERS"&
+     "+RESETTLE+THE+LAST+OF+THE+FIRE+HORSES+THE+LAST+TROLL+HARASSES+"&
+     "THE+FOREST+HEART+FREE+AT+LAST+OF+THE+LAST+TROLL+ALL+OFFER+THEIR+"&
+     "FIRE+HEAT+TO+THE+ASSISTERS+FAR+OFF+THE+TROLL+FASTS+ITS+LIFE+"&
+     "SHORTER+AS+STARS+RISE+THE+HORSES+REST+SAFE+AFTER+ALL+SHARE+HOT+"&
+     "FISH+AS+THEIR+AFFILIATES+TAILOR+A+ROOFS+FOR+THEIR+SAFE == FORTRESSES",
+     "TO + GO = OUT",
+     "SEND + A + TAD + MORE = MONEY",
+     "ABRA + CADABRA + ABRA + CADABRA = HOUDINI",
+     "I + GUESS + THE + TRUTH = HURTS",
+     "THATS + THE + THEORY = ANYWAY",
+     `SO + MANY + MORE + MEN + SEEM + TO + SAY + THAT +
+      THEY + MAY + SOON + TRY + TO + STAY + AT + HOME +
+      SO + AS + TO + SEE + OR + HEAR + THE + SAME + ONE +
+      MAN + TRY + TO + MEET + THE + TEAM + ON + THE +
+      MOON + AS + HE + HAS + AT + THE + OTHER + TEN =TESTS`,
+}
+
+for t in tests do
+    printf(1,"%s\n%s\n\n",{shorten(t,""),shorten(solve(t),"")})
+end for
+?elapsed(time()-t0)

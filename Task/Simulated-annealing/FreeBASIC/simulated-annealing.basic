@@ -1,0 +1,107 @@
+Dim Shared As Double dists(0 To 9999)
+
+' index into lookup table of Nums
+Function dist(ci As Integer, cj As Integer) As Double
+    Return dists(cj*100 + ci)
+End Function
+
+' energy at s, to be minimized
+Function Ens(path() As Integer) As Double
+    Dim As Double d = 0
+    For i As Integer = 0 To Ubound(path) - 1
+        d += dist(path(i), path(i+1))
+    Next
+    Return d
+End Function
+
+' temperature function, decreases to 0
+Function T(k As Double, kmax As Double, kT As Double) As Double
+    Return (1 - k / kmax) * kT
+End Function
+
+' variation of E, from state s to state s_next
+Function dE(s() As Integer, u As Integer, v As Integer) As Double
+    Dim As Integer su = s(u)
+    Dim As Integer sv = s(v)
+    ' old
+    Dim As Double a = dist(s(u-1), su)
+    Dim As Double b = dist(s(u+1), su)
+    Dim As Double c = dist(s(v-1), sv)
+    Dim As Double d = dist(s(v+1), sv)
+    ' new
+    Dim As Double na = dist(s(u-1), sv)
+    Dim As Double nb = dist(s(u+1), sv)
+    Dim As Double nc = dist(s(v-1), su)
+    Dim As Double nd = dist(s(v+1), su)
+    If v = u+1 Then Return (na + nd) - (a + d)
+    If u = v+1 Then Return (nc + nb) - (c + b)
+    Return (na + nb + nc + nd) - (a + b + c + d)
+End Function
+
+' probability to move from s to s_next
+Function P(deltaE As Double, k As Double, kmax As Double, kT As Double) As Double
+    Return Exp(-deltaE / T(k, kmax, kT))
+End Function
+
+' Simulated annealing
+Sub sa(kmax As Double, kT As Double)
+    Dim As Integer s(0 To 100)
+    Dim As Integer temp(0 To 98)
+    Dim As Integer dirs(0 To 7) = {1, -1, 10, -10, 9, 11, -11, -9}
+    Dim As Integer i, k, u, v, cv
+    Dim As Double Emin
+
+    For i = 0 To 98
+        temp(i) = i + 1
+    Next
+    Randomize Timer
+    For i = 0 To 98
+        Swap temp(i), temp(Int(Rnd * 99))
+    Next
+    For i = 0 To 98
+        s(i+1) = temp(i)
+    Next
+    Print "kT = "; kT
+    Print "E(s0) "; Ens(s())
+    Print
+    Emin = Ens(s())
+    For k = 0 To kmax
+        If k Mod (kmax/10) = 0 Then
+            Print Using "k:  #######   T:  #.####   Es:  ###.####"; k; T(k, kmax, kT); Ens(s())
+        End If
+        u = Int(Rnd * 99) + 1
+        cv = s(u) + dirs(Int(Rnd * 8))
+        If cv <= 0 Or cv >= 100 Then Continue For
+        If Abs(dist(s(u), cv)) > 5 Then Continue For
+        v = s(cv)
+        Dim As Double deltae = dE(s(), u, v)
+        If deltae < 0 Or P(deltae, k, kmax, kT) >= Rnd Then
+            Swap s(u), s(v)
+            Emin = Emin + deltae
+        End If
+    Next k
+    Print
+    Print "E(s_final) "; Emin
+    Print "Path:"
+    For i = 0 To Ubound(s)
+        If i > 0 And i Mod 10 = 0 Then Print
+        Print Using "####"; s(i);
+    Next
+    Print
+End Sub
+
+' distances
+For i As Integer = 0 To 9999
+    Dim As Integer ab = (i \ 100)
+    Dim As Integer cd = i Mod 100
+    Dim As Integer a  = (ab \ 10)
+    Dim As Integer b  = ab Mod 10
+    Dim As Integer c  = (cd \ 10)
+    Dim As Integer d  = cd Mod 10
+    dists(i) = Sqr((a-c)^2 + (b-d)^2)
+Next i
+
+Dim As Double kT = 1, kmax = 1e6
+sa(kmax, kT)
+
+Sleep

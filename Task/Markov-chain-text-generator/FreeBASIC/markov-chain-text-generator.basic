@@ -1,0 +1,147 @@
+Type WordArray
+    As String words(Any)
+    As Integer longi
+End Type
+
+Type MarkovData
+    As String suffixes(Any)
+    As Integer cnt
+End Type
+
+Type MarkovDict
+    As String keys(Any)
+    As MarkovData dato(Any)
+    As Integer size
+End Type
+
+Function SplitText(text As String) As WordArray
+    Dim As WordArray result
+    Dim As String c, word = ""
+    Redim result.words(0)
+
+    For i As Integer = 1 To Len(text)
+        c = Mid(text, i, 1)
+        If c = " " Then
+            If Len(word) > 0 Then
+                result.longi += 1
+                Redim Preserve result.words(result.longi)
+                result.words(result.longi) = word
+                word = ""
+            End If
+        Else
+            word &= c
+        End If
+    Next
+
+    If Len(word) > 0 Then
+        result.longi += 1
+        Redim Preserve result.words(result.longi)
+        result.words(result.longi) = word
+    End If
+
+    Return result
+End Function
+
+Function JoinWords(words(Any) As String, longi As Integer) As String
+    Dim result As String = ""
+
+    For i As Integer = 1 To longi
+        If i > 1 Then result &= " "
+        result &= words(i)
+    Next
+
+    Return result
+End Function
+
+Function Markov(words As WordArray, n As Integer, m As Integer) As String
+    Dim As MarkovDict dict
+    Redim dict.keys(0)
+    Redim dict.dato(0)
+    Dim As Integer i, j, found
+    Dim As String key
+
+    ' Build dictionary
+    For i = 1 To words.longi - n
+        key = ""
+        For j = 0 To n-1
+            If j > 0 Then key &= " "
+            key &= words.words(i + j)
+        Next
+
+        ' Find or add key
+        found = 0
+        For j = 1 To dict.size
+            If dict.keys(j) = key Then
+                found = j
+                Exit For
+            End If
+        Next
+
+        If found = 0 Then
+            dict.size += 1
+            Redim Preserve dict.keys(dict.size)
+            Redim Preserve dict.dato(dict.size)
+            dict.keys(dict.size) = key
+
+            Dim md As MarkovData
+            Redim md.suffixes(1 To 0)
+            md.cnt = 0
+            dict.dato(dict.size) = md
+            found = dict.size
+        End If
+
+        Dim md As MarkovData = dict.dato(found)
+        md.cnt += 1
+        Redim Preserve md.suffixes(1 To md.cnt)
+        md.suffixes(md.cnt) = words.words(i + n)
+        dict.dato(found) = md
+    Next
+
+    ' Generate text
+    Dim As Integer start = Int(Rnd * (words.longi - n)) + 1
+    Dim As WordArray result
+    result.longi = n
+    Redim result.words(1 To n)
+
+    For i = 0 To n-1
+        result.words(i + 1) = words.words(start + i)
+    Next
+
+    For i = 1 To m
+        key = ""
+        For j = result.longi - n + 1 To result.longi
+            If j > result.longi - n + 1 Then key &= " "
+            key &= result.words(j)
+        Next
+
+        found = 0
+        For j = 1 To dict.size
+            If dict.keys(j) = key Then
+                found = j
+                Exit For
+            End If
+        Next
+
+        If found = 0 Then Exit For
+
+        Dim As MarkovData md = dict.dato(found)
+        Dim As Integer r = Int(Rnd * md.cnt) + 1
+        result.longi += 1
+        Redim Preserve result.words(1 To result.longi)
+        result.words(result.longi) = md.suffixes(r)
+    Next
+
+    Return JoinWords(result.words(), result.longi)
+End Function
+
+Randomize Timer
+
+Dim As String text
+Open "i:\alice_oz.txt" For Input As #1
+text = Input(Lof(1), 1)
+Close #1
+
+Dim words As WordArray = SplitText(text)
+Print Markov(words, 2, 100)
+
+Sleep

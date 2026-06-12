@@ -1,0 +1,77 @@
+function hypot(atom x, y) return sqrt(x*x + y*y) end function
+
+// The classic CIE ΔE2000 implementation, which operates on two L*a*b* colors, and returns their difference.
+function ciede_2000(atom l1, a1, b1, l2, a2, b2, kl=1, kc=1, kh=1)
+    // Implements the CIEDE2000 color-difference formula using Phix.
+    // kl, kc, kh are parametric factors to be adjusted according to
+    // different viewing parameters such as textures, backgrounds...
+    atom n7 = power((hypot(a1,b1)+hypot(a2,b2))*0.5,7),
+         n = 1 + 0.5*(1-sqrt(n7/(n7+6103515625))),
+         c1 = hypot(a1*n,b1),
+         c2 = hypot(a2*n,b2),
+         cc = c1+c2,
+         c7 = power(cc*0.5,7),
+         h1 = atan2(b1,a1*n),
+         h2 = atan2(b2,a2*n),
+         ll = power((l1+l2)*0.5-50,2)
+    if h1<0 then h1 += 2*PI end if
+    if h2<0 then h2 += 2*PI end if
+    n = abs(h2-h1)
+    // Cross-implementation consistent rounding.
+    if PI-1e-14<n and n<PI+1e-14 then n = PI end if
+    // When the hue angles lie in different quadrants, the straightforward
+    // average can produce a mean that incorrectly suggests a hue angle in
+    // the wrong quadrant, the next lines handle this issue.
+    atom hm = (h1+h2)*0.5,
+         hd = (h2-h1)*0.5
+    if PI<n then
+        if 0<hd then
+            hd -= PI
+        else
+            hd += PI
+        end if
+        hm += PI
+    end if
+    atom p = 36*hm-55*PI,
+         // The hue rotation correction term is designed to account for the
+         // non-linear behavior of hue differences in the blue region.
+         hrt = -2*sqrt(c7/(c7+6103515625))*sin(PI/3*exp(p*p/(-25*PI*PI))),
+         lightnesssq = power((l2-l1)/(kl*(1+0.015*ll/sqrt(20+ll))),2),
+         // These coefficients adjust the impact of different harmonic
+         // components on the hue difference calculation.
+         t = 1 + 0.24 * sin(2*hm + PI*0.5) +
+                 0.32 * sin(3*hm + 8*PI/15) -
+                 0.17 * sin(  hm + PI/3) -
+                 0.20 * sin(4*hm + 3*PI/20),
+       hue = 2 * sqrt(c1*c2) * sin(hd) / (kh * (1+0.0075*cc*t)),
+    chroma = (c2-c1) / (kc*(1+0.0225*cc))
+    // Returning the square root ensures that the result represents
+    // the "true" geometric distance in the color space.
+    return sqrt(lightnesssq + hue*hue + chroma*chroma + chroma*hue * hrt)
+end function
+
+constant tests = {
+    {73.0,   49.0,   39.4, 73.0,   49.0,   39.4},
+    {30.0,  -41.0, -119.1, 30.0,  -41.0, -119.0},
+    {79.0, -117.0, -100.4, 79.5, -117.0, -100.0},
+    {15.0,  -55.0,    6.7, 14.0,  -55.0,    7.0},
+    {83.0,   98.0,  -59.5, 85.2,   98.0,  -59.5},
+    {59.0,  -11.0,  -95.0, 56.3,  -11.0,  -95.0},
+    {74.0,   -1.0,   68.6, 81.0,   -1.0,   69.0},
+    {46.4,  125.0,    6.0, 40.0,  125.0,    6.0},
+    {18.0,   -5.0,   68.0, 20.0,    5.0,   82.0},
+    {35.5,  -99.0,  109.0, 25.0,  -99.0,  109.0},
+    {59.0,   77.0,   41.5, 63.3,   77.0,   12.4},
+    {40.0,  -92.0,    7.7, 58.0,  -92.0,   -8.0},
+    {49.0,   -9.0,  -74.5, 51.1,   31.0,   16.0},
+    {88.0, -124.0,   56.0, 97.0,   62.0,  -28.0},
+    {98.0,   75.7,   11.0,  3.0,  -62.0,   11.0}
+}
+printf(1,"   L1       a1      b1     L2     a2      b2       ΔE2000\n")
+printf(1,"------------------------------------------------------------\n")
+constant fmt = "%6.1f   %6.1f  %6.1f %6.1f %6.1f  %6.1f %14.10f\n"
+for t in tests do
+    atom {l1,a1,b1,l2,a2,b2} = t,
+         res = ciede_2000(l1,a1,b1,l2,a2,b2)
+    printf(1,fmt,{l1,a1,b1,l2,a2,b2,res})
+end for

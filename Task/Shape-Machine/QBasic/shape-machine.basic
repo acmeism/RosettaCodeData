@@ -1,0 +1,15 @@
+DIM prev AS DOUBLE, sgte  AS DOUBLE
+DIM cnt AS INTEGER
+
+cnt = 1
+INPUT prev
+
+sgte = (prev + 3) * .86
+WHILE prev <> sgte
+  PRINT sgte
+  prev = sgte
+  cnt = cnt + 1
+  sgte = (prev + 3) * .86
+WEND
+PRINT "Took "; cnt; " iterations."
+END

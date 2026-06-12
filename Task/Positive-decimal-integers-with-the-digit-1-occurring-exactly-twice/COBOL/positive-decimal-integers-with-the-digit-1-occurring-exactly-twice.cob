@@ -1,0 +1,21 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. TWO-ONES.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       77 NUM       PIC 9999.
+       77 FMT       PIC ZZ9.
+       77 ONES      PIC 9.
+
+       PROCEDURE DIVISION.
+       BEGIN.
+           PERFORM COUNT-ONES
+           VARYING NUM FROM 1 BY 1 UNTIL NUM IS EQUAL TO 1000.
+           STOP RUN.
+
+       COUNT-ONES.
+           MOVE ZERO TO ONES.
+           INSPECT NUM TALLYING ONES FOR ALL '1'.
+           IF ONES IS EQUAL TO 2,
+               MOVE NUM TO FMT,
+               DISPLAY FMT.

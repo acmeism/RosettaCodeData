@@ -1,0 +1,101 @@
+-V
+   DIR_E  = ( 1,  0)
+   DIR_NE = ( 1,  1)
+   DIR_N  = ( 0,  1)
+   DIR_NW = (-1,  1)
+   DIR_W  = (-1,  0)
+   DIR_SW = (-1, -1)
+   DIR_S  = ( 0, -1)
+   DIR_SE = ( 1, -1)
+
+F path_str(origin_x, origin_y, directions)
+   -V :dirn = [:DIR_E  = ‘E’,
+               :DIR_NE = ‘NE’,
+               :DIR_N  = ‘N’,
+               :DIR_NW = ‘NW’,
+               :DIR_W  = ‘W’,
+               :DIR_SW = ‘SW’,
+               :DIR_S  = ‘S’,
+               :DIR_SE = ‘SE’]
+   R ‘X: ’origin_x‘, Y: ’origin_y‘, Path: ’directions.map(d -> @:dirn[d])
+
+T MarchingSquares
+   . Int width, height
+   . [Int] data
+
+   F (width, height, data)
+      .width = width
+      .height = height
+      .data = copy(data)
+
+   . F is_set(x, y)
+      I x <= 0 | x > .width | y <= 0 | y > .height
+         R 0B
+      R .data[(y - 1) * .width + (x - 1)] != 0
+
+   . F value(x, y)
+      V sum = 0
+      I .is_set(x, y) {sum [|]= 1}
+      I .is_set(x + 1, y) {sum [|]= 2}
+      I .is_set(x, y + 1) {sum [|]= 4}
+      I .is_set(x + 1, y + 1) {sum [|]= 8}
+      R sum
+
+   . F identify_perimeter_(=initial_x, =initial_y)
+      I initial_x < 0 {initial_x = 0}
+      I initial_x > .width {initial_x = .width}
+      I initial_y < 0 {initial_y = 0}
+      I initial_y > .height {initial_y = .height}
+      V initial_value = .value(initial_x, initial_y)
+      I initial_value C (0, 15)
+         X.throw RuntimeError(‘Supplied initial coordinates (#., #.) do not lie on a perimeter.’.format(initial_x, initial_y))
+
+      [IVec2] directions
+      V x = initial_x
+      V y = initial_y
+      V previous = (0, 0)
+
+      L
+         IVec2 direction
+
+         S .value(x, y)
+            1, 5, 13
+               direction = :DIR_N
+            2, 3, 7
+               direction = :DIR_E
+            4, 12, 14
+               direction = :DIR_W
+            8, 10, 11
+               direction = :DIR_S
+            6
+               direction = I previous == :DIR_N {:DIR_W} E :DIR_E
+            9
+               direction = I previous == :DIR_E {:DIR_N} E :DIR_S
+            E
+               X.throw RuntimeError(‘Illegal state.’)
+
+         directions.append(direction)
+         x += direction.x
+         y -= direction.y
+         previous = direction
+         I x == initial_x & y == initial_y
+            L.break
+
+      R path_str(initial_x, -initial_y, directions)
+
+   F identify_perimeter()
+      V size = .width * .height
+      L(i) 0 .< size
+         I .data[i] != 0
+            R .identify_perimeter_(i % .width, i I/ .width)
+
+V example = [
+   0, 0, 0, 0, 0,
+   0, 0, 0, 0, 0,
+   0, 0, 1, 1, 0,
+   0, 0, 1, 1, 0,
+   0, 0, 0, 1, 0,
+   0, 0, 0, 0, 0
+]
+V ms = MarchingSquares(5, 6, example)
+print(ms.identify_perimeter())

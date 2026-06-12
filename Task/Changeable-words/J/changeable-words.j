@@ -1,0 +1,27 @@
+   ;:inv ({~ ~.@($ /:~"1@#: I.@,)@(1=+/ .~: ::0:&>/~))(#~ 11<#@>) cutLF fread'unixdict.txt'
+aristotelean aristotelian
+claustrophobia claustrophobic
+committeeman committeemen
+committeewoman committeewomen
+complementary complimentary
+confirmation conformation
+congresswoman congresswomen
+councilwoman councilwomen
+craftsperson draftsperson
+eavesdropped eavesdropper
+frontiersman frontiersmen
+handicraftsman handicraftsmen
+incommutable incomputable
+installation instillation
+kaleidescope kaleidoscope
+neuroanatomy neuroanotomy
+newspaperman newspapermen
+nonagenarian nonogenarian
+onomatopoeia onomatopoeic
+philanthrope philanthropy
+prescription proscription
+schizophrenia schizophrenic
+shakespearean shakespearian
+spectroscope spectroscopy
+underclassman underclassmen
+upperclassman upperclassmen

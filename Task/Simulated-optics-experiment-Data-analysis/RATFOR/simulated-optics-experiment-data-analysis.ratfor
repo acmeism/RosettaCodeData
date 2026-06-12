@@ -1,0 +1,152 @@
+# -*- mode: indented-text; tab-width: 2; -*-
+
+# Reference:
+#
+#  A. F. Kracklauer, ‘EPR-B correlations: non-locality or geometry?’,
+#  J. Nonlinear Math. Phys. 11 (Supp.) 104–109 (2004).
+#  https://doi.org/10.2991/jnmp.2004.11.s1.13 (Open access, CC BY-NC)
+
+# Standard FORTRAN 77 provides no way to allocate space at runtime.
+# One would have to make a call to C, or do some such thing, or simply
+# recompile if you need a bigger array. However, it is not
+# necessary. This program computes the sums as it reads the data in.
+
+# Once upon a time, because memory was precious and compilers made it
+# hard to allocate memory, this would have been THE way to do such
+# calculations. But the code ends up being less modular.
+
+# In 2023 there is, for this particular program, no fathomable reason
+# not to use double precision. So I shall use double precision.
+
+define(angleL1, 0.0D0)          # 'D' for double precision.
+define(angleL2, 45.0D0)
+define(angleR1, 22.5D0)
+define(angleR2, 67.5D0)
+
+subroutine count (N00, N01, N10, N11,
+                  N00L1, N00L2, N00R1, N00R2,
+                  N01L1, N01L2, N01R1, N01R2,
+                  N10L1, N10L2, N10R1, N10R2,
+                  N11L1, N11L2, N11R1, N11R2)
+  implicit none
+  integer N00, N01, N10, N11
+  integer N00L1, N00L2, N00R1, N00R2
+  integer N01L1, N01L2, N01R1, N01R2
+  integer N10L1, N10L2, N10R1, N10R2
+  integer N11L1, N11L2, N11R1, N11R2
+  integer fields(1:7)
+  integer events, i, tmp
+  continue
+  N00 = 0;  N01 = 0;  N10 = 0;  N11 = 0
+  N00L1 = 0;  N00L2 = 0;  N00R1 = 0;  N00R2 = 0
+  N01L1 = 0;  N01L2 = 0;  N01R1 = 0;  N01R2 = 0
+  N10L1 = 0;  N10L2 = 0;  N10R1 = 0;  N10R2 = 0
+  N11L1 = 0;  N11L2 = 0;  N11R1 = 0;  N11R2 = 0
+  read (*,*) events
+  for (i = 0; i != events; i = i + 1)
+    {
+      read (*,*) fields
+      if (fields(1) == 1)
+        {
+          # Adjust for geometry.
+          tmp = fields(4); fields(4) = fields(5); fields(5) = tmp
+          tmp = fields(6); fields(6) = fields(7); fields(7) = tmp
+        }
+      if (fields(2) == 0 && fields(3) == 0)
+        {
+          N00 = N00 + 1
+          N00L1 = N00L1 + fields(4)
+          N00L2 = N00L2 + fields(5)
+          N00R1 = N00R1 + fields(6)
+          N00R2 = N00R2 + fields(7)
+        }
+      else if (fields(2) == 0 && fields(3) == 1)
+        {
+          N01 = N01 + 1
+          N01L1 = N01L1 + fields(4)
+          N01L2 = N01L2 + fields(5)
+          N01R1 = N01R1 + fields(6)
+          N01R2 = N01R2 + fields(7)
+        }
+      else if (fields(2) == 1 && fields(3) == 0)
+        {
+          N10 = N10 + 1
+          N10L1 = N10L1 + fields(4)
+          N10L2 = N10L2 + fields(5)
+          N10R1 = N10R1 + fields(6)
+          N10R2 = N10R2 + fields(7)
+        }
+      else
+        {
+          N11 = N11 + 1
+          N11L1 = N11L1 + fields(4)
+          N11L2 = N11L2 + fields(5)
+          N11R1 = N11R1 + fields(6)
+          N11R2 = N11R2 + fields(7)
+        }
+    }
+end
+
+function kappa (N, NL1, NL2, NR1, NR2)
+  implicit none
+  integer N, NL1, NL2, NR1, NR2
+  double precision kappa
+  double precision denom
+  double precision sinL, cosL, sinR, cosR
+  double precision sinLR, cosLR
+  continue
+  denom = N
+  # Equation (2.4) in the reference.
+  sinL = dsqrt (NL1 / denom)
+  cosL = dsqrt (NL2 / denom)
+  sinR = dsqrt (NR1 / denom)
+  cosR = dsqrt (NR2 / denom)
+  # Equation (2.3).
+  cosLR = (cosR * cosL) + (sinR * sinL)
+  sinLR = (sinR * cosL) - (cosR * sinL)
+  # Equation (2.5).
+  kappa = (cosLR * cosLR) - (sinLR * sinLR)
+end
+
+program OpSimA
+  implicit none
+  integer N00, N01, N10, N11
+  integer N00L1, N00L2, N00R1, N00R2
+  integer N01L1, N01L2, N01R1, N01R2
+  integer N10L1, N10L2, N10R1, N10R2
+  integer N11L1, N11L2, N11R1, N11R2
+  double precision kappa
+  double precision kappa00, kappa01, kappa10, kappa11
+  double precision chsh
+  continue
+  call count (N00, N01, N10, N11,
+              N00L1, N00L2, N00R1, N00R2,
+              N01L1, N01L2, N01R1, N01R2,
+              N10L1, N10L2, N10R1, N10R2,
+              N11L1, N11L2, N11R1, N11R2)
+  kappa00 = kappa (N00, N00L1, N00L2, N00R1, N00R2)
+  kappa01 = kappa (N01, N01L1, N01L2, N01R1, N01R2)
+  kappa10 = kappa (N10, N10L1, N10L2, N10R1, N10R2)
+  kappa11 = kappa (N11, N11L1, N11L2, N11R1, N11R2)
+  chsh = -kappa00 + kappa01 + kappa10 + kappa11
+  write (*,'()')
+  write (*,'("   light pulse events   ", I9)') n00 + n01 + n10 + n11
+  write (*,'()')
+  write (*,'("    correlation coefs")')
+  write (*,'("          ", F4.1, "° ", F4.1, "°   ", SPF9.6)') _
+    angleL1, angleR1, kappa00
+  write (*,'("          ", F4.1, "° ", F4.1, "°   ", SPF9.6)') _
+    angleL1, angleR2, kappa01
+  write (*,'("          ", F4.1, "° ", F4.1, "°   ", SPF9.6)') _
+    angleL2, angleR1, kappa10
+  write (*,'("          ", F4.1, "° ", F4.1, "°   ", SPF9.6)') _
+    angleL2, angleR2, kappa11
+  write (*,'()')
+  write (*,'("        CHSH contrast   ", SPF9.6)') chsh
+  write (*,'("  2*sqrt(2) = nominal   ", SPF9.6)') 2 * dsqrt (2.0D0)
+  write (*,'("           difference   ", SPF9.6)') _
+    chsh - (2 * dsqrt (2.0D0))
+  write (*,'()')
+  write (*,'("       CHSH violation   ", SPF9.6)') chsh - 2
+  write (*,'()')
+end

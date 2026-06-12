@@ -1,0 +1,241 @@
+/* ARM assembly Raspberry PI  */
+/*  program oddwords.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language ARM assembly*/
+.include "../constantes.inc"
+.equ READ,   3
+.equ WRITE,  4
+.equ OPEN,   5
+.equ CLOSE,  6
+.equ O_RDWR,  0x0002         @ open for reading and writing
+.equ BUFFERSIZE, 300000
+.equ WORDSIZE,   4
+
+//.include "../../ficmacros32.inc"        @ use for developper debugging
+/*******************************************/
+/* Structures                          **/
+/*******************************************/
+/* structure words array  */
+    .struct  0
+st_word_adr:
+    .struct st_word_adr + 4
+st_word_size:
+    .struct st_word_size + 4
+st_word_end:
+/************************************/
+/* Initialized data                 */
+/************************************/
+.data
+szMessOpen:           .asciz "File open error.\n"
+szMessRead:           .asciz "File read error.\n"
+szMessClose:          .asciz "File close error.\n"
+szFileName:           .asciz "unixdict.txt"
+szMessResult:         .asciz " : "
+szCarriageReturn:     .asciz "\n"
+szMessStart:          .asciz "Program 32 bits start.\n"
+/************************************/
+/* UnInitialized data               */
+/************************************/
+.bss
+sZoneConv:            .skip 24
+sBuffer:              .skip BUFFERSIZE     @ file buffer
+.align 4
+WordArray:            .skip st_word_end * 0x10000
+/************************************/
+/*  code section                    */
+/************************************/
+.text
+.global main
+main:                        @ entry of program
+    ldr r0,iAdrszMessStart
+    bl affichageMess
+    ldr r0,iAdrszFileName    @ file name
+    ldr r1,iAdrsBuffer       @ read buffer address
+    ldr r2,#iBufferSize      @ buffer size
+    ldr r3,iAdrWordArray     @ word address array
+    bl readFile
+    cmp r0,#-1               @ file error ?
+    beq 100f
+    mov r2,r0                @ word counter
+    ldr r0,iAdrsBuffer
+    ldr r1,iAdrWordArray     @ array address
+    bl traitWord
+
+100:                         @ standard end of the program
+    mov r0, #0               @ return code
+    mov r7, #EXIT            @ request to exit program
+    svc 0                    @ perform the system call
+
+iAdrsZoneConv:            .int sZoneConv
+iAdrszMessResult:         .int szMessResult
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszMessStart:          .int szMessStart
+iAdrszFileName:           .int szFileName
+iAdrszMessOpen:           .int szMessOpen
+iAdrszMessRead:           .int szMessRead
+iAdrszMessClose:          .int szMessClose
+iAdrsBuffer:              .int sBuffer
+iBufferSize:              .int BUFFERSIZE
+iAdrWordArray:            .int WordArray
+/***************************************************/
+/*   read file and create array words                   */
+/***************************************************/
+/* r0 contains file name */
+/* r1 contains a file buffer */
+/* r2 contains buffer size */
+/* r3 contains array word address */
+readFile:
+    push {r1-r9,lr}          @ save registers
+    mov r9,r1                @ file buffer
+    mov r6,r2
+    mov r10,r3
+    mov r1,#O_RDWR           @ flags
+    mov r2,#0                @ mode
+    mov r7,#OPEN             @ file open
+    svc 0
+    cmp r0,#0                @ error ?
+    ble 99f
+    mov r8,r0                @ FD save
+
+    mov r0,r8
+    mov r1,r9                @ read buffer address
+    mov r2,r6
+    mov r7,#READ             @ call system read file
+    svc 0
+    cmp r0,#0                @ error read ?
+    blt 97f
+    mov r6,r0                @ save file size
+    mov r0,r8                @ FD
+    mov r7,#CLOSE            @ call system close file
+    svc 0
+    cmp r0,#0                @ error close ?
+    blt 96f
+    mov r1,#0                @ index buffer
+    mov r2,r9                @ file buffer address
+    mov r3,#0                @ word length
+    mov r5,#0                @ word counter
+1:
+    ldrb r4,[r9,r1]          @ load character file buffer
+    cmp r4,#0x0D             @ end word ?
+    beq 2f                   @ yes
+    add r1,r1,#1             @ increment index and length
+    add r3,r3,#1
+    b 1b                     @ and loop
+2:
+    mov r4,#0                @
+    strb r4,[r9,r1]          @ store 0 final in word
+    cmp r3,#WORDSIZE         @ word length  ?
+    ble 3f                   @ no ?
+    mov r0,#st_word_end      @ structure size
+    mla r0,r5,r0,r10         @ compute word item address
+    str r2,[r0,#st_word_adr] @ store word address in array word
+    str r3,[r0,#st_word_size] @ store word size in array word
+    add r5,r5,#1             @ increment word counter
+3:
+    add r1,r1,#2             @ increment index buffer (0D0A)
+    cmp r1,r6                @ end ?
+    bge 4f
+    add r2,r9,r1             @ new word begin
+    mov r3,#0                @ init word length
+    b 1b                     @ and loop
+4:
+    mov r0,r5                @ return word counter
+    b 100f
+96:                          @ display error messages
+    ldr r0,iAdrszMessClose
+    bl affichageMess
+    mov r0,#-1               @ error
+    b 100f
+97:
+    ldr r0,iAdrszMessRead
+    bl affichageMess
+    mov r0,#-1               @ error
+    b 100f
+99:
+    ldr r0,iAdrszMessOpen
+    bl  affichageMess
+    mov r0,#-1               @ error
+
+ 100:
+    pop {r1-r9,pc}
+/***************************************************/
+/*   word analyse                                  */
+/***************************************************/
+/* r0 contains a file buffer */
+/* r1 contains array word address */
+/* r2 contains array element */
+traitWord:
+    push {r1-r12,lr}        @ save registers
+    mov r7,r0               @ save buffer address
+    mov r8,r1               @ save array word address
+    mov r9,r2               @ save size
+    mov r10,#0              @ init index word array
+    sub sp,sp,#80           @ reserve 80 byte on stack for work array
+    mov fp,sp               @ work array address
+1:
+    mov r0,#st_word_end     @ structure size
+    mla r0,r10,r0,r8        @ compute word item address
+    ldr r12,[r0,#st_word_adr]  @ load one word address
+    ldr r5,[r0,#st_word_size]  @ load word size
+    mov r3,#0               @ index word
+    mov r6,#0               @ size new word
+2:
+    ldrb r4,[r12,r3]        @ load characters on odd index
+    strb r4,[fp,r6]         @ store in wprk array on stack
+    add r6,r6,#1            @ increment size new word
+    add r3,r3,#2            @ increment index
+    cmp r3,r5               @ end word ?
+    ble 2b
+    cmp r6,#WORDSIZE        @ length new word ok ?
+    ble 10f
+    mov r4,#0               @ store 0 final new word
+    strb r4,[fp,r6]
+                            @ search new word in word array by binary search
+                            @ in french recherche dichotomique
+    mov r3,#0               @ low index
+    sub r4,r9,#1            @ high index = number of elements - 1
+3:                          @ begin search loop
+    cmp r3,r4               @ low > high
+    bgt 10f                 @ not found
+    add r7,r3,r4            @ compute (low + high) /2
+    lsr r7,#1
+    mov r1,#st_word_end     @ structure size
+    mla r2,r7,r1,r8         @ compute word item address
+    ldr r0,[r2,#st_word_adr]  @ load word array address at new index r7
+    mov r1,fp               @ search word address
+    bl comparaison          @ alpha comparison
+    cmp r0,#0
+    beq 4f                  @ find
+    addlt r3,r7,#1          @ lower -> index low = index + 1
+    subgt r4,r7,#1          @ bigger -> index high = index - 1
+    b 3b                    @ and loop
+
+4:                          @ ok -> display result
+    mov r0,r12
+    bl affichageMess
+    ldr r0,iAdrszMessResult
+    bl affichageMess
+    mov r0,fp
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+
+10:
+    mov r6,#0                @ init new length new word
+    add r10,r10,#1           @ increment index word array
+    cmp r10,r9               @ end ?
+    blt 1b                   @ no -> loop
+
+100:
+    add sp,sp,#80            @ stack alignement release work array
+    pop {r1-r12,pc}
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language ARM assembly*/
+.include "../affichage.inc"
+

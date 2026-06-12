@@ -1,0 +1,260 @@
+-- demo\rosetta\Generic_addition.exw
+--<next 210 lines copied from Generic_multiplication.exw>
+constant decimal = "0123456789"
+
+function negate(string b, alphabet)
+--
+-- negate b (can be balanced or unbalanced)
+--
+    if alphabet[1]='0' then
+        -- traditional: add/remove a leading '-'
+        -- eg "-123" <==> "123"
+        if b!="0" then
+            if b[1]='-' then
+                b = b[2..$]
+            else
+                b = "-"&b
+            end if
+        end if
+    else
+        -- balanced: mirror [non-0] digits
+        -- eg "-0+" (ie -8) <==> "+0-" (ie +8)
+        for i=1 to length(b) do
+            if b[i]!='.' then
+                b[i] = alphabet[-find(b[i],alphabet)]
+            end if
+        end for
+    end if
+    return b
+end function
+
+function b_trim(string b)
+-- (common code)
+    -- trim trailing ".000"
+    if find('.',b) then
+        b = trim_tail(trim_tail(b,'0'),'.')
+    end if
+    -- trim leading zeroes, but not "0.nnn" -> ".nnn"
+    -- [hence we cannot use the standard trim_head()]
+    while length(b)>1 and b[1]='0' and b[2]!='.' do
+        b = b[2..$]
+    end while
+    if b="" then b="0" end if
+    return b
+end function
+
+forward function b_sub(string a, b, alphabet)
+
+function b_add(string a, b, alphabet)
+    integer base = length(alphabet),
+            zdx = find('0',alphabet),
+            carry = 0, da, db, digit
+    if zdx=1 then
+        -- (let me know if you can fix this for me!)
+--      if a[1]='-' or b[1]='-' then ?9/0 end if -- +ve only
+        if a[1]='-' then    -- (-a)+b == b-a
+            return b_sub(b,negate(a,alphabet),alphabet)
+        end if
+        if b[1]='-' then    -- a+(-b) == a-b
+            return b_sub(a,negate(b,alphabet),alphabet)
+        end if
+    end if
+    integer adt = find('.',a),
+            bdt = find('.',b)
+    if adt or bdt then
+        -- remove the '.'s and zero-pad the shorter as needed
+        --   (thereafter treat them as two whole integers)
+        -- eg "1.23"+"4.5" -> "123"+"450" (leaving adt==2)
+        if adt then adt = length(a)-adt+1;  a[-adt..-adt] = "" end if
+        if bdt then bdt = length(b)-bdt+1;  b[-bdt..-bdt] = "" end if
+        if bdt>adt then
+            a &= repeat('0',bdt-adt)
+            adt = bdt
+        elsif adt>bdt then
+            b &= repeat('0',adt-bdt)
+        end if
+    end if
+    if length(a)<length(b) then
+        {a,b} = {b,a}   -- ensure b is the shorter
+    end if
+    for i=-1 to -length(a) by -1 do
+        da = iff(i<-length(a)?0:find(a[i],alphabet)-zdx)
+        db = iff(i<-length(b)?0:find(b[i],alphabet)-zdx)
+        digit = da + db + carry + zdx
+        carry = iff(digit>base?+1:iff(digit<1?-1:0))
+        a[i] = alphabet[digit-carry*base]
+        if i<-length(b) and carry=0 then exit end if
+    end for
+    if carry then
+        a = alphabet[carry+zdx]&a
+    end if
+    if adt then
+        a[-adt+1..-adt] = "."
+    end if
+    a = b_trim(a)
+    return a
+end function
+
+function a_smaller(string a, b, alphabet)
+-- return true if a is smaller than b
+-- if not balanced then both are +ve
+    if length(a)!=length(b) then ?9/0 end if -- sanity check
+    for i=1 to length(a) do
+        integer da = find(a[i],alphabet),
+                db = find(b[i],alphabet),
+                c = compare(a,b)
+        if c!=0 then return c<0 end if
+    end for
+    return false -- (=, which is not <)
+end function
+
+function b_sub(string a, b, alphabet)
+    integer base = length(alphabet),
+            zdx = find('0',alphabet),
+            carry = 0, da, db, digit
+    if zdx=1 then
+        if a[1]='-' then    -- (-a)-b == -(a+b)
+            return negate(b_add(negate(a,alphabet),b,alphabet),alphabet)
+        end if
+        if b[1]='-' then    -- a-(-b) == a+b
+            return b_add(a,negate(b,alphabet),alphabet)
+        end if
+    end if
+    integer adt = find('.',a),
+            bdt = find('.',b)
+    if adt or bdt then
+        -- remove the '.'s and zero-pad the shorter as needed
+        --   (thereafter treat them as two whole integers)
+        -- eg "1.23"+"4.5" -> "123"+"450" (leaving adt==2)
+        if adt then adt = length(a)-adt+1;  a[-adt..-adt] = "" end if
+        if bdt then bdt = length(b)-bdt+1;  b[-bdt..-bdt] = "" end if
+        if bdt>adt then
+            a &= repeat('0',bdt-adt)
+            adt = bdt
+        elsif adt>bdt then
+            b &= repeat('0',adt-bdt)
+        end if
+    end if
+    bool bNegate = false
+    if length(a)<length(b)
+    or (length(a)=length(b) and a_smaller(a,b,alphabet)) then
+        bNegate = true
+        {a,b} = {b,a}   -- ensure b is the shorter/smaller
+    end if
+    for i=-1 to -length(a) by -1 do
+        da = iff(i<-length(a)?0:find(a[i],alphabet)-zdx)
+        db = iff(i<-length(b)?0:find(b[i],alphabet)-zdx)
+        digit = da - (db + carry) + zdx
+        carry = digit<=0
+        a[i] = alphabet[digit+carry*base]
+        if i<-length(b) and carry=0 then exit end if
+    end for
+    if carry then
+        ?9/0    -- should have set bNegate above...
+    end if
+    if adt then
+        a[-adt+1..-adt] = "."
+    end if
+    a = b_trim(a)
+    if bNegate then
+        a = negate(a,alphabet)
+    end if
+    return a
+end function
+
+function b_mul(string a, b, alphabet)
+    integer base = length(alphabet),
+            zdx = find('0',alphabet),
+            dpa = find('.',a),
+            dpb = find('.',b),
+            ndp = 0
+    if dpa then ndp += length(a)-dpa; a[dpa..dpa] = "" end if
+    if dpb then ndp += length(b)-dpb; b[dpb..dpb] = "" end if
+    string pos = a, res = "0"
+    if zdx!=1 then
+        -- balanced number systems
+        string neg = negate(pos,alphabet)
+        for i=length(b) to 1 by -1 do
+            integer m = find(b[i],alphabet)-zdx
+            while m do
+                res = b_add(res,iff(m<0?neg:pos),alphabet)
+                m += iff(m<0?+1:-1)
+            end while
+            pos &= '0'
+            neg &= '0'
+        end for
+    else
+        -- non-balanced (normal) number systems
+        bool negative = false
+        if a[1]='-' then a = a[2..$]; negative = true end if
+        if b[1]='-' then b = b[2..$]; negative = not negative end if
+        for i=length(b) to 1 by -1 do
+            integer m = find(b[i],alphabet)-zdx
+            while m>0 do
+                res = b_add(res,pos,alphabet)
+                m -= 1
+            end while
+            pos &= '0'
+        end for
+        if negative then res = negate(res,alphabet) end if
+    end if
+    if ndp then
+        res[-ndp..-ndp-1] = "."
+    end if
+    res = b_trim(res)
+    return res
+end function
+--</copied from Generic_multiplication.exw>
+
+function normalise_decimal(string a)
+--
+-- eg "12.34e-3" ==> "0.01234"
+--     and "1e2" ==> "100"
+--
+    integer d = find('.',a),
+            e = find('e',a)
+    if e then
+        integer {{z}} = scanf(a[e+1..$],"%d")
+        a = a[1..e-1]
+        if d then
+            -- eg 12.34e-3 == 1234e-5
+            a[d..d] = ""
+            z -= length(a)-d+1
+        end if
+        if z>=0 then
+            -- eg 1e2 ==> 100
+            a &= repeat('0',z)
+        elsif z<-length(a) then
+            -- eg 1234e-5 ==> 0.01234
+            a = "0."&repeat('0',-z-length(a))&a
+        else
+            -- eg 1234e-3 ==> 1.234
+            a[z..z-1] = "."
+        end if
+    end if
+    return a
+end function
+
+function e_notation(string a)
+-- eg "1000000" ==> "1e6"
+    if find('.',a) then ?9/0 end if -- (to do)
+    integer l = length(a)
+    a = trim_tail(a,".0")
+    l -= length(a)
+    if l!=0 then
+        a &=sprintf("e%d",l)
+    end if
+    return a
+end function
+
+string s = "12345679",
+       t = "123456790"
+integer e = 63
+for n = -7 to 21 do
+    string bd = normalise_decimal(sprintf("%se%d",{s,e})),
+           e1 = normalise_decimal(sprintf("1e%d",e)),
+           res = b_add(b_mul(bd,"81",decimal),e1,decimal)
+    printf(1,"%2d res : %s\n",{n,e_notation(res)})
+    s = t & s
+    e -= 9
+end for

@@ -1,0 +1,13 @@
+DECLARE FUNCTION dec! (n!)
+DIM n(4)
+DATA 7,12.00,12.345,12.345677,0.142857142857142
+FOR i = LBOUND(n) TO UBOUND(n)
+    READ n(i)
+    PRINT n(i); "has"; dec(n(i)); "decimals"
+NEXT i
+END
+
+FUNCTION dec (n)
+    c$ = STR$(n)
+    IF INSTR(c$, ".") THEN dec = LEN(MID$(c$, INSTR(c$, ".") + 1)) ELSE dec = 0
+END FUNCTION

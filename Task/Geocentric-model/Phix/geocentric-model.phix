@@ -1,0 +1,74 @@
+-- demo\rosetta\geocentric.exw
+with javascript_semantics
+requires("1.0.6")
+include theGUI.e
+
+constant number_of_steps = 720,
+         jupiter_rounds = 2,
+         jupiter_year_ms = 30000,
+         jupiter_step = jupiter_rounds * 360 / number_of_steps,
+         frame_delay_ms = floor((jupiter_year_ms * jupiter_rounds) / number_of_steps),
+         SUN = 1, EARTH = 4, SATURN = 7,
+         names = {"sun","mercury","venus","earth","mars","jupiter","saturn"},
+         radius = {7,3,4,4,3,5,4},
+         orbit_radius = {0,24,48,72,96,120,160},
+         angular_step = sq_mul(jupiter_step,{0,49,19,11.86,6.3,1,0.4}),
+         colours = {TG_YELLOW,TG_SILVER,TG_LIGHT_GREY,TG_TEAL,TG_DARK_RED,TG_AMBER,TG_INDIGO},
+         moon_radius = 8
+sequence angular = repeat(0,SATURN)
+atom moon_angle = 0, moon_step = 360/10    -- exaggerated orbital speed
+
+function planet_xy(integer planet, atom xshift=0, yshift=0)
+    atom a = angular[planet]*PI/180,
+         r = orbit_radius[planet],
+         x = r*cos(a)+xshift,
+         y = r*sin(a)+yshift
+    return {x,y}
+end function
+
+function moon_xy()
+    atom {x,y} = planet_xy(EARTH),
+             a = moon_angle*PI/180
+    return {x+moon_radius*cos(a),
+            y+moon_radius*sin(a)}
+end function
+
+procedure draw_projection(gdx canvas, sequence shift, win_shift)
+    atom xshift = win_shift[1] + shift[1],
+         yshift = win_shift[2] + shift[2], x, y
+    for p=SUN to SATURN do
+        {x,y} = planet_xy(p,xshift,yshift)
+        gDrawCircle(canvas,x,y,radius[p],true,colour:=colours[p])
+    end for
+    {x,y} = moon_xy()
+    gCanvasPixel(canvas,x+xshift,y+yshift,TG_WHITE)
+end procedure
+
+function helio_shift()  -- Heliocentric projection shift
+    return {0,0}
+end function
+
+function geo_shift()  -- Geocentric projection shift
+    atom {sx,sy} = planet_xy(SUN),
+         {ex,ey} = planet_xy(EARTH)
+    return {sx-ex,sy-ey}
+end function
+
+procedure redraw(gdx canvas)
+    draw_projection(canvas,helio_shift(),{240,240})
+    draw_projection(canvas,geo_shift(),{760,240})
+end procedure
+
+procedure tick(gdx timer)
+    for p=SUN to SATURN do
+        angular[p] = rmdr(angular[p]+angular_step[p],360)
+    end for
+    moon_angle = rmdr(moon_angle+moon_step,360)
+    gdx canvas = gGetAttribute(timer,`USER_DATA`)
+    gRedraw(canvas)
+end procedure
+
+gdx canvas = gCanvas(redraw,"SIZE=1050x480,BGCLR=BLACK"),
+    dialog = gDialog(canvas,`TITLE="Geocentric model"`),
+    timer = gTimer(tick,80,true,canvas)
+gMainLoop(dialog)

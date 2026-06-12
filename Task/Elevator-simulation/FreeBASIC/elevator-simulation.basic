@@ -1,0 +1,249 @@
+#include "fbgfx.bi"
+
+' Constants
+Const WINDOW_WIDTH = 800
+Const WINDOW_HEIGHT = 700
+Const CD_DARKER_GREY = &h383838
+Const CD_LIGHTER_ORANGE = &hFFA500
+Const CD_PALE_BLUE = &h98C5DA
+Const CD_MEDIUM_BLUE = &h759EB4
+
+Type Button
+    x As Integer
+    y As Integer
+    text As String
+
+    Declare Constructor ()
+    Declare Constructor (x As Integer, y As Integer, txt As String)
+End Type
+
+Constructor Button()
+    x = 0
+    y = 0
+    text = ""
+End Constructor
+
+Constructor Button(x As Integer, y As Integer, txt As String)
+    This.x = x
+    This.y = y
+    This.text = txt
+End Constructor
+
+Type Panel
+    x As Integer
+    y As Integer
+    ancho As Integer
+    alto As Integer
+
+    Declare Constructor ()
+    Declare Constructor (x As Integer, y As Integer, w As Integer, h As Integer)
+End Type
+
+Constructor Panel()
+    x = 0
+    y = 0
+    ancho = 0
+    alto = 0
+End Constructor
+
+Constructor Panel(x As Integer, y As Integer, w As Integer, h As Integer)
+    This.x = x
+    This.y = y
+    This.ancho = w
+    This.alto = h
+End Constructor
+
+' Variables
+Dim Shared As Integer curFloor, waitSign, actionCount
+Dim Shared As Boolean doorOpen
+Dim Shared As String actions(100)
+
+' Initialize panels
+Dim Shared panels(4) As Panel
+panels(0) = Panel(195, 30, 45, 12)    ' indicator
+panels(1) = Panel(380, 150, 50, 90)   ' up/down
+panels(2) = Panel(380, 465, 100, 210) ' main
+panels(3) = Panel(625, 330, 75, 25)   ' restart
+panels(4) = Panel(625, 530, 75, 25)   ' exit
+
+' Initialize buttons
+Dim Shared buttons(9) As Button
+buttons(0) = Button(380, 110, "^")
+buttons(1) = Button(380, 190, "v")
+buttons(2) = Button(335, 305, "5")
+buttons(3) = Button(420, 305, "6")
+buttons(4) = Button(335, 385, "3")
+buttons(5) = Button(420, 385, "4")
+buttons(6) = Button(335, 465, "1")
+buttons(7) = Button(420, 465, "2")
+buttons(8) = Button(380, 540, "GF")
+buttons(9) = Button(380, 630, "><")
+
+Sub NewGame()
+    curFloor = Int(Rnd * 7)
+    waitSign = Int(Rnd * 7)
+    doorOpen = (Int(Rnd * 2) = 1)
+    actionCount = 0
+End Sub
+
+Sub DrawElevator()
+    Dim As Integer i, x, y
+
+    Screenlock
+    Cls
+
+    ' Draw panels
+    For i = 0 To 4
+        Line (panels(i).x - panels(i).ancho, panels(i).y - panels(i).alto)- _
+        (panels(i).x + panels(i).ancho, panels(i).y + panels(i).alto), _
+        CD_LIGHTER_ORANGE, BF
+    Next i
+
+    ' Draw floor indicator
+    Draw String (180, 20), Iif(curFloor = 0, "GF", Str(curFloor)), &hFFFFFF
+
+    ' Draw elevator shaft
+    Dim As Integer floorY = 50
+    For i = 6 To 0 Step -1
+        ' Draw floor background
+        Line (155, floorY)-(235, floorY + 80), &hFFFFFF, BF
+        Line (155, floorY)-(235, floorY + 80), &h808080, B
+
+        ' Draw floor number with better positioning
+        Draw String (130, floorY + 35), Iif(i = 0, "GF", Str(i)), &hFFFFFF
+
+        If i = curFloor Then
+            ' Draw elevator car with better visibility
+            Line (160, floorY + 5)-(230, floorY + 75), CD_MEDIUM_BLUE, BF
+
+            If doorOpen Then
+                ' Draw open doors
+                Line (165, floorY + 5)-(185, floorY + 75), CD_PALE_BLUE, BF
+                Line (205, floorY + 5)-(225, floorY + 75), CD_PALE_BLUE, BF
+            Else
+                ' Draw closed doors
+                Line (160, floorY + 5)-(230, floorY + 75), CD_MEDIUM_BLUE, BF
+            End If
+        End If
+
+        ' The WAIT sign indicates a floor where the elevator needs to stop
+        If i = waitSign Then
+            Circle (195, floorY + 40), 25, &hFFFF00,, , , F
+            Draw String (185, floorY + 35), "WAIT", &h000000
+        End If
+
+        floorY += 90
+    Next i
+
+    ' Draw buttons
+    For i = 0 To 9
+        Circle (buttons(i).x, buttons(i).y), 30, &hC0C0C0,, , , F
+        Circle (buttons(i).x, buttons(i).y), 30, &h000000
+        Draw String (buttons(i).x - 5, buttons(i).y - 5), buttons(i).text, &h000000
+    Next i
+
+    ' Draw panel labels
+    Draw String (panels(3).x - 20, panels(3).y - 5), "Restart", &hFFFFFF
+    Draw String (panels(4).x - 15, panels(4).y - 5), "Exit", &hFFFFFF
+
+    Screenunlock
+End Sub
+
+Sub ProcessActions()
+    If actionCount > 0 Then
+        Dim action As String = actions(0)
+
+        ' Shift array left
+        For i As Integer = 0 To actionCount - 2
+            actions(i) = actions(i + 1)
+        Next i
+        actionCount -= 1
+
+        ' Regular floor movement processing
+        Select Case action
+        Case "GF"
+            If curFloor > 0 Then
+                curFloor -= 1
+                doorOpen = False
+            Else
+                doorOpen = True
+            End If
+        Case "1" To "6"
+            Dim As Integer targetFloor = Valint(action)
+            ' Add multiple movements until target floor is reached
+            While curFloor <> targetFloor
+                If curFloor < targetFloor Then
+                    curFloor += 1
+                Else
+                    curFloor -= 1
+                End If
+                DrawElevator()
+                Sleep 500
+            Wend
+            doorOpen = True
+        Case "^"
+            If curFloor < 6 Then
+                curFloor += 1
+                doorOpen = False
+            End If
+        Case "v"
+            If curFloor > 0 Then
+                curFloor -= 1
+                doorOpen = False
+            End If
+        Case "><"
+            doorOpen = Not doorOpen
+        End Select
+
+        ' Check for WAIT sign
+        If curFloor = waitSign Then
+            waitSign = -1
+            doorOpen = True
+            actions(actionCount) = "><"
+            actionCount += 1
+        End If
+
+        DrawElevator()
+    End If
+End Sub
+
+Sub main()
+    Screenres WINDOW_WIDTH, WINDOW_HEIGHT, 32
+    Windowtitle "Elevator Simulation"
+
+    Randomize Timer
+    NewGame()
+
+    Dim As Integer mx, my, mb, i
+    Do
+        DrawElevator()
+
+        Getmouse mx, my, , mb
+        If mb And 1 Then
+            ' Check button clicks
+            For i = 0 To 9
+                If (mx - buttons(i).x) ^ 2 + (my - buttons(i).y) ^ 2 <= 900 Then
+                    actions(actionCount) = buttons(i).text
+                    actionCount += 1
+                    Sleep 100
+                    Exit For
+                End If
+            Next i
+
+            ' Check panel clicks
+            If mx >= panels(3).x - panels(3).ancho And mx <= panels(3).x + panels(3).ancho Then
+                If my >= panels(3).y - panels(3).alto And my <= panels(3).y + panels(3).alto Then
+                    NewGame()
+                Elseif my >= panels(4).y - panels(4).alto And my <= panels(4).y + panels(4).alto Then
+                    Exit Do
+                End If
+            End If
+        End If
+
+        ProcessActions()
+        Sleep 100
+
+    Loop Until Multikey(FB.SC_ESCAPE)
+End Sub
+
+main()

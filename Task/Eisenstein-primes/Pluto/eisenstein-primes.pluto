@@ -1,0 +1,65 @@
+require "complex"
+require "bitmap"
+local int = require "int"
+local fmt = require "fmt"
+
+local omega = complex.of(-0.5, math.sqrt(3.0) * 0.5)
+
+class eisenstein
+    private a, b, n
+
+    function __construct(a, b)
+        self.a = a
+        self.b = b
+        self.n = omega * b + a
+    end
+
+    function get_n() return self.n end
+
+    function real() return self.n:getReal() end
+    function imag() return self.n:getImag() end
+    function norm() return self.a * self.a - self.a * self.b + self.b * self.b end
+
+    function isprime()
+        if self.a == 0 or self.b == 0 or self.a == self.b then
+            local c = math.max(math.abs(self.a), math.abs(self.b))
+            return int.isprime(c) and c % 3 == 2
+        end
+        return int.isprime(self:norm())
+    end
+
+    function __tostring() return self.n:tostring() end
+end
+
+local eprimes = {}
+for a = -100, 100 do
+    for b = -100, 100 do
+        local e = new eisenstein(a, b)
+        if e:isprime() then eprimes:insert(e) end
+    end
+end
+
+eprimes:sort(|e1, e2| -> do
+    if e1:norm() < e2:norm() then return true end
+    if e1:norm() == e2:norm() then
+        if e1:imag() < e2:imag() then return true end
+        if e1:imag() == e2:imag() then return e1:real() < e2:real() end
+        return false
+    end
+    return false
+end)
+eprimes:map(|e| -> e:get_n())
+print("First 100 Eisenstein primes nearest zero:")
+fmt.tprint("%18s", eprimes:slice(1, 100):mapped(|e| -> e:format("% 6.4f", "%6.4f")), 4)
+
+-- Code to create and display the plot.
+local pts = eprimes:mapped(|e| -> {math.round(e:getReal()), math.round(e:getImag())})
+local bmp = bitmap.of(1000, 600, color.white, $'"Eisenstein primes with norm up to 100 ({#pts} points)"')
+local chrt = chart.of(bmp, 100, 500, 800, 400, range(-160, 160), range(-100, 100))
+chrt:axes(color.black, 2)
+local xmarks = range(-150, 150, 50)
+local ymarks = range(-75, 75, 25)
+chrt:mark(xmarks, ymarks, color.black, 2)
+chrt:label(xmarks, ymarks, color.black, 2, color.black)
+chrt:plot(pts, "·", color.black) -- uses interpunct character 0xb7
+bmp:view()

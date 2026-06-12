@@ -1,0 +1,140 @@
+Class Visitor {
+Private:
+      module VisitItem (p as Item) {
+            Error "Abstract"
+      }
+      module VisitOrder (p as Order) {
+            Error "Abstract"
+      }
+      module VisitCustomer (p as Customer) {
+            Error "Abstract"
+      }
+Public:
+      module Visit (p as *Visitable){
+            if p is type Item then
+                  .VisitItem p
+            else.if p is type Order then
+                  .VisitOrder p
+            else.if p is type Customer then
+                  .VisitCustomer p
+            end if
+      }
+}
+Class Visitable {
+      module accept (visitor as *Visitor){
+            Error "Abstract"
+      }
+}
+\\ a structure of objects
+Class Item as Visitable {
+      property name$ {Value}
+      module accept (visitor as *Visitor){
+            \\ do nothing
+      }
+Class:
+      module Item (.[name]$) {
+      }
+}
+Class Order as Visitable {
+Private:
+      Items=Queue
+Public:
+      property name$ {Value}
+      module final accept (visitor as *Visitor){
+            m=each(.Items)
+            while m
+                  visitor=>visit eval(m)
+            end while
+      }
+      module addItem (aName$){
+            Append .items, aName$:=Pointer(item(aName$))
+      }
+Class:
+      module Order (.[name]$, itemname$="") {
+            if itemname$<>"" then .additem itemname$
+      }
+}
+Class Customer as Visitable {
+Private:
+      orders=List
+Public:
+      property name$ {Value}
+      module final accept (visitor as *Visitor){
+            m=each(.orders)
+            while m
+                  visitor=>visit eval(m)
+            end while
+      }
+      module addOrder (order as *Order) {
+            Append .orders, order=>name$:=order
+      }
+      module Customer (.[name]$) {
+      }
+}
+Class CustomerGroup as Visitable {
+Private:
+      customers=List
+Public:
+      module final accept (visitor as *Visitor){
+            m=each(.customers)
+            while m
+                  visitor=>visit eval(m)
+            end while
+      }
+      module addCustomer (customer as *Customer) {
+            Append .customers, customer=>name$:=customer
+      }
+}
+Class GeneralReport as Visitor {
+Private:
+      ItemNo, OrderNo, CustomerNo
+      Document Result$
+      module VisitItem (p as *Item) {
+            .ItemNo++
+            .Result$<=format$("{0::-6}. {1}",.ItemNo, p=>name$)+{
+            }
+      }
+      module VisitOrder (p as *Order) {
+            .OrderNo++
+            .ItemNo<=0
+            .Result$<=format$("Order : {0}",p=>name$)+{
+            }
+            p=>accept pointer(this)
+      }
+      module VisitCustomer (p as *Customer) {
+            .CustomerNo++
+            .OrderNo<=0
+            .Result$<=format$("Customer: {0}", p=>name$)+{
+            }
+            p=>accept pointer(this)
+      }
+Public:
+      module displayResults {
+            Report .Result$
+            ClipBoard .Result$
+            Clear .Result$
+            .CustomerNo<=0
+      }
+}
+CustomerGroup=CustomerGroup()
+\\ put some items in an order
+For This {
+      order1=Order("1001", "AZX100")
+      order1.addItem "ZZ12-23"
+      M1=Customer("Bob")
+      M1.addOrder Pointer((order1))
+      order1=Order("1002", "AZX101")
+      M1.addOrder Pointer((order1))
+      CustomerGroup.addCustomer Pointer((M1))
+      order1=Order("1003", "KKX112")
+      order1.addItem "BZ212-6"
+      order1.addItem "BZ212-7"
+      M1=Customer("John")
+      M1.addOrder Pointer((order1))
+      CustomerGroup.addCustomer Pointer((M1))
+}
+\\ Now order1 and M1 erased
+\\ we get a pointer to a GeneralReport
+GeneralReport->GeneralReport()
+CustomerGroup.accept GeneralReport
+GeneralReport=>displayResults

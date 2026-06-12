@@ -1,0 +1,165 @@
+'Usage:  hexfile [-i <first index>] <file>
+
+Const bytesPerLine = 16
+Const tabWidth = 3
+Const fileIndexWidth = 8
+Const firstIndex = 1
+
+Const asciiLowerBound = 31
+Const asciiUpperBound = 127
+Const emptyByte = "  "
+Const emptyAsciiByte = " "
+Const nonAsciiByte = "."
+
+Enum Keys Explicit
+    Up = &H48FF
+    PageUp = &H49FF
+    Down = &H50FF
+    PageDown = &H51FF
+    Home = &H47FF
+    End_ = &H4FFF
+    Esc = 27
+End Enum
+
+Sub GetLine(Byval fileIndex As Longint, Byval fileNumber As Integer, bytes() As Ubyte)
+    Dim bytesread As Uinteger
+
+    If Get(#fileNumber,fileIndex,bytes(), ,bytesread) = 0 And bytesread > 0 Then
+        Redim Preserve bytes(bytesread)
+    Else
+        Erase bytes
+    End If
+End Sub
+
+Function ByteToAscii(Byval byte_ As Ubyte) As String
+    Return Iif(byte_ > asciiLowerBound And byte_ < asciiUpperBound, Chr(byte_), nonAsciiByte)
+End Function
+
+Function MakeLine(Byval firstIndexDisplay As Longint, Byval fileIndex As Longint, bytes() As Ubyte) As String
+    If Ubound(bytes) < Lbound(bytes) Then Return "" End If
+
+    Dim hexBytes As String = ""
+    Dim asciiBytes As String = ""
+
+    For byteIndex As Integer = Lbound(bytes) To Lbound(bytes) + bytesPerLine - 1
+        If byteIndex <= Ubound(bytes) Then
+            Dim byte_ As Ubyte = bytes(byteIndex)
+            asciiBytes += ByteToAscii(byte_)
+            hexBytes += Hex(byte_, 2)
+        Else
+            asciiBytes += emptyAsciiByte
+            hexBytes += emptyByte
+        End If
+
+        hexBytes += Iif(byteIndex = (bytesPerLine\2)-1, "  ", " ")
+    Next
+
+    Dim displayIndex As Const Longint = fileIndex - firstIndex + firstIndexDisplay
+    Return Space(1) + Hex(displayIndex,fileIndexWidth) + Space(tabWidth) +_
+    hexBytes + Space(tabWidth-1) + asciiBytes
+End Function
+
+Sub DumpInteractive(Byval fileNumber As Integer, Byval firstIndexDisplay As Longint)
+    Dim consoleDimensions As Integer = Width()
+    Dim linesPerPage As Integer = Hiword(consoleDimensions)
+    Dim bytesPerPage As Integer = bytesPerline * linesPerPage
+
+    Dim numberOfFullLines As Longint = (Lof(fileNumber)-1) \ bytesPerLine
+    Dim lastLineIndex As Longint = numberOfFullLines * bytesPerLine + firstIndex
+    Dim lastPageIndex As Longint = lastLineIndex - bytesPerPage + bytesPerLine
+    If lastPageIndex < firstIndex Then lastPageIndex = firstIndex End If
+
+    Cls
+
+    Dim input_ As Long
+    Dim fileIndex As Longint = firstIndex
+
+    Do
+        Locate 1,1,0
+        For lineNumber As Integer = 1 To linesPerPage
+            Dim lineIndex As Longint = fileIndex + (lineNumber-1)*bytesPerLine
+            Redim bytes(bytesPerLine) As Ubyte
+            GetLine(lineIndex, fileNumber, bytes())
+            Dim lineText As String = MakeLine(firstIndexDisplay, lineIndex, bytes())
+            If lineNumber = linesPerPage Then
+                Print lineText;
+            Else
+                Print lineText
+            End If
+        Next
+
+        input_ = Getkey
+        Select Case As Const input_
+        Case Keys.PageUp
+            fileIndex -= bytesPerPage
+        Case Keys.Up
+            fileIndex -= bytesPerLine
+        Case Keys.PageDown
+            fileIndex += bytesPerPage
+        Case Keys.Down
+            fileIndex += bytesPerLine
+        Case Keys.Home
+            fileIndex = firstIndex
+        Case Keys.End_
+            fileIndex = lastPageIndex
+        End Select
+
+        If fileIndex < firstIndex Then fileIndex = firstIndex
+        If fileIndex > lastPageIndex Then fileIndex = lastPageIndex
+    Loop Until input_ = Keys.Esc
+End Sub
+
+Sub PrintUsage()
+    Const firstColumn = 4
+    Const secondColumn = 12
+
+    Dim controls(0 To ..., 2) As String = {_
+    {"Down", "Scroll down one line."},_
+    {"Up", "Scroll up one line."},_
+    {"PgDown", "Show next page."},_
+    {"PgUp", "Show previos page."},_
+    {"End", "Jump to the end of the file."},_
+    {"Home", "Jump to the beginning of the file."},_
+    {"Esc", "Quit."}_
+    }
+
+    Print "hexfile - a simple commandline hexdumper"
+    Print "  (c) 2021-2023 Jussi Laasonen. Licensed under the MIT license."
+    Print "  See https://github.com/jlaasonen/hexfile for full license."
+    Print !"\nUsage: hexfile [-i <first index>] <file>"
+    Print !"\nDisplays an interactive hex dump the file."
+    Print !"\nControls:"
+
+    For row As Integer = Lbound(controls) To Ubound(controls)
+        Print Tab(firstColumn);controls(row,0);Tab(secondColumn);controls(row,1)
+    Next
+
+    Print !"\nOptions:"
+    Print "  -i <first index>"
+    Print "    Starts the displayed file index from the given index. Defaults to 0."
+    Print "    The value is expected in decimal format. For binary, octal or hexadecimal"
+    Print "    Use prefix &B, &O or &H respectively."
+End Sub
+
+Const fileIndexArgument = "-i"
+
+Dim fileName As String = ""
+Dim firstIndexDisplay As Longint = 0
+
+If __fb_argc__ = 2 Then
+    fileName = Command(1)
+Elseif __fb_argc__ = 4  And Command(1) = fileIndexArgument Then
+    firstIndexDisplay = Vallng(Command(2))
+    fileName = Command(3)
+End If
+
+Dim fileNumber As Long = Freefile
+
+If fileName = "" Then
+    PrintUsage()
+Elseif Open(fileName For Binary Access Read As #fileNumber) = 0 Then
+    DumpInteractive(fileNumber, firstIndexDisplay)
+    Close(fileNumber)
+Else
+    Print "Failed to open file '" + fileName + "'."
+End If

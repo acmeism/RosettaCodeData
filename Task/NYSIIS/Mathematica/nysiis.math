@@ -1,0 +1,146 @@
+ClearAll[Nysiis]
+
+(* Helper functions *)
+replaceAtStart[str_, from_, to_] :=
+  If[StringStartsQ[str, from],
+     <|"Result" -> StringReplacePart[str, to, {1, StringLength[from]}], "Changed" -> True|>,
+     <|"Result" -> str, "Changed" -> False|>];
+
+multiReplaceAtStart[str_, patterns_, to_] :=
+  Module[{res},
+    res = SelectFirst[patterns, StringStartsQ[str, #] &];
+    If[res === Missing["NotFound"],
+       <|"Result" -> str, "Changed" -> False|>,
+       <|"Result" -> StringReplacePart[str, to, {1, StringLength[res]}], "Changed" -> True|>]];
+
+replaceAtEnd[str_, from_, to_] :=
+  If[StringEndsQ[str, from],
+     <|"Result" -> StringReplacePart[str, to, {StringLength[str] - StringLength[from] + 1, StringLength[str]}], "Changed" -> True|>,
+     <|"Result" -> str, "Changed" -> False|>];
+
+multiReplaceAtEnd[str_, patterns_, to_] :=
+  Module[{res},
+    res = SelectFirst[patterns, StringEndsQ[str, #] &];
+    If[res === Missing["NotFound"],
+       <|"Result" -> str, "Changed" -> False|>,
+       <|"Result" -> StringReplacePart[str, to, {StringLength[str] - StringLength[res] + 1, StringLength[str]}], "Changed" -> True|>]];
+
+isVowel[c_] := MemberQ[{"A", "E", "I", "O", "U"}, c];
+
+(* Main function *)
+Nysiis[input_String] := Module[
+  {s, result, suffix1, suffix2, chars, out, currentChar, prevChar, nextChar, twoChar, threeChar},
+
+  (* Normalize input *)
+  s = StringJoin@ToUpperCase@StringCases[input, LetterCharacter];
+  If[StringLength[s] == 0, Return[""]];
+
+  (* Step 1: Initial transformations *)
+  result = replaceAtStart[s, "MAC", "MCC"]; s = result["Result"];
+  result = replaceAtStart[s, "KN", "NN"]; s = result["Result"];
+  result = replaceAtStart[s, "K", "C"]; s = result["Result"];
+  result = multiReplaceAtStart[s, {"PH", "PF"}, "FF"]; s = result["Result"];
+  result = replaceAtStart[s, "SCH", "SSS"]; s = result["Result"];
+
+  (* Step 2: Handle endings *)
+  suffix1 = {"EE", "IE"};
+  suffix2 = {"DT", "RT", "RD", "NT", "ND"};
+
+  result = multiReplaceAtEnd[s, suffix1, "Y"];
+  If[result["Changed"],
+    s = StringDrop[result["Result"], -1],
+    result = multiReplaceAtEnd[s, suffix2, "D"];
+    If[result["Changed"],
+      s = StringDrop[result["Result"], -1]
+    ]
+  ];
+
+  chars = Characters[s];
+  If[Length[chars] == 0, Return[""]];
+
+  (* Build output *)
+  out = First[chars];
+  Do[
+    currentChar = chars[[i]];
+    prevChar = chars[[i - 1]];
+    nextChar = If[i < Length[chars], chars[[i + 1]], None];
+
+    (* Transformations *)
+    If[currentChar == "E" && nextChar === "V", currentChar = "A",
+      If[isVowel[currentChar], currentChar = "A"]];
+    Switch[currentChar,
+      "Q", currentChar = "G",
+      "Z", currentChar = "S",
+      "M", currentChar = "N",
+      "K", currentChar = If[nextChar === "N", "N", "C"],
+      "H", If[!isVowel[prevChar] || (nextChar === None || !isVowel[nextChar]), currentChar = prevChar],
+      "W", If[isVowel[prevChar], currentChar = "A"]
+    ];
+
+    If[i < Length[chars],
+      twoChar = chars[[i]] <> chars[[i + 1]];
+      Switch[twoChar,
+        "KN", currentChar = "N",
+        "PH", currentChar = "F"
+      ];
+    ];
+    If[i + 2 <= Length[chars],
+      threeChar = chars[[i]] <> chars[[i + 1]] <> chars[[i + 2]];
+      If[threeChar == "SCH", currentChar = "S"];
+    ];
+
+    If[StringTake[out, -1] != currentChar, out = out <> currentChar];
+  ,
+    {i, 2, Length[chars]}
+  ];
+
+  (* Final cleanup *)
+  If[StringEndsQ[out, "S"], out = StringDrop[out, -1]];
+  If[StringMatchQ[out, ___ ~~ "AY"], out = StringDrop[out, -2] <> "Y"];
+  If[StringEndsQ[out, "A"], out = StringDrop[out, -1]];
+
+  out
+]
+
+(* Test cases *)
+testCases = {
+   {"Bishop", "BASAP"},
+   {"Carlson", "CARLSAN"},
+   {"Carr", "CAR"},
+   {"Chapman", "CAPNAN"},
+   {"Franklin", "FRANCLAN"},
+   {"Greene", "GRAN"},
+   {"Harper", "HARPAR"},
+   {"Jacobs", "JACAB"},
+   {"Larson", "LARSAN"},
+   {"Lawrence", "LARANC"},
+   {"Lawson", "LASAN"},
+   {"Louis, XVI", "LASXV"},
+   {"Lynch", "LYNC"},
+   (* {"Mackenzie", "MCANSY"}, *) (* note: commented like in JS *)
+   {"Matthews", "MAT"},
+   {"McCormack", "MCARNAC"},
+   {"McDaniel", "MCDANAL"},
+   {"McDonald", "MCDANALD"},
+   {"Mclaughlin", "MCLAGLAN"},
+   {"Morrison", "MARASAN"},
+   {"O'Banion", "OBANAN"},
+   {"O'Brien", "OBRAN"},
+   {"Richards", "RACARD"},
+   {"Silva", "SALV"},
+   {"Watkins", "WATCAN"},
+   {"Wheeler", "WALAR"},
+   {"Willis", "WAL"},
+   {"brown, sr", "BRANSR"},
+   {"browne, III", "BRAN"},
+   {"browne, IV", "BRANAV"},
+   {"knight", "NAGT"},
+   {"mitchell", "MATCAL"},
+   {"o'daniel", "ODANAL"}
+};
+
+
+Do[Module[{  name=testCase[[1]], expected=testCase[[2]] },  {name, Nysiis[name], If[Nysiis[name] == expected, "ok", "ERROR: " <> expected <> " expected"]} //Print ],
+   { testCase  , testCases}]
+
+

@@ -1,0 +1,350 @@
+--
+-- demo\rosetta\Diophantine_linear_system_solving.exw
+-- ==================================================
+--
+--  Translation of FreeBasic, with some help from Wren, admittedly made harder
+--  by the need to xlate 0 and -1 based idx to 1 based.
+--
+--  Note that for problem 16 (HMM extended gcd (example 7.2)), the signs of
+--  the (20) and (37) rows are flipped, which I'm told is OK.
+--
+with javascript_semantics -- (using an include instead of file i/o)
+include Diophantine_linear_system_constants.e -- DLS_PROBS/SOLNS
+constant echo = false,
+intext = split(DLS_PROBS,"\n"),
+outtxt = split(DLS_SOLNS,"\n",false)
+
+integer nxi = 1, nxo = 1
+function input(string /*prompt*/)
+    string in_line = intext[nxi]
+    nxi += 1
+    return in_line
+end function
+
+procedure output(string out_line)
+    printf(1,"%s\n",{out_line})
+    string expected = outtxt[nxo]
+    if out_line != expected then
+        printf(1,"%s <<=== expected ***ERROR***\n",{expected})
+        {} = wait_key() -- (nb does nowt in a browser)
+    end if
+    nxo += 1
+end procedure
+
+-- The complexity of the algorithm increases
+-- with alpha, as does the quality guarantee
+-- on the lattice basis vectors:
+-- alpha = aln / ald, 1/4 < alpha < 1
+constant aln = 80, ald = 81
+-- rows & columns
+integer m1, mn, nx, m, n
+-- column indices
+integer col1, col2
+
+-- Gram-Schmidt coefficients
+-- mu_rs = lambda_rs / d_s
+-- Br = d_r / d_r-1
+sequence lambda, d
+-- work matrix
+sequence a
+
+procedure InputAb_or_c(integer pr)
+    -- input A and b, or a complex constant and compute powers into A
+    if pr then -- (complex constant)
+        integer m2 = m1+1
+        atom p, q = 0, t
+        string g = input(" a + bi:")
+
+        integer plus = find('+',g)
+        string line = trim(g[1..plus-1])
+        atom x = to_number(line),
+             y = iff(plus?to_integer(trim(g[plus+1..$])):0)
+        if y then line &= sprintf(" + %g*i",y) end if
+        output(" "&line)
+
+        -- fudge factor 1
+        a[1,m1+1] = 1
+        -- c ^ 0
+        p = power(10,pr)
+        a[2,m1+1] = p
+        -- compute powers
+        for r=3 to m do
+            t = p
+            p = p*x-q*y
+            q = t*y+q*x
+            a[r,m1+1] = round(p)
+            a[r,m2+1] = round(q)
+        end for
+    else -- (input A and b)
+        for r=1 to n do
+--          printf(1," row A%d and b%d\n",r+1)
+            string g = input(" ")
+            -- reject all fractional coefficients
+            assert(not find_any(`\./`,g))
+            sequence gi = apply(split(substitute(g,'|',' ')),to_integer)
+            for s=1 to length(gi) do
+                a[s,m1+r] = gi[s]
+            end for
+        end for
+    end if
+end procedure
+
+function cf(sequence c) return apply(apply(c,sprint),length) end function
+function col_formats(sequence c) return apply(true,sprintf,{{" %%%dd"},apply(apply(columnize(c),cf),maxsq)}) end function
+
+function print_row(integer r, sequence fmts)
+    string line = ""
+    for s=1 to mn+1 do
+        if s=m1+1 then line &= " |" end if
+        line &= sprintf(fmts[s],a[r,s])
+    end for
+    return line
+end function
+
+-- print matrix a[,]
+procedure PrntM(integer sw)
+    integer k, r, s
+    string g
+    atom q
+
+    sequence fmts = col_formats(a)
+
+    if sw then
+        output("P | Hnf")
+
+        -- evaluate
+        k = 1
+        for r=1 to m+1 do
+            if a[r,mn+1] then
+                k = r
+                exit
+            end if
+        end for
+        sw = a[k,mn+1]=1
+        for s=m1+1 to mn do
+            sw = sw and a[k,s]=0
+        end for
+        g = iif(sw,"  -solution","   inconsistent")
+        for s=1 to m do
+            sw = sw and a[k,s]=0
+        end for
+        if sw then g = "" end if -- trivial
+
+        sequence lensq = repeat("",m+1)
+        lensq[k] = g
+        -- Calculate lengths squared
+        for r=1 to k-1 do
+            q = 0
+            for s=1 to m+1 do
+                q += a[r,s]*a[r,s]
+            end for
+            lensq[r] &= sprintf("   (%d)",q)
+        end for
+
+        -- Hnf and solution and null space
+        sequence order = tagset(k,m+1,-1)&tagset(k-1)
+        for r=1 to m+1 do
+            integer rr = order[r]
+            output(print_row(rr,fmts)&lensq[rr])
+        end for
+
+    else
+        printf(1,"I | Ab~\n")
+
+        for r=1 to m+1 do
+            printf(1,print_row(r,fmts))
+-- (not particularly helpful:)
+--          printf(1,", L:")
+--          for s=1 to m+1 do
+--              printf(1," %.20g",lambda[r,s])
+--          end for
+            printf(1,"\n")
+        end for
+    end if
+end procedure
+
+-- ----------------------
+-- Part 2: HMM algorithm 4
+-- ------------------------
+
+-- negate rows t
+procedure Minus(integer t)
+    a[t] = sq_uminus(a[t])
+    for r=1+1 to m+1 do
+        for s=1 to r+1 do
+            if r=t or s=t then
+                lambda[r,s] = -lambda[r,s]
+            end if
+        end for
+    end for
+end procedure
+
+-- LLL reduce rows k
+procedure Reduce(integer k, t)
+    col1 = nx
+    col2 = nx
+    -- pivot elements Ab~ in rows t and k
+    for s=m1+1 to mn+1 do
+        if a[t,s] then
+            col1 = s-1
+            exit
+        end if
+    end for
+    for s=m1+1 to mn+1 do
+        if a[k,s] then
+            col2 = s-1
+            exit
+        end if
+    end for
+    atom q = 0
+    if col1<nx then
+        if a[t,col1+1]<0 then Minus(t) end if
+        q = floor(a[k,col1+1]/a[t,col1+1])
+    else
+        atom lk = lambda[k,t]
+        if 2*abs(lk)>d[t+1] then
+            -- 2|lambda_kt| > d_t
+            -- not LLL-reduced yet
+            q = round(lk/d[t+1])
+        end if
+    end if
+
+    if q then
+        integer sx = iif(col1=nx?m:mn)
+        -- reduce row k
+        for s=1 to sx+1 do
+            a[k,s] -= q*a[t,s]
+        end for
+        lambda[k,t] -= q*d[t+1]
+        for s=1 to t+1 do
+            lambda[k,s] -= q*lambda[t,s]
+        end for
+    end if
+end procedure
+
+-- exchange rows k and k-1
+procedure Swop(integer k)
+    integer t = k-1, tm1 = t-1
+    {a[k], a[t]} = {a[t], a[k]}
+    object tmp = lambda[t][1..tm1]
+    lambda[t][1..tm1] = lambda[k][1..tm1]
+    lambda[k][1..tm1] = tmp; tmp = 0
+
+   -- update Gram coefficients
+   -- columns k, k-1 for r > k
+    atom lk = lambda[k,t],
+         db = (d[t]*d[k+1]+lk*lk)/d[k]
+    for r=k+1 to m+1 do
+        atom lr = lambda[r,k],
+             dk1 = d[k+1]
+        lambda[r,k] = (dk1*lambda[r,t]-lk*lr)/d[k]
+        lambda[r,t] = (db*lr+lk*lambda[r,k])/dk1
+    end for
+    d[k] = db
+end procedure
+
+integer problem_no = 0
+
+-- main limiting sequence
+procedure Main(integer sw)
+    problem_no += 1
+    printf(1,"problem #%d\n",problem_no)
+
+    InputAb_or_c(sw)
+
+    -- augment Ab~ with column e_m
+    a[m+1,mn+1] = 1
+    -- prefix standard basis
+    for i=1 to m+1 do a[i,i] = 1 end for
+    -- Gram sub-determinants
+    d = repeat(1,m+2)
+
+    if echo then PrntM(0) end if
+
+    integer k = 1,
+            tl = 0
+    while k<=m do
+        integer t = k-1
+        -- partial size reduction
+        Reduce(k+1, t+1)
+
+        sw = (col1=nx and col2=nx)
+        if sw then
+            -- zero rows k-1, k
+            atom lk = lambda[k+1,t+1]
+            -- Lovasz condition
+            -- Bk >= (alpha - mu_kt^2) * Bt
+            atom db = d[t+1]*d[k+2]+lk*lk
+            -- not satisfied
+            sw = db*ald<d[t+2]*d[t+2]*aln
+        end if
+
+        if sw or (col1<=col2 and col1<nx) then
+            -- test recommends a swap
+            Swop(k+1)
+            -- decrease k
+            if k>1 then k -= 1 end if
+        else
+            -- complete size reduction
+            for i=t-1 to 0 by -1 do
+                Reduce(k+1, i+1)
+            end for
+            -- increase k
+            k += 1
+        end if
+
+        tl += 1
+    end while
+
+    PrntM(-1)
+
+    output(sprintf("loop %d",tl))
+end procedure
+
+-- -------------------------------
+-- Part 1: driver, input and output
+-- ---------------------------------
+
+while true do
+    printf(1,"\n")
+    integer sw = 0
+    string g
+    while true do
+        g = input(" rows ")
+        if match("'",g) then
+            output(g)
+        else
+            exit
+        end if
+        sw = sw or match("const",g)
+    end while
+    n = to_integer(trim(g))
+    if n<1 then exit end if
+
+    g = input(" cols ")
+    m = to_integer(trim(g))
+    if m<1 then
+        for i=1 to n do
+            g = input("")
+        end for
+    else
+        -- set indices and allocate
+        if sw then
+            sw = n-1
+            n = 2
+            m += 2
+        end if
+        m1 = m+1
+        mn = m1+n
+        nx = mn+1
+        lambda = repeat(repeat(0,m+1),m+1)
+        a = repeat(repeat(0,mn+1),m+1)
+
+        Main(sw)
+        output("")
+        output("")
+    end if
+end while
+
+?"done"
+{} = wait_key()

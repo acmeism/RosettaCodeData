@@ -1,0 +1,216 @@
+with javascript_semantics
+function matrix_trace(sequence m)
+    atom res = 0
+    for i=1 to length(m) do
+        res += m[i,i]
+    end for
+    return res
+end function
+
+function matrix_minor(sequence m, integer x, y)
+    integer l = length(m)-1
+    sequence res = repeat(repeat(0,l),l)
+    for i=1 to l do
+        integer ri = i+(i>=x)
+        for j=1 to l do
+            integer rj = j+(j>=y)
+            res[i,j] = m[ri,rj]
+        end for
+    end for
+    return res
+end function
+
+function matrix_determinant(sequence m)
+    // Returns the determinant of the current instance
+    // provieded it's square, using Laplace expansion.
+    integer l = length(m)
+    if l=1 then return m[1,1] end if
+    if l=2 then return m[2,2]*m[1,1]-m[1,2]*m[2,1] end if
+    integer sgn = 1
+    atom det = 0
+    for i=1 to l do
+        sequence mm = matrix_minor(m,1,i)
+        det += sgn*m[1,i]*matrix_determinant(mm)
+        sgn = -sgn
+    end for
+    return det
+end function
+
+function cofactors(sequence m)
+    integer l = length(m)
+    sequence res = repeat(repeat(0,l),l)
+    for i=1 to l do
+        for j=1 to l do
+            sequence mm = matrix_minor(m,i,j)
+            atom d = matrix_determinant(mm)
+            res[i,j] = d*power(-1,i+j)
+        end for
+    end for
+    return res
+end function
+
+function diff_poly(sequence coefs)
+    // Returns the coefficients of a polynomial following differentiation.
+    // Polynomials are represented as described in 'eval_poly' below.
+    integer c = length(coefs)-1
+    if c=0 then return {0} end if
+    sequence deriv = repeat(0,c)
+    for i=1 to c do deriv[i] = (c-i+1) * coefs[i] end for
+    return deriv
+end function
+
+function root_poly(sequence coefs, atom guess=0.001, tol=1e-15, maxIter=100, mult=1)
+    integer deg = length(coefs)-1
+    if deg=0 then return null end if
+    if deg=1 then return -coefs[2]/coefs[1] end if
+    if deg=2 and coefs[2]*coefs[2] - 4*coefs[1]*coefs[3] < 0 then return null end if
+    if eval_poly(coefs, 0)=0 then return 0 end if
+    sequence deriv = diff_poly(coefs)
+    atom eps = 0.001,
+          x0 = guess
+    for iter=1 to maxIter do
+        atom den = eval_poly(deriv, x0)
+        if den=0 then
+            x0 = iff(x0>=0 ? x0 + eps : x0 - eps)
+        else
+            atom num = eval_poly(coefs, x0),
+                  x1 = x0 - num/den * mult
+            if abs(x1-x0)<=tol then
+                atom r = round(x1)
+                if abs(r-x1)<=eps and eval_poly(coefs, r)=0 then return r end if
+                return x1
+            end if
+            x0 = x1
+        end if
+    end for
+    x0 = round(x0)
+    if eval_poly(coefs, x0)=0 then return x0 end if
+    return null
+end function
+
+function poly_div(sequence num,den)
+    sequence curr = trim_tail(num,0),
+            right = trim_tail(den,0),
+              res = {}
+    integer base = length(curr)-length(right)
+    while base>=0 do
+        atom r = curr[-1] / right[-1]
+        res &= r
+        curr = curr[1..-2]
+        for i=1 to length(right)-1 do
+            curr[base+i] -= r * right[i]
+        end for
+        base -= 1
+    end while
+    return res
+end function
+
+include complex.e
+
+// assumes real coefficients, highest to lowest order
+function quadratic(atom a, b, c)
+    atom d = b*b - 4*a*c
+    if d=0 then                 // single real root
+        atom root = -b/(a*2)
+        return {root, root}
+    elsif d>0 then              // two real roots
+        atom sr = sqrt(d)
+        d = iff(b<0 ? sr - b : -sr - b)
+        return {d/(2*a), 2*c/d}
+    end if
+    // two complex roots
+    atom den = 1/(2*a)
+    complex t1 = complex_new(-b*den, 0),
+            t2 = complex_new(0, sqrt(-d)*den)
+    return {complex_add(t1,t2), complex_sub(t1,t2)}
+end function
+
+// same assumption as quadratic but 'x' can be real or complex.
+function eval_poly(sequence coefs, object x)
+    object res = coefs[1]
+    for i=2 to length(coefs) do
+        if complex(x) then
+            res = complex_add(complex_mul(res,x),coefs[i])
+        else
+            res = res*x + coefs[i]
+        end if
+    end for
+    return res
+end function
+
+function poly(sequence si)
+    -- display helper
+    string r = ""
+    for t=length(si) to 1 by -1 do
+        atom sit = si[t]
+        if sit!=0 then
+            if sit=1 and t>1 then
+                r &= iff(r=""? "":" + ")
+            elsif sit=-1 and t>1 then
+                r &= iff(r=""?"-":" - ")
+            else
+                if r!="" then
+                    r &= iff(sit<0?" - ":" + ")
+                    sit = abs(sit)
+                end if
+                r &= sprintf("%g",sit)
+            end if
+            r &= iff(t>1?"x"&iff(t>2?sprintf("^%d",t-1):""):"")
+        end if
+    end for
+    if r="" then r="0" end if
+    return r
+end function
+
+function eigenvalues(sequence m)
+    // find the characteristic polynomial
+    sequence cp = {1,
+                  -matrix_trace(m),
+                   matrix_trace(cofactors(m)),
+                  -matrix_determinant(m)},
+          roots = {},
+           errs = {}
+    // find first root
+    roots &= root_poly(cp)
+    errs &= eval_poly(cp, roots[1])
+    // divide out to get quadratic
+    sequence den = {-roots[1],1},
+             qdr = poly_div(reverse(cp),den)
+    // find second and third roots
+    roots &= quadratic(qdr[1],qdr[2],qdr[3])
+    errs = append(errs,eval_poly(cp, roots[2]))
+    errs = append(errs,eval_poly(cp, roots[3]))
+    string pm = ppf(m,{pp_Nest,1,pp_Indent,8,pp_IntFmt,"%2d"})
+    return {pm, poly(reverse(cp)), roots, errs}
+end function
+
+constant v = 1/sqrt(2)
+constant tests = {{{ 1, -1,  0},
+                   { 0,  1,  1},
+                   { 0,  0,  1}},
+                  {{-2, -4,  2},
+                   {-2,  1,  2},
+                   { 4,  2,  5}},
+                  {{ 1, -1,  0},
+                   { 0,  1, -1},
+                   { 0,  0,  1}},
+                  {{ 2,  0,  0},
+                   { 0, -1,  0},
+                   { 0,  0, -1}},
+                  {{ 2,  0,  0},
+                   { 0,  3,  4},
+                   { 0,  4,  9}},
+                  {{ 1,  0,  0},
+                   { 0,  v, -v},
+                   { 0,  v,  v}}}
+constant fmt = """
+Matrix: %s
+characteristic polynomial: %s
+eigenvalues: %v
+errors: %v
+
+"""
+
+for m in tests do
+    printf(1,fmt,eigenvalues(m))
+end for

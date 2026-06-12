@@ -1,0 +1,154 @@
+with javascript_semantics
+constant inf = 1e300*1e300,
+         nan = -(inf/inf),
+         eps = 1e-8
+
+function sqnorm(sequence p)
+    return sum(sq_power(p,2))
+end function
+
+function sqdist(sequence p1, p2)
+    return sqnorm(sq_sub(p1,p2))
+end function
+
+function projector_mult(sequence vs, v)
+    sequence s = repeat(0,length(v))
+    for i=1 to length(vs) do
+        sequence vi = vs[i]
+        s = sq_add(s,sq_mul(vi,sum(sq_mul(vi, v))))
+    end for
+    return s
+end function
+
+-- Gaertner Boundary:
+sequence empty_center,
+         centers,
+         square_radii,
+         -- Stack of points that are shifted / projected to put first one at origin:
+         projector
+
+function push_if_stable(sequence pt)
+    if length(centers) == 0 then
+        square_radii = append(square_radii, 0)
+        centers = {pt}
+        return true
+    end if
+    sequence q0 = centers[1],
+             center = centers[$],
+             C = sq_sub(center,q0),
+             Qm = sq_sub(pt,q0),
+             Qm_bar = projector_mult(projector,Qm),
+             residue = sq_sub(Qm,Qm_bar)
+    atom r2 = square_radii[$],
+         e = sqdist(Qm, C) - r2,
+         z = 2 * sqnorm(residue),
+         tol = eps * max(r2, 1),
+         isstable = abs(z) > tol
+    if isstable then
+        sequence center_new = sq_add(center,sq_mul(e/z,residue))
+        atom r2new = r2 + (e * e) / (2 * z)
+        projector = append(projector,sq_div(residue,sqrt(sqnorm(residue))))
+        centers = append(centers, center_new)
+        square_radii = append(square_radii, r2new)
+    end if
+    return isstable
+end function
+
+procedure pop_gb()
+    integer n = length(centers)
+    centers = centers[1..$-1]
+    square_radii = square_radii[1..$-1]
+    if n >= 2 then
+        projector = projector[1..$-1] -- (pop/discard)
+    end if
+end procedure
+
+function isinside(sequence pt, center, atom sqradius)
+    atom r2 = sqdist(pt, center)
+    return r2!=nan and (r2<=sqradius or abs(r2-sqradius)<eps)
+end function
+
+function move_to_front(sequence pts, integer i)
+    sequence pt = pts[i]
+    for j=1 to i do
+        {pts[j], pt} = {pt, pts[j]}
+    end for
+    return pts
+end function
+
+function ismaxlength()
+    return length(centers) == length(empty_center) + 1
+end function
+
+function _welzl(sequence pts, integer pos)
+    integer support_count = 0, s
+    sequence center = iff(length(centers)?centers[$]:empty_center)
+    atom sqradius = iff(length(centers)?square_radii[$]:0)
+    if ismaxlength() then
+        return {center, sqradius, 0}
+    end if
+    for i=1 to pos do
+        if not isinside(pts[i], center, sqradius) then
+            bool isstable = push_if_stable(pts[i])
+            if isstable then
+                {center, sqradius, s} = _welzl(pts, i)
+                pop_gb()
+                pts = move_to_front(deep_copy(pts), i)
+                support_count = s + 1
+            end if
+        end if
+    end for
+    return {center, sqradius, support_count}
+end function
+
+function find_max_excess(sequence center, pts, atom sqradius, integer k1)
+    atom err_max  = -inf
+    integer k_max = k1 - 1
+    for k=k_max to length(pts) do
+        sequence pt = pts[k]
+        atom err = sqdist(pt, center) - sqradius
+        if err > err_max then
+            err_max = err
+            k_max = k + 1
+        end if
+    end for
+    return {err_max, k_max - 1}
+end function
+
+procedure welzl(sequence points, integer maxiterations=2000)
+    sequence pts = points
+    empty_center = repeat(nan,length(pts[1]))
+    centers = {}
+    square_radii = {}
+    projector = {}
+
+    integer t = 1, s_new
+    {sequence center, atom sqradius, integer s} = _welzl(pts, t)
+    for i=1 to maxiterations do
+        atom {e, k} = find_max_excess(center, pts, sqradius, t + 1)
+        if e <= eps then exit end if
+        sequence pt = pts[k]
+        {} = push_if_stable(pt)
+        {center, sqradius, s_new} = _welzl(pts, s)
+        pop_gb()
+        pts = move_to_front(deep_copy(pts), k)
+        t = s + 1
+        s = s_new + 1
+    end for
+    printf(1,"For points: ") pp(points,{pp_Indent,12,pp_FltFmt,"%11.8f"})
+    printf(1,"    Center is at: %v\n", {center})
+    printf(1,"    Radius is: %.16g\n", {sqrt(sqradius)})
+end procedure
+
+constant tests = {{{0, 0}, { 0, 1}, { 1, 0}},
+                  {{5,-2}, {-3,-2}, {-2, 5}, {1, 6}, {0, 2}},
+                  {{2, 4, -1}, {1, 5, -3}, {8, -4, 1}, {3, 9, -5}},
+{{-0.6400900432782123, 2.643703255134232,    0.4016122094706093, 1.8959601399652273,-1.1624046608380516},
+ { 0.5632393652621324,-0.015981105190064373,-2.193725940351997, -0.9094586577358262, 0.7165036664470906},
+ {-1.7704367632976061, 0.2518283698686299,  -1.3810444289625348,-0.597516704360172,  1.089645656962647},
+ { 1.3448578652803103,-0.18140877132223002, -0.4288734015080915, 1.53271973321691,   0.41896461833399573},
+ { 0.2132336397213029, 0.07659442168765788,  0.1486364315310990, 2.3386893481333795,-2.3000459709300927},
+ { 0.6023153188617328, 0.3051735340025314,   1.0732600437151525, 1.1148388039984898, 0.047605838564167786},
+ { 1.3655523661720959, 0.5461416420929995, -0.09321951900362889,-1.004771137760985,  1.6532914656050117},
+ {-0.14974382165751837,-0.5375672589202939,-0.15845596754003466,-0.2750720340454088,-0.441247015836271}}}
+papply(tests,welzl)

@@ -1,0 +1,254 @@
+Const As Integer Rows = 3, Cols = 3
+
+Enum Spot
+    Empty = 0
+    Black
+    White
+End Enum
+
+Type Move
+    As Integer fromPos
+    As Integer toPos
+End Type
+
+Type Hexapawn
+    As Spot board(Rows * Cols)
+End Type
+
+Type herGameState
+    As Hexapawn h
+    As Integer moveIdx
+End Type
+
+Dim Shared As Move Ptr herNextMove(0 to 999)
+Dim Shared As Integer herNextMoveCnt = 0
+
+Function NewHexapawn() As Hexapawn
+    Dim As Hexapawn h
+    Dim As Integer i
+
+    For i = 0 To 2: h.board(i) = White: Next
+    For i = 3 To 5: h.board(i) = Empty: Next
+    For i = 6 To 8: h.board(i) = Black: Next
+
+    Return h
+End Function
+
+Sub PrintBoard(h As Hexapawn)
+    Dim As Integer r, c
+
+    For r = Rows - 1 To 0 Step -1
+        For c = 0 To Cols - 1
+            Select Case h.board(r * Cols + c)
+            Case Empty: Color 7: Print ".";
+            Case Black: Color 12: Print "B";
+            Case White: Color 10: Print "W";
+            End Select
+        Next
+        Color 14
+        Print
+    Next
+End Sub
+
+Function CheckMove(Byref h As Hexapawn, p As Spot, fromPos As Integer, toPos As Integer) As Integer
+    If h.board(fromPos) <> p Then Return 0
+    If h.board(toPos) = p Then Return 0
+
+    Dim As Integer deltaRow, deltaCol, capture
+    deltaRow = fromPos \ Cols - toPos \ Cols
+    deltaCol = fromPos Mod Cols - toPos Mod Cols
+
+    If (p = White And deltaRow <> -1) Or (p = Black And deltaRow <> 1) Then Return 0
+
+    capture= (h.board(toPos) <> Empty)
+
+    If (capture Or deltaCol <> 0) And (Not capture Or (deltaCol <> 1 And deltaCol <> -1)) Then Return 0
+
+    Return 1
+End Function
+
+Function PossibleMoves(Byref h As Hexapawn, s As Spot) As Move Ptr
+    Dim As Move Ptr moves = New Move[Rows * Cols * Rows * Cols + 1]
+    Dim As Integer moveCnt, fromPos, toPos
+
+    moveCnt = 0
+    For fromPos = 0 To Rows * Cols - 1
+        For toPos = 0 To Rows * Cols - 1
+            If CheckMove(h, s, fromPos, toPos) Then
+                moves[moveCnt].fromPos = fromPos
+                moves[moveCnt].toPos = toPos
+                moveCnt += 1
+            End If
+        Next
+    Next
+
+    moves[moveCnt].fromPos = -1  ' Mark end of moves
+    Return moves
+End Function
+
+Sub DoMove(Byref h As Hexapawn, p As Spot, fromPos As Integer, toPos As Integer)
+    h.board(fromPos) = Empty
+    h.board(toPos) = p
+End Sub
+
+Function ComputerMove(Byref h As Hexapawn, Byref state As herGameState) As Hexapawn
+    Dim As Move Ptr moves = PossibleMoves(h, Black)
+    Dim As Integer i, moveCnt, known, herMoveCnt, selectedMove
+
+    moveCnt = 0 : known = 0 : herMoveCnt = 0
+    While moves[moveCnt].fromPos <> -1
+        moveCnt += 1
+    Wend
+
+    If moveCnt = 0 Then
+        Print "Computer has no valid moves."
+        Return h
+    End If
+
+    Dim As Move Ptr herMoves = 0
+    For i = 1 To herNextMoveCnt
+        If memcmp(@h, @herNextMove(i)[0], Sizeof(Hexapawn)) = 0 Then
+            herMoves = @herNextMove(i)[1]
+            Exit For
+        End If
+    Next
+
+    If herMoves = 0 Then
+        herNextMoveCnt += 1
+        herNextMove(herNextMoveCnt) = New Move[moveCnt + 1]
+        memcpy(@herNextMove(herNextMoveCnt)[0], @h, Sizeof(Hexapawn))
+        memcpy(@herNextMove(herNextMoveCnt)[1], moves, moveCnt * Sizeof(Move))
+        herNextMove(herNextMoveCnt)[moveCnt + 1].fromPos = -1
+        herMoves = @herNextMove(herNextMoveCnt)[1]
+    Else
+        known = 1
+    End If
+
+    While herMoves[herMoveCnt].fromPos <> -1
+        herMoveCnt += 1
+    Wend
+
+    If herMoveCnt = 0 Then
+        Print "No good moves left to black, picking a random loser"
+        known = 1
+        herMoves = moves
+        herMoveCnt = moveCnt
+    End If
+
+    selectedMove = Int(Rnd * herMoveCnt)
+    If Not known Then
+        state.h = h
+        state.moveIdx = selectedMove
+    End If
+
+    Print "Computer moves "; herMoves[selectedMove].fromPos + 1; "->"; herMoves[selectedMove].toPos + 1
+    DoMove(h, Black, herMoves[selectedMove].fromPos, herMoves[selectedMove].toPos)
+
+    Delete moves
+    Return h
+End Function
+
+Function HumanMove(Byref h As Hexapawn) As Hexapawn
+    Dim As Integer fromPos, toPos
+
+    Do
+        Input "Your move (from to): ", fromPos, toPos
+        fromPos -= 1
+        toPos -= 1
+
+        If CheckMove(h, White, fromPos, toPos) Then
+            DoMove(h, White, fromPos, toPos)
+            Exit Do
+        Else
+            Print "Invalid move. Try again."
+        End If
+    Loop
+
+    Return h
+End Function
+
+Function GetWinner(Byref h As Hexapawn) As Spot
+    Dim As Integer i
+    ' Check if White reached the last row
+    For i = Cols * (Rows - 1) To Cols * Rows - 1
+        If h.board(i) = White Then Return White
+    Next
+
+    ' Check if Black reached the first row
+    For i = 0 To Cols - 1
+        If h.board(i) = Black Then Return Black
+    Next
+
+    ' Check if the opponent has no valid moves
+    If PossibleMoves(h, Black)[0].fromPos = -1 Then Return White
+    If PossibleMoves(h, White)[0].fromPos = -1 Then Return Black
+
+    Return Empty
+End Function
+
+Sub ResultHER(Byref state As herGameState, winner As Spot)
+    ' Sistema de aprendizaje H.E.R. (Hexapawn Educable Robot)
+    If winner = Black Then Exit Sub  ' Do nothing if Black (computer) wins
+
+    ' Throw out the last "unknown" move H.E.R. made
+    Dim As Integer i, j
+    For i = 1 To herNextMoveCnt
+        If memcmp(@state.h, @herNextMove(i)[0], Sizeof(Hexapawn)) = 0 Then
+            j = 0
+            While herNextMove(i)[j].fromPos <> -1
+                If j <> state.moveIdx Then herNextMove(i)[j - Iif(j > state.moveIdx, 1, 0)] = herNextMove(i)[j]
+                j += 1
+            Wend
+            herNextMove(i)[j - 1].fromPos = -1  ' Mark new end of moves
+            Exit For
+        End If
+    Next
+End Sub
+
+Sub MenuPrincipal
+    Dim As Integer i, blackWins = 0, whiteWins = 0
+
+    Do
+        Dim As Hexapawn h = NewHexapawn()
+        Dim As herGameState state
+        Dim As Spot currentPlayer = White
+
+        Do
+            PrintBoard(h)
+
+            h = Iif(currentPlayer = White, HumanMove(h), ComputerMove(h, state))
+
+            Dim As Spot winner = GetWinner(h)
+            If winner <> Empty Then
+                PrintBoard(h)
+                If winner = White Then
+                    Print "White wins!"
+                    whiteWins += 1
+                Else
+                    Print "Black wins!"
+                    blackWins += 1
+                End If
+                ResultHER(state, winner)
+                Print "Wins: Black="; blackWins; ", White="; whiteWins
+                Print
+                Exit Do
+            End If
+
+            currentPlayer = Iif(currentPlayer = White, Black, White)
+        Loop
+
+        Color 15
+        Dim As String response
+        Input "Play again? (y/n): ", response
+        If Lcase(response) <> "y" Then Exit Do
+        Cls
+    Loop
+
+    ' Clean up
+    For i = 0 To herNextMoveCnt -1: Delete herNextMove(i): Next
+End Sub
+
+' Main program
+Randomize Timer
+MenuPrincipal
+End

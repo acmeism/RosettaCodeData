@@ -1,0 +1,977 @@
+(*------------------------------------------------------------------*)
+
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+%{#
+#include <stdint.h>
+#include <limits.h>
+#include <float.h>
+#include <math.h>
+%}
+
+#define NIL list_nil ()
+#define ::  list_cons
+
+exception gint_overflow of ()
+
+(*------------------------------------------------------------------*)
+
+extern fn {tk : tkind}
+g0int_neginf :
+  () -<> g0int tk
+
+extern fn {tk : tkind}
+g0int_add_overflow_exn :
+  (g0int tk, g0int tk) -< !exn > g0int tk
+
+extern fn {tk : tkind}
+g0int_sub_overflow_exn :
+  (g0int tk, g0int tk) -< !exn > g0int tk
+
+extern fn {tk : tkind}
+g0int_mul_overflow_exn :
+  (g0int tk, g0int tk) -< !exn > g0int tk
+
+infixl ( + ) +!
+infixl ( - ) -!
+infixl ( * ) *!
+
+overload neginf with g0int_neginf
+overload +! with g0int_add_overflow_exn
+overload -! with g0int_sub_overflow_exn
+overload *! with g0int_mul_overflow_exn
+
+(*------------------------------------------------------------------*)
+(* 128-bit integers. *)
+
+%{#
+
+/* The most negative int128 will be treated as "neginf" or "negative
+   infinity". For our purposes the sign will not matter, though. */
+#define neginf_int128() (((__int128) 1) << 127)
+
+#define neg_c(x)    (-(x))
+#define add_c(x, y) ((x) + (y))
+#define sub_c(x, y) ((x) - (y))
+#define mul_c(x, y) ((x) * (y))
+#define div_c(x, y) ((x) / (y))
+#define mod_c(x, y) ((x) % (y))
+#define eq_c(x, y)  (((x) == (y)) ? atsbool_true : atsbool_false)
+#define neq_c(x, y) (((x) != (y)) ? atsbool_true : atsbool_false)
+#define lt_c(x, y)  (((x) < (y)) ? atsbool_true : atsbool_false)
+#define lte_c(x, y) (((x) <= (y)) ? atsbool_true : atsbool_false)
+#define gt_c(x, y)  (((x) > (y)) ? atsbool_true : atsbool_false)
+#define gte_c(x, y) (((x) >= (y)) ? atsbool_true : atsbool_false)
+
+/* GNU extensions for detection of integer overflow. */
+#define add_overflow(x, y, pz) \
+  (__builtin_add_overflow ((x), (y), (pz)) ? \
+          atsbool_true : atsbool_false)
+#define sub_overflow(x, y, pz) \
+  (__builtin_sub_overflow ((x), (y), (pz)) ? \
+          atsbool_true : atsbool_false)
+#define mul_overflow(x, y, pz) \
+  (__builtin_mul_overflow ((x), (y), (pz)) ? \
+          atsbool_true : atsbool_false)
+
+%}
+
+tkindef int128_kind = "__int128" (* A GNU extension. *)
+stadef int128knd = int128_kind
+typedef int128_0 = g0int int128knd
+typedef int128_1 (i : int) = g1int (int128knd, i)
+stadef int128 = int128_1 // 2nd-select
+stadef int128 = int128_0 // 1st-select
+stadef Int128 = [i : int] int128_1 i
+
+extern fn g0int_neginf_int128 : () -<> int128 = "mac#neginf_int128"
+extern fn g0int_neg_int128 : int128 -<> int128 = "mac#neg_c"
+extern fn g0int_add_int128 : (int128, int128) -<> int128 = "mac#add_c"
+extern fn g0int_sub_int128 : (int128, int128) -<> int128 = "mac#sub_c"
+extern fn g0int_mul_int128 : (int128, int128) -<> int128 = "mac#mul_c"
+extern fn g0int_div_int128 : (int128, int128) -<> int128 = "mac#div_c"
+extern fn g0int_mod_int128 : (int128, int128) -<> int128 = "mac#mod_c"
+extern fn g0int_eq_int128 : (int128, int128) -<> bool = "mac#eq_c"
+extern fn g0int_neq_int128 : (int128, int128) -<> bool = "mac#neq_c"
+extern fn g0int_lt_int128 : (int128, int128) -<> bool = "mac#lt_c"
+extern fn g0int_lte_int128 : (int128, int128) -<> bool = "mac#lte_c"
+extern fn g0int_gt_int128 : (int128, int128) -<> bool = "mac#gt_c"
+extern fn g0int_gte_int128 : (int128, int128) -<> bool = "mac#gte_c"
+
+implement g0int_neginf<int128knd> () = g0int_neginf_int128 ()
+implement g0int_neg<int128knd> x = g0int_neg_int128 x
+implement g0int_add<int128knd> (x, y) = g0int_add_int128 (x, y)
+implement g0int_sub<int128knd> (x, y) = g0int_sub_int128 (x, y)
+implement g0int_mul<int128knd> (x, y) = g0int_mul_int128 (x, y)
+implement g0int_div<int128knd> (x, y) = g0int_div_int128 (x, y)
+implement g0int_mod<int128knd> (x, y) = g0int_mod_int128 (x, y)
+implement g0int_eq<int128knd> (x, y) = g0int_eq_int128 (x, y)
+implement g0int_neq<int128knd> (x, y) = g0int_neq_int128 (x, y)
+implement g0int_lt<int128knd> (x, y) = g0int_lt_int128 (x, y)
+implement g0int_lte<int128knd> (x, y) = g0int_lte_int128 (x, y)
+implement g0int_gt<int128knd> (x, y) = g0int_gt_int128 (x, y)
+implement g0int_gte<int128knd> (x, y) = g0int_gte_int128 (x, y)
+
+implement g0int2int<intknd,int128knd> i = $UN.cast i
+implement g0int2int<int128knd,intknd> i = $UN.cast i
+implement g0int2float<int128knd,ldblknd> i = $UN.cast i
+
+implement g0int_iseqz<int128knd> x = (x = g0i2i 0)
+implement g0int_isneqz<int128knd> x = (x <> g0i2i 0)
+implement g0int_isltz<int128knd> x = (x < g0i2i 0)
+implement g0int_isltez<int128knd> x = (x <= g0i2i 0)
+implement g0int_isgtz<int128knd> x = (x > g0i2i 0)
+implement g0int_isgtez<int128knd> x = (x >= g0i2i 0)
+
+implement g0int_abs<int128knd> x = (if isltz x then ~x else x)
+
+local
+
+  extern fn
+  add_overflow_int128 :
+    (int128, int128, &int128? >> int128) -< !wrt > bool
+      = "mac#add_overflow"
+
+  extern fn
+  sub_overflow_int128 :
+    (int128, int128, &int128? >> int128) -< !wrt > bool
+      = "mac#sub_overflow"
+
+  extern fn
+  mul_overflow_int128 :
+    (int128, int128, &int128? >> int128) -< !wrt > bool
+      = "mac#mul_overflow"
+
+in (* local *)
+
+  fn
+  g0int_add_overflow_exn_int128 (x : int128, y : int128)
+      :<!exn> int128 =
+    let
+      var z : int128?
+      val overflow = $effmask_wrt add_overflow_int128 (x, y, z)
+    in
+      if ~overflow then
+        z
+      else
+        $raise gint_overflow ()
+    end
+
+  fn
+  g0int_sub_overflow_exn_int128 (x : int128, y : int128)
+      :<!exn> int128 =
+    let
+      var z : int128?
+      val overflow = $effmask_wrt sub_overflow_int128 (x, y, z)
+    in
+      if ~overflow then
+        z
+      else
+        $raise gint_overflow ()
+    end
+
+  fn
+  g0int_mul_overflow_exn_int128 (x : int128, y : int128)
+      :<!exn> int128 =
+    let
+      var z : int128?
+      val overflow = $effmask_wrt mul_overflow_int128 (x, y, z)
+    in
+      if ~overflow then
+        z
+      else
+        $raise gint_overflow ()
+    end
+
+end (* local *)
+
+implement
+g0int_add_overflow_exn<int128knd> (x, y) =
+  g0int_add_overflow_exn_int128 (x, y)
+
+implement
+g0int_sub_overflow_exn<int128knd> (x, y) =
+  g0int_sub_overflow_exn_int128 (x, y)
+
+implement
+g0int_mul_overflow_exn<int128knd> (x, y) =
+  g0int_mul_overflow_exn_int128 (x, y)
+
+(*------------------------------------------------------------------*)
+
+(* We will truncate quotients towards zero. *)
+infixl ( / ) div divrem
+infixl ( mod ) rem
+macdef div = g0int_div
+macdef rem = g0int_mod
+macdef divrem (a, b) =
+  let
+    val x = ,(a)
+    and y = ,(b)
+  in
+    (* Optimizing C compilers will compute both quotient and remainder
+       at the same time. *)
+    @(x \g0int_div y, x \g0int_mod y)
+  end
+
+(*------------------------------------------------------------------*)
+(* Continued fractions.
+
+   cf_generator tk -- A closure that produces terms of type g0int tk,
+                      sequentially.
+
+   cf tk           -- A structure from which one can get the ith
+                      term of a continued fraction. It gets terms
+                      from a cf_generator tk.                       *)
+
+typedef integer = int128
+stadef integerknd = int128knd
+
+typedef cf_generator = () -<cloref1> integer
+
+local
+
+  typedef _cf (terminated : bool,
+               m          : int,
+               n          : int) =
+    [m <= n]
+    @{
+      terminated = bool terminated, (* No more terms? *)
+      m = size_t m,         (* The number of terms computed so far. *)
+      n = size_t n,         (* The size of memo storage.*)
+      memo = arrayref (integer, n), (* Memoized terms. *)
+      gen = cf_generator            (* A thunk to generate terms. *)
+    }
+  typedef _cf (m : int) =
+    [terminated : bool]
+    [n : int | m <= n]
+    _cf (terminated, m, n)
+  typedef _cf =
+    [m : int]
+    _cf m
+
+  fn
+  _cf_get_more_terms
+            {terminated : bool}
+            {m          : int}
+            {n          : int}
+            {needed     : int | m <= needed; needed <= n}
+            (cf         : _cf (terminated, m, n),
+             needed     : size_t needed)
+      : [m1 : int | m <= m1; m1 <= needed]
+        [n1 : int | m1 <= n1]
+        _cf (m1 < needed, m1, n1) =
+    let
+      prval () = lemma_g1uint_param (cf.m)
+
+      macdef memo = cf.memo
+
+      fun
+      loop {i : int | m <= i; i <= needed}
+           .<needed - i>.
+           (i : size_t i)
+          : [m1 : int | m <= m1; m1 <= needed]
+            [n1 : int | m1 <= n1]
+            _cf (m1 < needed, m1, n1) =
+        if i = needed then
+          @{
+            terminated = false,
+            m = needed,
+            n = (cf.n),
+            memo = memo,
+            gen = (cf.gen)
+          }
+        else
+          let
+            val term = (cf.gen) ()
+          in
+            if term <> neginf<integerknd> () then
+              begin
+                memo[i] := term;
+                loop (succ i)
+              end
+            else
+              @{
+                terminated = true,
+                m = i,
+                n = (cf.n),
+                memo = memo,
+                gen = (cf.gen)
+              }
+          end
+    in
+      loop (cf.m)
+    end
+
+  fn
+  _cf_update {terminated : bool}
+             {m          : int}
+             {n          : int | m <= n}
+             {needed     : int}
+             (cf         : _cf (terminated, m, n),
+              needed     : size_t needed)
+      : [terminated1 : bool]
+        [m1 : int | m <= m1]
+        [n1 : int | m1 <= n1]
+        _cf (terminated1, m1, n1) =
+    let
+      prval () = lemma_g1uint_param (cf.m)
+      macdef memo = cf.memo
+      macdef gen = cf.gen
+    in
+      if (cf.terminated) then
+        cf
+      else if needed <= (cf.m) then
+        cf
+      else if needed <= (cf.n) then
+        _cf_get_more_terms (cf, needed)
+      else
+        let                     (* Provides twice the room needed. *)
+          val n1 = needed + needed
+          val memo1 = arrayref_make_elt (n1, g0i2i 0)
+          val () =
+            let
+              var i : [i : nat] size_t i
+            in
+              for (i := i2sz 0; i < (cf.m); i := succ i)
+                memo1[i] := memo[i]
+            end
+          val cf1 =
+            @{
+              terminated = false,
+              m = (cf.m),
+              n = n1,
+              memo = memo1,
+              gen = (cf.gen)
+            }
+        in
+          _cf_get_more_terms (cf1, needed)
+        end
+    end
+
+in (* local *)
+
+  typedef cf = ref _cf
+
+  extern fn cf_make : cf_generator -> cf
+
+  extern fn cf_get_at_size : {i : int} (cf, size_t i) -> integer
+  extern fn cf_get_at_int : {i : nat} (cf, int i) -> integer
+
+  extern fn cf2generator : cf -> cf_generator
+
+  (* The precedence of the overloads has to exceed that of ref[] *)
+  overload cf_get_at with cf_get_at_size of 1
+  overload cf_get_at with cf_get_at_int of 1
+  overload [] with cf_get_at of 1
+
+  implement
+  cf_make gen =
+    let
+      #ifndef CF_START_SIZE #then
+        #define CF_START_SIZE 32
+      #endif
+    in
+      ref
+        @{
+          terminated = false,
+          m = i2sz 0,
+          n = i2sz CF_START_SIZE,
+          memo = arrayref_make_elt (i2sz CF_START_SIZE, g0i2i 0),
+          gen = gen
+        }
+    end
+
+  implement
+  cf_get_at_size (cf, i) =
+    let
+      prval () = lemma_g1uint_param i
+      val cf1 = _cf_update (!cf, succ i)
+    in
+      !cf := cf1;
+      if i < (cf1.m) then
+        arrayref_get_at<integer> (cf1.memo, i)
+      else
+        neginf<integerknd> ()
+    end
+
+  implement cf_get_at_int (cf, i) = cf_get_at_size (cf, g1i2u i)
+
+  implement
+  cf2generator cf =
+    let
+      val i : ref Size_t = ref (i2sz 0)
+    in
+      lam () =>
+        let
+          val term = cf[!i]
+        in
+          !i := succ !i;
+          term
+        end
+    end
+
+end (* local *)
+
+(*------------------------------------------------------------------*)
+(* Make a string from an int128. *)
+
+fn
+int128_2string (i : int128) : string =
+  let
+    fun
+    loop (i : int128, accum : List0 charNZ) : List0 charNZ =
+      if iseqz i then
+        accum
+      else
+        let
+          val @(i, digit) = i divrem (g0i2i 10)
+          val digit = (g0i2i digit) : int
+          val digit = g1ofg0 (int2char0 (digit + (char2int0 '0')))
+          val () = assertloc (digit <> '\0')
+        in
+          loop (i, digit :: accum)
+        end
+
+    val minus_sign : Char = '-'
+    val () = assertloc (minus_sign <> '\0')
+  in
+    if iseqz i then
+      "0"
+    else if i = neginf<integerknd> () then
+      "neginf"
+    else if isltz i then
+      strnptr2string (string_implode (minus_sign :: (loop (~i, NIL))))
+    else
+      strnptr2string (string_implode (loop (i, NIL)))
+  end
+
+implement tostring_val<integer> i = $effmask_all int128_2string i
+
+implement fprint_val<integer> (f, i) = fprint! (f, tostring_val<integer> i)
+fn fprint_integer (f : FILEref, i : integer) = fprint_val<integer> (f, i)
+fn print_integer (i : integer) = fprint_integer (stdout_ref, i)
+fn prerr_integer (i : integer) = fprint_integer (stderr_ref, i)
+
+overload fprint with fprint_integer
+overload print with print_integer
+overload prerr with prerr_integer
+
+(*------------------------------------------------------------------*)
+(* Converting a continued fraction to a string. *)
+
+extern fn cf2string_with_default_max_terms : cf -> string
+extern fn cf2string_given_max_terms : (cf, Size_t) -> string
+
+overload cf2string with cf2string_with_default_max_terms
+overload cf2string with cf2string_given_max_terms
+
+val cf2string_default_max_terms : ref Size_t = ref (i2sz 20)
+
+implement
+cf2string_with_default_max_terms cf =
+  cf2string_given_max_terms (cf, !cf2string_default_max_terms)
+
+implement
+cf2string_given_max_terms (cf, max_terms) =
+  let
+    fun
+    loop (i     : Size_t,
+          accum : List0 string)
+        : List0 string =
+      let
+        val term = cf[i]
+      in
+        if i = max_terms then
+          begin
+            if term = neginf<integerknd> () then
+              "]" :: accum
+            else
+              ",...]" :: accum
+          end
+        else if term = neginf<integerknd> () then
+          "]" :: accum
+        else
+          let
+            val separator =
+              (if i = i2sz 0 then
+                 ""
+               else if i = i2sz 1 then
+                 ";"
+               else
+                 ",")
+            and term_str = tostring_val<integer> term
+          in
+            loop (succ i, term_str :: separator :: accum)
+          end
+        end
+
+    val string_lst = loop (i2sz 0, "[" :: NIL)
+  in
+    strptr2string (stringlst_concat (list_vt2t (reverse string_lst)))
+  end
+
+(*------------------------------------------------------------------*)
+(* The continued fraction for a rational number or integer. *)
+
+typedef ratnum = @(integer, integer)
+
+fn
+r2cf (ratnum : ratnum) : cf =
+  cf_make
+    let
+      val ratnum_ref : ref ratnum = ref ratnum
+    in
+      lam () =<cloref1>
+        let
+          val @(n, d) = !ratnum_ref
+        in
+          if iseqz d then
+            neginf<integerknd> ()
+          else
+            let
+              val @(q, r) = n divrem d
+            in
+              !ratnum_ref := @(d, r);
+              q
+            end
+        end
+    end
+
+fn
+i2cf (intnum : integer) : cf =
+  r2cf @(intnum, g0i2i 1)
+
+(*------------------------------------------------------------------*)
+(* Application of a homographic function to a continued fraction. *)
+
+typedef ng4 = @(integer, integer, integer, integer)
+
+fn
+apply_ng4 (ng4 : ng4, x : cf) : cf =
+  cf_make
+    let
+      val state : ref @(ng4, Size_t) = ref @(ng4, i2sz 0)
+    in
+      lam () =<cloref1>
+        let
+          fnx
+          loop (a1 : integer,
+                a  : integer,
+                b1 : integer,
+                b  : integer,
+                i  : Size_t)
+              : integer =
+            if (iseqz b1) * (iseqz b) then
+              neginf<integerknd> ()
+            else if (iseqz b1) + (iseqz b) then
+              absorb_term (a1, a, b1, b, i)
+            else
+              let
+                val @(q, r) = a divrem b
+                and @(q1, r1) = a1 divrem b1
+              in
+                if q1 <> q then
+                  absorb_term (a1, a, b1, b, i)
+                else
+                  begin
+                    !state :=
+                      @(@(b1, b, r1, r), i);
+                    q
+                  end
+              end
+          and
+          absorb_term (a1 : integer,
+                       a  : integer,
+                       b1 : integer,
+                       b  : integer,
+                       i  : Size_t)
+              : integer =
+            let
+              val term = x[i]
+            in
+              if term <> neginf<integerknd> () then
+                loop (a + (a1 * term), a1,
+                      b + (b1 * term), b1, succ i)
+              else
+                loop (a1, a1, b1, b1, succ i)
+            end
+
+          val @(@(a1, a, b1, b), i) = !state
+        in
+          loop (a1, a, b1, b, i)
+        end
+    end
+
+(*------------------------------------------------------------------*)
+(* Some basic operations involving only one continued fraction. *)
+
+fn
+cf_neg (x : cf) : cf =
+  apply_ng4 (@(g0i2i ~1, g0i2i 0, g0i2i 0, g0i2i 1), x)
+
+fn
+cf_add_ratnum (x : cf, y : ratnum) : cf =
+  let
+    val @(n, d) = y
+  in
+    apply_ng4 (@(d, n, g0i2i 0, d), x)
+  end
+
+fn
+ratnum_add_cf (x : ratnum, y : cf) : cf =
+  cf_add_ratnum (y, x)
+
+fn
+cf_add_integer (x : cf, y : integer) : cf =
+  cf_add_ratnum (x, @(y, g0i2i 1))
+
+fn
+integer_add_cf (x : integer, y : cf) : cf =
+  cf_add_ratnum (y, @(x, g0i2i 1))
+
+fn
+cf_sub_ratnum (x : cf, y : ratnum) : cf =
+  cf_add_ratnum (x, @(~(y.0), (y.1)))
+
+fn
+ratnum_sub_cf (x : ratnum, y : cf) : cf =
+  let
+    val @(n, d) = x
+  in
+    apply_ng4 (@(~d, n, g0i2i 0, d), y)
+  end
+
+fn
+cf_sub_integer (x : cf, y : integer) : cf =
+  cf_add_ratnum (x, @(~y, g0i2i 1))
+
+fn
+integer_sub_cf (x : integer, y : cf) : cf =
+  ratnum_sub_cf (@(x, g0i2i 1), y)
+
+fn
+cf_mul_ratnum (x : cf, y : ratnum) : cf =
+  let
+    val @(n, d) = y
+  in
+    apply_ng4 (@(n, g0i2i 0, g0i2i 0, d), x)
+  end
+
+fn
+ratnum_mul_cf (x : ratnum, y : cf) : cf =
+  cf_mul_ratnum (y, x)
+
+fn
+cf_mul_integer (x : cf, y : integer) : cf =
+  cf_mul_ratnum (x, @(y, g0i2i 1))
+
+fn
+integer_mul_cf (x : integer, y : cf) : cf =
+  cf_mul_ratnum (y, @(x, g0i2i 1))
+
+fn
+cf_div_ratnum (x : cf, y : ratnum) : cf =
+  cf_mul_ratnum (x, @(y.1, y.0))
+
+fn
+ratnum_div_cf (x : ratnum, y : cf) : cf =
+  let
+    val @(n, d) = x
+  in
+    apply_ng4 (@(g0i2i 0, n, d, g0i2i 0), y)
+  end
+
+fn
+cf_div_integer (x : cf, y : integer) : cf =
+  cf_mul_ratnum (x, @(g0i2i 1, y))
+
+fn
+integer_div_cf (x : integer, y : cf) : cf =
+  ratnum_div_cf (@(x, g0i2i 1), y)
+
+overload ~ with cf_neg
+
+overload + with cf_add_ratnum
+overload + with ratnum_add_cf
+overload + with cf_add_integer
+overload + with integer_add_cf
+
+overload - with cf_sub_ratnum
+overload - with ratnum_sub_cf
+overload - with cf_sub_integer
+overload - with integer_sub_cf
+
+overload * with cf_mul_ratnum
+overload * with ratnum_mul_cf
+overload * with cf_mul_integer
+overload * with integer_mul_cf
+
+overload / with cf_div_ratnum
+overload / with ratnum_div_cf
+overload / with cf_div_integer
+overload / with integer_div_cf
+
+(*------------------------------------------------------------------*)
+(* Application of a bihomographic function to a continued fraction. *)
+
+typedef ng8 = @(integer, integer, integer, integer,
+                integer, integer, integer, integer)
+
+fn
+apply_ng8 (ng8 : ng8, x : cf, y : cf) : cf =
+  cf_make
+    let
+      val ng : ref ng8 = ref ng8
+      and xsource : ref cf_generator = ref (cf2generator x)
+      and ysource : ref cf_generator  = ref (cf2generator y)
+
+      fn neginf_source () :<cloref1> integer = neginf<integerknd> ()
+    in
+      lam () =<cloref1>
+        let
+          fnx
+          recurs () : integer =
+            let
+              val @(a12, a1, a2, a, b12, b1, b2, b) = !ng
+              val bz = iseqz b
+              and b1z = iseqz b1
+              and b2z = iseqz b2
+              and b12z = iseqz b12
+            in
+              if b12z * b1z * b2z * bz then
+                neginf<integerknd> ()
+              else if bz * b2z then
+                absorb_x_term ()
+              else if bz + b2z then
+                absorb_y_term ()
+              else if b1z then
+                absorb_x_term ()
+              else
+                let
+                  val @(q, r) = a divrem b
+                  and @(q1, r1) = a1 divrem b1
+                  and @(q2, r2) = a2 divrem b2
+                  and @(q12, r12) =
+                    (if ~b12z then
+                       a12 divrem b12
+                     else
+                       @(neginf (), neginf ())) : @(integer, integer)
+                in
+                  if (~b12z) * (q = q1) * (q = q2) * (q = q12) then
+                    begin       (* Output a term. *)
+                      !ng := @(b12, b1, b2, b, r12, r1, r2, r);
+                      q
+                    end
+                  else
+                    let
+                      (* Put numerators over a common denominator,
+                         then compare the numerators. *)
+                      val n = a *! b1 *! b2
+                      and n1 = a1 *! b *! b2
+                      and n2 = a2 *! b *! b1
+                    in
+                      if abs (n1 -! n) > abs (n2 -! n) then
+                        absorb_x_term ()
+                      else
+                        absorb_y_term ()
+                    end
+                end
+            end
+          and
+          absorb_x_term () : integer =
+            let
+              val @(a12, a1, a2, a, b12, b1, b2, b) = !ng
+              val term = (!xsource) ()
+            in
+              if term <> neginf<integerknd> () then
+                begin
+                  try
+                    let
+                      val a12_ = a2 +! (a12 *! term)
+                      and a1_ = a +! (a1 *! term)
+                      and a2_ = a12
+                      and a_ = a1
+                      and b12_ = b2 +! (b12 *! term)
+                      and b1_ = b +! (b1 *! term)
+                      and b2_ = b12
+                      and b_ = b1
+                    in
+                      !ng := @(a12_, a1_, a2_, a_,
+                               b12_, b1_, b2_, b_);
+                      (* Be aware: this is not a tail recursion! *)
+                      recurs ()
+                    end
+                  with
+                  | ~ gint_overflow () =>
+                    begin
+                      (* Replace the sources with ones that return no
+                         terms. (You have to replace BOTH sources.) *)
+                      !ng := @(a12, a1, a12, a1, b12, b1, b12, b1);
+                      !xsource := neginf_source;
+                      !ysource := neginf_source;
+                      recurs ()
+                    end
+                end
+              else
+                begin
+                  !ng := @(a12, a1, a12, a1, b12, b1, b12, b1);
+                  recurs ()
+                end
+            end
+          and
+          absorb_y_term () : integer =
+            let
+              val @(a12, a1, a2, a, b12, b1, b2, b) = !ng
+              val term = (!ysource) ()
+            in
+              if term <> neginf<integerknd> () then
+                begin
+                  try
+                    let
+                      val a12_ = a1 +! (a12 *! term)
+                      and a1_ = a12
+                      and a2_ = a +! (a2 *! term)
+                      and a_ = a2
+                      and b12_ = b1 +! (b12 *! term)
+                      and b1_ = b12
+                      and b2_ = b +! (b2 *! term)
+                      and b_ = b2
+                    in
+                      !ng := @(a12_, a1_, a2_, a_,
+                               b12_, b1_, b2_, b_);
+                      (* Be aware: this is not a tail recursion! *)
+                      recurs ()
+                    end
+                  with
+                  | ~ gint_overflow () =>
+                    begin
+                      (* Replace the sources with ones that return no
+                         terms. (You have to replace BOTH sources.) *)
+                      !ng := @(a12, a12, a2, a2, b12, b12, b2, b2);
+                      !xsource := neginf_source;
+                      !ysource := neginf_source;
+                      recurs ()
+                    end
+                end
+              else
+                begin
+                  !ng := @(a12, a12, a2, a2, b12, b12, b2, b2);
+                  recurs ()
+                end
+            end
+        in
+          recurs ()
+        end
+    end
+
+(*------------------------------------------------------------------*)
+(* Some basic operations on two continued fractions. *)
+
+fn
+cf_add_cf (x : cf, y : cf) : cf =
+  apply_ng8 (@(g0i2i 0, g0i2i 1, g0i2i 1, g0i2i 0,
+               g0i2i 0, g0i2i 0, g0i2i 0, g0i2i 1), x, y)
+
+fn
+cf_sub_cf (x : cf, y : cf) : cf =
+  apply_ng8 (@(g0i2i 0, g0i2i 1, g0i2i ~1, g0i2i 0,
+               g0i2i 0, g0i2i 0, g0i2i 0, g0i2i 1), x, y)
+
+fn
+cf_mul_cf (x : cf, y : cf) : cf =
+  apply_ng8 (@(g0i2i 1, g0i2i 0, g0i2i 0, g0i2i 0,
+               g0i2i 0, g0i2i 0, g0i2i 0, g0i2i 1), x, y)
+
+fn
+cf_div_cf (x : cf, y : cf) : cf =
+  apply_ng8 (@(g0i2i 0, g0i2i 1, g0i2i 0, g0i2i 0,
+               g0i2i 0, g0i2i 0, g0i2i 1, g0i2i 0), x, y)
+
+overload + with cf_add_cf
+overload - with cf_sub_cf
+overload * with cf_mul_cf
+overload / with cf_div_cf
+
+(*------------------------------------------------------------------*)
+
+typedef charptr = $extype"char *"
+
+fn
+show_with_note (expression : string,
+                cf         : cf,
+                note       : string)
+    : void =
+  if note = "" then
+    ignoret ($extfcall (int, "printf", "%19s =>  %s\n",
+                        $UN.cast{charptr} expression,
+                        $UN.cast{charptr} (cf2string cf)))
+  else
+    ignoret ($extfcall (int, "printf", "%19s =>  %-46s  %s\n",
+                        $UN.cast{charptr} expression,
+                        $UN.cast{charptr} (cf2string cf),
+                        $UN.cast{charptr} note))
+
+fn
+show_without_note (expression : string, cf : cf) : void =
+  show_with_note (expression, cf, "")
+
+overload show with show_with_note
+overload show with show_without_note
+
+(*------------------------------------------------------------------*)
+
+val golden_ratio = cf_make (lam () =<cloref1> (g0i2i 1) : integer)
+val silver_ratio = cf_make (lam () =<cloref1> (g0i2i 2) : integer)
+val sqrt2 = silver_ratio - g0i2i 1
+
+val frac_13_11 = r2cf @(g0i2i 13, g0i2i 11)
+val frac_22_7 = r2cf @(g0i2i 22, g0i2i 7)
+
+val one = i2cf (g0i2i 1)
+val two = i2cf (g0i2i 2)
+val three = i2cf (g0i2i 3)
+val four = i2cf (g0i2i 4)
+
+implement
+main (argc, argv) =
+  begin
+    if 2 <= argc then
+      let
+        val n = g0string2uint (argv_get_at (argv, 1)) : uint
+      in
+        (* Set the maximum number of terms to print. *)
+        !cf2string_default_max_terms := g1u2u (g1ofg0 n)
+      end;
+
+    show ("golden ratio", golden_ratio, "(1 + sqrt(5))/2");
+    show ("silver ratio", silver_ratio, "1 + sqrt(2)");
+    show ("sqrt(2)", sqrt2);
+    show ("13/11", frac_13_11);
+    show ("22/7", frac_22_7);
+    show ("one", one);
+    show ("two", two);
+    show ("three", three);
+    show ("four", four);
+    show ("(1 + 1/sqrt(2))/2",
+          apply_ng8 (@(g0i2i 0, g0i2i 1, g0i2i 0, g0i2i 0,
+                       g0i2i 0, g0i2i 0, g0i2i 2, g0i2i 0),
+                     silver_ratio, sqrt2),
+          "method 1");
+    show ("(1 + 1/sqrt(2))/2",
+          apply_ng8 (@(g0i2i 1, g0i2i 0, g0i2i 0, g0i2i 1,
+                       g0i2i 0, g0i2i 0, g0i2i 0, g0i2i 8),
+                     silver_ratio, silver_ratio),
+          "method 2");
+    show ("(1 + 1/sqrt(2))/2", (g0i2i 1 + (one / sqrt2)) / two,
+          "method 3");
+    show ("sqrt(2) + sqrt(2)", sqrt2 + sqrt2);
+    show ("sqrt(2) - sqrt(2)", sqrt2 - sqrt2);
+    show ("sqrt(2) * sqrt(2)", sqrt2 * sqrt2);
+    show ("sqrt(2) / sqrt(2)", sqrt2 / sqrt2);
+
+    0
+  end
+
+(*------------------------------------------------------------------*)

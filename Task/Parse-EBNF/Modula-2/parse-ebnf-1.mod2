@@ -1,0 +1,89 @@
+MODULE EBNF;
+
+FROM  ASCII         IMPORT  EOL;
+FROM  InOut         IMPORT  Done, Read, Write, WriteLn, WriteInt, WriteString;
+FROM  EBNFScanner   IMPORT  Symbol, sym, id, Ino, GetSym, MarkError, SkipLine;
+FROM  TableHandler  IMPORT  WordLength, Table, overflow, InitTable, Record, Tabulate;
+
+VAR   T0, T1                : Table;
+
+PROCEDURE skip (n : INTEGER);
+
+BEGIN
+  MarkError (n);
+  WHILE  (sym < lpar) OR (sym > period)  DO  GetSym  END
+END skip;
+
+PROCEDURE Expression;
+
+  PROCEDURE Term;
+
+    PROCEDURE Factor;
+
+    BEGIN
+      IF  sym = ident  THEN
+        Record (T0, id, Ino);
+        GetSym
+      ELSIF  sym = literal  THEN
+        Record (T1, id, Ino);
+        GetSym
+      ELSIF  sym = lpar  THEN
+        GetSym;
+        Expression;
+        IF  sym = rpar  THEN  GetSym  ELSE  skip (2)  END
+      ELSIF  sym = lbk  THEN
+        GetSym;
+        Expression;
+        IF  sym = rbk  THEN  GetSym  ELSE  skip (3)  END
+      ELSIF  sym = lbr  THEN
+        GetSym;
+        Expression;
+        IF  sym = rbr  THEN  GetSym  ELSE  skip (4)  END
+      ELSE
+        skip (5)
+      END
+    END Factor;
+
+  BEGIN
+    Factor;
+    WHILE  sym < bar  DO  Factor  END
+  END Term;
+
+BEGIN
+  Term;
+  WHILE  sym = bar  DO
+    GetSym;
+    Term
+  END
+END Expression;
+
+
+PROCEDURE Production;
+
+BEGIN
+  Record (T0, id, - INTEGER (Ino));
+  GetSym;
+  IF  sym = eql  THEN  GetSym  ELSE  skip (7)  END;
+  Expression;
+  IF  sym # period  THEN
+    MarkError (8);
+    SkipLine
+  END;
+  GetSym
+END Production;
+
+
+BEGIN
+  InitTable (T0);
+  InitTable (T1);
+  GetSym;
+  WHILE  (sym = ident) AND (overflow = 0)  DO  Production  END;
+  IF  overflow > 0  THEN
+    WriteLn;
+    WriteString ("Table overflow");
+    WriteInt (overflow, 6);
+  END;
+  Write (35C);
+  Tabulate (T0);
+  Tabulate (T1);
+END EBNF.

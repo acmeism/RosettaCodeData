@@ -1,0 +1,52 @@
+%%% -*- mode: mercury; prolog-indent-width: 2; -*-
+
+:- module adaptive_simpson_task_mercury.
+
+:- interface.
+:- import_module io.
+:- pred main(io::di, io::uo) is det.
+
+:- implementation.
+:- import_module float.
+:- import_module int.
+:- import_module math.
+:- import_module string.
+
+:- pred simpson_rule((func(float) = float)::in,
+                     float::in, float::in, float::in, float::in,
+                     float::out, float::out, float::out) is det.
+simpson_rule(F, A, FA, B, FB, M, FM, QuadVal) :-
+  FM = F(M), (M = 0.5 * (A + B)),
+  (QuadVal = ((B - A) / 6.0) * (FA + (4.0 * FM) + FB)).
+
+:- func recursive_simpson(func(float) = float,
+                          float, float, float, float,
+                          float, float, float, float, int) = float.
+recursive_simpson(F, A, FA, B, FB, Tol,
+                  Whole, M, FM, Depth) = QuadVal :-
+  simpson_rule(F, A, FA, M, FM, LM, FLM, Left),
+  simpson_rule(F, M, FM, B, FB, RM, FRM, Right),
+  (Left + Right - Whole = Delta),
+  (0.5 * Tol = Tol_),
+  (if (Depth =< 0; Tol_ = Tol; abs(Delta) =< 15.0 * Tol)
+   then (QuadVal = Left + Right + (Delta / 15.0))
+   else (QuadVal = recursive_simpson(F, A, FA, M, FM, Tol_,
+                                     Left, LM, FLM, Depth - 1)
+                   + recursive_simpson(F, M, FM, B, FB, Tol_,
+                                       Right, RM, FRM, Depth - 1))).
+
+:- func quad_asr(func(float) = float,
+                 float, float, float, int) = float.
+quad_asr(F, A, B, Tol, Depth) = QuadVal :-
+  F(A) = FA, F(B) = FB,
+  simpson_rule(F, A, FA, B, FB, M, FM, Whole),
+  (QuadVal = recursive_simpson(F, A, FA, B, FB, Tol,
+                               Whole, M, FM, Depth)).
+
+main(!IO) :-
+  print("estimate of ∫ sin x dx from 0 to 1: ", !IO),
+  (QuadVal = quad_asr(sin, 0.0, 1.0, 1.0e-9, 100)),
+  print(from_float(QuadVal), !IO),
+  nl(!IO).
+
+:- end_module adaptive_simpson_task_mercury.

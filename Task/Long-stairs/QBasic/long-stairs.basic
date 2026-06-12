@@ -1,0 +1,25 @@
+RANDOMIZE TIMER : REM RANDOMIZE  for True BASIC
+stepsbehind = 0
+stairslength = 100
+
+PRINT "Seconds", "steps behind", "steps ahead"
+FOR trial = 1 TO 10000
+    stepsbehind = 0
+    seconds = 0
+    stairslength = 100
+    DO WHILE stepsbehind < stairslength
+        stepsbehind = stepsbehind + 1
+        FOR j = 1 TO 5
+            IF INT(RND * stairslength) < stepsbehind THEN stepsbehind = stepsbehind + 1
+            stairslength = stairslength + 1
+        NEXT j
+        seconds = seconds + 1
+        IF trial = 1 AND seconds > 599 AND seconds < 610 THEN PRINT seconds, stepsbehind, stairslength - stepsbehind
+    LOOP
+    secondstot = secondstot + seconds
+    stepstot = stepstot + stairslength
+NEXT trial
+
+PRINT "Average time taken: "; secondstot / 10000; " seconds."
+PRINT "Average final staircase length: "; stepstot / 10000; " steps."
+END

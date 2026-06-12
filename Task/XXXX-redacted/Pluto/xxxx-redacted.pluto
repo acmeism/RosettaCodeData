@@ -1,0 +1,67 @@
+local buffer = require "pluto:buffer"
+require "gchar"
+
+local function join(words, seps)
+    local lw = #words
+    local ls = #seps
+    local sb = buffer.new()
+    for i = 1, ls do
+        sb:append(words[i])
+        sb:append(seps[i])
+    end
+    if lw > ls then sb:append(words[lw]) end
+    return sb:tostring()
+end
+
+local function redact(text, word, opts)
+    local partial = "p" in opts
+    local overkill = "o" in opts
+    local insensitive = "i" in opts
+    local zwj = "\u{200d}"
+    local punct = "[] \t\n\r!\"#$%&()*+,./:;<=>?@[\\^`{|}~]+"
+    local letts = "[^] \t\n\r!\"#$%&()*+,./:;<=>?@[\\^`{|}~]+"
+    local seps, words = {}, {}
+    for s in text:gmatch(punct) do seps:insert(s) end
+    for w in text:gmatch(letts) do words:insert(w) end
+    local ex = insensitive ? (word:lower()) : word
+    for i = 1, #words do
+        local w = words[i]
+        local wl = insensitive ? (w:lower()) : w
+        local m = wl:find(ex)
+        if m and !wl:contains(ex .. zwj) and !wl:contains(zwj .. ex) then
+            if overkill then
+                words[i] = string.rep("X", gchar.of(w):len())
+            elseif !partial then
+                if wl == ex then words[i] = string.rep("X", gchar.of(w):len()) end
+            elseif partial then
+                local repl = string.rep("X", gchar.of(word):len())
+                words[i] = wl:replace(ex, repl)
+            end
+        end
+    end
+    print($"{opts} {join(words, seps)}\n")
+end
+
+local function print_results(text, all_opts, all_words)
+    print($"Text: {text}\n")
+    for all_words as word do
+        print($"Redact '{word}':")
+        for all_opts as opts do redact(text, word, opts) end
+    end
+    print()
+end
+
+local text = [[Tom? Toms bottom tomato is in his stomach while playing the "Tom-tom" brand tom-toms. That's so tom.
+'Tis very tomish, don't you think?]]
+local all_opts = {"[w|s|n]", "[w|i|n]", "[p|s|n]", "[p|i|n]", "[p|s|o]", "[p|i|o]"}
+local all_words = {"Tom", "tom", "t"}
+print_results(text, all_opts, all_words)
+
+text = "🧑 👨 🧔 👨‍👩‍👦"
+all_opts = {"[w]"}
+all_words = {"👨", "👨‍👩‍👦"}
+print_results(text, all_opts, all_words)
+
+text = "Argentina🧑🇦🇹  France👨🇫🇷  Germany🧔🇩🇪  Netherlands👨‍👩‍👦🇳🇱"
+all_opts = {"[p]", "[p|o]"}
+print_results(text, all_opts, all_words)

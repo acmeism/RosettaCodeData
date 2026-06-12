@@ -1,0 +1,11 @@
+let w = window.open("", "", "width=640,height=480");
+let canvas = document.createElement("canvas");
+canvas.width = 640;
+canvas.height = 480;
+w.document.body.appendChild(canvas);
+w.document.body.style.margin = 0;
+let ctx = canvas.getContext("2d");
+ctx.fillStyle = "#FFFF00";
+let x = Math.random() * 641;
+let y = Math.random() * 481;
+ctx.fillRect(x, y, 1, 1);

@@ -15,8 +15,8 @@ DIRS  =: atom(0)
 FILES =: atom(0)
 
 defn main(*args):
-  when-not fs/e('Conf/task.yaml'):
-    die: "Not a RosettaCodeData directory (Conf/task.yaml missing)"
+  when-not fs/e('Conf/lang.yaml'):
+    die: "Not a RosettaCodeData directory (Conf/lang.yaml missing)"
 
   each d qw(Meta Lang Task):
     when fs/d(d):
@@ -29,14 +29,16 @@ defn main(*args):
   log: 'START RosettaCode Sync'
 
   langs =: load-langs()
-  tasks =: load-tasks()
 
   write-meta-langs: langs
   refresh-discovery-list "Category:Programming_Languages" "Cache/langs.txt":
     "subcat"
   refresh-discovery-list "Category:Programming_Tasks" "Cache/tasks.txt":
     "page"
+  refresh-discovery-list "Category:Draft_Programming_Tasks" "Cache/draft-tasks.txt":
+    "page"
 
+  tasks =: load-tasks()
   sync-langs: langs
   sync-tasks tasks: langs
 
@@ -185,18 +187,43 @@ defn- build-lang-info([name text]):
   vector name:lc: info
 
 defn- load-tasks():
-  raw =: read('Conf/task.yaml'):yaml/load
+  stable =:
+    map _ read-list('Cache/tasks.txt'):
+      fn(name):
+        build-task-info name: false
+  drafts =:
+    map _ read-list('Cache/draft-tasks.txt'):
+      fn(name):
+        build-task-info name: true
+  infos =: concat(stable drafts)
+  validate-task-paths: infos
+  entries =:
+    map _ infos:
+      fn(info):
+        vector info.name: info
   into {}:
-    map build-task-info: keys(raw)
+    =>: entries
 
-defn- build-task-info(name):
+defn- read-list(path):
+  read(path).lines().filter(seq)
+
+defn- build-task-info(name draft):
   step1 =: replace(name qr("[\"']") "")
   path =:  replace(step1 qr("[,\\s/*!()\\x{7f}-\\x{ffff}]+") "-")
   info =:
     +{:name name,
       :url replace(name " " "_"),
-      :path path}
-  vector name: info
+      :path path,
+      :draft draft}
+  =>: info
+
+defn- validate-task-paths(infos):
+  reduce _ {} infos:
+    fn(seen info):
+      prev =: get(seen info.path)
+      when prev:
+        die: "Task path collision: '$(prev.name)' and '$(info.name)' both map to '$(info.path)'"
+      seen: .assoc(info.path info)
 
 defn- write-meta-langs(langs):
   fs/mkdir-p: 'Meta'
@@ -274,9 +301,13 @@ defn- write-task-good(info langs head remainder):
   base =: "Task/$(info.path)"
   fs/mkdir-p: base
   write "$base/00-TASK.txt": pad-newline(meta.description || '')
-  full-meta =:
+  base-meta =:
     meta.dissoc(:description)
         .assoc(:from "http://rosettacode.org/wiki/$(info.url)")
+  full-meta =:
+    if info.draft:
+      then: base-meta.assoc(:draft true)
+      else: base-meta
   when (seq full-meta):
     write "$base/00-META.yaml": "---\n$(yaml/dump(full-meta))"
 

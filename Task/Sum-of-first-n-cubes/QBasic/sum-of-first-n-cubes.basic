@@ -1,0 +1,20 @@
+DEFLNG A-Z
+
+fila = 0
+lenCubos = 49
+
+CLS
+PRINT "Suma de N cubos para n = [0..49]" + CHR$(10)
+
+FOR n = 0 TO lenCubos
+    sumCubos = 0
+    FOR m = 1 TO n
+        sumCubos = sumCubos + (m ^ 3)
+    NEXT m
+    fila = fila + 1
+    PRINT USING " ####### "; sumCubos;
+    IF fila MOD 5 = 0 THEN PRINT
+NEXT n
+
+PRINT CHR$(13) + "Encontrados"; fila; "cubos."
+END

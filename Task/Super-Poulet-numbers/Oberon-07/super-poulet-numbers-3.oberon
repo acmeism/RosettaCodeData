@@ -1,0 +1,94 @@
+MODULE SuperPouletNumbers; (* find some Super-Poulet numbers                  *)
+    IMPORT I64Ops, Primes, Out;
+
+    CONST  maxPrime = 1200000;         (* 1.2 million, hopefully enough for a *)
+                                       (*  Super Poulet number over 1 million *)
+    VAR    isPrime   : ARRAY maxPrime OF BOOLEAN;              (* prime sieve *)
+           powmod2dd : ARRAY maxPrime OF INTEGER;  (* powmod( 2, d, d ) cache *)
+
+    (*  returns aIn ^ bIn MOD m                                               *)
+    PROCEDURE powmod( aIn, bIn, m : INTEGER ) : INTEGER;
+        VAR   r, a                : INTEGER;
+              b                   : INTEGER;
+        BEGIN
+            r := 1; a := aIn; b := bIn;
+            WHILE b >= 1 DO
+                IF ODD( b ) THEN r := I64Ops.mulMod( r, a, m ) END;
+                b := b DIV 2;
+                a := I64Ops.mulMod( a, a, m )
+            END;
+        RETURN r
+        END powmod ;
+
+    (* returns powmod( 2, d, d ) using/storing the cache                      *)
+    PROCEDURE cachedPowMod2dd( d : INTEGER ) : INTEGER;
+        BEGIN
+            IF powmod2dd[ d ] < 0 THEN
+                powmod2dd[ d ] := powmod( 2, d, d )
+            END;
+        RETURN powmod2dd[ d ]
+        END cachedPowMod2dd ;
+
+    (* returns TRUE if n is a Super Poulet number, FALSE otherwise            *)
+    PROCEDURE isSuperPoulet( n : INTEGER ) : BOOLEAN;
+         VAR    result         : BOOLEAN;
+                d, q           : INTEGER;
+         BEGIN
+             IF    isPrime[ n ] THEN result := FALSE
+             ELSIF ~ ODD(   n ) THEN result := FALSE
+             ELSE
+                 result := powmod( 2, n - 1, n ) = 1;
+                 d := 3;
+                 WHILE result & ( d * d <= n ) DO
+                     IF n MOD d = 0 THEN
+                         result := cachedPowMod2dd( d ) = 2;
+                         IF result THEN
+                             q := n DIV d;
+                             IF q # d THEN
+                                 result := cachedPowMod2dd( q ) = 2
+                             END
+                         END
+                     END;
+                     INC( d, 2 )
+                 END
+             END;
+         RETURN result
+         END isSuperPoulet ;
+
+    (* finds the Super Poulet numbers required for the task                   *)
+    PROCEDURE SPtask;
+        VAR   count, pn    : INTEGER;
+              searching    : BOOLEAN;
+        BEGIN
+            count     := 0;
+            searching := TRUE;
+            pn        := 1;
+            WHILE searching DO
+                INC( pn, 2 );
+                IF isSuperPoulet( pn ) THEN
+                    INC( count );
+                    IF   count <= 20 THEN
+                        Out.String( " " );Out.Int( pn, 5 );
+                        IF count MOD 10 = 0 THEN Out.Ln END
+                    ELSIF pn > 1000000 THEN
+                        Out.Ln;Out.String( "Super-Poulet number " );Out.Int( count, 0 );
+                        Out.String( " (" );Out.Int( pn, 0 );
+                        Out.String( ") is the first over 1 000 000" );Out.Ln;
+                        searching := FALSE
+                    END
+                END
+            END
+        END SPtask ;
+
+    (* initialises the powmod( 2, d, d ) cache and the prime sieve            *)
+    PROCEDURE init;
+        VAR   d   : INTEGER;
+        BEGIN
+            FOR d := 0 TO maxPrime - 1 DO powmod2dd[ d ] := -1 END;
+            Primes.sieve( isPrime )
+        END init ;
+
+BEGIN
+    init;
+    SPtask
+END SuperPouletNumbers.

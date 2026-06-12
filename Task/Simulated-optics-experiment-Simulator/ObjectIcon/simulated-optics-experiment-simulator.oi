@@ -1,0 +1,252 @@
+#!/bin/env -S oiscript
+
+#
+# Reference:
+#
+#   A. F. Kracklauer, ‘EPR-B correlations: non-locality or geometry?’,
+#   J. Nonlinear Math. Phys. 11 (Supp.) 104–109 (2004).
+#   https://doi.org/10.2991/jnmp.2004.11.s1.13 (Open access, CC BY-NC)
+#
+
+import io
+import ipl.random
+import util
+
+$encoding UTF-8
+
+$define angleL1 0.0
+$define angleL2 45.0
+$define angleR1 22.5
+$define angleR2 67.5
+
+global rng
+
+# I am shamelessly using global variables. You could put all these
+# inside an object or a record, however, and pass them around that
+# way.
+global logS, logL, logR
+global detectionsL1, detectionsL2
+global detectionsR1, detectionsR2
+
+procedure main (args)
+  # Because main is run only once, there is no TECHNICAL reason to use
+  # "initial" in main.  But it documents that this is initialization.
+  initial
+  {
+    # Choose the RNG you prefer:
+
+    rng := PCG32 ()
+    #rng := MersenneTwister64 ()
+    #rng := MersenneTwister32 ()
+
+    # Use the traditional Icon RNG to randomize our actual RNG.
+    randomize ()
+    every 1 to ?1000 do
+      rng.real()
+  }
+
+  case *args of
+  {
+    1 : sally_forth (integer (args[1]), "-") | stop (&why)
+    2 : sally_forth (integer (args[1]), args[2]) | stop (&why)
+    default :
+    {
+      io.write ("Usage: ", &progname, " num_events [-|raw_data_file]")
+      exit (1)
+    }
+  }
+end
+
+procedure sally_forth (num_events, output_file)
+  local detectorL1, detectorL2
+  local detectorR1, detectorR2
+  local splitterL, splitterR
+
+  initial
+  {
+    logS := list (num_events)
+    logL := list (num_events)
+    logR := list (num_events)
+    detectionsL1 := list (num_events)
+    detectionsL2 := list (num_events)
+    detectionsR1 := list (num_events)
+    detectionsR2 := list (num_events)
+  }
+
+  detectorL1 := Light_Detector (detectionsL1)
+  detectorL2 := Light_Detector (detectionsL2)
+  detectorR1 := Light_Detector (detectionsR1)
+  detectorR2 := Light_Detector (detectionsR2)
+
+  splitterL := Beam_Splitter (angleL1, angleL2, logL,
+                              detectorL1, detectorL2)
+  splitterR := Beam_Splitter (angleR1, angleR2, logR,
+                              detectorR1, detectorR2)
+
+  # The light source runs the whole show.
+  light_source (num_events, logS, splitterL, splitterR)
+
+  write_raw_data (output_file)
+
+  return
+end
+
+procedure write_raw_data (output_file)
+  local f, i
+  if type (output_file) ~== "string" then
+  {
+    f := output_file
+    f.write(*logS)
+    every i := 1 to *logS do
+      f.write(logS[i], " ", logL[i], " ", logR[i], " ",
+              detectionsL1[i], " ", detectionsL2[i], " ",
+              detectionsR1[i], " ", detectionsR2[i])
+  }
+  else if output_file == "-" then
+    write_raw_data (FileStream.stdout)
+  else
+  {
+    f := open (output_file, "w") | stop (&why)
+    write_raw_data (f) | stop (&why)
+    f.close ()
+  }
+  return
+end
+
+procedure light_source (num_events, setting_log, splitterL, splitterR)
+  # The light source is a loop that runs a finite number of times and
+  # transmits angle data to the two polarizing beam splitters, through
+  # their "receive()" methods. It records its randomly chosen setting
+  # in a log.
+  #
+  # I recommend you do NOT think of the light source as "photons". To
+  # do so is to invite prejudgments that hamper visualization of the
+  # simulation. Think of the light source as two pairs of orthogonally
+  # plane-polarized light beams, along with a system of mirrors and
+  # shutters.
+  #
+  # But, even if the light source were "photons", there is no cause
+  # for objection, if the simulation records the "photons" values in a
+  # log and uses those values later. Remember, physicists claim
+  # "Bell’s Theorem" proves that "hidden variables" theories are
+  # impossible. To presume a SIMULATION cannot know what the "hidden
+  # variables" of a "photon" are is to presume the conclusion: that no
+  # "hidden variables" theory is possible!
+  #
+  # On the other hand, for our simulation we MUST presume otherwise,
+  # because what WE are trying to show is that, if you presume there
+  # ARE "hidden variables", which a SIMULATION certainly could take
+  # into account, then we get the CHSH contrast predicted by quantum
+  # mechanics. And this is SUPPOSED to be impossible to do!
+  #
+  # Which is a blatant contradiction of John Bell’s conclusion. If
+  # even ONE counterexample to a "theorem" exists, then THERE IS NO
+  # THEOREM. Here is a counterexample. Therefore Bell MUST have made
+  # an error.
+  #
+  # Short answer to "What error did Bell make?": Bell presumed his a
+  # and b were THE "hidden variables". This is wrong. Bell's a and b
+  # must be treated as FUNCTIONS of the "hidden variables". One simply
+  # does not presume that such variables are independent and not
+  # functions. To do so is a symptom of "innumeracy".
+  #
+  # Now, the "hidden variables" obviously share a common origin in the
+  # light source--and so, just as obviously, a and b SHOULD BE tightly
+  # correlated with each other. They share the same "hidden
+  # variables".
+  #
+  # That these facts escape notice among the supposedly greatest
+  # "geniuses" of our society is a profound SOCIAL conundrum. And it
+  # means that "photons" almost surely do have "hidden variables" that
+  # mainstream physicists simply are not looking for. They have given
+  # up trying.
+  #
+  # This all affects computer programmers: why expend so much resource
+  # trying to make a "quantum computer" out of "superposition states",
+  # and having computer science and computer engineering graduate
+  # students study "quantum logic", if there is nothing "magical"
+  # about "superposition states"? Would one stake their future on an
+  # inherently decimal digital computer made with 10-voltage logic
+  # instead of saturated transistors? You simply do not stake your
+  # future on such an idea.
+
+  local i, rand_0_or_1
+
+  every i := 1 to num_events do
+  {
+    rand_0_or_1 := rng.range(2) - 1
+    setting_log[i] := rand_0_or_1
+    if rand_0_or_1 = 0 then
+    {
+      splitterL.receive(i, 0.0)
+      splitterR.receive(i, 90.0)
+    }
+    else
+    {
+      splitterL.receive(i, 90.0)
+      splitterR.receive(i, 0.0)
+    }
+  }
+  return
+end
+
+class Beam_Splitter ()
+  # A polarizing beam splitter receives light-source angles via its
+  # "receive()" method (and assumes the light pulses have amplitude
+  # 1.0). A beam splitter angle is randomly selected and recorded in a
+  # log. Amplitudes of output pulses are computed, and transmitted to
+  # the "receive()" methods of light detector objects.
+
+  public angle1, angle2, setting_log
+  public detector1, detector2
+
+  public new (phi1, phi2, log, detec1, detec2)
+    angle1 := phi1
+    angle2 := phi2
+    setting_log := log
+    detector1 := detec1
+    detector2 := detec2
+    return
+  end
+
+  public receive (i, source_angle)
+    local my_angle, relative_angle, rand_0_or_1
+    local amplitude1, amplitude2
+
+    static pi_over_180
+    initial
+    {
+      pi_over_180 := Math.atan (1.0) / 45.0
+    }
+
+    rand_0_or_1 := rng.range(2) - 1
+    setting_log[i] := rand_0_or_1
+    my_angle := (if rand_0_or_1 = 0 then angle1 else angle2)
+    relative_angle := my_angle - source_angle
+    amplitude1 := abs (Math.cos (pi_over_180 * relative_angle))
+    amplitude2 := abs (Math.sin (pi_over_180 * relative_angle))
+    detector1.receive(i, amplitude1)
+    detector2.receive(i, amplitude2)
+    return
+  end
+end
+
+class Light_Detector ()
+  # A light detector receives light pulse data through its "receive()"
+  # method, and records its results in the "detections" list.
+
+  private detections
+
+  public new (detections_list)
+    detections := detections_list
+    return
+  end
+
+  public receive (i, amplitude)
+    local intensity, randnum
+    intensity := amplitude * amplitude
+    randnum := rng.real()
+    detections[i] := (if randnum <= intensity then 1 else 0)
+    return
+  end
+end

@@ -1,0 +1,13 @@
+import Data.List (transpose)
+
+numbers1, numbers2, numbers3 :: [Integer]
+numbers1 = [5, 45, 23, 21, 67]
+numbers2 = [43, 22, 78, 46, 38]
+numbers3 = [9, 98, 12, 98, 53]
+
+main :: IO ()
+main =
+  print $
+    minimum
+      <$> transpose
+        [numbers1, numbers2, numbers3]

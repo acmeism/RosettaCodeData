@@ -1,0 +1,11 @@
+(de delnon (Item Lst)
+   (if (index Item Lst)
+      (conc
+         (head (dec @) Lst)
+         (tail (- @) Lst) )
+      Lst ) )
+(let (N 2  L (range 1 5))
+   (delnon N L)
+   (println 'L L)
+   (setq L (delnon N L))
+   (println 'fin L) )

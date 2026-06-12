@@ -1,0 +1,42 @@
+V ch32 = Array(‘0123456789bcdefghjkmnpqrstuvwxyz’)
+V bool2ch = Dict(enumerate(ch32), (i, ch) -> (bin(i).zfill(5), ch))
+V ch2bool = Dict(bool2ch.items(), (k, v) -> (v, k))
+
+F bisect(val, =mn, =mx, =bits)
+   V mid = (mn + mx) / 2
+   I val < mid
+      bits <<= 1
+      mx = mid
+   E
+      bits = bits << 1 [|] 1
+      mn = mid
+
+   R (mn, mx, bits)
+
+F encoder(lat, lng, pre)
+   V (latmin, latmax) = (-90.0, 90.0)
+   V (lngmin, lngmax) = (-180.0, 180.0)
+   V bits = Int64(0)
+   L(i) 0 .< pre * 5
+      I i % 2 != 0
+         (latmin, latmax, bits) = bisect(lat, latmin, latmax, bits)
+      E
+         (lngmin, lngmax, bits) = bisect(lng, lngmin, lngmax, bits)
+
+   V b = bin(bits).zfill(pre * 5)
+   V geo = ((0 .< pre).map(i -> :bool2ch[@b[i * 5 .< (i + 1) * 5]]))
+
+   R geo.join(‘’)
+
+F decoder(geo)
+   V (minmaxes, latlong) = ([[-90.0, 90.0], [-180.0, 180.0]], 1B)
+   L(c) geo
+      L(bit) :ch2bool[c]
+         minmaxes[latlong][bit != ‘1’] = sum(minmaxes[latlong]) / 2
+         latlong = !latlong
+   R minmaxes
+
+L(lat, lng, pre) [(51.433718, -0.214126,  2),
+                  (51.433718, -0.214126,  9),
+                  (57.64911,   10.40744, 11)]
+   print(‘encoder(lat=#.6, lng=#.6, pre=#.) = '#.'’.format(lat, lng, pre, encoder(lat, lng, pre)))

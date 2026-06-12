@@ -1,0 +1,186 @@
+REM Rosetta Code problem: https://rosettacode.org/wiki/Linux_CPU_utilization
+REM by Jjuanhdez, 04/2025
+
+#ifdef __FB_LINUX__
+    #include "crt.bi"
+
+    Function get_cpu_times(Byref idle_time As ULongInt, Byref total_time As ULongInt) As Boolean
+        Dim As FILE Ptr fp
+        Dim As ZString * 256 linea
+        Dim As ULongInt user, nice, sys, idle, guest, guest_nice
+        Dim As ULongInt iowait = 0, irq = 0, softirq = 0, steal = 0
+
+        fp = fopen("/proc/stat", "r")
+        If fp = 0 Then Return False
+
+        If fgets(@linea, 256, fp) = 0 Then
+            fclose(fp)
+            Return False
+        End If
+        fclose(fp)
+
+        If sscanf(@linea, "cpu %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu", _
+            @user, @nice, @sys, @idle, @iowait, @irq, @softirq, @steal, @guest, @guest_nice) < 4 Then
+            Return False
+        End If
+
+        idle_time = idle + iowait
+        total_time = user + nice + sys + idle + iowait + irq + softirq + steal
+        Return True
+    End Function
+
+#ElseIf defined(__FB_WIN32__)
+    #include "windows.bi"
+
+    Function get_cpu_times(Byref idle_time As ULongInt, Byref total_time As ULongInt) As Boolean
+        Dim As FILETIME idleTime, kernelTime, userTime
+        If GetSystemTimes(@idleTime, @kernelTime, @userTime) = 0 Then Return False
+
+        idle_time = (CULngInt(idleTime.dwHighDateTime) Shl 32) Or CULngInt(idleTime.dwLowDateTime)
+
+        Dim As ULongInt kernel_time = (CULngInt(kernelTime.dwHighDateTime) Shl 32) Or CULngInt(kernelTime.dwLowDateTime)
+        Dim As ULongInt user_time = (CULngInt(userTime.dwHighDateTime) Shl 32) Or CULngInt(userTime.dwLowDateTime)
+
+        total_time = kernel_time + user_time
+        Return True
+    End Function
+
+#ElseIf defined(__FB_FREEBSD__) Or defined(__FB_OPENBSD__) Or defined(__FB_NETBSD__)
+    #include "crt.bi"
+
+    ' Definitions for sysctl
+    #define CTL_KERN      1
+    #define CTL_HW        6
+    #define KERN_CP_TIME  12
+    #define HW_NCPU       3
+
+    Type cp_time_t
+        user As ULongInt
+        nice As ULongInt
+        sys As ULongInt
+        interrupt As ULongInt
+        idle As ULongInt
+    End Type
+
+    Function get_cpu_times(Byref idle_time As ULongInt, Byref total_time As ULongInt) As Boolean
+        Dim As cp_time_t cp_time
+        Dim As UInteger lon = SizeOf(cp_time)
+        Dim As Integer mib(0 To 1)
+
+        ' Configure MIB for sysctl
+        mib(0) = CTL_KERN
+        mib(1) = KERN_CP_TIME
+
+        ' Getting CPU times using sysctl
+        If sysctl(@mib(0), 2, @cp_time, @lon, 0, 0) <> 0 Then Return False
+
+        idle_time = cp_time.idle
+        total_time = cp_time.user + cp_time.nice + cp_time.sys + cp_time.interrupt + cp_time.idle
+
+        Return True
+    End Function
+
+#ElseIf defined(__FB_DOS__)
+    ' In DOS, there is no direct method to obtain CPU usage
+    ' We will use an approximation based on measuring execution time
+
+    Dim Shared As ULongInt g_last_tick_count = 0
+    Dim Shared As ULongInt g_busy_time = 0
+    Dim Shared As ULongInt g_total_time = 1
+
+    Sub BusyWork(byval duration_ms As Integer)
+        Dim As ULongInt start_time = GetTickCount()
+        Dim As ULongInt end_time = start_time + duration_ms
+        Dim As Double dummy = 0
+
+        While GetTickCount() < end_time
+            For i As Integer = 1 To 1000
+                dummy = dummy + Sin(i) * Cos(i)
+            Next
+        Wend
+    End Sub
+
+    Function get_cpu_times(Byref idle_time As ULongInt, Byref total_time As ULongInt) As Boolean
+        Dim As ULongInt current_tick = GetTickCount()
+
+        If g_last_tick_count = 0 Then
+            g_last_tick_count = current_tick
+            idle_time = 0
+            total_time = 1
+            Return True
+        End If
+
+        Dim As ULongInt elapsed = current_tick - g_last_tick_count
+        g_last_tick_count = current_tick
+
+        Dim As ULongInt busy_start = GetTickCount()
+        BusyWork(10)  ' 10 ms of intensive work
+        Dim As ULongInt busy_elapsed = GetTickCount() - busy_start
+
+        ' Estimate downtime based on how long our baseline operation took
+        Dim As Double load_factor = busy_elapsed / 10.0  ' 1.0 means free CPU, >1.0 means load
+
+        g_busy_time += CULngInt(elapsed * (load_factor - 1) / load_factor)
+        g_total_time += elapsed
+
+        ' Limit counters to avoid overflow
+        If g_total_time > 1000000 Then
+            g_busy_time = g_busy_time / 2
+            g_total_time = g_total_time / 2
+        End If
+
+        idle_time = g_total_time - g_busy_time
+        total_time = g_total_time
+
+        Return True
+    End Function
+
+    Function GetTickCount() As ULongInt
+		Dim As ULong ticks
+		Asm
+			.intel_syntax noprefix
+			xor ah, ah
+			int 0x1A
+			mov [ticks], dx
+			mov [ticks+2], cx
+		End Asm
+        Return ticks * 55           ' 1 tick ˜ 55 ms
+    End Function
+
+#endif
+
+' Variables to store previous states
+Dim As ULongInt prev_idle = 0, prev_total = 0
+Dim As Integer first = 1
+
+Do
+    Dim As ULongInt idle, total
+
+    If Not get_cpu_times(idle, total) Then
+        Print "Error getting CPU times"
+        Exit Do
+    End If
+
+    If first = 1 Then
+        prev_idle = idle
+        prev_total = total
+        first = 0
+    Else
+        Dim As ULongInt idle_delta = idle - prev_idle
+        Dim As ULongInt total_delta = total - prev_total
+
+        If total_delta > 0 Then
+            Dim As Double utilization = 100.0 * (1.0 - CDbl(idle_delta) / CDbl(total_delta))
+            Print Using "CPU: ###.#%"; utilization
+        Else
+            Print "Insufficient data to calculate"
+        End If
+
+        prev_idle = idle
+        prev_total = total
+    End If
+
+    Sleep 1000
+Loop
+
+Sleep

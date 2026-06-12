@@ -1,0 +1,106 @@
+' Interface Visitor (implemented through function pointers)
+Type Visitor
+    visitaLiteral As Sub(Byval literal As Any Ptr)
+    visitaAdicion As Sub(Byval addition As Any Ptr)
+End Type
+
+' Forward declarations
+Type Expression
+    aceptar As Sub(Byval This As Expression Ptr, Byval v As Visitor Ptr)
+    obtenerValor As Function(Byval This As Expression Ptr) As Double
+End Type
+
+Type Literal
+    bbase As Expression
+    valor As Double
+End Type
+
+Type Addition
+    bbase As Expression
+    izda As Expression Ptr
+    dcha As Expression Ptr
+End Type
+
+' Expression Printing Visitor implementation
+Sub visitaLiteral(Byval literal As Any Ptr)
+    Dim lit As Literal Ptr = literal
+    Print lit->valor
+End Sub
+
+Sub visitaAdicion(Byval addition As Any Ptr)
+    Dim anade As Addition Ptr = addition
+    Dim leftValue As Double = anade->izda->obtenerValor(anade->izda)
+    Dim rightValue As Double = anade->dcha->obtenerValor(anade->dcha)
+    Dim sum As Double = leftValue + rightValue
+    Print Using " # + # = #"; leftValue; rightValue; sum
+End Sub
+
+' Literal methods
+Sub aceptarLiteral(Byval This As Expression Ptr, Byval v As Visitor Ptr)
+    v->visitaLiteral(This)
+End Sub
+
+Function obtenerValorLiteral(Byval This As Expression Ptr) As Double
+    Dim lit As Literal Ptr = Cptr(Literal Ptr, This)
+    Return lit->valor
+End Function
+
+Function crearLiteral(Byval value As Double) As Literal Ptr
+    Dim lit As Literal Ptr = New Literal
+    lit->bbase.aceptar = @aceptarLiteral
+    lit->bbase.obtenerValor = @obtenerValorLiteral
+    lit->valor = value
+    Return lit
+End Function
+
+' Addition methods
+Sub adicionAceptar(Byval This As Expression Ptr, Byval v As Visitor Ptr)
+    Dim anade As Addition Ptr = Cptr(Addition Ptr, This)
+    anade->izda->aceptar(anade->izda, v)
+    anade->dcha->aceptar(anade->dcha, v)
+    v->visitaAdicion(This)
+End Sub
+
+Function adicionObtenerValor(Byval This As Expression Ptr) As Double
+    Dim anade As Addition Ptr = Cptr(Addition Ptr, This)
+    Return anade->izda->obtenerValor(anade->izda) + anade->dcha->obtenerValor(anade->dcha)
+End Function
+
+Function adicionCrear(Byval izda As Expression Ptr, Byval dcha As Expression Ptr) As Addition Ptr
+    Dim anade As Addition Ptr = New Addition
+    anade->bbase.aceptar = @adicionAceptar
+    anade->bbase.obtenerValor = @adicionObtenerValor
+    anade->izda = izda
+    anade->dcha = dcha
+    Return anade
+End Function
+
+' Main program
+Sub main()
+    ' Create visitor
+    Dim printingVisitor As Visitor
+    printingVisitor.visitaLiteral = @visitaLiteral
+    printingVisitor.visitaAdicion = @visitaAdicion
+
+    ' Create expression tree: 1 + 2 + 3
+    Dim lit1 As Literal Ptr = crearLiteral(1)
+    Dim lit2 As Literal Ptr = crearLiteral(2)
+    Dim lit3 As Literal Ptr = crearLiteral(3)
+
+    Dim add1 As Addition Ptr = adicionCrear(@lit1->bbase, @lit2->bbase)
+    Dim add2 As Addition Ptr = adicionCrear(@add1->bbase, @lit3->bbase)
+
+    ' Accept visitor
+    add2->bbase.aceptar(@add2->bbase, @printingVisitor)
+
+    ' Cleanup
+    Delete lit1
+    Delete lit2
+    Delete lit3
+    Delete add1
+    Delete add2
+End Sub
+
+main()
+
+Sleep

@@ -1,0 +1,206 @@
+#include once "big_int/big_integer.bi"
+
+Type FreqPair
+    c As String
+    v As Long
+End Type
+
+Type Triple
+    diff As BigInt
+    powr As Integer
+    freq(Any) As FreqPair
+End Type
+
+Function findChar(arr() As FreqPair, c As String) As Integer
+    For i As Integer = Lbound(arr) To Ubound(arr)
+        If arr(i).c = c Then Return i
+    Next
+    Return -1
+End Function
+
+Sub addOrUpdateFreq(arr() As FreqPair, c As String)
+    Dim As Integer idx = findChar(arr(), c)
+    If idx = -1 Then
+        If Lbound(arr) > Ubound(arr) Then
+            Redim arr(0)
+        Else
+            Redim Preserve arr(0 To Ubound(arr) + 1)
+        End If
+        arr(Ubound(arr)).c = c
+        arr(Ubound(arr)).v = 1
+    Else
+        arr(idx).v += 1
+    End If
+End Sub
+
+Sub cumulativeFreq(freq() As FreqPair, cf() As FreqPair)
+    Dim As Long total = 0
+    Redim cf(-1 To -1)
+    For i As Integer = 0 To 255
+        Dim As String c = Chr(i)
+        Dim As Integer idx = findChar(freq(), c)
+        If idx <> -1 Then
+            If Lbound(cf) > Ubound(cf) Then
+                Redim cf(0)
+            Else
+                Redim Preserve cf(0 To Ubound(cf) + 1)
+            End If
+            cf(Ubound(cf)).c = c
+            cf(Ubound(cf)).v = total
+            total += freq(idx).v
+        End If
+    Next
+End Sub
+
+Function sumFreq(freq() As FreqPair) As Long
+    Dim As Long s = 0
+    For i As Integer = Lbound(freq) To Ubound(freq)
+        s += freq(i).v
+    Next
+    Return s
+End Function
+
+Function getFreq(freq() As FreqPair, c As String) As Long
+    Dim As Integer idx = findChar(freq(), c)
+    If idx <> -1 Then Return freq(idx).v
+    Return 0
+End Function
+
+Function getCF(cf() As FreqPair, c As String) As Long
+    Dim As Integer idx = findChar(cf(), c)
+    If idx <> -1 Then Return cf(idx).v
+    Return 0
+End Function
+
+Function BigInt_Pow(bbase As BigInt, expo As Integer) As BigInt
+    Dim As BigInt res = 1
+    For i As Integer = 1 To expo
+        res *= bbase
+    Next
+    Return res
+End Function
+
+Function arithmeticCoding(cad As String, radix As Long) As Triple
+    Dim As Integer i
+    Dim As FreqPair freq()  ' The frequency of characters
+    Redim freq(-1 To -1)
+    For i = 1 To Len(cad)
+        addOrUpdateFreq(freq(), Mid(cad, i, 1))
+    Next
+
+    Dim As FreqPair cf()  ' The cumulative frequency
+    Redim cf(-1 To -1)
+    cumulativeFreq(freq(), cf())
+
+    Dim As BigInt bbase = Len(cad)  ' Base
+    Dim As BigInt lower = 0         ' Lower bound
+    Dim As BigInt pf = 1            ' Product of all frequencies
+
+    ' Each term is multiplied by the product of the
+    ' frequencies of all previously occuring symbols
+    For i = 1 To Len(cad)
+        Dim As String c = Mid(cad, i, 1)
+        Dim As Long x = getCF(cf(), c)
+        lower = lower * bbase + x * pf
+        pf *= getFreq(freq(), c)
+    Next
+
+    Dim As BigInt upper = lower + pf  ' Upper bound
+    Dim As Integer powr = 0
+    Dim As BigInt bigRadix = radix
+    Dim As BigInt tmpPf = pf
+
+    While tmpPf > 0
+        tmpPf \= bigRadix
+        If tmpPf = 0 Then Exit While
+        powr += 1
+    Wend
+
+    Dim As BigInt diff = (upper - 1) \ BigInt_Pow(bigRadix, powr)
+
+    Dim As Triple result
+    result.diff = diff
+    result.powr = powr
+
+    Dim As Integer n = Ubound(freq) - Lbound(freq) + 1
+    Redim result.freq(Lbound(freq) To Ubound(freq))
+    For i = Lbound(freq) To Ubound(freq)
+        result.freq(i) = freq(i)
+    Next
+
+    Return result
+End Function
+
+Function arithmeticDecoding(num As BigInt, radix As Long, pwr As Integer, freq() As FreqPair) As String
+    Dim As BigInt pow = BigInt_Pow(radix, pwr)
+    Dim As BigInt enc = num * pow
+    Dim As Long bbase = sumFreq(freq())
+
+    Dim As FreqPair cf()  ' Create the cumulative frequency table
+    Redim cf(-1 To -1)
+    cumulativeFreq(freq(), cf())
+
+    Dim As String dict()  ' Create the dictionary
+    Redim dict(-1 To -1)
+    Dim As Long posi()
+    Redim posi(-1 To -1)
+    For i As Integer = Lbound(cf) To Ubound(cf)
+        If Lbound(dict) > Ubound(dict) Then
+            Redim dict(0)
+            Redim posi(0)
+        Else
+            Redim Preserve dict(0 To Ubound(dict) + 1)
+            Redim Preserve posi(0 To Ubound(posi) + 1)
+        End If
+        dict(Ubound(dict)) = cf(i).c
+        posi(Ubound(posi)) = cf(i).v
+    Next
+
+    Dim As Long lchar = -1  ' Fill the gaps in the dictionary
+    Dim As String dictFull(0 To bbase - 1)
+    For i As Long = 0 To bbase - 1
+        dictFull(i) = ""
+        Dim As Boolean found = False
+        For j As Integer = Lbound(posi) To Ubound(posi)
+            If posi(j) = i Then
+                dictFull(i) = dict(j)
+                lchar = Asc(dict(j))
+                found = True
+                Exit For
+            End If
+        Next
+        If Not found And lchar <> -1 Then dictFull(i) = Chr(lchar)
+    Next
+
+    ' Decode the input number
+    Dim As String decoded = ""
+    Dim As BigInt bigBase = bbase
+    For i As Long = bbase - 1 To 0 Step -1
+        Dim As BigInt pow_i = BigInt_Pow(bigBase, i)
+        Dim As BigInt div_val = enc \ pow_i
+        Dim As Long div
+        div = div_val
+        Dim As String c = dictFull(div)
+        Dim As Long fv = getFreq(freq(), c)
+        Dim As Long cv = getCF(cf(), c)
+        Dim As BigInt diff = enc - pow_i * cv
+        enc = diff \ fv
+        decoded += c
+    Next
+
+    Return decoded  ' Return the decoded ouput
+End Function
+
+' Main program
+Dim As Long radix = 10
+Dim As String cadenas(1 To 4) = {"DABDDB", "DABDDBBDDBA", "ABRACADABRA", "TOBEORNOTTOBEORTOBEORNOT"}
+
+For i As Integer = 1 To Ubound(cadenas)
+    Dim As String St = cadenas(i)
+    Dim As Triple encoded = arithmeticCoding(St, radix)
+    Dim As String dec = arithmeticDecoding(encoded.diff, radix, encoded.powr, encoded.freq())
+    Print Using "\                       \ => \                  \ * ##^##"; St; Str(encoded.diff); radix; encoded.powr
+    If St <> dec Then Print !"\tHowever that is incorrect!"
+Next
+
+Sleep

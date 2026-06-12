@@ -1,0 +1,5 @@
+text <- scan("Rodgers.txt", character(), sep = "\n")
+print(text)
+reversed <- rev(text)
+print(reversed)
+write(reversed, "SaveTheOutput.txt")

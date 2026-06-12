@@ -1,0 +1,55 @@
+-- demo\rosetta\Floyd-Steinberg_dithering.exw
+without js  -- read_ppm()
+requires("1.0.6")
+include theGUI.e
+
+function diff(sequence c1, c2)
+    return sum(sq_abs(sq_sub(c1,c2)))
+end function
+
+function nearest_color(sequence c, palette)
+    sequence diffs = apply(true,diff,{{c},palette})
+    return palette[smallest(diffs,true)]
+end function
+
+function floyd_steinberg(sequence pixbuf)
+    integer w = length(pixbuf[1]), h = length(pixbuf)
+    sequence res = apply(pixbuf,to_rgb),
+             palette = {{  0,  0,  0},{  0,255,255},
+                        {  0,  0,255},{255,  0,255},
+                        {  0,255,  0},{255,255,  0},
+                        {255,  0,  0},{255,255,255}}
+    for y=1 to h do
+        for x=1 to w do
+            sequence oldrgb = res[y,x],
+                     newrgb = nearest_color(oldrgb,palette),
+                     err = sq_sub(oldrgb,newrgb)
+            res[y,x] = rgba(newrgb)
+            for dyxm in {{0,1,7},{1,-1,3},{1,0,5},{1,1,1}} do
+                integer {dy,dx,m} = dyxm,
+                         ty = y+dy, tx = x+dx
+                if tx<=w and tx>=1 and ty<=h then
+                    res[ty,tx] = sq_add(res[ty,tx],sq_mul(err,m/16))
+                end if
+            end for
+        end for
+    end for
+    gdm new_img = gImage_from_Pixbuf(res)
+    return new_img
+end function
+
+include ppm.e
+sequence pixbuf = read_ppm("Quantum_frog.ppm")
+-- (^^ ditto Wren|Pluto/Julia outputs, if you have 'em)
+gdm image1 = gImage_from_Pixbuf(pixbuf),
+    image2 = floyd_steinberg(pixbuf)
+integer iw = length(pixbuf[1]), ih = length(pixbuf)
+
+procedure redraw(gdx canvas)
+    gDrawImage(image1,canvas)
+    gDrawImage(image2,canvas,iw)
+end procedure
+
+gdx canvas = gCanvas(redraw,"==",{{"SIZE",{iw*2,ih}}}),
+    dialog = gDialog(canvas,"Floyd-Steinberg dithering")
+gMainLoop(dialog)

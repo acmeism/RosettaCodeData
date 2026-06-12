@@ -1,0 +1,22 @@
+DECLARE FUNCTION isPrime% (ValorEval!)
+
+FOR n = 1 TO 200
+    IF isPrime(n ^ 3 + 2) THEN PRINT n, n ^ 3 + 2
+NEXT n
+
+FUNCTION isPrime% (ValorEval!)
+    STATIC i AS INTEGER
+    IF ValorEval = 2 THEN
+        isPrime = 1
+    ELSEIF ValorEval <= 1 OR ValorEval MOD 2 = 0 THEN
+        isPrime = 0
+    ELSE
+        isPrime = 1
+        FOR i = 3 TO INT(SQR(ValorEval)) STEP 2
+            IF ValorEval MOD i = 0 THEN
+                isPrime = 0
+                EXIT FUNCTION
+            END IF
+        NEXT i
+    END IF
+END FUNCTION

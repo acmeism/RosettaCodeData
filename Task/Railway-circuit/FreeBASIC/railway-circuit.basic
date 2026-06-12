@@ -1,0 +1,184 @@
+#include "crt.bi"
+
+Enum TrackDirection
+    dcha = 1
+    izda = -1
+    directo = 0
+End Enum
+
+Type PermutationsGen
+    numPositions As Integer
+    choices(Any) As Integer
+    indices(Any) As Integer
+    sequence(Any) As Integer
+    carry As Integer
+End Type
+
+' Normalizes a sequence by returning its minimum rotation
+Function normalize(tracks() As Integer, size As Integer) As String
+    Dim As String best, current
+    Dim As Integer i, shift
+
+    For i = 0 To size - 1
+        current &= Ltrim(Str(tracks(i)))
+    Next
+    best = current
+
+    ' try all rotations
+    For shift = 1 To size - 1
+        current = ""
+        For i = 0 To size - 1
+            current &= Ltrim(Str(tracks((i + shift) Mod size)))
+        Next
+        If current < best Then best = current
+    Next
+
+    Return best
+End Function
+
+' It also normalizes by reflection (mirror symmetry)
+Function normalizeMirror(tracks() As Integer, size As Integer) As String
+    Dim As String best = normalize(tracks(), size)
+
+    Dim As Integer inv(size - 1)
+    For i As Integer = 0 To size - 1
+        inv(i) = -tracks(size - 1 - i)
+    Next
+
+    Dim As String candidate = normalize(inv(), size)
+    If candidate < best Then best = candidate
+
+    Return best
+End Function
+
+' Check geometric closure (position and angle)
+Function fullCircleRight(tracks() As Integer, size As Integer) As Boolean
+    Const As Double pi = 3.141592653589793
+    Dim As Double angle = 0, x = 0, y = 0, rad
+
+    For i As Integer = 0 To size - 1
+        Select Case tracks(i)
+        Case dcha
+            angle += 30
+        Case izda
+            angle -= 30
+        End Select
+
+        rad = angle * pi / 180.0
+        x += Cos(rad)
+        y += Sin(rad)
+    Next
+
+    ' Only clockwise directions are accepted (net angle >= 0)
+    If angle < 0 Then Return False
+
+    If Abs(angle Mod 360) > 0.001 Then Return False
+    If (Abs(x) > 0.001) Or (Abs(y) > 0.001) Then Return False
+
+    Return True
+End Function
+
+Function fullCircleStraight(tracks() As Integer, size As Integer, nStraight As Integer) As Boolean
+    Dim As Integer cnt = 0
+    For i As Integer = 0 To size - 1
+        If tracks(i) = directo Then cnt += 1
+    Next
+    Return (cnt = nStraight)
+End Function
+
+Sub circuits(nCurved As Integer, nStraight As Integer)
+    If ((nCurved + nStraight - 12) Mod 4) <> 0 Then
+        Print "Input must be 12 + k * 4"
+        Return
+    End If
+
+    Dim As Integer trackTypes(2)
+    Dim As Integer totalTracks = nCurved + nStraight
+    Dim As PermutationsGen gen
+    Dim As Integer i, numTypes
+
+    If nStraight = 0 Then
+        trackTypes(0) = dcha : trackTypes(1) = izda
+        numTypes = 2
+    Elseif nStraight = 12 Then
+        trackTypes(0) = dcha : trackTypes(1) = directo
+        numTypes = 2
+    Else
+        trackTypes(0) = dcha : trackTypes(1) = izda : trackTypes(2) = directo
+        numTypes = 3
+    End If
+
+    With gen
+        .numPositions = totalTracks
+        Redim .choices(numTypes - 1)
+        Redim .indices(totalTracks - 1)
+        Redim .sequence(totalTracks - 1)
+
+        For i = 0 To numTypes - 1
+            .choices(i) = trackTypes(i)
+        Next
+
+        For i = 0 To totalTracks - 1
+            .indices(i) = 0
+            .sequence(i) = .choices(0)
+        Next
+    End With
+
+    Print Using "Solutions for C&,&:"; nCurved; nStraight
+
+    Dim As Integer solutions = 0, normCount = 0
+    Dim As Boolean continue_loop = True
+    Dim As String norms()
+
+    While continue_loop
+        If fullCircleStraight(gen.sequence(), totalTracks, nStraight) Then
+            If fullCircleRight(gen.sequence(), totalTracks) Then
+                Dim norm As String = normalize(gen.sequence(), totalTracks)
+
+                ' Evitar rotaciones duplicadas
+                Dim As Boolean repe = False
+                For i = 0 To normCount - 1
+                    If norms(i) = norm Then
+                        repe = True
+                        Exit For
+                    End If
+                Next
+
+                If Not repe Then
+                    Redim Preserve norms(normCount)
+                    norms(normCount) = norm
+                    normCount += 1
+
+                    If normCount <= 6 Then
+                        For i = 0 To totalTracks - 1
+                            Print Using " ##"; gen.sequence(i);
+                        Next
+                        Print
+                    End If
+                End If
+            End If
+        End If
+
+        continue_loop = False
+        For i = totalTracks - 1 To 0 Step -1
+            gen.indices(i) += 1
+            If gen.indices(i) < numTypes Then
+                gen.sequence(i) = gen.choices(gen.indices(i))
+                continue_loop = True
+                Exit For
+            End If
+            gen.indices(i) = 0
+            gen.sequence(i) = gen.choices(0)
+        Next
+    Wend
+
+    Print normCount; !" solution(s) found\n"
+End Sub
+
+' Main program
+For n As Integer = 12 To 28 Step 4
+    circuits(n, 0)
+Next
+circuits(12, 4)
+
+Sleep

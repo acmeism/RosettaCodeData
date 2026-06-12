@@ -1,0 +1,73 @@
+#define PI  4 * Atn(1)
+
+Dim Shared As Double freqs(7) = {261.6, 293.6, 329.6, 349.2, 392.0, 440.0, 493.9, 523.3}
+Dim Shared As String*3 notes(7) = {"Doh", "Ray", "Mee", "Fah", "Soh", "Lah", "Tee", "doh"}
+
+Function getNote(freq As Double) As String
+    Dim n As Integer = Ubound(freqs) + 1
+    Dim index As Integer = n
+    For i As Integer = 0 To Ubound(freqs)
+        If freq <= freqs(i) Then
+            index = i
+            Exit For
+        End If
+    Next
+
+    Select Case index
+    Case 0
+        Return "Doh-"
+    Case n
+        Return "doh+"
+    Case Else
+        Return Iif((freqs(index) - freq <= freq - freqs(index - 1)), notes(index) & "-", notes(index - 1) & "+")
+    End Select
+End Function
+
+Dim As Integer ff = Freefile()
+Dim As String filename = "musical_scale.wav"
+
+Open filename For Binary Access Read As #ff
+If Err > 0 Then Print "Error opening file" : Sleep : End
+
+Dim As String hdr = Space(44)
+Get #ff, , hdr
+
+' Check header parameters
+Dim As Integer sampleRate = Cvl(Mid(hdr, 25, 4))
+Print "Sample Rate    :"; sampleRate
+
+Dim As Integer dataLength = Cvl(Mid(hdr, 41, 4))
+Dim As Integer duration = dataLength \ sampleRate
+Print "Duration       :"; duration
+
+Dim As Double freq_sum = 0.0
+Dim As Double sampleRateF = sampleRate
+Dim As String sample_data = Space(sampleRate)
+Dim As Integer samples_per_chunk = 20
+Print "Bytes examined :"; samples_per_chunk; " per sample"
+
+For j As Integer = 0 To duration - 1
+    Get #ff, , sample_data
+    For i As Integer = 1 To samples_per_chunk
+        Dim As Double sample_value = Asc(Mid(sample_data, i, 1))
+        Dim As Double freq = (sample_value * sampleRateF) / (260 * (PI * 2))
+        freq_sum += freq
+    Next
+Next
+
+Dim As Double computed_freq = freq_sum / (duration * samples_per_chunk)
+Print
+Print Using "Computed average frequency = ###.# Hz ("; computed_freq;
+Print getNote(computed_freq); ")"
+
+freq_sum = 0.0
+For i As Integer = 0 To Ubound(freqs)
+    freq_sum += freqs(i)
+Next
+
+Dim As Double actual_avg = freq_sum / (Ubound(freqs) + 1)
+Print "Actual average frequency   ="; actual_avg; " Hz ("; getNote(actual_avg); ")"
+
+Close #ff
+
+Sleep

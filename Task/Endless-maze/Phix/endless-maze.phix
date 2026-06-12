@@ -1,0 +1,130 @@
+-- demo\rosetta\text_maze.exw
+with javascript_semantics
+requires("1.0.6") -- (not yet shipped)
+include theGUI.e
+sequence x, y, e
+integer pos, xp, yp, offx = 0, offy = 0
+
+procedure init()
+    xp = 12
+    yp = 12
+    x = {xp}
+    y = {yp}
+    e = {0,0,0}
+    for n=1 to 4 do e &= rand(2)=2 end for
+    pos = 1
+end procedure
+init()
+
+function create_xpms()
+    string hdr = """
+15 15 2 1
+. c None
+* c #FF0000
+""",
+    pixels = """
+...............
+.......*.......
+......***......
+.....*****.....
+....*******....
+...*********...
+..***********..
+.....*****.....
+.....*****.....
+.....*****.....
+.....*****.....
+.....*****.....
+.....*****.....
+.....*****.....
+...............
+"""
+    sequence res = {gImage_from_XPM(hdr&pixels)}
+    for i=1 to 3 do
+        -- rotate 90 degrees:
+        sequence p = split(pixels,'\n'), -- (corrupt not)
+                 q = split(pixels,'\n')  --  (same size)
+        for r=1 to 15 do
+            for c=1 to 15 do     --   put each row in
+                q[c,-r] = p[r,c] -- an ascending column
+            end for
+        end for
+        pixels = join(q,'\n')
+        res &= gImage_from_XPM(hdr&pixels)
+    end for
+    return res
+end function
+constant xpm = create_xpms()
+
+integer f = 1
+
+procedure redraw(gdx canvas)
+    integer xp = x[pos],
+            yp = y[pos]
+    if xp+offx<0 then offx += 1 end if
+    if yp+offy<0 then offy += 1 end if
+    if xp+offx>=25 then offx -= 1 end if
+    if yp+offy>=25 then offy -= 1 end if
+    gSetAttribute(canvas,"FGCLR",TG_WHITE)
+    for i=1 to length(x) do
+        integer rx = 24*x[i]+12+offx*24,
+                ry = 24*y[i]+12+offy*24
+        gDrawRect(canvas, rx-10, rx+10, ry-10, ry+10, true)
+        if e[4*i+0] then gDrawCircle(canvas,rx+10,ry,6,true) end if
+        if e[4*i+2] then gDrawCircle(canvas,rx-10,ry,6,true) end if
+        if e[4*i+1] then gDrawCircle(canvas,rx,ry+10,6,true) end if
+        if e[4*i+3] then gDrawCircle(canvas,rx,ry-10,6,true) end if
+    end for
+    integer px = 24*xp+5+offx*24,
+            py = 24*yp+5+offy*24
+    gDrawImage(xpm[f],canvas,px,py)
+    if length(x)=1 then
+       gDrawText(canvas,5,12,"arrow keys to navigate")
+       gDrawText(canvas,5,28,"n for new maze")
+    end if
+end procedure
+
+function key_cb(gdx canvas, integer c)
+    integer d = -1
+    switch c do
+        case VK_UP:     d = rmdr(f+2,4)
+        case VK_LEFT:   d = rmdr(f+1,4)
+        case VK_DOWN:   d = rmdr(f+0,4)
+        case VK_RIGHT:  d = rmdr(f+3,4)
+        case 'n','N': init(); gRedraw(canvas)
+    end switch
+    if d!=-1 and e[4*pos+d]=1 then
+        // for relative directions:
+        f = {2,3,4,1}[d+1]
+        if even(d) then xp += 1-d
+                   else yp += 2-d end if
+        pos = length(x)+1
+        for n=1 to length(x) do
+            if x[n]=xp and y[n]=yp then
+                pos = n
+                exit
+            end if
+        end for
+        if pos>length(x) then
+            x &= xp
+            y &= yp
+            for n=1 to 4 do e &= rand(2)=2 end for
+            integer px = x[pos], py = y[pos]
+            for n,xn in x do
+                integer yn = y[n]
+                if    xn=px+1 and yn = py then e[4*pos+0] = e[4*n+2]
+                elsif xn=px and yn = py+1 then e[4*pos+1] = e[4*n+3]
+                elsif xn=px-1 and yn = py then e[4*pos+2] = e[4*n+0]
+                elsif xn=px and yn = py-1 then e[4*pos+3] = e[4*n+1]
+                end if
+            end for
+        end if
+        gRedraw(canvas)
+    end if
+    return TG_DEFAULT
+end function
+
+gdx canvas = gCanvas(redraw,"SIZE=601x601, BGCLR=TG_BLACK"),
+    dialog = gDialog(canvas,"Text Maze")
+gSetHandler(canvas, `KEY`, key_cb);
+gMainLoop(dialog)

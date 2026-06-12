@@ -1,0 +1,115 @@
+--
+-- demo/Countdown.exw
+--
+-- solves the numbers game from countdown.
+--
+with javascript_semantics
+constant n = 6,
+         ops = "+-*/"
+enum ADD, SUB, MUL, DIV
+
+sequence chosen = repeat(0,n), -- original numbers <-> partial sums
+     expression = repeat(0,n), -- the operations tried so far
+       solution -- (a/best snapshot of expression)
+
+int len,    -- n+1 means no solution yet found
+    maxlev, -- recursion limit (5, drops as solns found)
+    near,   -- nearest answer (in solution) out by this
+    lenn,   -- length of ""         ""
+    target
+
+procedure countdown(int level=1)
+--
+-- Recursive search - takes two numbers, performs an op (storing result), checks
+-- for target value, and calls itself. All solutions are stored, to find shortest,
+-- so that, for example, 100+1 is chosen instead of 100+(75/25)-1-1.
+-- Optimizations are made to ensure commutative operations are only performed one
+-- way round, division is only performed when no remainder, and */1 are skipped.
+--
+    for i=1 to n do
+        integer sti = chosen[i] -- speedwise/save
+        if sti!=0 then
+            for j=1 to n do
+                integer stj = chosen[j] -- ""
+                if i!=j and stj!=0 then
+                    for operation=ADD to DIV do
+                        if (operation<DIV or mod(sti,stj)=0)
+                        and (operation<MUL or stj!=1)
+                        and (sti>=stj) then
+                            -- worth doing...
+                            integer ci = sti
+                            switch operation do
+                                case ADD: ci += stj
+                                case SUB: ci -= stj
+                                case MUL: ci *= stj
+                                case DIV: ci /= stj
+                            end switch
+                            chosen[i] = ci
+                            chosen[j] = 0
+                            /* store operands and operator */
+                            expression[level] = {sti,ops[operation],stj,ci}
+
+                            -- check for solution
+                            if ci==target then
+                                if level<len then
+                                    /* solution is shortest so far - store it */
+                                    len = level
+                                    maxlev = level-1
+                                    near = 0
+                                    solution = deep_copy(expression)
+                                end if
+                            else
+                                --store closest?
+                                integer offby = abs(target-ci)
+                                if offby<near then
+                                    near = offby
+                                    lenn = level
+                                    solution = deep_copy(expression)
+                                end if
+                                -- if not at required level, recurse
+                                if level<maxlev then
+                                    countdown(level+1)
+                                end if
+                            end if
+                            -- undo
+                            chosen[i] = sti
+                            chosen[j] = stj
+                        end if
+                    end for
+                end if
+            end for
+        end if
+    end for
+end procedure
+
+procedure test(sequence list, int dest)
+    len = n+1
+    maxlev = 5
+    near = dest
+    target = dest
+    chosen = deep_copy(list)
+    countdown()
+    /* process solution into printable form */
+    string off = "exact"
+    if len=n+1 then
+        off = sprintf("off by %d",near)
+        len = lenn
+    end if
+    string soln = join(apply(true,sprintf,{{"%d%c%d=%d"},solution[1..len]}),", ")
+    printf(1,"Target %d from %18v: %s (%s)\n",{dest,list,soln,off})
+end procedure
+
+atom t0 = time()
+test({75,50,25,100,8,2},737)
+test({3,6,25,50,75,100},952)
+test({100,75,50,25,6,3},952)
+test({50,100,4,2,2,4},203)
+test({25,4,9,2,3,10},465)
+test({9,8,10,5,9,7},241)
+test({3,7,6,2,1,7},824)
+test({75,50,25,100,8,2},125)
+test({8,4,4,6,8,9},594)
+test({2,4,9,10,3,5},363)
+--test(shuffle(tagset(10)&tagset(10)&tagstart(25,4,25))[1..6],100+rand(899))
+?time()-t0
+wait_key()

@@ -1,0 +1,13 @@
+(ql:quickload "screamer")
+(in-package :screamer-user)
+(defun special-pythagorean-triple (sum)
+  (let* ((a (an-integer-between 1 (floor sum 3)))
+         (b (an-integer-between (1+ a) (floor (- sum a) 2)))
+         (c (- sum a b)))
+    (when (< c b) (fail))
+    (if (= (* c c) (+ (* a a) (* b b)))
+        (list a b c (* a b c))
+        (fail))))
+
+(print (one-value (special-pythagorean-triple 1000)))
+;; => (200 375 425 31875000)

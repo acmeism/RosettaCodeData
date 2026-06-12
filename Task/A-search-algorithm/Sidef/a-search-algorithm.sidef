@@ -1,0 +1,105 @@
+class AStarGraph {
+
+    has barriers = [
+        [2,4],[2,5],[2,6],[3,6],[4,6],[5,6],[5,5],[5,4],[5,3],[5,2],[4,2],[3,2]
+    ]
+
+    method heuristic(start, goal) {
+        var (D1 = 1, D2 = 1)
+        var dx = abs(start[0] - goal[0])
+        var dy = abs(start[1] - goal[1])
+        (D1 * (dx + dy)) + ((D2 - 2*D1) * Math.min(dx, dy))
+    }
+
+    method get_vertex_neighbours(pos) {
+        gather {
+            for dx, dy in [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]] {
+                var x2 = (pos[0] + dx)
+                var y2 = (pos[1] + dy)
+                (x2<0 || x2>7 || y2<0 || y2>7) && next
+                take([x2, y2])
+            }
+        }
+    }
+
+    method move_cost(_a, b) {
+        barriers.contains(b) ? 100 : 1
+    }
+}
+
+func AStarSearch(start, end, graph) {
+
+    var G = Hash()
+    var F = Hash()
+
+    G{start} = 0
+    F{start} = graph.heuristic(start, end)
+
+    var closedVertices = []
+    var openVertices = [start]
+    var cameFrom = Hash()
+
+    while (openVertices) {
+
+        var current = nil
+        var currentFscore = Inf
+
+        for pos in openVertices {
+            if (F{pos} < currentFscore) {
+                currentFscore = F{pos}
+                current = pos
+            }
+        }
+
+        if (current == end) {
+            var path = [current]
+            while (cameFrom.contains(current)) {
+                current = cameFrom{current}
+                path << current
+            }
+            path.flip!
+            return (path, F{end})
+        }
+
+        openVertices.remove(current)
+        closedVertices.append(current)
+
+        for neighbour in (graph.get_vertex_neighbours(current)) {
+            if (closedVertices.contains(neighbour)) {
+                next
+            }
+            var candidateG = (G{current} + graph.move_cost(current, neighbour))
+
+            if (!openVertices.contains(neighbour)) {
+                openVertices.append(neighbour)
+            }
+            elsif (candidateG >= G{neighbour}) {
+                next
+            }
+
+            cameFrom{neighbour} = current
+            G{neighbour} = candidateG
+            var H = graph.heuristic(neighbour, end)
+            F{neighbour} = (G{neighbour} + H)
+        }
+    }
+
+    die "A* failed to find a solution"
+}
+
+var graph = AStarGraph()
+var (route, cost) = AStarSearch([0,0], [7,7], graph)
+
+var w = 10
+var h = 10
+
+var grid = h.of { w.of { "." } }
+for y in (^h) { grid[y][0] = "█"; grid[y][-1] = "█" }
+for x in (^w) { grid[0][x] = "█"; grid[-1][x] = "█" }
+
+for x,y in (graph.barriers) { grid[x+1][y+1] = "█" }
+for x,y in (route)          { grid[x+1][y+1] = "x" }
+
+grid.each { .join.say }
+
+say "Path cost #{cost}: #{route}"

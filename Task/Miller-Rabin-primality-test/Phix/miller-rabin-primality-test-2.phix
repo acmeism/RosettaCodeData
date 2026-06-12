@@ -1,0 +1,102 @@
+-- this is transpiled (then manually copied) to mpz_prime() in mpfr.js:
+mpz modp47 = NULL, w
+sequence witness_ranges
+function mpz_prime_mr(mpz p, integer k = 10)
+    -- deterministic to 3,317,044,064,679,887,385,961,981
+    constant primes = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47}
+    if mpz_cmp_si(p,primes[$])<=0 then
+        return find(mpz_get_integer(p),primes)
+    end if
+    if modp47=NULL then
+        modp47 = mpz_init("614_889_782_588_491_410") -- === product(primes), largest < 2^64
+        w = mpz_init()
+        -- Best known deterministic witnesses for given range and set of bases
+        -- https://miller-rabin.appspot.com/
+        -- https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test
+        witness_ranges = {{"341_531",{"9345883071009581737"}},
+                          {"1_050_535_501",{"336781006125",
+                                            "9639812373923155"}},
+                          {"350_269_456_337",{"4230279247111683200",
+                                              "14694767155120705706",
+                                              "16641139526367750375"}},
+                          {"55_245_642_489_451",{"2", "141889084524735",
+                                                 "1199124725622454117",
+                                                 "11096072698276303650"}},
+                          {"7_999_252_175_582_851",{"2", "4130806001517",
+                                                    "149795463772692060",
+                                                    "186635894390467037",
+                                                    "3967304179347715805"}},
+                          {"585_226_005_592_931_977",{"2", "123635709730000",
+                                                      "9233062284813009",
+                                                      "43835965440333360",
+                                                      "761179012939631437",
+                                                      "1263739024124850375"}},
+                          {"18_446_744_073_709_551_615",{"2", "325", "9375",
+                                                         "28178", "450775",
+                                                         "9780504", "1795265022"}},
+                          {"318_665_857_834_031_151_167_461",{"2", "3", "5", "7", "11",
+                                                              "13", "17", "19", "23",
+                                                              "29", "31", "37"}},
+                          {"3_317_044_064_679_887_385_961_981",{"2", "3", "5", "7", "11",
+                                                                "13", "17", "19", "23",
+                                                                "29", "31", "37", "41"}}}
+        for i=1 to length(witness_ranges) do
+            witness_ranges[i][1] = mpz_init(witness_ranges[i][1])
+            for j=1 to length(witness_ranges[i][2]) do
+                witness_ranges[i][2][j] = mpz_init(witness_ranges[i][2][j])
+            end for
+        end for
+    end if
+    mpz_gcd(w,p,modp47)
+    if mpz_cmp_si(w,1)!=0 then
+        return false    -- eliminates 86.2% of all integers
+    end if
+    --
+    -- Choose input witness bases:
+    --
+    sequence witnesses
+    if mpz_cmp(p,witness_ranges[$][1])>=0 then
+        witnesses = repeat(0,k)
+        for i=1 to k do
+            mpz a = mpz_init()
+            mpz_sub_ui(a, p, 2)
+            mpz_rand(a,a)       -- a := 0..a-1 (cf rand(n) yields 1..n)
+            mpz_add_ui(a, a, 2)
+            witnesses[i] = a
+        end for
+    else
+        for i=1 to length(witness_ranges) do
+            if mpz_cmp(p,witness_ranges[i][1])<0 then
+                witnesses = witness_ranges[i][2]
+                exit
+            end if
+        end for
+    end if
+    mpz d = mpz_init()
+    mpz_sub_ui(d,p,1)
+    mpz nm1 = mpz_init_set(d)
+--    d >>= 4 while (d & 0xf) == 0                  # suck out factors of 2
+--    (d >>= (d & 3)^2; d >>= (d & 1)^1) if d.even? # 4 bits at a time
+    while mpz_even(d) do
+        mpz_fdiv_q_2exp(d, d, 1)
+    end while
+
+    for i=1 to length(witnesses) do
+        mpz b = witnesses[i]
+        if not mpz_divisible_p(b,p) then -- skip multiples of input
+            mpz s = mpz_init_set(d),
+                y = mpz_init()
+            mpz_powm(y, b, d, p)        -- y := b^d % p
+            while mpz_cmp_si(y,1)!=0
+              and mpz_cmp(y,nm1)!=0
+              and mpz_cmp(s,nm1)!=0 do
+                mpz_powm_ui(y, y, 2, p)     -- y := y^2 mod p
+                mpz_mul_2exp(s, s, 1)       -- s << 1
+            end while
+            if mpz_cmp(y,nm1)!=0 then
+                if mpz_even(s) then return false end if
+            end if
+        end if
+      end for
+      return true
+end function

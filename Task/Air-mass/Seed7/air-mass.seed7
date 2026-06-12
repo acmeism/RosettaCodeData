@@ -1,0 +1,60 @@
+$ include "seed7_05.s7i";
+  include "float.s7i";
+  include "math.s7i";
+
+const float: DEG is 0.017453292519943295769236907684886127134; #degrees to radians
+const float: RE is 6371000.0;   #Earth radius in meters
+const float: dd is 0.001;       #integrate in this fraction of the distance already covered
+const float: FIN is 10000000.0; #integrate only to a height of 10000km, effectively infinity
+
+const func float: rho (in float: a) is
+  #the density of air as a function of height above sea level
+  return exp(-a / 8500.0);
+
+const func float: height (in float: a, in float: z, in float: d) is func
+  #a is altitude of observer
+  #z is zenith angle (in degrees)
+  #d is distance along line of sight
+  result
+    var float: r is 0.0;
+  local
+    var float: AA is 0.0;
+    var float: HH is 0.0;
+  begin
+    AA := RE + a;
+    HH := sqrt( AA ** 2.0 + d ** 2.0 - 2.0 * d * AA * cos((180.0 - z) * DEG) );
+    r := HH - RE;
+  end func;
+
+const func float: columnDensity (in float: a, in float: z) is func
+  #integrates density along line of sight
+  result
+    var float: sum is 0.0;
+  local
+    var float: d is 0.0;
+    var float: delta is 0.0;
+  begin
+    while d < FIN do
+      delta := max(dd, dd * d); #adaptive step size to avoid taking it forever
+      sum +:= rho(height(a, z, d + 0.5 * delta)) * delta;
+      d +:= delta;
+    end while;
+  end func;
+
+const func float: airmass (in float: a, in float: z) is
+  return columnDensity(a, z) / columnDensity(a, 0.0);
+
+const proc: main is func
+  local
+    var integer: zz is 0;
+    var float: z is 0.0;
+  begin
+    writeln("Angle     0 m              13700 m");
+    writeln("------------------------------------");
+    for zz range 0 to 90 step 5 do
+      z := flt(zz);
+      write(z lpad 4);
+      write(airmass(0.0, z) digits 8 lpad 15);
+      writeln(airmass(13700.0, z) digits 8 lpad 17);
+    end for;
+  end func;

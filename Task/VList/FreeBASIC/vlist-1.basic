@@ -1,0 +1,628 @@
+'********************************************************************
+' FBVLIST, Virtual ListBox custom control for FreeBasic
+'********************************************************************
+' Public Domain by Borje Hagsten, December 2000
+'
+' Modified for Freebasic by James Klutho
+'--------------------------------------------------------------------
+'  VL_REFRESH      - to refresh control with new array data
+' wParam = Not used, should be 0.
+' lParam = Not used, should be 0.
+' Returns: Nothing, 0
+' Example: SendMessage hWndCtrl,  VLB_REFRESH, 0, 0
+'--------------------------------------------------------------------
+'  VL_SIZEHANDLER  - internal, for handling resizing and memory DC's etc.
+' wParam = Not used, should be 0.
+' lParam = Not used, should be 0.
+' Returns: Nothing, 0
+' Example: SendMessage hWndCtrl,  VLB_SIZEHANDLER, 0, 0
+'--------------------------------------------------------------------
+'  VL_GETSELECTED  - returns selected line number ((array item)
+' wParam = not used, should be 0.
+' lParam = not used, should be 0.
+' Returns: Index of selected line.
+' Example: index = SendMessage(hWndCtrl,  VLB_GETSELECTED, 0, 0)
+'--------------------------------------------------------------------
+'  VL_SETSELECTED  - sets selected line number ((array item)
+' wParam = Line to select.
+' lParam = Redraw flag.  TRUE to redraw,  FALSE to ignore
+' Returns: Index of selected line, or -1 if no selection could be made.
+' Example: index = SendMessage(hWndCtrl,  VLB_SETSELECTED, SelectLine,  TRUE)
+'--------------------------------------------------------------------
+'  VL_GETTOPLINE   - returns first visible line in control
+' wParam = not used, should be 0.
+' lParam = not used, should be 0.
+' Returns: Index of control's top (first visible) line.
+' Example: index = SendMessage(hWndCtrl,  VLB_GETTOPLINE, 0, 0)
+'--------------------------------------------------------------------
+'  VL_SETTOPLINE   - sets first visible line in control
+' wParam = Line to show as top (first visible) line.
+' lParam = Redraw flag.  TRUE to redraw,  FALSE to ignore
+' Returns: Index of top line, or -1 if no items are available.
+' Example: index = SendMessage(hWndCtrl,  VLB_SETTOPLINE, TopLine,  TRUE)
+'--------------------------------------------------------------------
+'  VLN_RETURN
+' Notification sent to parent's  WM_COMMAND when Enter key has been pressed
+'--------------------------------------------------------------------
+'  VLN_SPACE
+' Notification sent to parent's  WM_COMMAND when Space bar has been pressed
+'--------------------------------------------------------------------
+'  VLN_DELETE
+' Notification sent to parent's  WM_COMMAND when Delete key has been pressed
+
+'********************************************************************
+' Declares
+'********************************************************************
+
+Declare Sub SetSBar(Myhwnd As HWND, Byval vhPage As Long, Byval vhMax As Long, Byval vhPos As Long, Byval vhBar As Long)
+
+'VList messages and Notifications
+#define VL_SETARRAY     WM_USER + 1
+#define VL_REFRESH      WM_USER + 2
+#define VL_GETSELECTED  WM_USER + 3
+#define VL_SETSELECTED  WM_USER + 4
+#define VL_GETTOPLINE   WM_USER + 5
+#define VL_SETTOPLINE   WM_USER + 6
+#define VL_SIZEHANDLER  WM_USER + 7
+#define VL_GETCURSEL    WM_USER + 8
+#define VL_SETCURSEL    WM_USER + 9
+
+#define VLN_RETURN      WM_USER + 200
+#define VLN_SPACE       WM_USER + 201
+#define VLN_DELETE      WM_USER + 202
+
+#define FBVLISTSTYLES   WS_VISIBLE OR WS_CHILD OR WS_VSCROLL OR WS_TABSTOP OR WS_DLGFRAME OR WS_HSCROLL
+
+#define VL_WSTRINGLEN  50  'Change to any desired fixed length Wstring you desire
+#define USEWSTR         1  'Change to zero to use ANSI strings - non zero for Wstrings
+
+Type MyNotify
+    NMHeader As NMHDR
+    Param1   As Long
+    Param2   As Long
+    Param3   As Long
+    Param4   As Long
+End Type
+
+Type vListData                 'Type variable to hold private ListBox data
+    hParent      As HWND       'Can be freely customized to meet extended needs
+    hInst        As HINSTANCE
+    id           As Long
+    cyChar       As Long
+    wMaxHeight   As Long
+    wFirstLine   As Long
+    wLastLine    As Long
+    tLineCount   As Long
+    charWidth    As Long
+    wMaxWidth    As Long
+    iHscrollMax  As Long
+    iHscrollPos  As Long
+    xPos         As Long
+    hBit         As hGDIOBJ
+    memDC        As hDC
+    SelLine      As Long
+    hFont        As hFont
+    st           As String Ptr
+    ws           As WSTRING Ptr
+End Type
+
+
+Function VLSendNotifyMessage(Byval hWnd As hWnd, Byval hCtrl As hWnd, Byval CtrlID As Long, Byval NCode As Long,Byval MyParam1 As Long, Byval MyParam2 As Long, Byval MyParam3 As Long, Byval MyParam4 As Long) As Long
+    Dim NMG As MyNotify
+
+    NMG.NMHeader.hwndFrom=hCtrl
+    NMG.NMHeader.idFrom=CtrlID
+    NMG.NMHeader.code=NCode
+    NMG.Param1=MyParam1
+    NMG.Param2=MyParam2
+    NMG.Param3=MyParam3
+    NMG.Param4=MyParam4
+
+    Return SendMessage(hWnd, WM_NOTIFY,Cast(wParam,CtrlID), Cast(lParam,Varptr(NMG)))
+End Function
+
+'********************************************************************
+' Set Scroll bars
+'********************************************************************
+Sub SetSBar( myhwnd As HWND, Byval vhPage As Long, Byval vhMax As Long,Byval vhPos As Long, Byval vhBar As Long)
+    Dim si As SCROLLINFO
+
+    si.cbSize = Sizeof(si)
+    si.fMask  = SIF_ALL Or SIF_DISABLENOSCROLL
+    si.nMin   = 0
+    si.nMax   = MAX(0, vhMax)
+    si.nPage  = vhPage
+    si.nPos   = vhPos
+    SetScrollInfo myhwnd, vhBar, @si, -1
+End Sub
+
+'********************************************************************
+' Main control procedure
+'********************************************************************
+Function VL_Proc (hWnd As Hwnd, wMsg As UINT, _
+    wParam As WPARAM, lParam As LPARAM) As LRESULT
+    Dim tm As TEXTMETRIC, rc As RECT, wRect As RECT
+    Dim ps As PAINTSTRUCT,_
+    si   As SCROLLINFO, lp As Point, _
+    hdc  As hDC, hPen As hGDIOBJ, hBrush As hGDIOBJ, _
+    tSel As Long, bkBrush As hGDIOBJ, hBrushSel As hGDIOBJ, _
+    y    As Long, i As Long, iVscrollInc As Long, hScrlInc As Long
+
+    Dim MyWStr As wstring * 50
+
+    'Note: v is declared as DIM, but stored globally via DIMAlloc and
+    '      a pointer to the returned handle is stored in the extra bytes
+    '      of the control's private window class (in cbWndExtra), so each
+    '      control still can hold its own private data.
+
+    Dim v As VlistData Ptr
+
+    If wMsg <> WM_CREATE Then v = GetProp(hWnd,"VlistData")
+
+    Select Case wMsg
+    Case WM_CREATE  'Allocate storage for the vListData structure.
+        v = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, Sizeof(VlistData))
+        'print v
+        If v Then
+            SetProp hWnd, "VlistData", Cast(HANDLE,v)
+        Else
+            MessageBox hWnd, "Could not allocate memory for Virtual Listbox" & Chr$(0), _
+            "FBLIST32 message" & Chr$(0), MB_OK
+            Function = -1 : Exit Function  'Return -1 to break the action
+        End If
+
+        v->hParent = GetParent(hWnd)
+        v->id      = GetWindowLong(hWnd, GWL_ID)
+        v->hInst   = Cast(hInstance, GetWindowLongPtr(hWnd, GWLP_HINSTANCE))
+        v->SelLine = -1 : v->tLineCount = -1
+        SendMessage hWnd, VL_SIZEHANDLER, 0, 0
+
+    Case WM_DESTROY
+        If v Then
+            If v->hbit  Then DeleteObject SelectObject(v->memDC, v->hbit)
+            If v->memDC Then DeleteDC Cast(hDC, v->memDC)
+            HeapFree(GetProcessHeap(), 0, Byval v)
+            RemoveProp hWnd,"VlistData"
+        End If
+
+    Case WM_SETFONT
+        If wParam <> v->hFont Then
+            v->hFont = Cast(hFont, wParam)
+            SelectObject v->memDC, v->hFont
+            GetTextMetrics (v->memDC, @tm)                  'Get font parameters
+            v->cyChar = tm.tmHeight + tm.tmExternalLeading  'Line spacing
+            v->charWidth  = tm.tmAveCharWidth               'Average character width
+            GetWindowRect(hWnd, @wRect)                     'Adjust height to avoid partial lines
+            v->wMaxHeight = (wRect.Bottom - wRect.Top) \ v->cyChar
+            v->wMaxWidth = MAX(1, ((wRect.Right - wRect.Left) / 2) / (v->charWidth - 1)) 'Get window size in characters
+            SetWindowPos hWnd, 0, 0, 0, wRect.Right - wRect.Left,v->wMaxHeight * v->cyChar + 4,SWP_NOMOVE Or SWP_NOZORDER
+
+            SendMessage hWnd, VL_SIZEHANDLER, 0, 0
+        End If
+
+    Case WM_SIZE
+        If Hiword(lParam) Then
+            v->wMaxHeight = Hiword(lParam) / v->cyChar
+            SendMessage hWnd, VL_SIZEHANDLER, 0, 0
+        End If
+
+    Case VL_SIZEHANDLER  'create a virtual window that fits current window size
+        If v->hbit  Then DeleteObject SelectObject(v->memDC,v->hbit)
+        If v->memDC Then DeleteDC v->memDC
+
+        hDC = GetDC(hWnd)
+        GetClientRect(hWnd, @wRect)
+        v->memDC = CreateCompatibleDC(hDC)
+        v->hbit  = CreateCompatibleBitmap(hDC, wRect.Right, wRect.Bottom)
+        v->hbit  = SelectObject(v->memDC, v->hbit)
+
+        hbrush   = GetStockObject( WHITE_BRUSH)
+
+        If hbrush Then SelectObject v->memDC, hbrush
+        If v->hFont = 0 Then v->hFont = GetStockObject(ANSI_VAR_FONT)
+        If v->hFont Then SelectObject v->memDC, v->hFont
+        PatBlt v->memDC, 0, 0, wRect.Right, wRect.Bottom, PATCOPY
+
+        GetTextMetrics (v->memDC, @tm)                  'Get font parameters
+        v->cyChar = tm.tmHeight + tm.tmExternalLeading  'Line spacing
+        v->charWidth = tm.tmAveCharWidth                'Average character width
+        ReleaseDC (hWnd, hdc)
+
+        v->wMaxHeight = wRect.Bottom / v->cyChar
+        v->wMaxWidth = MAX(1, (wRect.Right / 2) / (v->charWidth - 1) ) 'Get window size in characters
+
+        v->iHscrollMax = MAX (0, 1024 - v->wMaxWidth) '1024, max number of characters..
+        v->iHscrollPos = MIN (v->iHscrollPos, v->iHscrollMax)
+        v->xPos = v->charWidth * (- v->iHscrollPos)
+        SetSBar hwnd, v->wMaxWidth, v->iHscrollMax, v->iHscrollPos, SB_HORZ
+
+        v->wMaxHeight = wRect.Bottom / v->cyChar
+        SetSBar hwnd, v->wMaxHeight, MAX(0, v->tLineCount), v->wFirstLine, SB_VERT
+        InvalidateRect hWnd, Byval  NULL, 0 : UpdateWindow hwnd
+
+    Case WM_VSCROLL
+        If v->tLineCount < 0 Then Exit Select
+
+        Select Case Loword(wParam)
+        Case SB_TOP        : iVscrollInc = -v->wFirstLine
+        Case SB_BOTTOM     : iVscrollInc =  v->tLineCount - v->wMaxHeight
+        Case SB_LINEUP     : iVscrollInc = -1
+        Case SB_LINEDOWN   : If v->wFirstLine < v->tLineCount - v->wMaxHeight + 1 Then iVscrollInc =  1
+        Case SB_PAGEUP     : iVscrollInc = MIN(-1, v->wMaxHeight)
+        Case SB_PAGEDOWN   : iVscrollInc = MAX(1, v->wMaxHeight)
+        Case SB_THUMBTRACK ' getScrollInfo enables 32-bit scroll positions
+            si.cbSize = Sizeof(si)
+            si.fMask  = SIF_TRACKPOS
+            GetScrollInfo hWnd, SB_VERT, @si
+            iVscrollInc = si.nTrackPos - v->wFirstLine
+        Case Else          : iVscrollInc = 0
+        End Select
+
+        iVscrollInc = MAX(-v->wFirstLine, MIN(iVscrollInc, v->tLineCount - v->wMaxHeight + 1))
+
+        If iVscrollInc <> 0 And v->wFirstLine <= v->tLineCount - v->wMaxHeight + 1 Then
+            v->wFirstLine = MIN(v->wFirstLine + iVscrollInc, v->tLineCount - v->wMaxHeight + 1)
+            SetSBar hwnd, v->wMaxHeight, MAX(0, v->tLineCount), v->wFirstLine, SB_VERT
+            InvalidateRect hWnd, Byval  NULL, 0 : UpdateWindow hwnd
+        End If
+
+    Case WM_HSCROLL
+        Select Case Loword(wParam)
+        Case SB_LINELEFT      : hScrlInc = -1
+        Case SB_LINERIGHT     : hScrlInc =  1
+        Case SB_PAGELEFT      : hScrlInc = -v->wMaxWidth
+        Case SB_PAGERIGHT     : hScrlInc =  v->wMaxWidth
+        Case SB_THUMBTRACK    : hScrlInc = Hiword(wParam) - v->iHscrollPos
+        Case Else             : hScrlInc = 0
+        End Select
+
+        hScrlInc = MAX(-v->iHscrollPos, MIN(hScrlInc, v->iHscrollMax - v->iHscrollPos))
+        If hScrlInc <> 0 Then
+            v->iHscrollPos = v->iHscrollPos + hScrlInc
+            v->xPos = v->charWidth * (- v->iHscrollPos)
+            SetSBar hwnd, v->wMaxWidth, v->iHscrollMax, v->iHscrollPos, SB_HORZ
+            InvalidateRect hwnd, Byval  NULL, 0 : UpdateWindow hwnd
+        End If
+
+    Case WM_GETDLGCODE ' Ensure that the control processes all keys (except tab and escape) by itself
+        Dim iMsg As UINT, pMsg As TAGMSG Ptr
+        pMsg = Cast(TAGMSG Ptr, lParam)
+        If pMsg > 0 Then iMsg = pMsg->Message
+        If iMsg = WM_KEYDOWN Or iMsg =  WM_CHAR Then
+            Select Case pMsg->wParam
+            Case VK_TAB, VK_ESCAPE   'let system handle these
+                Function = DefWindowProc(hWnd, wMsg, wParam, lParam)
+            Case Else
+                Function = DLGC_WANTALLKEYS
+            End Select
+        End If
+
+    Case WM_CHAR
+        #If(USEWSTR = 0)
+
+        ' mimic standard listbox's search on keypress
+        For i = v->SelLine + 1 To v->tLineCount ' look for next item that starts like pressed key
+            If Ucase(Chr(wParam)) = Ucase(Chr(Asc(v->st[i]))) Then  ' on success, set sel and exit
+                SendMessage hWnd, VL_SETCURSEL, i, 1
+                Exit Function
+            End If
+        Next
+
+        'if no success and SelLine is > first item, scan from array start to SelLine - 1
+        If v->SelLine > 0 Then
+            For i = 0 To v->SelLine - 1
+                If Ucase(Chr(wParam)) = Ucase(Chr(Asc(v->st[i]))) Then
+                    SendMessage hWnd, VL_SETCURSEL, i, 1
+                    Exit Function
+                End If
+            Next
+        End If
+        #Else
+
+        For i = v->SelLine + 1 To v->tLineCount ' look for next item that starts like pressed key
+            If Ucase(Chr(wParam)) = Ucase(Chr(Asc(v->ws[i * VL_WSTRINGLEN]))) Then  ' on success, set sel and exit
+                SendMessage hWnd, VL_SETCURSEL, i, 1
+                Exit Function
+            End If
+        Next
+
+        'if no success and SelLine is > first item, scan from array start to SelLine - 1
+        If v->SelLine > 0 Then
+            For i = 0 To v->SelLine - 1
+                If Ucase(Chr(wParam)) = Ucase(Chr(Asc(v->ws[i * VL_WSTRINGLEN]))) Then
+                    SendMessage hWnd, VL_SETCURSEL, i, 1
+                    Exit Function
+                End If
+            Next
+        End If
+        #endif
+
+    Case WM_KEYDOWN
+        If v->tLineCount < 0 And wParam <>  VK_TAB Then Exit Select
+
+        Select Case (wParam)
+        Case VK_UP, VK_LEFT
+            If v->SelLine = -1 Then v->SelLine = v->wFirstLine + 1
+            v->SelLine = MAX&(v->SelLine - 1, 0)
+            If v->SelLine < v->wFirstLine Or v->SelLine > v->wLastLine Then
+                v->wFirstLine = MIN&(v->SelLine, v->tLineCount - v->wMaxHeight + 1)
+                SetSBar hwnd, v->wMaxHeight, MAX&(0, v->tLineCount), v->wFirstLine, SB_VERT
+            End If
+            InvalidateRect hWnd, Byval  NULL, 0 : UpdateWindow hwnd
+
+        Case VK_DOWN, VK_RIGHT
+            If v->SelLine = -1 Then v->SelLine = v->wFirstLine - 1
+            v->SelLine = MIN(v->SelLine + 1, v->tLineCount)
+            'print v->wMaxHeight
+            If v->SelLine > v->wLastLine Or v->SelLine < v->wFirstLine Then
+                v->wFirstLine = MIN(v->SelLine, v->tLineCount) - v->wMaxHeight + 1
+                'print v->wFirstLine
+                SetSBar hwnd, v->wMaxHeight, MAX(0, v->tLineCount), v->wFirstLine, SB_VERT
+            End If
+            InvalidateRect hWnd, Byval  NULL, 0 : UpdateWindow hwnd
+
+        Case VK_PRIOR 'PgUp
+            If v->SelLine = v->wFirstLine Then
+                v->SelLine = MAX(v->SelLine - v->wMaxHeight + 1, 0)
+            Else
+                v->SelLine = v->wFirstLine
+            End If
+
+            If v->SelLine < v->wFirstLine + 1 Then
+                v->wFirstLine = v->SelLine
+                SetScrollPos (hWnd, SB_VERT, v->wFirstLine, TRUE)
+            End If
+            InvalidateRect hWnd, Byval  NULL, 0 : UpdateWindow hwnd
+
+        Case VK_NEXT  'PgDn
+            If v->SelLine = v->wLastLine Then
+                v->SelLine = MIN(v->SelLine + v->wMaxHeight - 1, v->tLineCount)
+            Else
+                v->SelLine = v->wLastLine
+            End If
+
+            If v->SelLine > v->wLastLine Then
+                v->wFirstLine = MIN&(v->SelLine, v->tLineCount) - v->wMaxHeight + 1
+                SetScrollPos (hWnd, SB_VERT, v->wFirstLine, TRUE)
+            End If
+            InvalidateRect hWnd, Byval  NULL, 0 : UpdateWindow hwnd
+
+        Case VK_SPACE  'Space bar pressed
+            VLSendNotifyMessage v->hParent,hWnd,v->id,VLN_SPACE,0,0,0,0
+
+        Case VK_RETURN 'Enter key pressed
+            VLSendNotifyMessage v->hParent,hWnd,v->id,VLN_RETURN,0,0,0,0
+
+        Case VK_DELETE 'Delete key pressed
+            VLSendNotifyMessage v->hParent,hWnd,v->id,VLN_DELETE,0,0,0,0
+
+        Case VK_HOME
+            v->SelLine = 0 : v->wFirstLine = 0
+            SetScrollPos (hWnd, SB_VERT, v->wFirstLine, TRUE)
+            InvalidateRect hWnd, Byval  NULL, 0 : UpdateWindow hwnd
+
+        Case VK_END
+            v->SelLine = v->tLineCount
+            v->wFirstLine = v->tLineCount - v->wMaxHeight + 1
+            SetScrollPos (hWnd, SB_VERT, v->wFirstLine, TRUE)
+            InvalidateRect hWnd, Byval  NULL, 0 : UpdateWindow hwnd
+
+        Case Else
+
+    End Select
+
+    Case WM_MOUSEMOVE
+        If v->tLineCount < 0 Then Exit Select
+        If wParam =  MK_LBUTTON Then
+            GetCursorPos @lp : GetWindowRect hWnd, @wRect
+            If lp.y < wRect.Top + 3 Then
+                tSel = v->wFirstLine - ((wRect.Top - lp.y) \ v->cyChar + 1)
+            Else
+                tSel = v->wFirstLine + Hiword(lParam) \ v->cyChar
+            End If
+
+            If tSel < 0 Then tSel = 0
+            If tSel > v->tLineCount Then tSel = v->tLineCount
+            If v->SelLine = tSel Then Exit Select 'no need to repeat ourselves..
+
+            If tSel > v->wLastLine Then v->wFirstLine = tSel - v->wMaxHeight + 1
+            If tSel < v->wFirstLine Then v->wFirstLine = tSel
+            v->SelLine = tSel
+
+            If v->tLineCount > v->wMaxHeight - 1 Then
+                SetSBar hwnd, v->wMaxHeight, MAX(0, v->tLineCount), v->wFirstLine, SB_VERT
+            End If
+
+            InvalidateRect hWnd, Byval  NULL, 0 : UpdateWindow hwnd
+        End If
+
+    Case WM_LBUTTONDBLCLK
+        If v->tLineCount < 0 Then Exit Select
+        v->SelLine = MAX(0, v->wFirstLine + Hiword(lParam) \ v->cyChar)
+        If v->SelLine <= v->tLineCount Then
+            SendMessage v->hParent, WM_COMMAND, MAKELONG(v->id, LBN_DBLCLK), Cast(lparam,hwnd)
+        End If
+
+    Case WM_LBUTTONDOWN
+        If v->tLineCount < 0 Then Exit Select
+        SetCapture hWnd
+        v->SelLine = v->wFirstLine + Hiword(lParam) \ v->cyChar
+        If v->SelLine < 0 Then v->SelLine = 0
+        If v->SelLine > v->tLineCount Then v->SelLine = v->tLineCount
+        SetFocus hWnd
+        InvalidateRect hWnd, Byval  NULL, 0 : UpdateWindow hwnd
+
+    Case WM_LBUTTONUP
+        If v->tLineCount < 0 Then Exit Select
+        ReleaseCapture
+
+    Case WM_KILLFOCUS, WM_SETFOCUS ' Must process these if line is selected
+        If v->SelLine > - 1 Then
+            InvalidateRect hWnd, Byval  NULL, 0 : UpdateWindow hwnd
+        Else
+            GetClientRect hWnd, @wRect
+            rc.Left = 0 : rc.Top = 0 : rc.Right = wRect.Right : rc.Bottom = v->cyChar
+            hdc = GetDc(hWnd)
+            DrawFocusRect hDC, @rc
+            ReleaseDc hWnd, hdc
+        End If
+        If wMsg =  WM_KILLFOCUS Then 'Send notifications to parent
+            SendMessage v->hParent, WM_COMMAND, MAKELONG(v->id, LBN_KILLFOCUS), Cast(lparam,hwnd)
+        Else
+            SendMessage v->hParent, WM_COMMAND, MAKELONG(v->id, LBN_SETFOCUS), Cast(lparam,hwnd)
+        End If
+
+    Case WM_PAINT 'Draw only the list items that needs to be shown
+        'Send  WM_CTLCOLORLISTBOX to parent, to get eventual brush for bg color
+        bkBrush = Cast(hGDIOBJ,SendMessage(v->hParent, WM_CTLCOLORLISTBOX, Cast(wParam,v->memDC), Cast(lparam,hwnd)) )
+        If bkBrush Then SelectObject v->memDC, bkBrush
+
+        hdc = BeginPaint(hWnd, @ps)
+        GetClientRect(hWnd, @wRect)
+
+        v->wFirstLine = MAX(0, v->wFirstLine)
+        v->wLastLine  = MIN(v->tLineCount, v->wFirstLine + v->wMaxHeight - 1)
+
+        PatBlt v->memDC, 0, 0, wRect.Right, wRect.Bottom, PATCOPY
+
+        If v->tLineCount > -1 Then ' DRAW TEXT (ARRAY)
+            For i = v->wFirstLine To v->wLastLine
+                y = v->cyChar * (-v->wFirstLine + i)
+
+                #If(USEWSTR = 0)
+                    TabbedTextOut v->memDC, v->xPos, y,Byval Strptr(v->st[i]), Len(v->st[i]),0, Byval  NULL, 0
+                #Else
+                    MyWStr = v->ws[i * VL_WSTRINGLEN]   '"Jimmy " + WSTR(i)
+                    TabbedTextOutW v->memDC, v->xPos, y,Byval Varptr(MyWstr), Len(MyWStr),0, Byval  NULL, 0
+                #endif
+            Next
+        End If
+
+        'DRAW SELECTION
+        If v->SelLine >= v->wFirstLine Then
+            If v->SelLine > v->tLineCount Then v->SelLine = v->tLineCount
+            rc.Left = 0 : rc.Top = v->cyChar * (v->SelLine - v->wFirstLine)
+            rc.Right = wRect.right : rc.Bottom = rc.Top + v->cyChar
+
+            '=== Draw Selection rectangle, plus focus rectangle ===
+            If GetFocus = hWnd Then
+                hBrushSel = GetSysColorBrush( COLOR_HIGHLIGHT)
+            Else
+                hBrushSel = GetSysColorBrush( COLOR_INACTIVECAPTION)
+            End If
+            hBrushSel = SelectObject(v->memDC, hBrushSel)
+            hPen = CreatePen( PS_DOT, 1, GetSysColor( COLOR_HIGHLIGHTTEXT))
+            hPen = SelectObject(v->memDC, hPen)
+
+            SetROP2(v->memDC, R2_MERGEPENNOT)
+            Rectangle(v->memDC, rc.Left - 1, rc.Top - 1, rc.Right + 1, rc.Bottom + 1)
+            If GetFocus() = hWnd Then DrawFocusRect(v->memDC, @rc)
+
+            SelectObject v->memDC, hBrushSel
+            DeleteObject SelectObject(v->memDC, hPen)
+            SendMessage v->hParent, WM_COMMAND, MAKELONG(v->id, LBN_SELCHANGE), Cast(lparam,hwnd)
+
+        Elseif v->SelLine = -1 And GetFocus = hWnd Then
+            rc.Left = 0 : rc.Top = 0 : rc.Right = wRect.right : rc.Bottom = v->cyChar
+            DrawFocusRect v->memDC, @rc
+        End If
+
+        BitBlt hDC, wRect.top, wRect.left, wRect.right, wRect.bottom, v->memDC, 0, 0, SRCCOPY
+        EndPaint(hWnd, @ps)
+
+    Case WM_ERASEBKGND 'Prevent erasing background
+        Function = 1
+
+    Case LB_SETHORIZONTALEXTENT
+        GetClientRect(hWnd, @wRect)
+        v->iHscrollMax = MAX (0, wParam - wRect.Right)
+        SetSBar hwnd, v->wMaxWidth, v->iHscrollMax, v->iHscrollPos, SB_HORZ
+
+    Case VL_SETARRAY
+        #If(USEWSTR = 0)
+            v->st = Cast(Any Ptr,wParam)
+        #Else
+            v->ws = Cast(Any Ptr,wParam)
+        #endif
+        v->SelLine = -1
+        v->tLineCount = lParam
+        v->wFirstLine = 0
+
+    Case VL_REFRESH
+        SetSBar hwnd, v->wMaxHeight, MAX(0, v->tLineCount), v->wFirstLine, SB_VERT
+        InvalidateRect hWnd, Byval  NULL, 0 : UpdateWindow hwnd
+
+    Case VL_GETSELECTED
+        Function = v->SelLine
+
+    Case VL_GETCURSEL
+        Function = v->SelLine
+
+    Case VL_SETSELECTED
+        If wParam < 0 Then
+            v->SelLine = -1
+        Else
+            v->SelLine = MIN(wParam, v->tLineCount)
+        End If
+        SetSBar hwnd, v->wMaxHeight, MAX(0, v->tLineCount), v->wFirstLine, SB_VERT
+        If lParam Then 'Refresh control
+            InvalidateRect hWnd, Byval  NULL, 0 : UpdateWindow hwnd
+        End If
+        Function = v->SelLine
+
+    Case VL_SETCURSEL
+        If wParam < 0 Then
+            v->SelLine = -1
+        Else
+            v->SelLine = MIN(wParam, v->tLineCount)
+            If v->SelLine < v->wFirstLine Then
+                v->wFirstLine = v->SelLine
+            Elseif v->SelLine > v->wFirstLine + v->wMaxHeight - 1 Then
+                v->wFirstLine = MIN(v->SelLine - v->wMaxHeight + 1, v->tLineCount - v->wMaxHeight + 1)
+            End If
+        End If
+
+        SetSBar hwnd, v->wMaxHeight, MAX(0, v->tLineCount), v->wFirstLine, SB_VERT
+        InvalidateRect hWnd, Byval  NULL, 0 : UpdateWindow hwnd
+        Function = v->SelLine
+
+    Case VL_GETTOPLINE
+        Function = v->wFirstLine
+
+    Case VL_SETTOPLINE
+        If wParam < 0 Then
+            v->wFirstLine = 0
+        Else
+            v->wFirstLine = MIN(wParam, v->tLineCount - v->wMaxHeight + 1)
+        End If
+        SetSBar hwnd, v->wMaxHeight, MAX(0, v->tLineCount), v->wFirstLine, SB_VERT
+        If lParam Then 'Refresh control
+            InvalidateRect hWnd, Byval  NULL, 0 : UpdateWindow hwnd
+        End If
+        Function = v->wFirstLine
+
+    Case Else  ' Process all other messages
+        Function = DefWindowProc(hWnd, wMsg, wParam, lParam)
+
+    End Select
+End Function
+
+Sub VL_INT()
+    Dim wc As WNDCLASSEX
+    Dim As String szClassName = "FBVLIST"
+
+    If GetClassInfoEx(GetModuleHandle(Byval NULL), Strptr(szClassName), @wc) <> 0 Then
+        '    'It is already registered
+        Exit Sub
+    End If
+
+    wc.cbSize        = Sizeof(wc)
+    wc.style         = CS_DBLCLKS
+    wc.lpfnWndProc   = @VL_Proc
+    wc.cbWndExtra    = 4  '4 extra bytes for pointer to UDT
+    wc.hInstance     = GetModuleHandle(Byval NULL)
+    wc.hCursor       = LoadCursor(NULL, Byval IDC_ARROW)
+    wc.lpszClassName = Strptr(szClassName)
+
+    RegisterClassEx @wc
+End Sub

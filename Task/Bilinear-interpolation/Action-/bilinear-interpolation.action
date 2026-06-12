@@ -1,0 +1,108 @@
+INCLUDE "H6:REALMATH.ACT"
+INCLUDE "H6:LOADPPM5.ACT"
+
+PROC PutBigPixel(INT x,y BYTE col)
+  IF x>=0 AND x<=79 AND y>=0 AND y<=47 THEN
+    y==LSH 2
+    col==RSH 4
+    IF col<0 THEN col=0
+    ELSEIF col>15 THEN col=15 FI
+    Color=col
+    Plot(x,y)
+    DrawTo(x,y+3)
+  FI
+RETURN
+
+PROC DrawImage(GrayImage POINTER image INT x,y)
+  INT i,j
+  BYTE c
+
+  FOR j=0 TO image.gh-1
+  DO
+    FOR i=0 TO image.gw-1
+    DO
+      c=GetGrayPixel(image,i,j)
+      PutBigPixel(x+i,y+j,c)
+    OD
+  OD
+RETURN
+
+PROC Lerp(REAL POINTER s,e,t,res)
+  REAL tmp1,tmp2
+
+  RealSub(e,s,tmp1)     ;tmp1=e-s
+  RealMult(tmp1,t,tmp2) ;tmp2=(e-s)*t
+  RealAdd(s,tmp2,res)   ;res=s+(e-s)*t
+RETURN
+
+PROC BilinearInterpolation(GrayImage POINTER src,dst)
+  INT i,j,x,y,c
+  REAL mx,my,rx,ry,fx,fy,tmp1,tmp2,tmp3,r00,r01,r10,r11
+  BYTE c00,c01,c10,c11
+
+  IntToReal(src.gw-1,tmp1) ;tmp1=src.width-1
+  IntToReal(dst.gw,tmp2)   ;tmp2=dst.width
+  RealDiv(tmp1,tmp2,mx)    ;mx=(src.width-1)/dst.width
+  IntToReal(src.gh-1,tmp1) ;tmp1=src.height-1
+  IntToReal(dst.gh,tmp2)   ;tmp2=dst.height
+  RealDiv(tmp1,tmp2,my)    ;my=(src.height-1)/dst.height
+  FOR j=0 TO dst.gh-1
+  DO
+    IntToReal(j,tmp1)    ;tmp=j
+    RealMult(tmp1,my,ry) ;ry=j*my
+    y=Floor(ry)
+    IntToReal(y,tmp1)    ;tmp1=floor(ry)
+    RealSub(ry,tmp1,fy)  ;fy=frac(ry)
+    FOR i=0 TO dst.gw-1
+    DO
+      IntToReal(i,tmp1)    ;tmp=i
+      RealMult(tmp1,mx,rx) ;rx=i*mx
+      x=Floor(rx)
+      IntToReal(x,tmp1)    ;tmp1=floor(rx)
+      RealSub(rx,tmp1,fx)  ;fx=frac(rx)
+
+      c00=GetGrayPixel(src,x,y)
+      c01=GetGrayPixel(src,x,y+1)
+      c10=GetGrayPixel(src,x+1,y)
+      c11=GetGrayPixel(src,x+1,y+1)
+
+      IntToReal(c00,r00)
+      IntToReal(c01,r01)
+      IntToReal(c10,r10)
+      IntToReal(c11,r11)
+
+      Lerp(r00,r10,fx,tmp1)
+      Lerp(r01,r11,fx,tmp2)
+      Lerp(tmp1,tmp2,fy,tmp3)
+      c=RealToInt(tmp3)
+      IF c<0 THEN
+        c=0
+      ELSEIF c>255 THEN
+        c=255
+      FI
+      SetGrayPixel(dst,i,j,c)
+    OD
+  OD
+RETURN
+
+PROC Main()
+  BYTE CH=$02FC ;Internal hardware value for last key pressed
+  BYTE ARRAY data30x30(900),data48x48(2304)
+  GrayImage im30x30,im48x48
+
+  Put(125) PutE() ;clear the screen
+  MathInit()
+  InitGrayImage(im30x30,30,30,data30x30)
+  InitGrayImage(im48x48,48,48,data48x48)
+  PrintE("Loading source image...")
+  LoadPPM5(im30x30,"H6:LENA30G.PPM")
+  PrintE("Bilinear interpolation...")
+  BilinearInterpolation(im30x30,im48x48)
+
+  Graphics(9)
+  DrawImage(im30x30,0,0)
+  DrawImage(im48x48,32,0)
+
+  DO UNTIL CH#$FF OD
+  CH=$FF
+RETURN

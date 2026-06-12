@@ -1,0 +1,78 @@
+    // R is turn counter in right direction
+    // The nb of right turns in direction i
+    // must be = to nb of right turns in direction i+6 (opposite)
+fcn legal(R){
+   foreach i in (6){ if(R[i]!=R[i+6]) return(False) }
+   True
+}
+    // equal circuits by rotation ?
+fcn circuit_eq(Ca,Cb){
+   foreach i in (Cb.len()){ if(Ca==Cb.append(Cb.pop(0))) return(True) }
+   False
+}
+    // check a result vector RV of circuits
+    // Remove equivalent circuits
+fcn check_circuits(RV){  // modifies RV
+   n:=RV.len();
+   foreach i in (n - 1){
+      if(not RV[i]) continue;
+      foreach j in ([i+1..n-1]){
+         if(not RV[j]) continue;
+         if(circuit_eq(RV[i],RV[j])) RV[j]=Void;
+      }
+   }
+   RV
+}
+
+    // global variables
+    // *circuits* = result set = a vector
+var _count, _calls, _circuits;
+
+   // generation of circuit C[i] i = 0 .... maxn including straight (may be 0) tracks
+fcn circuits([List]C,[Int]Rct,[List]R,[List]D,n,maxn, straight){
+   _Rct,_Rn:=Rct,R[Rct];	// save area
+   _calls+=1;
+
+   if(_calls>0d4_000_000) False;	// enough for maxn=24
+   else if(n==maxn and 0==Rct and legal(R) and legal(D)){ // hit legal solution
+       _count+=1;
+       _circuits.append(C.copy());	// save solution
+   }else if(n==maxn) False;	// stop
+	// important cutter - not enough right turns
+   else if(Rct and ((Rct + maxn) < (n + straight + 11))) False
+   else{
+      // play right
+      R[Rct]+=1;   Rct=(Rct+1)%12;   C[n]=1;
+      circuits(C,Rct,R,D,n+1, maxn, straight);
+
+      Rct=_Rct;   R[Rct]=_Rn;   C[n]=Void;   // unplay it - restore values
+
+      // play left
+      Rct=(Rct - 1 + 12)%12;   C[n]=-1;   // -1%12 --> 11 in EchoLisp
+      circuits(C,Rct,R,D,n+1,maxn,straight);
+
+      Rct=_Rct;   R[Rct]=_Rn;   C[n]=Void;      // unplay
+
+      if(straight){      // play straight line
+	 C[n]=0;   D[Rct]+=1;
+	 circuits(C,Rct,R,D,n+1,maxn,straight-1);
+	 D[Rct]+=-1;   C[n]=Void;    // unplay
+      }
+   }
+}
+
+    // (generate max-tracks  [ + max-straight])
+fcn gen(maxn=20,straight=0){
+   R,D:=(12).pump(List(),0), R.copy();  // vectors of zero
+   C:=(maxn + straight).pump(List(),Void.noop);	// vector of Void
+   _count,_calls,_circuits = 0,0,List();
+   R[0]=C[0]=1;				// play starter (always right)
+   circuits(C,1,R,D,1,maxn + straight,straight);
+   println("gen-counters %,d . %d".fmt(_calls,_count));
+
+   _circuits=check_circuits(_circuits).filter();
+   if(0==straight)
+        println("Number of circuits C%,d : %d".fmt(maxn,_circuits.len()));
+   else println("Number of circuits C%,d,%d : %d".fmt(maxn,straight,_circuits.len()));
+   if(_circuits.len()<20) _circuits.apply2(T(T("toString",*),"println"));
+}

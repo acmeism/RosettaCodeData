@@ -1,0 +1,128 @@
+(phixonline)-->
+ <span style="color: #000080;font-style:italic;">--
+ -- demo\rosetta\OpenGLShader.exw
+ -- =============================
+ --
+ --  Works identically to the rc JavaScript entry under pwa/p2js, but on desktop/Phix
+ --  the colours cycle round white/blue/orange once per second. Beyond my ken anyway.
+ --</span>
+ <span style="color: #008080;">with</span> <span style="color: #008080;">javascript_semantics</span>
+ <span style="color: #7060A8;">requires</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"1.0.1"</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">include</span> <span style="color: #000000;">pGUI</span><span style="color: #0000FF;">.</span><span style="color: #000000;">e</span>
+ <span style="color: #008080;">include</span> <span style="color: #000000;">opengl</span><span style="color: #0000FF;">.</span><span style="color: #000000;">e</span>
+
+ <span style="color: #004080;">Ihandln</span> <span style="color: #000000;">dlg</span>
+ <span style="color: #004080;">Ihandle</span> <span style="color: #000000;">canvas</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">resize_cb</span><span style="color: #0000FF;">(</span><span style="color: #004080;">Ihandle</span> <span style="color: #000080;font-style:italic;">/*ih*/</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">integer</span> <span style="color: #000000;">width</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">height</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">glViewport</span><span style="color: #0000FF;">(</span><span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">width</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">height</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">return</span> <span style="color: #004600;">IUP_DEFAULT</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #008080;">constant</span> <span style="color: #000000;">fragment_shader</span> <span style="color: #0000FF;">=</span> <span style="color: #008000;">"""
+ precision highp float;
+ uniform float u_time;
+ void main(void) {
+     // some gobbledegook
+     vec3 foo = vec3(pow(gl_FragCoord.xy, vec2(1.0 + sin(dot(vec4(1.0, 100.0, 0.0, 0.0), gl_FragCoord)))), 0.0);
+     foo *= mat3(1.2, 3.9, 1.4, 4.1, 0.2, 1.4, 2.5, 1.6, 7.2);
+
+     gl_FragColor = vec4(mod(foo + vec3(u_time), 1.0), 1.0);
+ }
+ """</span>
+ <span style="color: #008080;">constant</span> <span style="color: #000000;">vertex_shader</span> <span style="color: #0000FF;">=</span> <span style="color: #008000;">"""
+ attribute vec3 a_position;
+ attribute vec4 a_color;
+ varying vec4 v_color;
+ void main(void) {
+     gl_Position = vec4(a_position, 1.0);
+     v_color = a_color;
+ }
+ """</span>
+
+ <span style="color: #008080;">constant</span> <span style="color: #000000;">vertices</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span>
+                       <span style="color: #0000FF;">-</span><span style="color: #000000;">0.5</span><span style="color: #0000FF;">,</span> <span style="color: #0000FF;">-</span><span style="color: #000000;">0.5</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span>
+                       <span style="color: #0000FF;">+</span><span style="color: #000000;">0.5</span><span style="color: #0000FF;">,</span> <span style="color: #0000FF;">-</span><span style="color: #000000;">0.5</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span>
+                       <span style="color: #0000FF;">-</span><span style="color: #000000;">0.5</span><span style="color: #0000FF;">,</span> <span style="color: #0000FF;">+</span><span style="color: #000000;">0.5</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0</span>
+                     <span style="color: #0000FF;">}</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">getShader</span><span style="color: #0000FF;">(</span><span style="color: #004080;">string</span> <span style="color: #000000;">src</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">integer</span> <span style="color: #000000;">shader_type</span><span style="color: #0000FF;">)</span>
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">shader</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glCreateShader</span><span style="color: #0000FF;">(</span><span style="color: #000000;">shader_type</span><span style="color: #0000FF;">)</span>
+     <span style="color: #000080;font-style:italic;">// Compile shader from source</span>
+     <span style="color: #7060A8;">glShaderSource</span><span style="color: #0000FF;">(</span><span style="color: #000000;">shader</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">src</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">glCompileShader</span><span style="color: #0000FF;">(</span><span style="color: #000000;">shader</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">if</span> <span style="color: #008080;">not</span> <span style="color: #7060A8;">glGetShaderParameter</span><span style="color: #0000FF;">(</span><span style="color: #000000;">shader</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_COMPILE_STATUS</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span>
+         <span style="color: #7060A8;">crash</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">glGetShaderInfoLog</span><span style="color: #0000FF;">(</span><span style="color: #000000;">shader</span><span style="color: #0000FF;">))</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">return</span> <span style="color: #000000;">shader</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #004080;">integer</span> <span style="color: #000000;">timeUniform</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">set_shader</span><span style="color: #0000FF;">()</span>
+     <span style="color: #7060A8;">IupGLMakeCurrent</span><span style="color: #0000FF;">(</span><span style="color: #000000;">canvas</span><span style="color: #0000FF;">)</span>
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">prog</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glCreateProgram</span><span style="color: #0000FF;">()</span>
+     <span style="color: #7060A8;">glAttachShader</span><span style="color: #0000FF;">(</span><span style="color: #000000;">prog</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">getShader</span><span style="color: #0000FF;">(</span><span style="color: #000000;">vertex_shader</span><span style="color: #0000FF;">,</span><span style="color: #004600;">GL_VERTEX_SHADER</span><span style="color: #0000FF;">))</span>
+     <span style="color: #7060A8;">glAttachShader</span><span style="color: #0000FF;">(</span><span style="color: #000000;">prog</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">getShader</span><span style="color: #0000FF;">(</span><span style="color: #000000;">fragment_shader</span><span style="color: #0000FF;">,</span><span style="color: #004600;">GL_FRAGMENT_SHADER</span><span style="color: #0000FF;">))</span>
+     <span style="color: #7060A8;">glLinkProgram</span><span style="color: #0000FF;">(</span><span style="color: #000000;">prog</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">if</span> <span style="color: #008080;">not</span> <span style="color: #7060A8;">glGetProgramParameter</span><span style="color: #0000FF;">(</span><span style="color: #000000;">prog</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_LINK_STATUS</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span>
+         <span style="color: #7060A8;">crash</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">glGetProgramInfoLog</span><span style="color: #0000FF;">(</span><span style="color: #000000;">prog</span><span style="color: #0000FF;">))</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #7060A8;">glUseProgram</span><span style="color: #0000FF;">(</span><span style="color: #000000;">prog</span><span style="color: #0000FF;">)</span>
+
+     <span style="color: #000080;font-style:italic;">// Get the indexes to communicate vertex attributes to the program.</span>
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">positionAttr</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glGetAttribLocation</span><span style="color: #0000FF;">(</span><span style="color: #000000;">prog</span><span style="color: #0000FF;">,</span> <span style="color: #008000;">"a_position"</span><span style="color: #0000FF;">)</span>
+     <span style="color: #000080;font-style:italic;">// And specify that we will be actually delivering data to those attributes.</span>
+     <span style="color: #7060A8;">glEnableVertexAttribArray</span><span style="color: #0000FF;">(</span><span style="color: #000000;">positionAttr</span><span style="color: #0000FF;">)</span>
+
+     <span style="color: #000000;">timeUniform</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glGetUniformLocation</span><span style="color: #0000FF;">(</span><span style="color: #000000;">prog</span><span style="color: #0000FF;">,</span> <span style="color: #008000;">"u_time"</span><span style="color: #0000FF;">)</span>
+
+     <span style="color: #000080;font-style:italic;">// Store vertex positions and colors in array buffer objects.</span>
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">positionBuffer</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glCreateBuffer</span><span style="color: #0000FF;">()</span>
+     <span style="color: #7060A8;">glBindBuffer</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_ARRAY_BUFFER</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">positionBuffer</span><span style="color: #0000FF;">)</span>
+     <span style="color: #0000FF;">{</span><span style="color: #004080;">integer</span> <span style="color: #000000;">size</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">atom</span> <span style="color: #000000;">pData</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glFloat32Array</span><span style="color: #0000FF;">(</span><span style="color: #000000;">vertices</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">glBufferData</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_ARRAY_BUFFER</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">size</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">pData</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_STATIC_DRAW</span><span style="color: #0000FF;">)</span>
+
+
+     <span style="color: #7060A8;">glEnable</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_DEPTH_TEST</span><span style="color: #0000FF;">);</span>
+
+     <span style="color: #000080;font-style:italic;">//Specify the array data to render. </span>
+     <span style="color: #7060A8;">glBindBuffer</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_ARRAY_BUFFER</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">positionBuffer</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">glVertexAttribPointer</span><span style="color: #0000FF;">(</span><span style="color: #000000;">positionAttr</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">3</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_FLOAT</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">false</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">)</span>
+
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #004080;">atom</span> <span style="color: #000000;">t0</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">time</span><span style="color: #0000FF;">()</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">timer_cb</span><span style="color: #0000FF;">(</span><span style="color: #004080;">Ihandle</span> <span style="color: #000080;font-style:italic;">/*ih*/</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">glClearColor</span><span style="color: #0000FF;">(</span><span style="color: #000000;">0.3</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0.3</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0.3</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">1.0</span><span style="color: #0000FF;">)</span>
+     <span style="color: #004080;">integer</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">w</span><span style="color: #0000FF;">,</span><span style="color: #000000;">h</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">IupGetIntInt</span><span style="color: #0000FF;">(</span><span style="color: #000000;">canvas</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"DRAWSIZE"</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">glViewport</span><span style="color: #0000FF;">(</span><span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">w</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">h</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">glUniform1f</span><span style="color: #0000FF;">(</span><span style="color: #000000;">timeUniform</span><span style="color: #0000FF;">,</span> <span style="color: #0000FF;">(</span><span style="color: #7060A8;">time</span><span style="color: #0000FF;">()-</span><span style="color: #000000;">t0</span><span style="color: #0000FF;">))</span>
+     <span style="color: #7060A8;">glClear</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_COLOR_BUFFER_BIT</span> <span style="color: #0000FF;">||</span> <span style="color: #004600;">GL_DEPTH_BUFFER_BIT</span><span style="color: #0000FF;">)</span>
+
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">numVertices</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">length</span><span style="color: #0000FF;">(</span><span style="color: #000000;">vertices</span><span style="color: #0000FF;">)/</span><span style="color: #000000;">3</span><span style="color: #0000FF;">;</span> <span style="color: #000080;font-style:italic;">// 3 coordinates per vertex</span>
+     <span style="color: #7060A8;">glDrawArrays</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_TRIANGLES</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">numVertices</span><span style="color: #0000FF;">);</span>
+
+     <span style="color: #7060A8;">glFlush</span><span style="color: #0000FF;">()</span>
+
+     <span style="color: #008080;">return</span> <span style="color: #004600;">IUP_DEFAULT</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">main</span><span style="color: #0000FF;">()</span>
+     <span style="color: #7060A8;">IupOpen</span><span style="color: #0000FF;">()</span>
+     <span style="color: #7060A8;">IupGLCanvasOpen</span><span style="color: #0000FF;">()</span>
+     <span style="color: #000000;">canvas</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">IupGLCanvas</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"RESIZE_CB"</span><span style="color: #0000FF;">,</span> <span style="color: #7060A8;">Icallback</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"resize_cb"</span><span style="color: #0000FF;">),</span> <span style="color: #008000;">"RASTERSIZE=640x480"</span><span style="color: #0000FF;">)</span>
+     <span style="color: #000000;">dlg</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">IupDialog</span><span style="color: #0000FF;">(</span><span style="color: #000000;">canvas</span><span style="color: #0000FF;">,</span> <span style="color: #008000;">"TITLE=OpenGLShader, SHRINK=YES"</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">IupMap</span><span style="color: #0000FF;">(</span><span style="color: #000000;">dlg</span><span style="color: #0000FF;">)</span>
+     <span style="color: #000000;">set_shader</span><span style="color: #0000FF;">()</span>
+     <span style="color: #7060A8;">IupShow</span><span style="color: #0000FF;">(</span><span style="color: #000000;">dlg</span><span style="color: #0000FF;">)</span>
+     <span style="color: #004080;">Ihandle</span> <span style="color: #000000;">timer</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">IupTimer</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">Icallback</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"timer_cb"</span><span style="color: #0000FF;">),</span> <span style="color: #000000;">1000</span><span style="color: #0000FF;">/</span><span style="color: #000000;">20</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">if</span> <span style="color: #7060A8;">platform</span><span style="color: #0000FF;">()!=</span><span style="color: #004600;">JS</span> <span style="color: #008080;">then</span>
+         <span style="color: #7060A8;">IupMainLoop</span><span style="color: #0000FF;">()</span>
+         <span style="color: #000000;">dlg</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">IupDestroy</span><span style="color: #0000FF;">(</span><span style="color: #000000;">dlg</span><span style="color: #0000FF;">)</span>
+         <span style="color: #7060A8;">IupClose</span><span style="color: #0000FF;">()</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+ <span style="color: #000000;">main</span><span style="color: #0000FF;">()</span>
+<!--

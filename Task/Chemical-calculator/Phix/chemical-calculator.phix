@@ -1,0 +1,92 @@
+with javascript_semantics
+constant elements = new_dict() -- (eg "H" -> 1.008)
+
+function multiplier(string formula, integer fdx)
+    -- check for a trailing number, or return 1
+    integer n = 1
+    if fdx<=length(formula) then
+        integer ch = formula[fdx]
+        if ch>='1' and ch<='9' then
+            n = ch-'0'
+            fdx += 1
+            while fdx<=length(formula) do
+                ch = formula[fdx]
+                if ch<'0' or ch>'9' then exit end if
+                n = n*10 + ch-'0'
+                fdx += 1
+            end while
+        end if
+    end if
+    return {n,fdx}
+end function
+
+procedure molar_mass(string formula, name, atom expected)
+    sequence stack = {0} -- (for parenthesis handling)
+    integer sdx = 1, fdx = 1, n
+    while fdx<=length(formula) do
+        integer ch = formula[fdx]
+        if ch>='A' and ch<='Z' then
+            -- All elements start with capital, rest lower
+            integer fend = fdx
+            while fend<length(formula) do
+                ch = formula[fend+1]
+                if ch<'a' or ch>'z' then exit end if
+                fend += 1
+            end while
+            string element = formula[fdx..fend]
+            atom mass = getd(element,elements)
+            if mass=0 then ?9/0 end if -- missing?
+            {n,fdx} = multiplier(formula,fend+1)
+            stack[sdx] += n*mass
+        elsif ch='(' then
+            sdx += 1
+            stack &= 0
+            fdx += 1
+        elsif ch=')' then
+            {n,fdx} = multiplier(formula,fdx+1)
+            sdx -= 1
+            stack[sdx] += stack[$]*n
+            stack = stack[1..sdx]
+        else
+            ?9/0    -- unknown?
+        end if
+    end while
+    if sdx!=1 then ?9/0 end if -- unbalanced brackets?
+    if name!="" then formula &= " ("&name&")" end if
+--  string res = sprintf("%g",stack[1]),    -- (still fine)
+--         e = sprintf("%g",expected)       --     """
+    string res = sprintf("%.12g",stack[1]),
+           e = sprintf("%.12g",expected)
+    if res!=e then res &= " *** ERROR: expected "&e end if
+    printf(1,"%26s = %s\n",{formula,res})
+end procedure
+
+-- (following clipped for brevity, works fine with whole table from task description pasted in)
+constant etext = split("""
+H,1.008
+C,12.011
+O,15.999
+Na,22.98976928
+S,32.06
+Cl,35.45
+Uue,315""","\n")
+
+for i=1 to length(etext) do
+    string element
+    atom mass
+    {{element,mass}} = scanf(etext[i],"%s,%f")
+    setd(element,mass,elements)
+end for
+molar_mass("H","Hydrogen",1.008)
+molar_mass("H2","Hydrogen gas",2.016)
+molar_mass("H2O","Water",18.015)
+molar_mass("H2O2","Hydrogen peroxide",34.014)
+molar_mass("(HO)2","Hydrogen peroxide",34.014)
+--molar_mass("Na2SO4","Sodium sulfate",142.036) -- (fine for "%g")
+molar_mass("Na2SO4","Sodium sulfate",142.03553856)  --   """
+molar_mass("C6H12","Cyclohexane",84.162)
+molar_mass("COOH(C(CH3)2)3CH3","",186.295)
+molar_mass("C6H4O2(OH)4","Vitamin C",176.124)
+molar_mass("C27H46O","Cholesterol",386.664)
+molar_mass("Uue","Ununennium",315)
+molar_mass("UueCl","",350.45)

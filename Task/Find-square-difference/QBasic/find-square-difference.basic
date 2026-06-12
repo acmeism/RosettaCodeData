@@ -1,0 +1,8 @@
+FUNCTION fpow (n)
+    WHILE (i * i) - ((i - 1) * (i - 1)) < n
+        i = i + 1
+    WEND
+    fpow = i
+END FUNCTION
+
+PRINT fpow(1001)

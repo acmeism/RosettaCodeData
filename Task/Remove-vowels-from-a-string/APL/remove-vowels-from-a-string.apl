@@ -1,0 +1,1 @@
+devowel ← ~∘'AaEeIiOoUu'

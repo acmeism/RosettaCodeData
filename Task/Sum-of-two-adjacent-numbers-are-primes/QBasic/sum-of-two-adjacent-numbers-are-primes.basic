@@ -1,0 +1,24 @@
+FUNCTION isPrime (ValorEval)
+    IF ValorEval <= 1 THEN isPrime = 0
+    FOR i = 2 TO INT(SQR(ValorEval))
+        IF ValorEval MOD i = 0 THEN isPrime = 0
+    NEXT i
+    isPrime = 1
+END FUNCTION
+
+n = 0
+num = 0
+PRINT "The first 20 pairs of numbers whose sum is prime:"
+DO
+    n = n + 1
+    suma = 2 * n + 1
+    IF isPrime(suma) THEN
+        num = num + 1
+        IF num < 21 THEN
+            PRINT USING "## + ## = ##"; n; (n + 1); suma
+        ELSE
+            EXIT DO
+        END IF
+    END IF
+LOOP
+END

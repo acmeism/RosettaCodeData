@@ -1,0 +1,21 @@
+FUNCTION tobin$ (d)
+    s$ = ""
+    DO WHILE d <> 0
+       r = d MOD 2
+       s$ = STR$(r) + s$
+       d = d \ 2
+    LOOP
+    tobin$ = s$
+END FUNCTION
+
+k = 0 : n = 1 : p = 2
+DO
+   IF n >= p THEN p = p + p
+   k = n + n * p
+   IF k < 1000 THEN
+      PRINT k; " = "; tobin$(k)
+   ELSE
+      EXIT DO
+   END IF
+   n = n + 1
+LOOP

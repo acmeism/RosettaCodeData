@@ -1,0 +1,1 @@
+-> $n { (^∞).map: -> $m { if (my $p = $n × 2 ** $m + 1).is-prime { printf "%3d %4d: %d\n",$n,$m,$p; last } } } for 1..400

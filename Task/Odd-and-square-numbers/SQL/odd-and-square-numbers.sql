@@ -1,0 +1,6 @@
+WITH RECURSIVE t(a, b) AS (
+  VALUES(1, 8)
+  UNION ALL
+  SELECT a + b, b + 8 FROM t WHERE a + b < 1000
+)
+SELECT a FROM t WHERE a > 99

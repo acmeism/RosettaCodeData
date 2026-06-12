@@ -1,0 +1,144 @@
+sequence stateList = {} -- entries as follows:
+
+enum LABEL, -- character label - null for epsilon
+     EDGE1, -- first transition
+     EDGE2  -- second transition
+
+enum INITIAL, ACCEPTS
+type nfaentry(sequence n) return length(n)=2 end type
+
+function createState()
+  stateList &= {{null, null, null}}
+  return length(stateList)
+end function
+
+function compileRegex(string postfix)
+    stateList = {} // reset
+    sequence nfa = {}
+    nfaentry nfa1, nfa2
+    integer initial, accepts
+    for c in postfix do
+        if c!='.' then
+            initial = createState()
+            accepts = createState()
+        end if
+        if find(c,".|") then
+            {nfa,nfa2} = {nfa[1..$-1],nfa[$]}
+        end if
+        if find(c,"*.|+?") then
+            {nfa,nfa1} = {nfa[1..$-1],nfa[$]}
+        end if
+        if find(c,"*|+?") then
+            stateList[initial][EDGE1] = nfa1[INITIAL]
+        end if
+        if find(c,"*?") then
+            stateList[initial][EDGE2] = accepts
+        end if
+        if find(c,"*+") then
+            stateList[nfa1[ACCEPTS]][EDGE1] = nfa1[INITIAL]
+            stateList[nfa1[ACCEPTS]][EDGE2] = accepts
+        elsif c='.' then
+            stateList[nfa1[ACCEPTS]][EDGE1] = nfa2[INITIAL]
+            initial = nfa1[INITIAL]
+            accepts = nfa2[ACCEPTS]
+        elsif c='|' then
+            stateList[initial][EDGE2] = nfa2[INITIAL]
+            stateList[nfa1[ACCEPTS]][EDGE1] = accepts
+            stateList[nfa2[ACCEPTS]][EDGE1] = accepts
+        elsif c='?' then
+            stateList[nfa1[ACCEPTS]][EDGE1] = accepts
+        else // Literal character
+            stateList[initial][LABEL] = c
+            stateList[initial][EDGE1] = accepts
+        end if
+        nfa &= {{initial, accepts}}
+    end for
+    return nfa[$]
+end function
+
+function followes(integer id)
+    // compute the epsilon closure of a state
+    sequence states = {}, stack = {id}
+    while length(stack) do
+        id = stack[$]; stack = stack[1..$-1]
+        if not find(id,states) then
+            states &= id
+            integer {label,e1,e2} = stateList[id]
+            if label=null then
+                if e1!=null then stack &= e1 end if
+                if e2!=null then stack &= e2 end if
+            end if
+        end if
+    end while
+    return states
+end function
+
+function shunt(string infix)
+    // convert infix into postfix notation,
+    //  using the shunting yard algorithm
+    string postfix = "", stack = "", ops = "|.?+*"
+    for c in infix do
+        if c='(' then
+            stack &= c
+        elsif c=')' then
+            while stack[$]!='(' do
+                postfix &= stack[$]
+                stack = stack[1..-2]
+            end while
+            assert(stack[$]='(')
+            stack = stack[1..-2] // remove '('
+        else
+            integer priority = find(c,ops)
+            if priority then
+                while length(stack)
+                  and priority<=find(stack[$],ops) do
+                    postfix &= stack[$]
+                    stack = stack[1..-2]
+                end while
+                stack &= c
+            else
+                postfix &= c
+            end if
+        end if
+    end for
+    if length(stack) then
+        postfix &= reverse(stack)
+    end if
+    return postfix
+end function
+
+include sets.e -- for union()
+
+procedure matchRegex(string infix, sequence tests, string expected)
+    string postfix = shunt(infix)
+    nfaentry nfa = compileRegex(postfix)
+    string res = ""
+    for s in tests do
+        sequence current = followes(nfa[INITIAL]),
+              nextStates = {}
+        for c in s do
+            for state in current do
+                integer {label,e1,e2} = stateList[state]
+                if label=c then
+                    nextStates = union(nextStates,followes(e1))
+                end if
+            end for
+            current = nextStates
+            nextStates = {}
+        end for
+        res &= iff(find(nfa[ACCEPTS],current)?'T':'F')
+    end for
+    assert(res=expected)
+    printf(1," infix:%-10s => postfix:%-8s => results:%s\n",{infix,postfix,res})
+end procedure
+
+constant tests = {"", "abc", "abbc", "abcc", "abad", "abbbc"},
+   expressions = {{"a.b.c*",    "FTFTFF"},
+                  {"a.(b|d).c*","FTFTFF"},
+                  {"(a.(b|d))*","TFFFTF"},
+                  {"a.(b.b)*.c","FFTFFF"}}
+printf(1,"For tests in %v:\n",{tests})
+for ie in expressions do
+    string {infix,expected} = ie
+    matchRegex(infix,tests,expected)
+end for

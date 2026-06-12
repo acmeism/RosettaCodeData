@@ -1,0 +1,106 @@
+#include "crt\math.bi"
+
+Function betain(x As Double, p As Double, q As Double) As Double
+    If p <= 0 Or q <= 0 Or x < 0 Or x > 1 Then
+        Print "ValueError"
+        End
+    End If
+
+    If x = 0 Or x = 1 Then Return x
+
+    Dim As Double acu = 1e-15
+    'Dim As Double lnbeta = LogGamma(p) + LogGamma(q) - LogGamma(p + q)
+    Dim As Double lnbeta = lGamma(p) + lGamma(q) - lGamma(p + q)
+
+    Dim As Double xx = x
+    Dim As Double cx = 1 - x
+    Dim As Double pp = p
+    Dim As Double qq = q
+    Dim As Integer indx = 0
+    Dim As Double psq = p + q
+    If p < psq * x Then
+        xx = 1 - x
+        cx = x
+        pp = q
+        qq = p
+        indx = 1
+    End If
+
+    Dim As Double term = 1.0
+    Dim As Double ai = 1.0
+    Dim As Double value = 1.0
+    Dim As Integer ns = Int(qq + cx * psq)
+    Dim As Double rx = xx / cx
+    Dim As Double temp = qq - ai
+    If ns = 0 Then rx = xx
+
+    Do
+        term *= temp * rx / (pp + ai)
+        value += term
+        temp = Abs(term)
+
+        If temp <= acu And temp <= acu * value Then
+            value *= Exp(pp * Log(xx) + (qq - 1) * Log(cx) - lnbeta) / pp
+            Return Iif(indx, 1 - value, value)
+        End If
+
+        ai += 1
+        If ns > 0 Then
+            ns -= 1
+            temp = qq - ai
+            If ns = 0 Then
+                rx = xx
+            Else
+                temp = psq
+                psq += 1
+            End If
+        End If
+    Loop
+End Function
+
+Sub welch_ttest(a1() As Double, a2() As Double, Byref t As Double, Byref df As Double, Byref p As Double)
+    Dim As Integer n1 = Ubound(a1) + 1
+    Dim As Integer n2 = Ubound(a2) + 1
+    If n1 <= 1 Or n2 <= 1 Then
+        Print "ValueError"
+        End
+    End If
+
+    Dim As Double mean1 = 0
+    For i As Integer = 0 To n1 - 1
+        mean1 += a1(i)
+    Next i
+    mean1 /= n1
+
+    Dim As Double mean2 = 0
+    For i As Integer = 0 To n2 - 1
+        mean2 += a2(i)
+    Next i
+    mean2 /= n2
+
+    Dim As Double var1 = 0
+    For i As Integer = 0 To n1 - 1
+        var1 += (a1(i) - mean1) ^ 2
+    Next i
+    var1 /= (n1 - 1)
+
+    Dim As Double var2 = 0
+    For i As Integer = 0 To n2 - 1
+        var2 += (a2(i) - mean2) ^ 2
+    Next i
+    var2 /= (n2 - 1)
+
+    t = (mean1 - mean2) / Sqr(var1 / n1 + var2 / n2)
+    df = (var1 / n1 + var2 / n2) ^ 2 / (var1 ^ 2 / (n1 ^ 2 * (n1 - 1)) + var2 ^ 2 / (n2 ^ 2 * (n2 - 1)))
+    p = betain(df / (t ^ 2 + df), df / 2, 1 / 2)
+End Sub
+
+Dim As Double a1(3) = {3, 4, 1, 2.1}
+Dim As Double a2(2) = {490.2, 340, 433.9}
+Dim As Double t, df, p
+welch_ttest(a1(), a2(), t, df, p)
+Print " t: "; t
+Print "df: "; df
+Print " p: "; p
+
+Sleep

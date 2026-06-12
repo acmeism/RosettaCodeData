@@ -1,0 +1,82 @@
+(* Prime Partitionable Numbers / Erdős-Woods Numbers *)
+(* A number n is prime partitionable if there exists a partition {P1,P2} of primes < n
+   such that for any composition n1+n2=n, there exists p1 in P1 and p2 in P2
+   such that p1|n1 or p2|n2 *)
+
+primePart[n_] := Module[{P, P1, P2, x1, n1, n2, factors1, factors2, validPartition},
+  (* Get all primes up to n-1 *)
+  P = Prime[Range[PrimePi[n - 1]]];
+
+  (* If no primes less than n, return empty *)
+  If[Length[P] == 0, Return[{}]];
+
+  (* Try all even numbers from 2 to 2^Length[P]-1 as bit patterns *)
+  (* Even numbers ensure P1 is non-empty (bit 0 corresponds to smallest prime) *)
+  For[x1 = 2, x1 <= 2^Length[P] - 1, x1 += 2,
+    (* Extract subset P1 based on bit pattern x1 *)
+    P1 = Pick[P, IntegerDigits[x1, 2, Length[P]], 1];
+    (* P2 is the complement of P1 in P *)
+    P2 = Complement[P, P1];
+
+    (* Skip if P2 is empty *)
+    If[Length[P2] == 0, Continue[]];
+
+    validPartition = True;
+
+    (* Check all compositions n1 + n2 = n where both n1, n2 > 0 *)
+    For[n1 = 1, n1 <= n - 1 && validPartition, n1++,
+      n2 = n - n1;
+
+      (* Get prime factors of n1 and n2 *)
+      factors1 = If[n1 == 1, {}, FactorInteger[n1][[All, 1]]];
+      factors2 = If[n2 == 1, {}, FactorInteger[n2][[All, 1]]];
+
+      (* Check if there exists p1 in P1 such that p1|n1 OR p2 in P2 such that p2|n2 *)
+      If[Length[Intersection[P1, factors1]] == 0 &&
+         Length[Intersection[P2, factors2]] == 0,
+        (* This composition fails the condition *)
+        validPartition = False
+      ];
+    ];
+
+    (* If all compositions satisfy the condition, return this partition *)
+    If[validPartition, Return[{P1, P2}]]
+  ];
+
+  (* If no valid partition found, return empty *)
+  {}
+]
+
+(* Check if a number is prime partitionable (Erdős-Woods number) *)
+isPrimePartitionable[n_] := Length[primePart[n]] > 0
+
+(* Generate first several prime partitionable numbers *)
+primePartitionableNumbers[max_] := Module[{result = {}},
+  Do[
+    If[isPrimePartitionable[n], AppendTo[result, n]],
+    {n, 1, max}
+  ];
+  result
+]
+
+(* Alternative implementation: Check if n is an Erdős-Woods number directly *)
+isErdosWoods[k_] := Module[{a, found = False, i, gcd1, gcd2},
+  (* Try different starting points a *)
+  For[a = 2, a <= 1000 && !found, a++, (* limit search to reasonable range *)
+    found = True;
+    (* Check if each element a+i (for 0 < i < k) shares a factor with a or a+k *)
+    For[i = 1, i <= k - 1 && found, i++,
+      gcd1 = GCD[a, a + i];
+      gcd2 = GCD[a + k, a + i];
+      If[gcd1 == 1 && gcd2 == 1, found = False];
+    ];
+  ];
+  found
+]
+
+(* Examples and tests *)
+Print["First few prime partitionable numbers: ", primePartitionableNumbers[40]]
+Print["Prime partition for n=16: ", primePart[16]]
+Print["Prime partition for n=22: ", primePart[22]]
+Print["Is 16 Erdős-Woods? ", isErdosWoods[16]]
+Print["Is 17 Erdős-Woods? ", isErdosWoods[17]]

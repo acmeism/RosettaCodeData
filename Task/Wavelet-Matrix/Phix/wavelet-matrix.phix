@@ -1,0 +1,155 @@
+// BitRank "class" for rank operations
+enum BITS, COUNT
+type BitRank(object br)
+    return sequence(br)
+       and sequence(br[BITS])
+       and sequence(br[COUNT])
+end type
+
+// WaveletMatrix "class"
+enum B, // Array of BitRanks
+     POS, // position array
+     HEIGHT // Height of the matrix
+type WaveletMatrix(object wm)
+    return sequence(wm)
+       and length(wm)=3
+       and sequence(wm[B])
+       and sequence(wm[POS])
+       and integer(wm[HEIGHT])
+end type
+
+// Get i'th bit of v
+function GetBitAt(integer v, i)
+    return and_bits(floor(v/power(2,i)),1)
+end function
+
+// Count number of 1's in [0, i)
+function Rank1(BitRank br, integer i)
+    integer blockIndex = floor(i/64),
+            bitposic = and_bits(i,63),
+            cnt = 0
+
+    // Add cnt from previous blocks
+    if blockIndex > 0 then cnt = br[COUNT][blockIndex] end if
+
+    // Count bits in current block
+    for j=1 to bitposic do
+        if and_bits(br[BITS][blockIndex+1],power(2,j-1)) then cnt += 1 end if
+    end for
+
+    return cnt
+end function
+
+// Count number of 0's in [0, i)
+function Rank0(BitRank br, integer i)
+    return i - Rank1(br, i)
+end function
+
+// Initialize a BitRank structure
+function InitBitRank(integer size)
+    integer numBlocks = floor((size+63)/64)
+    BitRank br = {repeat(0,numBlocks), -- [BITS]
+                  repeat(0,numBlocks)} -- [COUNT]
+    return br
+end function
+
+// Initialize the WaveletMatrix with a vector
+function CreateWaveletMatrix(sequence vec, integer maxVal=-1)
+    if maxVal=-1 then maxVal = max(vec)+1 end if
+    integer height = iff(maxVal=1?1:64-(32-length(int_to_bits(maxVal)))),
+                 n = length(vec)
+    WaveletMatrix wm = {repeat(0,height), -- B
+                        repeat(0,height), -- POS
+                        height}           -- HEIGHT
+
+    // Create a copy of the input vector for manipulation
+    sequence tmpVec = deep_copy(vec)
+
+    for h=1 to height do
+        wm[B][h] = InitBitRank(n)
+
+        // Count zeros
+        integer zeros = 0,
+                bit = height-h
+        for i=1 to n do
+            integer vi = tmpVec[i]-1
+            if GetBitAt(vi, bit) = 0 then
+                zeros += 1
+            else
+                // Set bit in BitRank
+                integer blockIdx = floor((i-1)/64),
+                        bitposic = and_bits((i-1),63)
+                wm[B][h][BITS][blockIdx+1] ||= power(2,bitposic)
+            end if
+        end for
+
+        // Build cnt array
+        integer runningCount = 0
+        for i,bits in wm[B][h][BITS] do
+            wm[B][h][COUNT][i] = runningCount
+            runningCount += count_bits(bits)
+        end for
+
+        // Stable partition - separate 0's and 1's
+        sequence zeroValues = repeat(0,zeros),
+                  oneValues = repeat(0,n-zeros)
+        integer zeroIdx = 1, oneIdx = 1
+
+        for i,ti in tmpVec do
+            if GetBitAt(ti-1, bit) = 0 then
+                zeroValues[zeroIdx] = ti
+                zeroIdx += 1
+            else
+                oneValues[oneIdx] = ti
+                oneIdx += 1
+            end if
+        end for
+
+        // Combine arrays back
+        zeroValues &= oneValues
+        tmpVec = zeroValues
+
+        wm[POS][h] = zeros
+    end for
+    return wm
+end function
+
+// kth smallest element in [l, r)
+function Quantile(WaveletMatrix wm, integer k, l, r)
+    integer res = 0, h = wm[HEIGHT]
+
+    for i=1 to h do
+        BitRank b = wm[B][i]
+        integer nl = Rank0(b, l),
+                nr = Rank0(b, r),
+                zeros = nr - nl
+        if zeros > k then
+            // Go to left (0) child
+            l = nl
+            r = nr
+        else
+            // Go to right (1) child
+            integer p = wm[POS][i]
+            l = p + l-nl
+            r = p + r-nr
+            k -= zeros
+            res ||= power(2,h-i)
+        end if
+    end for
+    return res
+end function
+
+procedure main()
+    sequence a = {3374, 956, 2114, 3415, 3437},
+         uniqa = unique(a),
+        mapped = apply(true,binary_search,{a,{uniqa}})
+
+    WaveletMatrix wm = CreateWaveletMatrix(mapped, length(uniqa))
+
+    for query in {{2,2,1},{3,4,1},{4,5,1},{1,2,2},{4,4,1}} do
+        integer {l,r,k} = query
+        ?uniqa[Quantile(wm, k-1, l-1, r)+1]
+    end for
+end procedure
+
+main()

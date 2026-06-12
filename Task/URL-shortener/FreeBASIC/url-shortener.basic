@@ -1,0 +1,110 @@
+#Include Once "vbcompat.bi"
+
+Const maxShortLongi = 6
+Const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+Function randomShortKey(longi As Integer) As String
+    Dim As String s = ""
+    For i As Integer = 1 To longi
+        s &= Mid(chars, Int(Rnd * Len(chars)) + 1, 1)
+    Next
+    Return s
+End Function
+
+Function existsShortKey(shortKey As String) As Boolean
+    Dim As String linea
+    Dim As Integer posic
+    Dim As Integer ff = Freefile()
+    If Not Fileexists("urls.txt") Then Return False
+
+    Open "urls.txt" For Input As #ff
+    While Not Eof(ff)
+        Line Input #ff, linea
+        posic = Instr(linea, "|")
+        If posic > 0 Then
+            If Left(linea, posic - 1) = shortKey Then
+                Close #ff
+                Return True
+            End If
+        End If
+    Wend
+    Close #ff
+    Return False
+End Function
+
+Sub StoreMapping(longUrl As String)
+    Dim As String shortKey
+    Do
+        shortKey = randomShortKey(maxShortLongi)
+    Loop While existsShortKey(shortKey)
+
+    Dim As Integer ff = Freefile()
+    Open "urls.txt" For Append As #ff
+    Print #ff, shortKey & "|" & longUrl
+    Close #ff
+End Sub
+
+Function FindLongUrl(shortKey As String) As String
+    Dim As String linea, longUrl
+    Dim As Integer posic
+    Dim As Integer ff = Freefile()
+    If Not Fileexists("urls.txt") Then Return ""
+
+    Open "urls.txt" For Input As #ff
+    While Not Eof(ff)
+        Line Input #ff, linea
+        posic = Instr(linea, "|")
+        If posic > 0 Then
+            If Left(linea, posic - 1) = shortKey Then
+                longUrl = Mid(linea, posic + 1)
+                Close #ff
+                Return longUrl
+            End If
+        End If
+    Wend
+    Close #ff
+    Return ""
+End Function
+
+' Main program
+Print "URL Shortener simple - FreeBASIC"
+Dim As String entrada, shortKey, longUrl
+
+Randomize Timer
+
+Do
+    Print: Print "Enter a long URL to shorten (or 'exit' to exit): "
+    Line Input entrada
+    If Lcase(entrada) = "exit" Then Exit Do
+
+    StoreMapping(entrada)
+    shortKey = ""
+
+    ' Find the newly generated shortkey (the last one in the file)
+    Dim As String linea
+    Dim As Integer posic
+    Dim As Integer ff = Freefile()
+
+    Open "urls.txt" For Input As #ff
+    While Not Eof(ff)
+        Line Input #ff, linea
+        posic = Instr(linea, "|")
+        If posic > 0 Andalso Right(linea, Len(entrada)) = entrada Then
+            shortKey = Left(linea, posic - 1)
+        End If
+    Wend
+    Close #ff
+
+    Print "shortened URL: http://localhost:8080/" & shortKey
+
+    Print "Enter a short URL to redirect to (key only): "
+    Line Input entrada
+    longUrl = FindLongUrl(entrada)
+    If longUrl = "" Then
+        Print "Short URL not found."
+    Else
+        Print "Redirecting to: "; longUrl
+    End If
+Loop
+
+Sleep

@@ -1,0 +1,29 @@
+DO
+    DIM s AS STRING
+    INPUT "Enter a string or 'q' to quit: ", s
+    IF s = "q" THEN EXIT DO
+    DIM res AS INTEGER
+    res = areAbcCountsEqual(s)
+    PRINT "The counts of 'a', 'b', 'c' are ";
+    IF res THEN
+        PRINT "equal."
+    ELSE
+        PRINT "not equal."
+    END IF
+    PRINT
+LOOP
+
+FUNCTION areAbcCountsEqual (s AS STRING)
+    a = 0: b = 0: c = 0
+    s = LCASE$(s)
+    FOR i = 1 TO LEN(s)
+        IF MID$(s, i, 1) = "a" THEN
+            a = a + 1
+        ELSEIF MID$(s, i, 1) = "b" THEN
+            b = b + 1
+        ELSEIF MID$(s, i, 1) = "c" THEN
+            c = c + 1
+        END IF
+    NEXT i
+    areAbcCountsEqual = (a = b) AND (b = c)
+END FUNCTION

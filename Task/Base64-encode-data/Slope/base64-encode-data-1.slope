@@ -1,0 +1,52 @@
+(define table-reg "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=")
+(define table-alt "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_=")
+
+; The second argument to encode, if given, will be treated as a bool
+;   a truthy value will have the encoding be URL safe
+(define encode (lambda (in ...)
+  (if (not (pair? in))
+    (set! in (string->bytes (append "" in))))
+  (define table (if (and (pair? ...) (car ...)) table-alt table-reg))
+  (define b-length (length in))
+  (define pad-length
+    (if (equal? (% b-length 3) 1)
+      2
+      (if (equal? (% b-length 3) 2)
+        1
+        0)))
+  (define size (+ b-length pad-length))
+  (define src-arr in)
+  (define dst-arr in)
+  (cond
+    ((equal? pad-length 1) (set! dst-arr (append dst-arr 0)))
+    ((equal? pad-length 2) (set! dst-arr (append dst-arr 0 0))))
+  (define result [])
+  (for ((i 0 (+ i 3))) ((< i size))
+    (define a (ref dst-arr i))
+    (define b (ref dst-arr (+ i 1)))
+    (define c (ref dst-arr (+ i 2)))
+    (define is-last (> (+ i 3) b-length))
+    (set! result
+      (append result
+        (>> a 2)
+        (| (<< (& a 3) 4) (>> b 4))))
+    (if (or (not is-last) (zero? pad-length))
+      (set! result
+        (append result
+          (| (<< (& b 15) 2) (>> c 6))
+          (& c 63)))
+      (if (equal? pad-length 2)
+        (set! result (append result "=" "="))
+        (if (equal? pad-length 1)
+          (set! result (append result (| (<< (& b 15) 2) (>> c 6)) "="))))))
+  (list->string
+    (map
+      (lambda (code)
+        (if (string? code)
+          "="
+          (ref table code)))
+      result))))
+
+(load-mod request) ; available from slp
+(define data (request::fetch "http://rosettacode.org/favicon.ico"))
+(display (encode data))

@@ -1,0 +1,66 @@
+(* Copyright © 2017 John L. Gustafson
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sub-license, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+This copyright and permission notice shall be included in all copies or substantial portions of the software.
+
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY,
+WHETHER IN AN ACTION OR CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*)
+
+setpositenv[{n_Integer /; n >= 2, e_Integer /; e >= 0}] := (
+   {nbits, es} = {n, e};
+   npat = 2^nbits;
+   useed = 2^2^es;
+   {minpos, maxpos} = {useed^(-nbits + 2), useed^(nbits - 2)};
+   qsize = Power[2, Ceiling[Log[2, (nbits - 2) 2^(es + 2) + 5]]];
+   qextra = qsize - (nbits - 2) 2^(es + 2);
+)
+positQ[p_Integer] := 0 <= p < npat
+twoscomp[sign_, p_] := Mod[If[sign > 0, p, npat - p], npat]
+signbit[p_ /; positQ[p]] := IntegerDigits[p, 2, nbits][[1]]
+regimebits[p_ /; positQ[p]] :=
+ Module[
+  {q = twoscomp[1 - signbit[p], p], bits, bit2, npower, tempbits},
+  bits = IntegerDigits[q, 2, nbits];
+  bit2 = bits[[2]]; (* Look for the run length after the sign bit. *)
+
+  tempbits = Join[Drop[bits, 1], {1 - bit2}]; (* Drop the sign bit,
+  but append a complement bit as a sure-fire way to end the run. *)
+
+  npower = (Position[tempbits, 1 - bit2, 1, 1])[[1]] - 1; (*
+  Find first opposite bit. *)
+
+  Take[bits, {2, Min[npower + 1, nbits]}]
+]
+regimevalue[bits_] := If[bits[[1]] == 1, Length[bits] - 1, -Length[bits]]
+exponentbits[p_ /; positQ[p]] :=
+ Module[{q = twoscomp[1 - signbit[p], p], bits, startbit},
+  startbit = Length[regimebits[q]] + 3;
+  bits = IntegerDigits[q, 2, nbits];
+  If[startbit > nbits, {},
+   Take[bits, {startbit, Min[startbit + es - 1, nbits]}]]]
+fractionbits[p_ /; positQ[p]] :=
+ Module[{q = twoscomp[1 - signbit[p], p], bits, startbit},
+  startbit = Length[regimebits[q]] + 3 + es;
+  bits = IntegerDigits[q, 2, nbits];
+  If[startbit > nbits, {}, Take[bits, {startbit, nbits}]]]
+p2x[p_ /; positQ[p]] :=
+ Module[{s = (-1)^signbit[p], k = regimevalue[regimebits[p]],
+   e = exponentbits[p], f = fractionbits[p]},
+  e = Join[e, Table[0, es - Length[e]]]; (*
+  Pad with 0s on the right if they are clipped off. *)
+
+  e = FromDigits[e, 2];
+  If[f == {}, f = 1, f = 1 + FromDigits[f, 2] 2^(-Length[f])];
+  Which[
+   p == 0, 0,
+   p == npat/2, ComplexInfinity, (* The two exception values,
+   0 and \[PlusMinus]\[Infinity] *)
+   True, s useed^k*2^e*f]
+]
+setpositenv[{16, 3}];
+p2x @ 2^^0000110111011101 // TraditionalForm

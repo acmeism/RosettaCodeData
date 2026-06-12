@@ -1,0 +1,215 @@
+//cmd: +w640 +h480 +am2 +a0.01
+
+#version 3.7;
+
+global_settings {
+  assumed_gamma 1
+}
+
+//enum CICurve items
+#declare _cu_items = array[4]{"Ctrl", "Point", "Curmult", "Matrix"}
+#declare _cu_ctrl = 0;
+#declare _cu_point = 1;
+#declare _cu_curmult = 2;
+#declare _cu_matrix = 3;
+//enum curve ctrl items
+#declare _cu_ctrl_items = array[5]{"DimSeg", "Step", "Len", "Segments", "CurrSeg"}
+#declare _cu_dimseg = 0;
+#declare _cu_step = 1;
+#declare _cu_len = 2;
+#declare _cu_segments = 3;
+#declare _cu_curseg = 4;
+
+//enum CITCurve items
+#declare _cu_tcurve = 0;
+#declare _cu_ccurve = 1;
+
+#macro _arrFill(Len, Val)
+  /*:Create and fill an array of length Len with value Val*/
+  #local Arr = array[Len];
+  #for(i,0,Len-1)
+    #local Arr[i] = Val;
+  #end
+  Arr
+#end
+
+#macro _CIinit(CIarr, DimSeg, Step, Matrix)
+  #local Len = dimension_size(CIarr, 1);
+  #local Lsd = Len - DimSeg;
+  #if(Lsd < 0)
+    #error  "Too few points in curve array"
+  #end
+  #if(mod(Lsd, Step) = 0)
+    #local Segments = div(Lsd, Step) + 1;
+  #else
+    #error  "Not the right amount of points in curve array"
+  #end
+  #local CurrSeg = -1;
+  #local CICurve = array[4];
+  #local CICurve[_cu_ctrl] = array[5]{DimSeg, Step, Len, Segments, CurrSeg};
+  #local CICurve[_cu_point] = CIarr;
+  #local CICurve[_cu_curmult] = _arrFill(dimension_size(Matrix,1), <0,0,0>);
+  #local CICurve[_cu_matrix] = Matrix;
+  CICurve
+#end
+
+#macro _CIdivMatrix(Matrix, Div)
+  #for(i, 0, dimension_size(Matrix,1)-1)
+    #for(j, 0, dimension_size(Matrix[i],1)-1)
+      #local Matrix[i][j] = Matrix[i][j] / Div;
+    #end
+  #end
+  Matrix
+#end
+
+
+#macro CIbspline2(CIarr)
+/*:
+Quadratic b-spline aka parabolic spline
+Three control points define a segment.
+The curve does not pass through any control point. It starts half way P0P1
+and ends half way P1P2.
+The curve is "attracted" to the middel control points.
+Number of control points in a multi segment curve is 3 + (n * 1)
+*/
+  #local DimSeg = 3;
+  #local Step = 1;
+  #local Div = 2;
+  #local Matrix = array[3]{
+      array[3]{ 1,-2, 1},
+      array[2]{-2, 2},
+      array[2]{ 1, 1}
+  }
+  #local Matrix = _CIdivMatrix(Matrix, Div);
+  _CIinit(CIarr, DimSeg, Step, Matrix)
+#end
+
+
+#macro CIbspline3(CIarr)
+/*: Cubic b-spline
+Four control points define a segment.
+The curve does not pass through any control point. It goes from near
+P1 to near P2
+The curve is "attracted" to the middel control points.
+Number of control points in a multi segment curve is 4 + (n * 1)
+*/
+  #local DimSeg = 4;
+  #local Step = 1;
+  #local Div = 6;
+  #local Matrix = array[4]{
+      array[4]{-1, 3,-3, 1},
+      array[3]{ 3,-6, 3},
+      array[3]{-3, 0, 3},
+      array[3]{ 1, 4, 1}
+  }
+  #local Matrix = _CIdivMatrix(Matrix, Div);
+  _CIinit(CIarr, DimSeg, Step, Matrix)
+#end
+
+
+#macro CIget(CICurve, T)
+  /*: Gets the point on the curve at T
+
+  parameter:
+    CICurve (array, vector): an array of vectors and other parameters as created via one
+                              of the spline initialisation macros.
+    T (float, [0,1]): position at which to interpolate the curve.
+
+  return:
+    (vector) returns a point on the curve at T.
+
+  use example:
+    #declare TheCurve = CIlinear(PointArray);
+    #declare P = CIget(TheCurve, 0.1);
+  */
+
+  /* T goes from 0 to 1 for the whole curve. From current T find the proper curve segment.
+     Tseg also goes from 0 to 1. Once the proper segment is found, get the proper Tseg.
+  */
+  #local Len = CICurve[_cu_ctrl][_cu_len];
+  #local Segments = CICurve[_cu_ctrl][_cu_segments];
+  #local CImult = CICurve[_cu_curmult];
+  #if(T = 1)
+    #local Segment = Segments - 1;
+    #local Tseg = 1;
+  #else
+    #local Segment = floor(T * Segments);
+    #local Tseg =  (T * Segments) - Segment;
+  #end
+  #if(Segment != CICurve[_cu_ctrl][_cu_curseg])
+    #local CICurve[_cu_ctrl][_cu_curseg] = Segment;
+    #local CurrPos = Segment * CICurve[_cu_ctrl][_cu_step];
+    #local CImatrix = CICurve[_cu_matrix];
+    #local MaxPos = Len - CICurve[_cu_ctrl][_cu_dimseg] + CICurve[_cu_ctrl][_cu_step];
+    #if(CurrPos < MaxPos)
+      #for(i, 0, dimension_size(CImatrix, 1) - 1)
+        #local CImult[i] = <0, 0, 0>;
+        #for(j, 0, dimension_size(CImatrix[i], 1) - 1)
+          #local jSegment = j + CurrPos;
+          #local CImult[i] = CImult[i] + CImatrix[i][j] * CICurve[_cu_point][jSegment];
+        #end
+      #end
+    #end
+    #local CICurve[_cu_curmult] = CImult;
+  #end
+  #local F = CImult[0];
+  #for(i, 1, dimension_size(CImult, 1) - 1)
+    #local F = (F * Tseg) + CImult[i];
+  #end
+  F
+#end
+
+//== Scene
+
+//spline control points
+#declare ControlPoints = array[12]{
+  <171,171>,
+  <185,111>,
+  <202,109>,
+  <202,189>,
+  <328,160>,
+  <208,254>,
+  <241,330>,
+  <164,252>,
+  < 69,278>,
+  <139,208>,
+  < 72,148>,
+  <168,172>
+};
+
+//Set up quadratic b-spline (White)
+#declare Bspl2 = CIbspline2(ControlPoints)
+
+//get the points on the curve
+#for(T, 0, 1, 0.001)
+  sphere{CIget(Bspl2, T), 2 pigment{rgb 1}}
+#end
+
+
+//Set up cubic b-spline (Blue)
+#declare Bspl3 = CIbspline3(ControlPoints)
+
+//get the points on the curve
+#for(T, 0, 1, 0.001)
+  sphere{CIget(Bspl3, T), 2 pigment{rgb <0.2,0.2,1>}}
+#end
+
+
+//control points
+sphere{ControlPoints[0] 3 pigment{rgb <1,0,0>}}
+#for(i, 1, dimension_size(ControlPoints,1) - 1)
+  sphere{ControlPoints[i] 3 pigment{rgb <1,0,0>}}
+  cylinder{ControlPoints[i-1], ControlPoints[i], 0.5 pigment{rgb <1,0,0>}}
+#end
+
+
+camera {
+  //perspective angle 75
+  location  <190, 220,-250>
+  right     x*image_width/image_height
+  look_at   <190, 220,0>
+}
+
+light_source{<0, 0,-3000> color rgb 1}
+
+

@@ -1,0 +1,150 @@
+with javascript_semantics
+function parse_hex_digits(string digits, integer i)
+  integer codepoint = 0;
+  for digit in lower(digits) do
+    codepoint *= #10
+    if digit>='0' and digit<='9' then
+      codepoint += digit - '0';
+    elsif digit >= 'a' and digit <= 'f' then
+      codepoint += digit - 'a' + 10;
+    else
+      throw(sprintf(`invalid \\uXXXX escape sequence, at index %d`, {i}));
+    end if
+  end for
+  return codepoint;
+end function
+
+function is_low_surrogate(integer codepoint)
+  return codepoint >= 0xdc00 and codepoint <= 0xdfff;
+end function
+
+function is_high_surrogate(integer codepoint)
+  return codepoint >= 0xd800 and codepoint <= 0xdbff;
+end function
+
+function decode_hex_char(string s, integer i)
+  integer l = length(s);
+
+  if i+4>l then
+    throw(sprintf(`incomplete escape sequence, at index %d`, {i-1}));
+  end if
+
+  i += 1; // Move past 'u'
+  integer codepoint = parse_hex_digits(s[i..i+3], i-2);
+
+  if is_low_surrogate(codepoint) then
+    throw(sprintf(`unexpected low surrogate code point, at index %d`, {i-2}));
+  end if
+
+  if is_high_surrogate(codepoint) then
+    if not(i + 9 < l and s[i + 4] == '\\' and s[i + 5] == 'u') then
+      throw(sprintf(`incomplete escape sequence, at index %d`, {i-2}));
+    end if
+
+    integer low_surrogate = parse_hex_digits(s[i+6..i+9], i+4);
+    if not is_low_surrogate(low_surrogate) then
+      throw(sprintf(`unexpected code point, at index %d`, {i+4}));
+    end if
+
+    codepoint = 0x10000 + ((codepoint && 0x03ff) * #400) + (low_surrogate && 0x03ff);
+
+    return {codepoint, i+9};
+  end if
+
+  return {codepoint, i+3}
+end function
+
+function string_from_codepoint(integer codepoint, i)
+  if codepoint <= 0x1f then
+    throw(sprintf(`invalid character, at index %d`, {i}));
+  end if
+  // ASIDE: this is the really tricky hidden and somewhat cheaty part,
+  // that's likely to be rather different in every language/submission.
+  --
+  -- So far / at the time of writing:
+  -- ALGOL 68: CHAROF codepoint; (kind of/I think)
+  -- APL: your guess is as good as mine
+  -- C#: char.ConvertFromUtf32(codepoint);
+  -- C++: full on manual code
+  -- DuckDB: from_json()
+  -- EasyLang: strchar v
+  -- F#: n/a (uses Regex.Unescape)
+  -- FreeBASIC: Chr(codepoint)
+  -- Go: full on manual code
+  -- Java: Character.toString(codepoint);
+  -- JavaScript: String.fromCodePoint(codepoint);
+  -- jq: n/a (uses -r command line option)
+  -- Julia: Char(codepoint)
+  -- Kotlin: codepoint.toChar().toString()
+  -- Nu: n/a (uses from json)
+  -- PascalABC.NET: n/a (uses Regex.Unescape)
+  -- Phix: utf32_to_utf8({codepoint})
+  -- Python: chr(codepoint)
+  -- "" jbs: full on manual code
+  -- Raku: n/a (autohandled by "say $o.made", I think)
+  -- RPL: n/a [no unicode support]
+  -- Rust: std::char::from_u32(code_point)
+  -- TypeScript: as Javascript
+  -- Wren: String.fromCodePoint(cp)
+  -- Zig: std.unicode.utf8Encode()
+  --
+  -- This (pure Phix) standard builtin contains
+  -- similar code to C++, Go, and Python[jbs]:
+  return utf32_to_utf8({codepoint})
+end function
+
+function unescape(string s)
+  string res = ""
+  integer l = length(s), i=1
+  while i<=l do
+    integer ch = s[i];
+    if ch == '\\' then
+      i += 1; // Move past '\'
+      ch = s[i]
+
+      switch ch do
+        case '"','\\','/':  res &= ch
+        case 'b':           res &= '\x08'
+        case 'f':           res &= '\x0C'
+        case 'n':           res &= '\n'
+        case 'r':           res &= '\r'
+        case 't':           res &= '\t'
+        case 'u':
+          integer startIndex = i - 1, codepoint;
+          {codepoint, i} = decode_hex_char(s, i);
+          res &= string_from_codepoint(codepoint, startIndex);
+        default:
+          throw(sprintf(`unknown escape sequence, at index %d`, {i-1}));
+      end switch
+    else
+      res &= ch
+    end if
+    i += 1;
+  end while
+  return res
+end function
+
+constant tests = {
+  "abc",
+  "a☺c",
+  "a\\\"c",
+  "\\u0061\\u0062\\u0063",
+  "a\\\\c",
+  "a\\u263Ac",
+  "a\\\\u263Ac",
+  "a\\uD834\\uDD1Ec",
+  "a\\ud834\\udd1ec",
+  "a\\u263",
+  "a\\u263Xc",
+  "a\\uDD1Ec",
+  "a\\uD834c",
+  "a\\uD834\\u263Ac",
+};
+
+for s in tests do
+  try
+    printf(1,"%s -> %s\n",{s,unescape(s)});
+  catch err
+    printf(1,"%s -> %s\n",{s,err[E_USER]});
+  end try
+end for

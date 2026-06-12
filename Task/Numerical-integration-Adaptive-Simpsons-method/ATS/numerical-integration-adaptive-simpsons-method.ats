@@ -1,0 +1,207 @@
+(* Adaptive Simpson quadrature was, I believe, one of the subjects in
+   my undergraduate numerical analysis coursework (in the middle
+   1980s). It is most likely the first recursive quadrature method to
+   have been published, and it is very easy to write a program that
+   does it. *)
+
+#include "share/atspre_staload.hats"
+
+(* The interface is a template function, for any of the floating-point
+   types. *)
+extern fn {tk : tkind}
+quadrature_by_adaptive_simpson
+          (* f is an ordinary function (compiled to a C function, as
+             opposed to a closure with an environment), with no effect
+             restrictions. I make it a function rather than a closure
+             so we can use ordinary C functions for "f". I could have
+             written "-<1>" or just "->" instead of "-<fun1>" *)
+          (f     : g0float tk -<fun1> g0float tk,
+           a     : g0float tk,
+           b     : g0float tk,
+           tol   : g0float tk,  (* Tolerance. *)
+           depth : intGte 0) (* The maximum depth of recursion. *)
+    (* The type of the return value is "g0float tk", or in other words
+       (for purposes of this example program) any of the
+       floating-point types "float", "double", or "ldouble" (long
+       double), corresponding to the floating-point types of standard
+       C. A plain colon means there are no effect restrictions. Had I
+       written ":<1>" or ":<fun1>" instead, it would have meant the
+       same thing. *)
+    : g0float tk
+
+(* The implementation will be for any floating-point type (although it
+   can be overridden, either generally or for a specific type). *)
+implement {tk}
+quadrature_by_adaptive_simpson (f, a, b, tol, depth) =
+  let
+    (* A shorthand. Sometimes you will see typedefs written instead as
+       "stadef", which is a more general notation. *)
+    typedef real = g0float tk
+
+    (* In ATS, you can nest functions inside functions to whatever
+       depth you like. *)
+    fn
+    _quad_asr_simpsons (a  : real,
+                        fa : real,
+                        b  : real,
+                        fb : real)
+        (* The return type is an unboxed 3-tuple of floating point
+           numbers. It will be passed around as a C struct. Usually
+           one can leave out the "@" sign, but I like to include it. A
+           BOXED tuple (allocated as a struct in the heap, and passed
+           around as a pointer) would be written '() instead of @() *)
+        : @(real, real, real) =
+      let
+        (* The type of 0.5 must be casted to type "real" (= "g0float
+           tk"). Here I will do that rather explicitly, using a
+           macro. Typically it is possible to let the ATS compiler
+           infer which type-to-type cast is necessary. See further
+           below where I write "g0i2f" to do the casts from integer to
+           floating-point type. *)
+        macdef one_half = g0float2float<double_kind,tk> 0.5
+
+        val m = one_half * (a + b)
+        val fm = f(m)
+        val h = b - a
+      in
+        @(m, fm, (h / g0i2f 6) * (fa + (g0i2f 4 * fm) + fb))
+      end
+
+    (* _quad_asr is a recursive function, so I must write "fun"
+       instead of "fn". *)
+    fun
+    _quad_asr {depth : nat}
+              (* "depth" is a hypothetical natural number, used only
+                 during typechecking. The notations below mean that,
+                 on each call to _quad_asr, the value that is of type
+                 "int depth" will have to be proven to decrease
+                 without passing zero. If this is indeed so, then the
+                 function is guaranteed to terminate (unless it would
+                 run out of stack space, etc.). *)
+              .<depth>.
+              (a     : real,
+               fa    : real,
+               b     : real,
+               fb    : real,
+               tol   : real,
+               whole : real,
+               m     : real,
+               fm    : real,
+               depth : int depth) : g0float tk =
+      let
+        (* Saying "and" here means that the computations should be
+           performed as if at the same time, and perhaps even at the
+           same time. In this case that is not necessary, although
+           perhaps it is good as documentation. In some instances it
+           is REALLY what you want. *)
+        val @(lm, flm, left) = _quad_asr_simpsons (a, fa, m, fm)
+        and @(rm, frm, right) = _quad_asr_simpsons (m, fm, b, fb)
+
+        val delta = left + right - whole
+        and tol_ = g0f2f 0.5 * tol
+      in
+        (* I test the value of "depth" first, so the typechecker can
+           know that, in later branches, the value of depth is greater
+           than zero, and thus can be decremented. (The ATS compiler
+           will otherwise refuse to let you subtract 1.) I could have
+           tested "depth" at the same time as the later tests, by
+           using "+" instead of "||" to mean OR, but why that is so is
+           getting too technical for this example. *)
+        if depth = 0 then
+          left + right + (delta / g0i2f 15)
+        else if tol_ = tol || abs (delta) <= g0i2f 15 * tol then
+          left + right + (delta / g0i2f 15)
+        else
+          let
+            val left_val = _quad_asr (a, fa, m, fm, tol_, left,
+                                      lm, flm, depth - 1)
+            and right_val = _quad_asr (m, fm, b, fb, tol_, right,
+                                       rm, frm, depth - 1)
+          in
+            left_val + right_val
+          end
+      end
+
+    (* Here is an alternative to writing "and". Programmers in
+       languages such as Python will recognize the technique: *)
+    val @(fa, fb) = @(f(a), f(b))
+
+    val @(m, fm, whole) = _quad_asr_simpsons (a, fa, b, fb)
+  in
+    _quad_asr (a, fa, b, fb, tol, whole, m, fm, depth)
+  end
+
+(* We can compile an instance of the template, AND make that instance
+   available to BOTH ATS and C. The
+   ="ext#quadrature_by_adaptive_simpson_double" tells the compiler to
+   use "quadrature_by_adaptive_simpson_double" as the name of the C
+   function, rather than some mangled version of that name. *)
+extern fn
+quadrature_by_adaptive_simpson_double :
+  (* The following means "of the same type as
+     'quadrature_by_adaptive_simpson' instantiated for the 'double'
+     floating-point type". Here it serves simply as a convenient
+     shorthand.  *)
+  $d2ctype (quadrature_by_adaptive_simpson<double_kind>)
+    = "ext#quadrature_by_adaptive_simpson_double"
+implement
+quadrature_by_adaptive_simpson_double (f, a, b, tol, depth) =
+  quadrature_by_adaptive_simpson<double_kind> (f, a, b, tol, depth)
+
+(* Let us call quadrature_by_adaptive_simpson_double from C rather
+   than from ATS, simply to demonstrate the process. *)
+%{
+
+#include <math.h>
+
+double quadrature_by_adaptive_simpson_double (void *f,
+                                              double a, double b,
+                                              double tol, int depth);
+double integral_of_sine_from_0_to_1 (double tol, int depth);
+
+double
+integral_of_sine_from_0_to_1 (double tol, int depth)
+{
+  return
+    quadrature_by_adaptive_simpson_double
+      ((void *) sin, 0, 1, tol, depth);
+}
+
+%}
+
+(* A "main" that reads no command-line arguments. It must return an
+   exit status. *)
+implement
+main () =
+  let
+    val tol = 1e-9
+    val depth = 1000
+
+    (* One of the ways to make the foreign function call to C. *)
+    val result1 = $extfcall (double, "integral_of_sine_from_0_to_1",
+                             tol, depth)
+    val () = println! ("estimate of ∫ sin x dx from 0 to 1, ",
+                       "by call to the C interface: ", result1)
+
+    (* Another way to make a foreign function call. *)
+    extern fn sin : double -> double = "mac#sin"
+
+    (* Calling the same compiled function, but this time from ATS
+       instead of C. *)
+    val result2 =
+      quadrature_by_adaptive_simpson_double
+        (sin, 0.0, 1.0, tol, depth)
+    val () = println! ("estimate of ∫ sin x dx from 0 to 1, ",
+                       "by call to a compiled function: ", result2)
+
+    (* Using the template function directly, with single precision
+       numbers. *)
+    extern fn sinf : float -> float = "mac#sinf"
+    val result3 =
+      quadrature_by_adaptive_simpson<float_kind>
+        (sinf, 0.0f, 1.0f, 1e-5f, depth)
+    val () = println! ("estimate of ∫ sin x dx from 0 to 1, ",
+                       "by call to the template: ", result3)
+  in
+    0                           (* Exit status. *)
+  end

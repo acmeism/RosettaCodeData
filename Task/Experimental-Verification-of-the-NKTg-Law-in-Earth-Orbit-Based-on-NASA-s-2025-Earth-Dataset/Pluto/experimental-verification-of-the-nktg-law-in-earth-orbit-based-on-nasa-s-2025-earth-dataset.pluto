@@ -1,0 +1,77 @@
+$define DM_DT = -1.8  -- kg/s
+
+class OrbitalData
+    function __construct(
+        public date,
+        public x,
+        public v,
+        public m
+    ) end
+end
+
+class ResultRow
+    function __construct(
+        public date,
+        public p,
+        public nktg1,
+        public nktg2,
+        public v_sim,
+        public v_nasa,
+        public err
+    ) end
+
+    function __tostring()
+        return string.format(
+            "%-12s %14.3e %14.3e %14.3e %12.3e %12.3e %10.4f%%",
+            self.date,
+            self.p,
+            self.nktg1,
+            self.nktg2,
+            self.v_sim,
+            self.v_nasa,
+            self.err
+        )
+    end
+end
+
+local momentum = |m, v| -> m * v
+local nktg1    = |x, p| -> x * p
+local nktg2    = |p|    -> DM_DT * p
+
+local relative_error = |sim, nasa| -> (sim - nasa) / nasa * 100
+
+-- Simulated NKTg 2025 dataset.
+local sim_2025 = {
+    new OrbitalData("01/01/2025", 1.471012e11, 3.0276e4, 5.97219e24),
+    new OrbitalData("04/01/2025", 1.494953e11, 2.9791e4, 5.97218999999998e24),
+    new OrbitalData("07/01/2025", 1.520965e11, 2.9282e4, 5.97218999999997e24),
+    new OrbitalData("10/01/2025", 1.496328e11, 2.9764e4, 5.97218999999995e24),
+    new OrbitalData("12/31/2025", 1.471025e11, 3.0276e4, 5.97218999999994e24)
+}
+
+-- NASA observed velocities.
+local nasa_2025 = {
+    {"01/01/2025", 3.0287e4},
+    {"04/01/2025", 2.9791e4},
+    {"07/01/2025", 2.9291e4},
+    {"10/01/2025", 2.9778e4},
+    {"12/31/2025", 3.0286e4}
+}
+
+print("\nExperimental Verification of NKTg Law (Earth 2025)\n")
+
+local f = "%-12s %14s %14s %14s %12s %12s %10s"
+print(string.format(f, "Date", "Momentum(p)", "NKTg1", "NKTg2", "v_sim", "v_NASA", "Error"))
+print(string.rep("-", 95))
+
+for i, data in sim_2025 do
+    local p      = momentum(data.m, data.v)
+    local n1     = nktg1(data.x, p)
+    local n2     = nktg2(p)
+    local v_sim  = data.v
+    local v_nasa = nasa_2025[i][2]
+    local err    = relative_error(data.v, v_nasa)
+
+    local row = new ResultRow(data.date, p, n1, n2, v_sim, v_nasa, err)
+    print(row)
+end

@@ -1,0 +1,256 @@
+constant BLOSUM62 = {
+-- j,o,u entries are "fake", intended to trigger a typecheck if actually referenced:
+-- A  B  C  D  E  F  G  H  I  j  K  L  M  N  o  P  Q  R  S  T  u  V  W  X  Y  Z
+ { 4,-2, 0,-2,-1,-2, 0,-2,-1,"",-1,-1,-1,-2,"",-1,-1,-1, 1, 0,"", 0,-3,-1,-2,-1}, -- A
+ {-2, 6,-3, 6, 2,-3,-1,-1,-3,"",-1,-4,-3, 1,"",-1, 0,-2, 0,-1,"",-3,-4,-1,-3, 2}, -- B
+ { 0,-3, 9,-3,-4,-2,-3,-3,-1,"",-3,-1,-1,-3,"",-3,-3,-3,-1,-1,"",-1,-2,-1,-2,-4}, -- C
+ {-2, 6,-3, 6, 2,-3,-1,-1,-3,"",-1,-4,-3, 1,"",-1, 0,-2, 0,-1,"",-3,-4,-1,-3, 2}, -- D
+ {-1, 2,-4, 2, 5,-3,-2, 0,-3,"", 1,-3,-2, 0,"",-1, 2, 0, 0,-1,"",-2,-3,-1,-2, 5}, -- E
+ {-2,-3,-2,-3,-3, 6,-3,-1, 0,"",-3, 0, 0,-3,"",-4,-3,-3,-2,-2,"",-1, 1,-1, 3,-3}, -- F
+ { 0,-1,-3,-1,-2,-3, 6,-2,-4,"",-2,-4,-3, 0,"",-2,-2,-2, 0,-2,"",-3,-2,-1,-3,-2}, -- G
+ {-2,-1,-3,-1, 0,-1,-2, 8,-3,"",-1,-3,-2, 1,"",-2, 0, 0,-1,-2,"",-3,-2,-1, 2, 0}, -- H
+ {-1,-3,-1,-3,-3, 0,-4,-3, 4,"",-3, 2, 1,-3,"",-3,-3,-3,-2,-1,"", 3,-3,-1,-1,-3}, -- I
+ {"","","","","","","","","","","","","","","","","","","","","","","","","",""}, -- j
+ {-1,-1,-3,-1, 1,-3,-2,-1,-3,"", 5,-2,-1, 0,"",-1, 1, 2, 0,-1,"",-2,-3,-1,-2, 1}, -- K
+ {-1,-4,-1,-4,-3, 0,-4,-3, 2,"",-2, 4, 2,-3,"",-3,-2,-2,-2,-1,"", 1,-2,-1,-1,-3}, -- L
+ {-1,-3,-1,-3,-2, 0,-3,-2, 1,"",-1, 2, 5,-2,"",-2, 0,-1,-1,-1,"", 1,-1,-1,-1,-2}, -- M
+ {-2, 1,-3, 1, 0,-3, 0, 1,-3,"", 0,-3,-2, 6,"",-2, 0, 0, 1, 0,"",-3,-4,-1,-2, 0}, -- N
+ {"","","","","","","","","","","","","","","","","","","","","","","","","",""}, -- o
+ {-1,-1,-3,-1,-1,-4,-2,-2,-3,"",-1,-3,-2,-2,"", 7,-1,-2,-1,-1,"",-2,-4,-1,-3,-1}, -- P
+ {-1, 0,-3, 0, 2,-3,-2, 0,-3,"", 1,-2, 0, 0,"",-1, 5, 1, 0,-1,"",-2,-2,-1,-1, 2}, -- Q
+ {-1,-2,-3,-2, 0,-3,-2, 0,-3,"", 2,-2,-1, 0,"",-2, 1, 5,-1,-1,"",-3,-3,-1,-2, 0}, -- R
+ { 1, 0,-1, 0, 0,-2, 0,-1,-2,"", 0,-2,-1, 1,"",-1, 0,-1, 4, 1,"",-2,-3,-1,-2, 0}, -- S
+ { 0,-1,-1,-1,-1,-2,-2,-2,-1,"",-1,-1,-1, 0,"",-1,-1,-1, 1, 5,"", 0,-2,-1,-2,-1}, -- T
+ {"","","","","","","","","","","","","","","","","","","","","","","","","",""}, -- u
+ { 0,-3,-1,-3,-2,-1,-3,-3, 3,"",-2, 1, 1,-3,"",-2,-2,-3,-2, 0,"", 4,-3,-1,-1,-2}, -- V
+ {-3,-4,-2,-4,-3, 1,-2,-2,-3,"",-3,-2,-1,-4,"",-4,-2,-3,-3,-2,"",-3,11,-1, 2,-3}, -- W
+ {-1,-1,-1,-1,-1,-1,-1,-1,-1,"",-1,-1,-1,-1,"",-1,-1,-1,-1,-1,"",-1,-1,-1,-1,-1}, -- X
+ {-2,-3,-2,-3,-2, 3,-3, 2,-1,"",-2,-1,-1,-2,"",-3,-1,-2,-2,-2,"",-1, 2,-1, 7,-2}, -- Y
+ {-1, 2,-4, 2, 5,-3,-2, 0,-3,"", 1,-3,-2, 0,"",-1, 2, 0, 0,-1,"",-2,-3,-1,-2, 5}} -- Z
+
+// Linear gap cost (used when a '-' is inserted into the alignment).
+constant GAP_COST = -4
+
+enum S1ID, S2ID, S1, S2, N, SCORE, MAX_VAL, MAX_I, MAX_J
+
+function fill_score(sequence sw, integer gap_cost)
+    sequence s1 = sq_sub(upper(sw[S1]),'A'-1),
+             s2 = sq_sub(upper(sw[S2]),'A'-1),
+          score = sw[SCORE]
+    sw[SCORE] = 0
+    for i=2 to length(score) do
+        for j=2 to length(score[1]) do
+            score[i,j] = max({score[i-1,j-1] + BLOSUM62[s1[i-1],s2[j-1]],
+                              score[i-1,j] + gap_cost,
+                              score[i,j-1] + gap_cost,
+                              0})
+        end for
+    end for
+    sw[SCORE] = score
+    return sw
+end function
+
+function optimize_alignment(sequence sw)
+    // Find the maximum score and its position
+    integer max_val = 0, max_i = 0, max_j = 0,
+            l1 = length(sw[S1]), l2 = length(sw[S2])
+    sequence score = sw[SCORE]
+    for i=2 to l1 do
+        for j=2 to l2 do
+            if score[i,j]>max_val then
+                max_val = score[i,j]
+                max_i = i
+                max_j = j
+            end if
+        end for
+    end for
+    sw[MAX_VAL] = max_val
+    sw[MAX_I] = max_i
+    sw[MAX_J] = max_j
+    return sw
+end function
+
+function SmithWaterman(string s1id, s2id, s1, s2, integer n, gap_cost = GAP_COST)
+    sequence sw = repeat(repeat(0,length(s2)+1),length(s1)+1)
+    sw = {s1id,s2id,s1,s2,n,sw,0,0,0}
+    sw = fill_score(sw, gap_cost)
+    sw = optimize_alignment(sw)
+    return sw
+end function
+
+// Compute p-value based on n iterations
+function pval(sequence sw)
+    integer better = 0, n = sw[N], swm = sw[MAX_VAL]
+    string s1 = sw[S1], s2 = sw[S2]
+    for iter=1 to n do
+        better += SmithWaterman("","",s1,shuffle(s2),0)[MAX_VAL]>swm
+    end for
+    return (better+1) / (n+1)
+end function
+
+procedure print_alignment(sequence sw, integer gap_cost = GAP_COST)
+    string s1 = sw[S1], k1 = sq_sub(upper(s1),'A'-1),
+           s2 = sw[S2], k2 = sq_sub(upper(s2),'A'-1),
+           s1id = sw[S1ID],
+           s2id = sw[S2ID],
+            -- aside: these are built backwards:
+           s1print = "",
+           alignmt = "",
+           s2print = ""
+    integer i = sw[MAX_I],
+            j = sw[MAX_J],
+           ml = max(length(s1id),length(s2id))
+    sequence score = sw[SCORE]
+
+    // Begin by adding the last amino acid to the sequence
+    s1print &= s1[i]
+    s2print &= s2[j]
+
+    // Compare the match
+    if s1[i] == s2[j] then
+        alignmt &= s1[i]
+    elsif BLOSUM62[k1[i],k2[j]]>0 then
+        alignmt &= '+'
+    else
+        alignmt &= ' '
+    end if
+
+    // Backtrack to construct alignment
+    while score[i,j]>0 do
+        if score[i,j]-gap_cost == score[i-1,j] then
+            i -= 1
+            s1print &= s1[i]
+            s2print &= '-'
+            alignmt &= ' '
+        elsif score[i,j]-gap_cost == score[i,j-1] then
+            j -= 1
+            s1print &= '-'
+            s2print &= s2[j]
+            alignmt &= ' '
+        else
+            i -= 1
+            j -= 1
+            s1print &= s1[i]
+            s2print &= s2[j]
+            if s1[i] == s2[j] then
+                alignmt &= s1[i]
+            elsif BLOSUM62[k1[i],k2[j]]>0 then
+                alignmt &= '+'
+            else
+                alignmt &= ' '
+            end if
+        end if
+    end while
+    assert(length(s1print)=length(alignmt))
+    assert(length(s1print)=length(s2print))
+    s1print = reverse(s1print)
+    s2print = reverse(s2print)
+    alignmt = reverse(alignmt)
+
+    printf(1,"COMPARISON OF %s AND %s\n",{sw[S1ID],sw[S2ID]})
+    printf(1,"Score: %d\n",sw[MAX_VAL])
+    printf(1,"Alignment:\n")
+    printf(1,"%s: %s\n%s  %s\n%s: %s\n",{pad_head(s1id,ml),shorten(s1print,"",50),
+                                            repeat(' ',ml),shorten(alignmt,"",50),
+                                         pad_head(s2id,ml),shorten(s2print,"",50)})
+
+    // Print score matrix if both strings are less than 15 characters
+    if length(s1)<15 and length(s2)<15 then
+        printf(1,"\nScore Matrix:\n")
+        pp(sw[SCORE],{pp_Nest,1})
+    end if
+
+    // Print p-value if the specified iterations is > 0
+    if sw[N]>0 then
+        printf(1,"\np-value: %.3f\n",pval(sw))
+    end if
+    printf(1,"\n")
+end procedure
+
+constant ACC_TO_SEQ = new_dict({
+  {"O95363", "MVGSALRRGAHAYVYLVSKASHISRGHQHQAWGSRPPAAECATQRAPGSVVELLGKSYPQ"&
+             "DDHSNLTRKVLTRVGRNLHNQQHHPLWLIKERVKEHFYKQYVGRFGTPLFSVYDNLSPVV"&
+             "TTWQNFDSLLIPADHPSRKKGDNYYLNRTHMLRAHTSAHQWDLLHAGLDAFLVVGDVYRR"&
+             "DQIDSQHYPIFHQLEAVRLFSKHELFAGIKDGESLQLFEQSSRSAHKQETHTMEAVKLVE"&
+             "FDLKQTLTRLMAHLFGDELEIRWVDCYFPFTHPSFEMEINFHGEWLEVLGCGVMEQQLVN"&
+             "SAGAQDRIGWAFGLGLERLAMILYDIPDIRLFWCEDERFLKQFCVSNINQKVKFQPLSKY"&
+             "PAVINDISFWLPSENYAENDFYDLVRTIGGDLVEKVDLIDKFVHPKTHKTSHCYRITYRH"&
+             "MERTLSQREVRHIHQALQEAAVQLLGVEGRF"},
+  {"Q10574", "MSWEQYQMYVPQCHPSFMYQGSIQSTMTTPLQSPNFSLDSPNYPDSLSNGGGKDDKKKCR"&
+             "RYKTPSPQLLRMRRSAANERERRRMNTLNVAYDELREVLPEIDSGKKLSKFETLQMAQKY"&
+             "IECLSQILKQDSKNENLKSKSG"},
+  {"P22816", "MTKYNSGSSEMPAAQTIKQEYHNGYGQPTHPGYGFSAYSQQNPIAHPGQNPHQTLQNFFS"&
+             "RFNAVGDASAGNGGAASISANGSGSSCNYSHANHHPAELDKPLGMNMTPSPIYTTDYDDE"&
+             "NSSLSSEEHVLAPLVCSSAQSSRPCLTWACKACKKKSVTVDRRKAATMRERRRLRKVNEA"&
+             "FEILKRRTSSNPNQRLPKVEILRNAIEYIESLEDLLQESSTTRDGDNLAPSLSGKSCQSD"&
+             "YLSSYAGAYLEDKLSFYNKHMEKYGQFTDFDGNANGSSLDCLNLIVQSINKSTTSPIQNK"&
+             "ATPSASDTQSPPSSGATAPTSLHVNFKRKCST"},
+  {"Q8IU24", "MEFVELSSCRFDATPTFCDRPAAPNATVLPGEHFPVPNGSYEDQGDGHVLAPGPSFHGPG"&
+             "RCLLWACKACKKKTVPIDRRKAATMRERRRLVKVNEAFDILKKKSCANPNQRLPKVEILR"&
+             "NAISYIEQLHKLLRDSKENSSGEVSDTSAPSPGSCSDGMAAHSPHSFCTDTSGNSSWEQG"&
+             "DGQPGNGYENQSCGNTVSSLDCLSLIVQSISTIEGEENNNASNTPR"},
+  {"Q90477", "MELSDIPFPIPSADDFYDDPCFNTNDMHFFEDLDPRLVHVSLLKPDEHHHIEDEHVRAPS"&
+             "GHHQAGRCLLWACKACKRKTTNADRRKAATMRERRRLSKVNDAFETLKRCTSTNPNQRLP"&
+             "KVEILRNAISYIESLQALLRSQEDNYYPVLEHYSGDSDASSPRSNCSDGMMDFMGPTCQT"&
+             "RRRNSYDSSYFNDTPNADARNNKNSVVSSLDCLSSIVERISTETPACPVLSVPEGHEESP"&
+             "CSPHEGSVLSDTGTTAPSPTSCPQQQAQETIYQVL"},
+  {"P13904", "MELLPPPLRDMEVTEGSLCAFPTPDDFYDDPCFNTSDMSFFEDLDPRLVHVTLLKPEEPH"&
+             "HNEDEHVRAPSGHHQAGRCLLWACKACKRKTTNADRRKAATMRERRRLSKVNEAFETLKR"&
+             "YTSTNPNQRLPKVEILRNAIRYIESLQALLHDQDEAFYPVLEHYSGDSDASSPRSNCSDG"&
+             "MMDYNSPPCGSRRRNSYDSSFYSDSPNDSRLGKSSVISSLDCLSSIVERISTQSPSCPVP"&
+             "TAVDSGSEGSPCSPLQGETLSERVITIPSPSNTCTQLSQDPSSTIYHVL"},
+  {"P16075", "MDLLGPMEMTEGSLCSFTAADDFYDDPCFNTSDMHFFEDLDPRLVHVGGLLKPEEHPHTR"&
+             "APPREPTEEEHVRAPSGHHQAGRCLLWACKACKRKTTNADRRKAATMRERRRLSKVNEAF"&
+             "ETLKRCTSTNPNQRLPKVEILRNAIRYIESLQALLREQEDAYYPVLEHYSGESDASSPRS"&
+             "NCSDGMMEYSGPPCSSRRRNSYDSSYYTESPNDPKHGKSSVVSSLDCLSSIVERISTDNS"&
+             "TCPILPPAEAVAEGSPCSPQEGGNLSDSGAQIPSPTNCTPLPQESSSSSSSNPIYQVL"},
+  {"P10085", "MELLSPPLRDIDLTGPDGSLCSFETADDFYDDPCFDSPDLRFFEDLDPRLVHMGALLKPE"&
+             "EHAHFPTAVHPGPGAREDEHVRAPSGHHQAGRCLLWACKACKRKTTNADRRKAATMRERR"&
+             "RLSKVNEAFETLKRCTSSNPNQRLPKVEILRNAIRYIEGLQALLRDQDAAPPGAAAFYAP"&
+             "GPLPPGRGSEHYSGDSDASSPRSNCSDGMMDYSGPPSGPRRQNGYDTAYYSEAARESRPG"&
+             "KSAAVSSLDCLSSIVERISTDSPAAPALLLADAPPESPPGPPEGASLSDTEQGTQTPSPD"&
+             "AAPQCPAGSNPNAIYQVL"},
+  {"P17542", "MTERPPSEAARSDPQLEGRDAAEASMAPPHLVLLNGVAKETSRAAAAEPPVIELGARGGP"&
+             "GGGPAGGGGAARDLKGRDAATAEARHRVPTTELCRPPGPAPAPAPASVTAELPGDGRMVQ"&
+             "LSPPALAAPAAPGRALLYSLSQPLASLGSGFFGEPDAFPMFTTNNRVKRRPSPYEMEITD"&
+             "GPHTKVVRRIFTNSRERWRQQNVNGAFAELRKLIPTHPPDKKLSKNEILRLAMKYINFLA"&
+             "KLLNDQEEEGTQRAKTGKDPVVGAGGGGGGGGGGAPPDDLLQDVLSPNSSCGSSLDGAAS"&
+             "PDSYTEEPAPKHTARSLHPAMLPAADGAGPR"},
+  {"P15172", "MELLSPPLRDVDLTAPDGSLCSFATTDDFYDDPCFDSPDLRFFEDLDPRLMHVGALLKPE"&
+             "EHSHFPAAVHPAPGAREDEHVRAPSGHHQAGRCLLWACKACKRKTTNADRRKAATMRERR"&
+             "RLSKVNEAFETLKRCTSSNPNQRLPKVEILRNAIRYIEGLQALLRDQDAAPPGAAAAFYA"&
+             "PGPLPPGRGGEHYSGDSDASSPRSNCSDGMMDYSGPPSGARRRNCYEGAYYNEAPSEPRP"&
+             "GKSAAVSSLDCLSSIVERISTESPAAPALLLADVPSESPPRRQEAAAPSEGESSGDPTQS"&
+             "PDAAPQCPAGANPNPIYQVL"}})
+
+constant ACCESSIONS = {"P15172", "P17542", "P10085", "P16075", "P13904",
+                       "Q90477", "Q8IU24", "P22816", "Q10574", "O95363"},
+         LA = length(ACCESSIONS)
+
+// Part 1 of the test cases.
+constant sw = SmithWaterman("str001", "str002", "deadly", "ddgearlyk", 999)
+print_alignment(sw)
+
+// Part 2 of the test cases.
+sequence test2 = repeat(repeat(0,LA),LA)
+for i,ai in ACCESSIONS do
+    for j,aj in ACCESSIONS from i do
+        sequence si = getd(ai,ACC_TO_SEQ),
+                 sj = getd(aj,ACC_TO_SEQ),
+               temp = SmithWaterman(ai,aj,si,sj,0)
+        test2[i][j] = temp[MAX_VAL]
+if i=1 and j=2 then -- (comment out for excessively copious output)
+        print_alignment(temp)
+end if
+    end for
+end for
+pp(test2,{pp_Nest,1})
+
+// Part 3 of the test cases.
+string id1 = "P15172", s1 = getd(id1,ACC_TO_SEQ),
+       id2 = "Q10574", s2 = getd(id2,ACC_TO_SEQ),
+       id3 = "O95363", s3 = getd(id3,ACC_TO_SEQ)
+sequence comp1 = SmithWaterman(id1, id2, s1, s2, 999),
+         comp2 = SmithWaterman(id1, id3, s1, s3, 999)
+printf(1,"\np-value for %s versus %s: %.3f\n",{id1,id2,pval(comp1)})
+printf(1,"\np-value for %s versus %s: %.3f\n",{id1,id3,pval(comp2)})

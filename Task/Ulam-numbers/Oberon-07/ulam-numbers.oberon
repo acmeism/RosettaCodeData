@@ -1,0 +1,111 @@
+MODULE UlamNumbers;
+       (* find some Ulam numbers, U(n) = the smallest number > U(n-1) that is  *)
+       (* the uniue sum of U(i) and U(j), i, j < n, i =/= j, U(1)=1, U(2) = 2  *)
+    IMPORT Out;
+
+    CONST  maxUlam           = 10000;           (* maximum ulam number to find *)
+           ulamSliceMax      = 20000;           (* length of work array slices *)
+           unused            = "0";                       (* Ulam number state *)
+           one               = "1";                       (* ...               *)
+           multiple          = "2";                       (* ...               *)
+    TYPE   UlamSlice         = POINTER TO UlamSliceData;
+           UlamSliceData     = RECORD
+                                   data      : ARRAY ulamSliceMax OF CHAR;
+                                   next      : UlamSlice
+                               END;
+    VAR    U                 : ARRAY maxUlam + 1 OF INTEGER;   (* Ulam numbers *)
+           uCount, i, p, upi : INTEGER;
+           upic              : CHAR;
+           powerOf10         : INTEGER;
+           currSlice, slices : UlamSlice;
+           currStart         : INTEGER;         (* starting index in currSlice *)
+           currEnd           : INTEGER;           (* ending index in currSlice *)
+
+    PROCEDURE newSlice() : UlamSlice;
+        VAR   slice      : UlamSlice;
+              i          : INTEGER;
+        BEGIN
+            NEW( slice );
+            FOR i := 0 TO ulamSliceMax - 1 DO slice.data[ i ] := unused END
+        RETURN slice
+        END newSlice;
+
+    (* position in slices so currSlicr contains dataIndex                      *)
+    PROCEDURE position( dataIndex : INTEGER );
+        BEGIN
+            IF dataIndex < currStart THEN
+                (* the required index is in an earlier slice,                  *)
+                (* go back to the first                                        *)
+                currSlice := slices;
+                currStart := 0;
+                currEnd   := ulamSliceMax - 1
+            END;
+            WHILE dataIndex > currEnd DO
+                (* the required item is in a later slice                       *)
+                IF currSlice.next = NIL THEN
+                    (* need to allocate a new slice for the item               *)
+                    currSlice.next := newSlice()
+                END;
+                currSlice := currSlice.next;
+                INC( currStart, ulamSliceMax );
+                INC( currEnd,   ulamSliceMax )
+            END;
+            (* the required index is now in the current slice                  *)
+        END position;
+
+    (* returns the dataIndex'th number state from slices                       *)
+    PROCEDURE get( dataIndex : INTEGER ) : CHAR;
+        BEGIN
+            position( dataIndex )
+        RETURN currSlice.data[ dataIndex MOD ulamSliceMax ]
+        END get;
+
+    (* set the dataIndex'th number state in slices to state                    *)
+    PROCEDURE put( dataIndex : INTEGER; state : CHAR );
+        BEGIN
+            position( dataIndex );
+            currSlice.data[ dataIndex MOD ulamSliceMax ] := state
+        END put;
+
+BEGIN
+    FOR i := 0 TO maxUlam DO U[ i ] := 0 END;
+    currStart := 0;
+    currEnd   := ulamSliceMax - 1;
+    slices    := newSlice();
+    currSlice := slices;
+    FOR i := 1 TO 3 DO put( i, one ) END;
+    U[ 1 ] := 1; U[ 2 ] := 2;
+    Out.String( " 1 2" );
+    uCount := 2;                                     (* treat 1 & 2 separately *)
+    powerOf10 := 100;               (* next "power of ten" Ulam number to show *)
+    i         := 2;
+    WHILE uCount < maxUlam DO
+        INC( i );
+        IF get( i ) = one THEN
+            (* can use this number                                             *)
+            INC( uCount );
+            U[ uCount ] := i;
+            IF uCount < 21 THEN
+                Out.String( " " );Out.Int( i, 0 );
+                IF uCount = 20 THEN Out.String( "..." ) END
+            ELSIF uCount = powerOf10 THEN
+                IF uCount = 100 THEN
+                    Out.Ln;Out.String( "The     10th Ulam number is: " );Out.Int( U[ 10 ], 0 );
+                END;
+                Out.Ln;Out.String( "The " );Out.Int( powerOf10, 6 );
+                Out.String( "th Ulam number is: " );Out.Int( i, 0 );
+                powerOf10 := powerOf10 * 10
+            END;
+            FOR p := 1 TO uCount - 1 DO
+                upi  := U[ p ] + i;
+                upic := get( upi );
+                IF upic = unused THEN
+                    put( upi, one )             (* U[ p ] + i is unique so far *)
+                ELSIF upic = one THEN
+                    put( upi, multiple )        (* u[ p ] + i isn't unique     *)
+                END
+            END
+        END
+    END;
+    Out.Ln
+END UlamNumbers.

@@ -1,0 +1,131 @@
+        .model  tiny
+        .code
+        .486
+        org     100h
+
+;Register assignments:
+;al  = Char
+;ebx = CSet
+;cl  = CTC
+;ch  = VTC
+;dl  = CDC
+;dh  = VDC
+;si  = Str
+;edi = VSet
+;ebp = Item
+
+start:  mov     si, offset str1 ;Text(Str1)
+        call    vowcon
+        mov     si, offset str2 ;Text(Str2)
+
+;Display numbers of vowels and consonants in string at si
+vowcon: push    si
+        xor     cx, cx          ;CTC:= 0;  VTC:= 0
+        xor     dx, dx
+        xor     ebx, ebx
+        xor     edi, edi
+
+;while Str(I) # 0 do
+; Ch:= Str(I); I++
+cv10:   lodsb                   ;al:= ds:[si++]
+        cmp     al, 0
+        je      cv90            ; if Ch>=^A & Ch<=^Z then
+        cmp     al, 'A'
+        jb      cv20
+         cmp    al, 'Z'
+         ja     cv20
+          or    al, 20h         ;  Ch:= Ch ! $20
+cv20:
+        cmp     al, 'a'         ; if Ch>=^a & Ch<=^z then
+        jb      cv50
+        cmp     al, 'z'
+        ja      cv50
+
+        push    cx              ;  Item:= 1 << (Ch-^a)
+        mov     cl, al
+        sub     cl, 'a'
+        xor     ebp, ebp        ;  mov ebp, 1
+        inc     bp
+        shl     ebp, cl
+        pop     cx
+
+        cmp     al, 'a'         ;  case Ch of a e i o u vowels
+        je      cv22
+        cmp     al, 'e'
+        je      cv22
+        cmp     al, 'i'
+        je      cv22
+        cmp     al, 'o'
+        je      cv22
+        cmp     al, 'u'
+        jne     cv30
+
+cv22:   inc     ch              ;    VTC++
+        test    edi, ebp        ;    if (VSet&Item) = 0 then
+        jne     cv25
+         inc    dh              ;     VDC++
+         or     edi, ebp        ;     VSet:= VSet ! Item
+cv25:   jmp     cv50
+cv30:                           ;  other: consonants
+        inc     cl              ;    CTC++
+        test    ebx, ebp        ;    if (CSet&Item) = 0 then
+        jne     cv50
+         inc    dl              ;     CDC++
+         or     ebx, ebp        ;     CSet:= CSet ! Item
+cv50:   jmp     cv10
+cv90:
+        pop     si
+        call    strout
+        mov     si, offset crlf ;CrLf
+        call    strout
+        mov     di, offset msg2 ;Text(" total")
+        call    common
+
+        mov     cx, dx          ;get distinct counts
+        mov     di, offset msg2a;Text(" distinct")
+        call    common
+        mov     si, offset crlf
+        jmp     strout
+
+;Common display code
+common: mov     si, offset msg1 ;Text("Contains ")
+        call    strout
+        mov     al, ch          ;numout(VTC/VDC)
+        call    numout
+        mov     si, di          ;Text(" total/distinct")
+        call    strout
+        mov     si, offset msg3 ;Text(" vowels and ")
+        call    strout
+        mov     al, cl          ;numout(CTC/CDC)
+        call    numout
+        mov     si, offset msg4 ;Text(" consonants.^M^J")
+        jmp     strout
+
+;Display string pointed to by si
+so10:   int     29h
+strout: lodsb                   ;al:= ds:[si++]
+        cmp     al, 0
+        jne     so10
+        ret
+
+;Display positive number in al (less than 100)
+numout: aam     10      ;ah:= al/10; al:= rem
+        push    ax
+        test    ah, ah
+        je      no10
+         mov    al, ah
+         call   numout
+no10:   pop     ax
+        add     al, '0'
+        int     29h
+        ret
+
+str1    db      "X86 Assembly Language!", 0
+str2    db      "Now is the time for all good men to come to the aid of their country.", 0
+msg1    db      "Contains ", 0
+msg2    db      " total", 0
+msg2a   db      " distinct", 0
+msg3    db      " vowels and ", 0
+msg4    db      " consonants."
+crlf    db      0Dh, 0Ah, 0
+        end     start

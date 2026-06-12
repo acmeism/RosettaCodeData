@@ -1,0 +1,86 @@
+with javascript_semantics
+function cubes_before(atom n)
+    -- nb: if n is /not/ cube-free it /is/ included in the result.
+    -- nth := n-cubes_before(n) means n is the nth cube-free integer,
+    --                but only if cubes_before(n-1)==cubes_before(n),
+    -- otherwise cubes_before(cubicate) isn't really very meaningful.
+    atom r = 0
+    bool xpm = true -- extend prior multiples
+    sequence pm = {}
+    for i=1 to floor(power(n,1/3)) do
+        atom p3 = power(get_prime(i),3), k = floor(n/p3)
+        if p3>n then exit end if
+        for mask=1 to power(2,length(pm))-1 do
+            integer m = mask, mi = 0, bc = count_bits(mask)
+            atom kpm = p3
+            do
+                mi += 1
+                if odd(m) then kpm *= pm[mi] end if
+                m = floor(m/2)
+            until m=0
+            if kpm>n then
+                if bc=1 then
+                    xpm = false
+                    pm = pm[1..mi-1]
+                    exit
+                end if
+            else
+                -- account for already counted multiples.
+                -- -pairs +triples -quads ... as per link above
+                k += iff(odd(bc)?-1:+1)*floor(n/kpm)
+            end if
+        end for
+        r += k
+        if xpm then pm &= p3 end if
+    end for
+    return r
+end function
+
+function cube_free(atom nth)
+    -- get the nth cube-free integer
+    atom lo = nth, hi = nth*2, mid, cb, k
+    while hi-cubes_before(hi)<nth do
+        lo = hi
+        hi *= 2
+    end while
+    -- bisect until we have a possible...
+    atom t1 = time()+1
+    while true do
+        mid = floor((lo+hi)/2)
+        cb = cubes_before(mid)
+        k = mid-cb
+        if k=nth then
+            -- skip omissions
+            while cubes_before(mid-1)!=cb do
+                mid -= 1
+                cb -= 1
+            end while
+            exit
+        elsif k<nth then
+            lo = mid
+        else
+            hi = mid
+        end if
+        if time()>t1 then
+            progress("bisecting %,d..%,d (diff %,d)...\r",{lo,hi,hi-lo})
+            t1 = time()+1
+        end if
+    end while
+    return mid
+end function
+
+atom t0 = time()
+function A370833(atom nth)
+    if nth=1 then return {1,1,1} end if
+    atom n = cube_free(nth)
+    sequence f = prime_powers(n)
+    string e = elapsed(time()-t0,0.1," (%s)")
+    e = substitute(e,"utes and","s")
+    return {nth,n,f[$][1],e}
+end function
+
+sequence f100 = vslice(apply(tagset(100),A370833),3)
+printf(1,"First 100 terms of a[n]:\n%s\n",join_by(f100,1,10," ",fmt:="%3d"))
+for n in sq_power(10,tagset(11,3)) do
+    printf(1,"The %,dth term of a[n] is %,d with highest divisor %,d.%s\n",A370833(n))
+end for

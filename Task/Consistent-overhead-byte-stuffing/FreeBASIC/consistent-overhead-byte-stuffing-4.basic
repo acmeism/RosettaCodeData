@@ -1,0 +1,150 @@
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+public final class ConsistentOverheadByteStuffing {
+
+	public static void main(String[] args) {
+		List<Byte[]> tests = List.of(
+			new Byte[] { 0x00 },
+			new Byte[] { 0x00, 0x00 },
+			new Byte[] { 0x00, 0x11, 0x00 },
+			new Byte[] { 0x11, 0x22, 0x00, 0x33 },
+			new Byte[] { 0x11, 0x22, 0x33, 0x44 },
+			new Byte[] { 0x11, 0x00, 0x00, 0x00 },
+			createArray((byte) 0x01, (byte) 0xfe, new Byte[0]),
+			createArray((byte) 0x00, (byte) 0xfe, new Byte[0]),
+			createArray((byte) 0x01, (byte) 0xff, new Byte[0]),
+			createArray((byte) 0x02, (byte) 0xff, new Byte[] { 0x00 }),
+			createArray((byte) 0x03, (byte) 0xff, new Byte[] { 0x00, 0x01 })
+		);
+		
+		for ( Byte delimiter : new Byte[] { 0x00, 0x02 } ) {
+			List<Byte[]> encodedResults = new ArrayList<Byte[]>();
+			
+		    System.out.println(String.format("%s%02x%s", "COBS encoding (hex) with delimiter ", delimiter, ":"));
+		    tests.forEach( test -> {
+		        Byte[] encoded = encode(test, delimiter);
+		        encodedResults.addLast(encoded);
+		        System.out.println(String.format("%-33s%s%s", toHexString(test), " => ", toHexString(encoded)));
+		    } );
+		    System.out.println();
+		
+		    System.out.println(String.format("%s%02x%s", "COBS decoding (hex) with delimiter ", delimiter, ":"));
+		    encodedResults.forEach( encoded -> {
+		        Byte[] decoded = decode(encoded, delimiter);
+		        System.out.println(String.format("%-33s%s%s", toHexString(encoded), " => ", toHexString(decoded)));
+		    } );
+		    System.out.println();
+		}
+	}
+	
+	private static Byte[] encode(Byte[] data, Byte delimiter) {
+        if ( data.length == 0 ) {
+            throw new AssertionError("Data must be a non-empty list of bytes.");
+        }
+
+        List<Byte> encoded = Stream.of( (byte) 255 ).collect(Collectors.toList());
+        int inserted = 0;
+        int code = 1;
+        boolean addLastCode = true;
+
+        for ( Byte bb : data ) {
+            if ( bb != 0 ) {
+                encoded.addLast(bb);
+                code += 1;
+            }
+
+            addLastCode = true;
+            if ( bb == 0 || code == 255 ) {
+                if ( code == 255 ) {
+                	addLastCode = false;
+                }
+                encoded.set(inserted, (byte) code);
+                code = 1;
+                inserted = encoded.size();
+                encoded.addLast((byte) 0);
+            }
+        }
+
+        if ( addLastCode ) {
+        	encoded.set(inserted, (byte) code);
+        }
+        if ( delimiter != 0 ) {
+        	for ( int i = 0; i < encoded.size(); i++ ) {
+        		encoded.set(i, (byte) ( encoded.get(i) ^ delimiter ));
+        	}
+        }
+        if ( addLastCode ) {
+        	encoded.addLast(delimiter);
+        } else {
+        	encoded.set(inserted, delimiter);
+        }
+
+        return encoded.toArray( new Byte[0] );
+    }
+
+	private static Byte[] decode(Byte[] encoded, Byte delimiter)  {
+        if ( encoded.length == 0 || encoded[encoded.length - 1] != delimiter ) {
+            throw new AssertionError("Encoded data must be a non-empty list of delimiter-terminated bytes.");
+        }
+
+        List<Byte> encodedList = Arrays.asList(encoded).subList(0, encoded.length - 1);
+        if ( delimiter != 0 ) {
+        	for ( int i = 0; i < encodedList.size(); i++ ) {
+        		encodedList.set(i, (byte) ( encodedList.get(i) ^ delimiter ));
+        	}
+        }
+
+        List<Byte> decoded = new ArrayList<Byte>();
+        byte code = (byte) 255;
+        byte block = 0;
+
+        for ( int i = 0; i < encodedList.size(); i++ ) {
+            final Byte bb = encodedList.get(i);
+
+            if ( block != 0 ) {
+                decoded.addLast(bb);
+            } else {
+                if ( i + bb > encodedList.size() ) {
+                	throw new AssertionError("Invalid argument: marker pointing beyond the end of the packet.");
+                }
+                if ( code != (byte) 255 ) {
+                	decoded.addLast((byte) 0);
+                }
+
+                code = bb;
+                block = code;
+                if ( code == 0 ) {
+                	break;
+                }
+            }
+
+            block -= 1;
+        }
+
+        return decoded.toArray( new Byte[0] );
+	}
+	
+	private static Byte[] createArray(Byte start, Byte end, Byte[] extra) {
+		return Stream.concat(IntStream.rangeClosed(start & 0xFF, end & 0xFF).mapToObj( i -> (byte) i ),
+			Arrays.stream(extra)).toList().toArray( new Byte[0] );
+	}
+	
+	private static String toHexString(Byte[] bytes) {
+		StringBuilder builder = new StringBuilder();
+		for ( Byte bb : bytes ) {			
+		    builder.append(String.format("%02X ", bb));
+		}
+		
+		String result = builder.toString();
+		if ( result.length() < 30 ) {
+			return result;
+		}
+		return result.substring(0, 14) + " ... " + result.substring(result.length() - 15, result.length() - 1);
+	}
+
+}

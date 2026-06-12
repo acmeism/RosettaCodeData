@@ -1,0 +1,168 @@
+-- Aside: at the time of writing, this is a 42 year old algorithm that was proved impractical 41 years ago
+--        hence see https://rosettacode.org/wiki/Quickselect_algorithm#Phix should you hanker after that.
+--        (In other words I'm just doing a plain sort(), and living with any overheads compared to that.)
+enum X, Y
+
+function bridge(sequence points, atom verticalLine)
+
+    if length(points) == 2 then
+        return points
+    end if
+
+    sequence candidates = {},
+             pairset = {},
+             slopes = {},
+             validPairs = {}
+
+    for i=1 to length(points)-1 by 2 do
+        sequence p1 = points[i],
+                 p2 = points[i+1]
+        pairset &= {iff(p1<p2?{p1,p2}:{p2,p1})}
+    end for
+
+    if odd(length(points)) then
+        candidates &= {points[$]}
+    end if
+
+    for pair in pairset do
+        sequence {pi,pj} = pair
+
+        if pi[X]=pj[X] then
+            if pi[Y]>pj[Y] then
+                candidates &= {pi}
+            else
+                candidates &= {pj}
+            end if
+        else
+            slopes &= (pi[Y]-pj[Y])/(pi[X]-pj[X])
+            validPairs &= {pair}
+        end if
+    end for
+
+    integer ls = length(slopes)
+    if ls == 0 then
+        // Handle case when no valid pairs with slopes are found
+        if length(candidates) >= 2 then
+            return candidates[1..2]
+        end if
+        // If we don't have enough candidates, return the first pair
+        return points[1..2]
+    end if
+
+    integer medianIndex = floor((ls+1)/2)
+    sequence sorted_slopes = sort(slopes)
+    atom medianSlope = sorted_slopes[medianIndex]
+
+    sequence smalls={}, equals={}, larges={}
+
+    for i, slope in slopes do
+        sequence vi = validPairs[i]
+        if slope < medianSlope then
+            smalls = append(smalls, vi)
+        elsif slope == medianSlope then
+            equals = append(equals, vi)
+        else
+            larges = append(larges, vi)
+        end if
+    end for
+
+    atom maxSlope = max(sq_sub(vslice(points,Y),sq_mul(medianSlope,vslice(points,X))))
+
+    sequence maxSet = {}
+    for p in points do
+        if p[Y]-medianSlope*p[X] == maxSlope then
+            maxSet = append(maxSet, p)
+        end if
+    end for
+
+    sequence left = maxSet[1], right = left
+    for i, p in maxSet from 2 do
+        if p<left then
+            left = p
+        end if
+        if not (p<right) then
+            right = p
+        end if
+    end for
+
+    if left[X]<=verticalLine and right[X]>verticalLine then
+        return {left, right}
+    end if
+
+    if right[X]<=verticalLine then
+        candidates &= vslice(larges,2)
+        candidates &= vslice(equals,2)
+        candidates &= vslice(smalls,1)
+        candidates &= vslice(smalls,2)
+    end if
+
+    if left[X]>verticalLine then
+        candidates &= vslice(larges,1)
+        candidates &= vslice(equals,1)
+        candidates &= vslice(smalls,1)
+        candidates &= vslice(smalls,2)
+    end if
+
+    return bridge(candidates, verticalLine)
+end function
+
+function connect(sequence leftmost, rightmost, points)
+
+    if leftmost=rightmost then
+        return {leftmost}
+    end if
+
+    integer midIndex := floor(length(points)/2)
+    sequence sorted_points = sort(points)
+    sequence maxLeft := sorted_points[midIndex]
+
+    sequence minRight := sorted_points[midIndex+1],
+        {left, right} := bridge(points, (maxLeft[X]+minRight[X])/2),
+           pointsLeft := {},
+           pointsRight := {}
+
+    for p in points do
+        if p[X]<left[X] then
+            pointsLeft &= {p}
+        elsif p[X]>right[X] then
+            pointsRight &= {p}
+        end if
+    end for
+
+    sequence result := connect(leftmost, left, pointsLeft)&
+                       connect(right, rightmost, pointsRight)
+
+    return result
+end function
+
+function samex(sequence point, atom x) return point[X]==x end function
+
+function upperHull(sequence points)
+
+    sequence leftmost = max(filter(points,samex,min(points)[X])),
+            rightmost = max(points),
+       filteredpoints = {leftmost,rightmost}
+
+    for p in points do
+        if leftmost[X]<p[X] and p[X]<rightmost[X] then
+            filteredpoints = append(filteredpoints,p)
+        end if
+    end for
+
+    return connect(leftmost,rightmost,filteredpoints)
+end function
+
+function flip(sequence points) return sq_mul(points,-1) end function
+
+function convexHull(sequence points)
+    sequence res = upperHull(points),
+             low = flip(upperHull(flip(points)))
+    if res[$]=low[1] then res = res[1..$-1] end if
+    if low[$]=res[1] then low = low[1..$-1] end if
+    res &= low
+    return res
+end function
+
+constant points = {{0,0},{1,0},{0,1},{0.5,0.5}}
+printf(1,"Input points: %v\n",{points})
+printf(1,"Convex hull points: %v\n",{convexHull(points)})

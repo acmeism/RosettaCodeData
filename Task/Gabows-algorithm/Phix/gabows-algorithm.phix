@@ -1,0 +1,117 @@
+// Digraph represents a directed graph using adjacency lists
+integer n_v,    // number of vertices
+        n_e     // number of edges
+sequence adj    // adjacency lists
+
+type vertex(integer v)
+    return v>=1 and v<=n_v
+end type
+
+// GabowSCC computes strongly connected components (SCCs) in a digraph using Gabow's algorithm
+sequence marked,        // marked[v] = has v been visited?
+         id,            // id[v] = id of strong component containing v
+         preorder,      // preorder[v] = preorder of v
+         stack1,        // Stores vertices in order of visitation
+         stack2         // Auxiliary stack for finding SCC roots
+integer preCounter,     // preorder number counter
+        sccCount        // number of strongly-connected components
+
+// dfs implements depth-first search core logic for Gabow's algorithm
+procedure dfs(integer v)
+    marked[v] = true
+    preorder[v] = preCounter
+    preCounter += 1
+    stack1 = append(stack1, v)
+    stack2 = append(stack2, v)
+    for w in adj[v] do
+        if not marked[w] then
+            dfs(w)
+        elsif id[w] == -1 then
+            // Pop vertices from stack2 until top has preorder number <= preorder[w]
+            while length(stack2) > 0 and preorder[stack2[$]] > preorder[w] do
+                stack2 = stack2[1..$-1] // Pop
+            end while
+        end if
+    end for
+
+    // If v is the root of an SCC
+    if length(stack2) > 0 and stack2[$] == v then
+        // Pop v from stack2
+        stack2 = stack2[1..$-1]
+
+        sccCount += 1
+        // Pop vertices from stack1 until v is popped; assign them the current SCC id
+        while length(stack1) do
+            integer w := stack1[$]
+            stack1 = stack1[1..$-1] // Pop
+            id[w] = sccCount
+            if w == v then exit end if
+        end while
+    end if
+end procedure
+
+// StronglyConnected returns true if vertices v and w are in the same strong component
+function StronglyConnected(vertex v, w)
+    return id[v] != -1 and id[v] == id[w]
+end function
+
+// Manually construct the digraph (same as in Python code)
+n_v = 13 // numVertices
+n_e = 0  // no edges yet
+adj = repeat({},n_v)
+
+sequence edges := {{5,3},{3,4},{4,3},{7,1},{1,2},{3,1},{12,13},{13,10},{10,11},{10,12},
+           {9,10},{11,13},{1,6},{6,5},{4,6},{7,5},{7,10},{8,7},{8,9},{9,8},{6,4},{1,7}}
+for edge in edges do
+    integer {v, w} := edge
+    adj[v] = append(adj[v], w)
+    n_e += 1
+end for
+
+printf(1,"Constructed Digraph:\n")
+printf(1,"%d vertices, %d edges\n", {n_v, n_e})
+for v=1 to n_v do
+    printf(1,"%d: %v\n",{v,adj[v]})
+end for
+
+// Compute SCCs
+marked := repeat(false,n_v)
+id := repeat(-1, n_v)
+preorder := repeat(0, n_v)
+preCounter := 1
+sccCount := 0
+stack1 := {}
+stack2 := {}
+for v=1 to n_v do
+    if not marked[v] then
+        dfs(v)
+    end if
+end for
+
+// Print results
+printf(1,"\n%d strongly connected components\n", sccCount)
+
+// Group vertices by component ID
+sequence components := repeat({},sccCount)
+for v=1 to n_v do
+    integer componentID := id[v]
+    if componentID != -1 then
+        components[componentID] = append(components[componentID], v)
+    else
+        printf(1,"Warning: Vertex %d has no SCC ID assigned.\n", v)
+    end if
+end for
+
+printf(1,"\nComponents:\n")
+for i=1 to sccCount do
+    printf(1,"Component %d: %v\n", {i,components[i]})
+end for
+
+// Example usage of StronglyConnected and GetID
+printf(1,"\nConnectivity checks:\n")
+printf(1,"Vertices 1 and 4 strongly connected? %t\n", StronglyConnected(1,4))
+printf(1,"Vertices 1 and 8 strongly connected? %t\n", StronglyConnected(1,8))
+printf(1,"Vertices 10 and 13 strongly connected? %t\n", StronglyConnected(10,13))
+
+printf(1,"ID of vertex 6: %d\n", id[6])
+printf(1,"ID of vertex 9: %d\n", id[9])

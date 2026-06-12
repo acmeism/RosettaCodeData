@@ -1,0 +1,197 @@
+Structure Node
+  child.i
+  sib.i
+  parent.i
+EndStructure
+
+Procedure compute_alfa(node, Array nodes.Node(1), Array beta.i(1), Array alfa.i(1))
+  alfa(node) = alfa(nodes(node)\parent) | (beta(node) & -beta(node))
+  If nodes(node)\child <> 0
+    compute_alfa(nodes(node)\child, nodes(), beta(), alfa())
+  EndIf
+  If nodes(node)\sib <> 0
+    compute_alfa(nodes(node)\sib, nodes(), beta(), alfa())
+  EndIf
+EndProcedure
+
+Procedure process(N, Array A.i(1), Array pi.i(1), Array beta.i(1), Array alfa.i(1), Array tau.i(1), Array lam.i(1))
+  Dim nodes.Node(100)
+  t = 0
+  For v = N To 1 Step -1
+    u = 0
+    While A(v) > A(t) Or (A(v) = A(t) And v > t)
+      u = t
+      t = nodes(t)\parent
+    Wend
+    If u <> 0
+      nodes(v)\sib = nodes(u)\sib
+      nodes(u)\sib = 0
+      nodes(u)\parent = v
+      nodes(v)\child = u
+    Else
+      nodes(v)\sib = nodes(t)\child
+    EndIf
+    nodes(t)\child = v
+    nodes(v)\parent = t
+    t = v
+  Next
+
+  p = nodes(0)\child
+  m = 0
+  lam(0) = -1
+
+  Repeat
+    Repeat
+      m + 1
+      pi(p) = m
+      tau(m) = 0
+      lam(m) = 1 + lam(m >> 1)
+      If nodes(p)\child <> 0
+        p = nodes(p)\child
+      Else
+        beta(p) = m
+        Break
+      EndIf
+    ForEver
+
+    Repeat
+      tau(beta(p)) = nodes(p)\parent
+      If nodes(p)\sib <> 0
+        p = nodes(p)\sib
+        Break
+      EndIf
+      p = nodes(p)\parent
+      If p <> 0
+        h = lam(m & -pi(p))
+        beta(p) = ((m >> h) | 1) << h
+      Else
+        Break 2
+      EndIf
+    ForEver
+  Until p = 0
+
+  p = nodes(0)\child
+  lam(0) = lam(m)
+  pi(0) = 0 : beta(0) = 0 : alfa(0) = 0
+
+  If p <> 0
+    compute_alfa(p, nodes(), beta(), alfa())
+  EndIf
+EndProcedure
+
+Procedure.i nca(x, y, Array beta.i(1), Array alfa.i(1), Array tau.i(1), Array lam.i(1), Array pi.i(1))
+  If beta(x) <= beta(y)
+    h = lam(beta(y) & -beta(x))
+  Else
+    h = lam(beta(x) & -beta(y))
+  EndIf
+
+  k = alfa(x) & alfa(y) & -(1 << h)
+  If k = 0
+    h = 0
+  Else
+    h = lam(k & -k)
+  EndIf
+
+  j = ((beta(x) >> h) | 1) << h
+
+  If j <> beta(x)
+    l = lam(alfa(x) & ((1 << h) - 1))
+    x = tau(((beta(x) >> l) | 1) << l)
+  EndIf
+  If j <> beta(y)
+    l = lam(alfa(y) & ((1 << h) - 1))
+    y = tau(((beta(y) >> l) | 1) << l)
+  EndIf
+
+  If pi(x) <= pi(y)
+    ProcedureReturn x
+  Else
+    ProcedureReturn y
+  EndIf
+EndProcedure
+
+Procedure solve_test_case(m, Array values.i(1), Array queries.i(1), num_queries, Array expected.i(1))
+  Dim A.i(100)
+  Dim R.i(100)
+  Dim B.i(100)
+  Dim pi.i(100)
+  Dim beta.i(100)
+  Dim alfa.i(100)
+  Dim tau.i(100)
+  Dim lam.i(100)
+
+  A(0) = 2147483647
+  N = 1 : cnt = 0 : oldx = 0
+
+  For i = 1 To m
+    x = values(i)
+    If i > 1 And x <> oldx
+      A(N) = cnt
+      R(N) = i
+      N + 1
+      cnt = 0
+    EndIf
+    B(i) = N
+    cnt + 1
+    oldx = x
+  Next
+  A(N) = cnt
+  R(N) = m + 1
+
+  process(N, A(), pi(), beta(), alfa(), tau(), lam())
+
+  PrintN("Queries and Results:")
+  For q = 1 To num_queries
+    i1 = queries((q - 1) * 2 + 1)
+    j1 = queries((q - 1) * 2 + 2)
+    x1 = B(i1)
+    y1 = B(j1)
+    z = 0
+
+    If x1 = y1
+      z = j1 - i1 + 1
+    Else
+      If x1 + 1 <> y1
+        z = A(nca(x1 + 1, y1 - 1, beta(), alfa(), tau(), lam(), pi()))
+      Else
+        z = 0
+      EndIf
+      If (R(x1) - i1) > z : z = R(x1) - i1 : EndIf
+      If (A(y1) - R(y1) + j1 + 1) > z : z = A(y1) - R(y1) + j1 + 1 : EndIf
+    EndIf
+
+    PrintN("Query: " + Str(i1) + " " + Str(j1))
+    PrintN("Result: " + Str(z) + " (Expected: " + Str(expected(q)) + ")")
+    If z <> expected(q)
+      PrintN("  WARNING: Result doesn't match expected output")
+    EndIf
+  Next
+  PrintN("")
+EndProcedure
+
+OpenConsole()
+Dim values.i(10)
+Dim queries.i(6)
+Dim expected.i(3)
+
+values(1) = -1 : values(2) = -1 : values(3) = 1 : values(4) = 1 : values(5) = 1
+values(6) = 1 : values(7) = 3 : values(8) = 10 : values(9) = 10 : values(10) = 10
+
+queries(1) = 2 : queries(2) = 3
+queries(3) = 1 : queries(4) = 10
+queries(5) = 5 : queries(6) = 10
+
+expected(1) = 1 : expected(2) = 4 : expected(3) = 3
+
+PrintN("Test Case 1:")
+PrintN("Size: 10, Queries: 3")
+Print("Values:")
+For i = 1 To 10
+  Print(" " + Str(values(i)))
+Next
+PrintN("")
+
+solve_test_case(10, values(), queries(), 3, expected())
+PrintN(#CRLF$ + "Press ENTER to exit"): Input()
+CloseConsole()

@@ -1,0 +1,41 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. ABC-WORDS.
+
+       ENVIRONMENT DIVISION.
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT DICT ASSIGN TO DISK
+           ORGANIZATION LINE SEQUENTIAL.
+
+       DATA DIVISION.
+       FILE SECTION.
+       FD DICT
+           LABEL RECORD STANDARD
+           VALUE OF FILE-ID IS "unixdict.txt".
+       01 WORD            PIC X(32).
+
+       WORKING-STORAGE SECTION.
+       01 A               PIC 99.
+       01 B               PIC 99.
+       01 C               PIC 99.
+       01 X               PIC 99.
+
+       PROCEDURE DIVISION.
+       BEGIN.
+           OPEN INPUT DICT.
+
+       READ-WORD.
+           READ DICT, AT END CLOSE DICT, STOP RUN.
+           PERFORM CHECK-WORD.
+           GO TO READ-WORD.
+
+       CHECK-WORD.
+           MOVE ZERO TO A, B, C, X.
+           INSPECT WORD TALLYING A FOR CHARACTERS BEFORE INITIAL 'a'.
+           INSPECT WORD TALLYING B FOR CHARACTERS BEFORE INITIAL 'b'.
+           INSPECT WORD TALLYING C FOR CHARACTERS BEFORE INITIAL 'c'.
+           INSPECT WORD TALLYING X FOR CHARACTERS BEFORE INITIAL ' '.
+           IF A IS LESS THAN B
+           AND B IS LESS THAN C
+           AND C IS LESS THAN X,
+               DISPLAY WORD.

@@ -1,0 +1,545 @@
+(* "Dynamic" file. (Implementations.) *)
+
+(* To set up a predictable name-mangling scheme:  *)
+#define ATS_PACKNAME "rosetta-code.continued_fraction"
+
+(* Load templates from the ATS2 prelude: *)
+#include "share/atspre_staload.hats"
+
+(* Load declarations and templates from ats2-xprelude: *)
+#include "xprelude/HATS/xprelude.hats"
+staload "xprelude/SATS/exrat.sats"
+staload _ = "xprelude/DATS/exrat.dats"
+
+(* Load the declarations for this package: *)
+staload "continued_fraction.sats"
+
+typedef cf_record =
+  (* A cf_record is an unboxed record, denoted by @{}. A boxed record
+     would be written '{} and would be placed in the heap. Either way,
+     it is an immutable record. For a mutable record, we would have to
+     use vtypedef to make it a LINEAR type. *)
+  @{
+    terminated = bool,          (* Is the generator exhausted? *)
+    memo_count = size_t,        (* How many terms are memoized? *)
+
+    (* An arrszref is an array with runtime bounds checking. An
+       arrszref is less efficient than an arrayref, but will not force
+       us to use dependent types for the indices. *)
+    memo = arrszref exrat,      (* Memoized terms. *)
+
+    generate = term_generator   (* The source of terms. *)
+  }
+
+(* The actual type of a continued_fraction is a MUTABLE reference to
+   the (immutable) cf_record. Within this file, we may also call the
+   type cf_t. *)
+typedef cf_t = ref cf_record
+assume continued_fraction = cf_t
+
+implement
+continued_fraction_make generator =
+  let
+    val record : cf_record =
+      @{
+        terminated = false,
+        memo_count = i2sz 0,
+        memo = arrszref_make_elt<exrat> (i2sz 32, exrat_make (0, 1)),
+        generate = generator
+      }
+  in
+    ref record
+  end
+
+(* "fn" means a non-recursive function. A function that might be
+   recursive is written "fun" (or sometimes "fnx"). Incidentally: it
+   is common to see the recursions put into nested functions, with the
+   function a programmer is supposed to call being non-recursive. This
+   is often a matter of style. (By the way, in a "*.sats" file there
+   is no distinction between "fn" and "fun" that I know of.) *)
+fn
+resize_if_necessary (cf : cf_t, i : size_t) : void =
+  let
+    val @{
+          terminated = terminated,
+          memo_count = memo_count,
+          memo = memo,
+          generate = generate
+        } = !cf
+  in
+    if size memo <= i then
+      let
+        val new_size = i2sz 2 * (succ i)
+        val new_memo =
+          arrszref_make_elt<exrat> (new_size, exrat_make (0, 1))
+        val new_record : cf_record =
+          @{
+            terminated = terminated,
+            memo_count = memo_count,
+            memo = new_memo,
+            generate = generate
+          }
+
+        var i : size_t          (* A C-style automatic variable. *)
+      in
+        (* A C-style for-loop. *)
+        for (i := i2sz 0; i <> memo_count; i := succ i)
+          new_memo[i] := memo[i];
+
+        !cf := new_record
+      end
+  end
+
+fn
+update_terms (cf : cf_t, i : size_t) : void =
+  let
+    fun
+    loop () : void =
+      let
+        val @{
+              terminated = terminated,
+              memo_count = memo_count,
+              memo = memo,
+              generate = generate
+            } = !cf
+      in
+        if terminated then
+          ()
+        else if i < memo_count then
+          ()
+        else
+          case generate () of
+          | None () =>
+            let
+              val new_record =
+                @{
+                  terminated = true,
+                  memo_count = memo_count,
+                  memo = memo,
+                  generate = generate
+                }
+            in
+              !cf := new_record
+            end
+          | Some term =>
+            (* "begin-end" is a synonym for "()". *)
+            begin
+              memo[memo_count] := term;
+              let
+                val new_record =
+                  @{
+                    terminated = false,
+                    memo_count = succ memo_count,
+                    memo = memo,
+                    generate = generate
+                  }
+              in
+                !cf := new_record;
+                loop ()
+              end
+            end
+      end
+  in
+    loop ()
+  end
+
+implement
+term_exists (cf, i) =
+  let
+    val i = i2sz i
+
+    fun
+    loop () =
+      let
+        val @{
+              terminated = terminated,
+              memo_count = memo_count,
+              memo = memo,
+              generate = generate
+            } = !cf
+      in
+        if i < memo_count then
+          true
+        else if terminated then
+          false
+        else
+          begin
+            resize_if_necessary (cf, i);
+            update_terms (cf, i);
+            loop ()
+          end
+      end
+  in
+    loop ()
+  end
+
+implement
+get_term_exn (cf, i) =
+  if i2sz i < (!cf).memo_count then
+    let
+      val memo = (!cf).memo
+    in
+      memo[i]
+    end
+  else
+    $raise IllegalArgExn "get_term_exn:out_of_bounds"
+
+implement
+continued_fraction_to_term_generator cf =
+  let
+    val i : ref (intGte 0) = ref 0
+  in
+    lam () =<cloref1>
+      let
+        val j = !i
+      in
+        if term_exists (cf, j) then
+          begin
+            !i := succ j;
+            Some (cf[j])
+          end
+        else
+          None ()
+      end
+  end
+
+implement default_max_terms = ref 20
+
+implement
+continued_fraction_to_string_given_max_terms (cf, max_terms) =
+  let
+    fun
+    loop (i : intGte 0, accum : string) : string =
+      if ~term_exists (cf, i) then
+        (* The return value of string_append is a LINEAR, MUTABLE
+           strptr, which we cast to a nonlinear, immutable string.
+           (One could introduce one's own shorthands, though.) *)
+        strptr2string (string_append (accum, "]"))
+      else if i = max_terms then
+        strptr2string (string_append (accum, ",...]"))
+      else
+        let
+          val separator =
+            if i = 0 then
+              ""
+            else if i = 1 then
+              ";"
+            else
+              ","
+          and term_string = tostring_val<exrat> cf[i]
+        in
+          loop (succ i,
+                strptr2string (string_append (accum, separator,
+                                              term_string)))
+        end
+  in
+    loop (0, "[")
+  end
+
+implement
+continued_fraction_to_string_default_max_terms cf =
+  let
+    val max_terms = !default_max_terms
+  in
+    continued_fraction_to_string_given_max_terms (cf, max_terms)
+  end
+
+implement
+int_to_continued_fraction i =
+  let
+    val done : ref bool = ref false
+    val i = (g0i2f i) : exrat
+  in
+    continued_fraction_make
+      (lam () =<cloref1>
+        if !done then
+          None ()
+        else
+          begin
+            !done := true;
+            Some i
+          end)
+  end
+
+implement
+exrat_to_continued_fraction num =
+  let
+    val done : ref bool = ref false
+    val num : ref exrat = ref num
+  in
+    continued_fraction_make
+      (lam () =<cloref1>
+        if !done then
+          None ()
+        else
+          let
+            val q = floor !num
+            val r = !num - q
+          in
+            if iseqz r then
+              !done := true
+            else
+              !num := reciprocal r;
+            Some q
+          end)
+  end
+
+implement
+rational_to_continued_fraction (numer, denom) =
+  exrat_to_continued_fraction (exrat_make (numer, denom))
+
+implement
+continued_fraction_make_constant_term i =
+  let
+    val i = (g0i2f i) : exrat
+  in
+    continued_fraction_make (lam () =<cloref1> Some i)
+  end
+
+implement
+ng8_make_int tuple =
+  let
+    val @(a12, a1, a2, a, b12, b1, b2, b) = tuple
+    fn f (i : int) : exrat = exrat_make (i, 1)
+  in
+    @(f a12, f a1, f a2, f a, f b12, f b1, f b2, f b)
+  end
+
+implement ng8_stopping_processing_threshold =
+  ref (exrat_make (2, 1) ** 512)
+implement ng8_infinitization_threshold =
+  ref (exrat_make (2, 1) ** 64)
+
+fn
+too_big (term : exrat) : bool =
+  abs (term) >= abs (!ng8_stopping_processing_threshold)
+
+fn
+any_too_big (ng : ng8) : bool =
+  (* "orelse" may also be (and usually is) written "||", as in C.
+     The "orelse" notation resembles that of Standard ML.
+     Non-shortcircuiting OR also exists, and can be written "+". *)
+  case+ ng of  (* <-- the + sign means all cases must have a match. *)
+  | @(a, b, c, d, e, f, g, h) =>
+    too_big (a) orelse too_big (b) orelse
+    too_big (c) orelse too_big (d) orelse
+    too_big (e) orelse too_big (f) orelse
+    too_big (g) orelse too_big (h)
+
+fn
+infinitize (term : exrat) : Option exrat =
+  if abs (term) >= abs (!ng8_infinitization_threshold) then
+    None ()
+  else
+    Some term
+
+val no_terms_source : term_generator =
+  lam () =<cloref1> None ()
+
+fn
+divide (a : exrat, b : exrat) : @(exrat, exrat) =
+  if iseqz b then
+    @(exrat_make (0, 1), exrat_make (0, 1))
+  else
+    (* Do integer division of the numerators of a and b. The following
+       particular function does floor division if the divisor is
+       positive, ceiling division if the divisor is negative. Thus the
+       remainder is never negative. *)
+    exrat_numerator_euclid_division (a, b)
+
+implement
+ng8_apply ng =
+  lam (x, y) =>
+    let
+      val ng : ref ng8 = ref ng
+      and xsource : ref term_generator =
+        ref (continued_fraction_to_term_generator x)
+      and ysource : ref term_generator =
+        ref (continued_fraction_to_term_generator y)
+
+      fn
+      all_b_are_zero () : bool =
+        let
+          val @(_, _, _, _, b12, b1, b2, b) = !ng
+        in
+          (* Instead of the Standard ML-like notation "andalso", one
+             may (and usually does) use the C-like notation
+             "&&". There is also non-shortcircuiting AND, written
+             "*". *)
+          iseqz b andalso
+          iseqz b2 andalso
+          iseqz b1 andalso
+          iseqz b12
+        end
+
+      fn
+      all_four_equal (a : exrat, b : exrat,
+                      c : exrat, d : exrat) : bool =
+        a = b && a = c && a = d
+
+      fn
+      absorb_x_term () =
+        let
+          val @(a12, a1, a2, a, b12, b1, b2, b) = !ng
+        in
+          case (!xsource) () of
+          | Some term =>
+            let
+              val new_ng = (a2 + (a12 * term),
+                            a + (a1 * term), a12, a1,
+                            b2 + (b12 * term),
+                            b + (b1 * term), b12, b1)
+            in
+              if any_too_big new_ng then
+                (* Pretend all further x terms are infinite. *)
+                (!ng := @(a12, a1, a12, a1, b12, b1, b12, b1);
+                 !xsource := no_terms_source)
+              else
+                !ng := new_ng
+            end
+          | None () =>
+              !ng := @(a12, a1, a12, a1, b12, b1, b12, b1)
+        end
+
+      fn
+      absorb_y_term () =
+        let
+          val @(a12, a1, a2, a, b12, b1, b2, b) = !ng
+        in
+          case (!ysource) () of
+          | Some term =>
+            let
+              val new_ng = (a1 + (a12 * term), a12,
+                            a + (a2 * term), a2,
+                            b1 + (b12 * term), b12,
+                            b + (b2 * term), b2)
+            in
+              if any_too_big new_ng then
+                (* Pretend all further y terms are infinite. *)
+                (!ng := @(a12, a12, a2, a2, b12, b12, b2, b2);
+                 !ysource := no_terms_source)
+              else
+                !ng := new_ng
+            end
+          | None () =>
+              !ng := @(a12, a12, a2, a2, b12, b12, b2, b2)
+        end
+
+      fun
+      loop () =
+        (* ATS2 can do mutual recursion with proper tail calls, but,
+           to stay closer to the Standard ML code, here I use only
+           single tail recursion. To do mutual recursion with proper
+           tail calls, one says "fnx" instead of "fun". *)
+        if all_b_are_zero () then
+          None ()             (* There are no more terms to output. *)
+        else
+          let
+            val @(_, _, _, _, b12, b1, b2, b) = !ng
+          in
+            if iseqz b andalso iseqz b2 then
+              (absorb_x_term (); loop ())
+            else if iseqz b orelse iseqz b2 then
+              (absorb_y_term (); loop ())
+            else if iseqz b1 then
+              (absorb_x_term (); loop ())
+            else
+              let
+                val @(a12, a1, a2, a, _, _, _, _) = !ng
+                val @(q12, r12) = divide (a12, b12)
+                and @(q1, r1) = divide (a1, b1)
+                and @(q2, r2) = divide (a2, b2)
+                and @(q, r) = divide (a, b)
+              in
+                if isneqz b12 andalso
+                      all_four_equal (q12, q1, q2, q) then
+                  (!ng := (b12, b1, b2, b, r12, r1, r2, r);
+                   (* Return a term--or, if a magnitude threshold is
+                      reached, return no more terms . *)
+                   infinitize q)
+                else
+                  let
+                    (* Put a1, a2, and a over a common denominator and
+                       compare some magnitudes. (SIDE NOTE: We are
+                       representing big integers as EXACT rationals
+                       with denominator one, so in fact could have put
+                       a1, a2, and a over their respective
+                       denominators and compared the
+                       fractions. However, I have retained the
+                       phrasing of the Standard ML program.) *)
+                    val n1 = a1 * b2 * b
+                    and n2 = a2 * b1 * b
+                    and n = a * b1 * b2
+                  in
+                    if abs (n1 - n) > abs (n2 - n) then
+                      (absorb_x_term (); loop ())
+                    else
+                      (absorb_y_term (); loop ())
+                    end
+                  end
+              end
+    in
+      continued_fraction_make (lam () =<cloref1> loop ())
+    end
+
+(* A macro definition: *)
+macdef make_op (tuple) = ng8_apply (ng8_make_int ,(tuple))
+
+implement ng8_apply_add = make_op @(0, 1, 1, 0, 0, 0, 0, 1)
+implement ng8_apply_sub = make_op @(0, 1, ~1, 0, 0, 0, 0, 1)
+implement ng8_apply_mul = make_op @(1, 0, 0, 0, 0, 0, 0, 1)
+implement ng8_apply_div = make_op @(0, 1, 0, 0, 0, 0, 1, 0)
+
+(* Here the closure is "wrapped" in an ordinary function. *)
+val _ng8_apply_neg = make_op @(0, 0, ~1, 0, 0, 0, 0, 1)
+implement ng8_apply_neg cf = _ng8_apply_neg (cf, cf)
+
+
+val _reciprocal = make_op @(0, 0, 0, 1, 0, 1, 0, 0)
+
+implement
+ng8_apply_pow (cf, i) =
+  let
+    macdef reciprocal cf = _reciprocal (,(cf), ,(cf))
+
+    fun
+    loop (x     : continued_fraction,
+          n     : int,
+          accum : continued_fraction) : continued_fraction =
+      if 1 < n then
+        let
+          val nhalf = n / 2
+          and xsquare = x * x
+        in
+          if nhalf + nhalf <> n then
+            loop (xsquare, nhalf, accum * x)
+          else
+            loop (xsquare, nhalf, accum)
+        end
+      else if n = 1 then
+        accum * x
+      else
+        accum
+  in
+    if 0 <= i then
+      loop (cf, i, one)
+    else
+      reciprocal (loop (cf, ~i, one))
+  end
+
+implement zero = i2cf 0
+implement one = i2cf 1
+implement two = i2cf 2
+implement three = i2cf 3
+implement four = i2cf 4
+
+implement one_fourth = r2cf (1, 4)
+implement one_third = r2cf (1, 3)
+implement one_half = r2cf (1, 2)
+implement two_thirds = r2cf (2, 3)
+implement three_fourths = r2cf (3, 4)
+
+implement golden_ratio = constant_term_cf 1
+implement silver_ratio = constant_term_cf 2
+implement sqrt2 = silver_ratio - one
+implement sqrt5 = (two * golden_ratio) - one

@@ -1,0 +1,112 @@
+require "bitmap"
+
+local function clamp(c) return math.max(0, math.min(255, c)) end
+
+class c3
+    static function fromRGB(c)
+        local r = (c >> 16) & 0xff
+        local g = (c >>  8) & 0xff
+        local b = (c      ) & 0xff
+        return new c3(r, g, b)
+    end
+
+    function __construct(r, g, b)
+        r = math.round(r)
+        g = math.round(g)
+        b = math.round(b)
+        self.r = clamp(r)
+        self.g = clamp(g)
+        self.b = clamp(b)
+    end
+
+    function __add(o)
+        return new c3(self.r + o.r, self.g + o.g, self.b + o.b)
+    end
+
+    function __sub(o)
+        return new c3(self.r - o.r, self.g - o.g, self.b - o.b)
+    end
+
+    function __mul(d)
+        return new c3(self.r * d, self.g * d, self.b * d)
+    end
+
+    function diff(o)
+        local rd = o.r - self.r
+        local gd = o.g - self.g
+        local bd = o.b - self.b
+        return rd * rd + gd * gd + bd * bd
+    end
+
+    function toRGB()
+        return bitmap.rgbColor(self.r, self.g, self. b)
+    end
+end
+
+local function find_closest_color(c, palette)
+    local closest = palette[1]
+    for i = 1, #palette do
+        local n = palette[i]
+        if n:diff(c) < closest:diff(c) then closest = n end
+    end
+    return closest
+end
+
+local function floyd_steinberg(bmp)
+    local palette = {
+        new c3(  0,   0,   0), -- black
+        new c3(  0,   0, 255), -- green
+        new c3(  0, 255,   0), -- blue
+        new c3(  0, 255, 255), -- cyan
+        new c3(255,   0,   0), -- red
+        new c3(255,   0, 255), -- purple
+        new c3(255, 255,   0), -- yellow
+        new c3(255, 255, 255)  -- white
+    }
+
+    local w = bmp:width()
+    local h = bmp:height()
+    local d = table.create(h)
+    for y = 0, h - 1 do
+        d[y + 1] = table.create(w)
+        for x = 0, w - 1 do
+            local c = bmp:get(x, y)
+            d[y + 1][x + 1] = c3.fromRGB(c)
+        end
+    end
+
+    for y = 0, h - 1 do
+        for x = 0, w - 1 do
+            local old_color = d[y + 1][x + 1]
+            local new_color = find_closest_color(old_color, palette)
+            bmp:set(x, y, new_color:toRGB())
+            local err = old_color - new_color
+
+            if x + 1 < w then
+                d[y + 1][x + 2] += err * (7 / 16)
+            end
+
+            if (x - 1) >= 0 and y + 1 < h then
+                d[y + 2][x] += err * (3 / 16)
+            end
+
+            if y + 1 < h then
+                d[y + 2][x + 1] += err * (5 / 16)
+            end
+
+            if x + 1 < w and y + 1 < h then
+                d[y + 2][x + 2] += err * (1 / 16)
+            end
+        end
+    end
+end
+
+-- Get name of .bmp file to dither from user.
+local filename = arg[1]
+if !filename then
+    print("Please pass the name of the .bmp file to be dithered as a command line parameter.")
+    os.exit(1)
+end
+local bmp = bitmap.fromfile(filename)
+floyd_steinberg(bmp)
+bmp:save(false, "dithered_" .. filename:sub(1, -5))

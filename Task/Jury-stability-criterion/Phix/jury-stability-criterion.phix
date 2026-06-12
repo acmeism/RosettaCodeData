@@ -1,0 +1,324 @@
+function eval_poly(sequence coeffs, atom z)
+    atom res = 0
+    for i,c in coeffs do
+        res += c*power(z,i-1)
+    end for
+    return res
+end function
+
+function print_poly(sequence s)
+    -- display helper, copied from demo\rosetta\Polynomial_long_division.exw
+    -- eg {0.8,4,3.3,1} => "z^3 + 3.3z^2 + 4z + 0.8"
+    string r = ""
+    for t=length(s) to 1 by -1 do
+        atom st = s[t]
+        if st!=0 then
+            if st=1 and t>1 then
+                r &= iff(r=""? "":" + ")
+            elsif st=-1 and t>1 then
+                r &= iff(r=""?"-":" - ")
+            else
+                if r!="" then
+                    r &= iff(st<0?" - ":" + ")
+                    st = abs(st)
+                end if
+                r &= sprintf("%g",st)
+            end if
+            if t>1 then
+                r &= "z"
+                if t>2 then
+                    r &= sprintf("^%d",t-1)
+                end if
+            end if
+        end if
+    end for
+    if r="" then r="0" end if
+    return r
+end function
+
+--# Performs the three necessary conditions (sufficient for n<=2)
+function my_test3(sequence P_coeffs, integer n_order)
+    bool stability = True
+
+    --# 1. P(z=1) > 0
+    atom val_at_1 = eval_poly(P_coeffs, 1)
+    bool test1 = (val_at_1 > 1e-9)  --# Numerically robust check for > 0
+    printf(1,"\t       P(z = 1)  > 0       =>   %9.3g > 0        => %t\n",{val_at_1,test1})
+    if not test1 then
+        stability = False
+    end if
+
+    --# 2. (-1)^n * P(z=-1) > 0
+    atom val_at_minus_1 = eval_poly(P_coeffs, -1),
+            term_with_n = power(-1,n_order) * val_at_minus_1
+    bool test2 = (term_with_n > 1e-9)  ---# Numerically robust check for > 0
+    printf(1,"\t     n \n")
+    printf(1,"\t (-1)  P(z = -1) > 0       =>   %9.3g > 0        => %t\n",{term_with_n,test2})
+    if not test2 then
+        stability = False
+    end if
+
+    --# 3. |an| > |a0|
+    atom a0 = P_coeffs[1],
+         an = P_coeffs[$]
+    bool test3_cond = (abs(an) > abs(a0))
+    --# Ensure an is not zero for this condition if poly order is > 0
+    if n_order > 0 and abs(an) < 1e-9 then --# an is effectively zero
+        --# This case indicates a lower order polynomial or problem with input.
+        --# Original MATLAB doesn't explicitly check an!=0 here but Jury assumes it.
+        --# For robustness, if an is zero, this test usually implies instability or undefined.
+        --# However, if a0 is also zero, |0| > |0| is false.
+--      pass  # Let the direct comparison proceed as per MATLAB
+    end if
+    string sn = sprintf("|%0.3g|",an),
+           s0 = sprintf("|%0.3g|",a0)
+    printf(1,"\t            |an| > |a0|    => %11s > %-8s => %t\n",{sn,s0,test3_cond})
+    if not test3_cond then
+        stability = False
+    end if
+    return stability
+end function
+
+--# Constructs the Jury table
+function jury_table(sequence P_coeffs, integer n_order)
+    integer num_coeffs = n_order + 1
+    --# This function is called only if n_order > 2 in the MATLAB code
+    --# For n_order = 3, rows = 2*3 - 3 = 3 (indices 1, 2, 3)
+    --# For n_order = 4, rows = 2*4 - 3 = 5 (indices 1, 2, 3, 4, 5)
+    sequence T = repeat(repeat(0,num_coeffs),2*n_order-3)
+
+    --# First two rows (Phix 1-indexed)
+    T[1] = P_coeffs  --# P_coeffs (a0, a1, ..., an)
+    T[2] = reverse(P_coeffs) --# P_coeffs reversed (an, an-1, ..., a0)
+
+    --# Third row - first derived row
+    T[3] = sq_sub(sq_mul(T[1,1],T[1]),sq_mul(T[2,1],T[2]))
+
+    --# Loop for subsequent rows (if n_order > 3)
+    for j_m=4 to n_order do
+        T[j_m][1..-2] = reverse(T[j_m-1][1..-2])
+        T[j_m+1] = sq_sub(sq_mul(T[j_m-1,1],T[j_m-1]),sq_mul(T[j_m,1],T[j_m]))
+    end for
+    return T
+end function
+
+--# Prints the Jury table
+procedure print_jury_table(sequence T, integer n_order)
+    printf(1,"       Row\t    Table\n")
+    integer nctp = n_order+1 -- number of columns to print
+    for i=1 to n_order do
+        printf(1,"\t%d\t|\t%s\n",{nctp,join(T[i*2-1][1..nctp],fmt:="%8.3g")})
+        if i*2>length(T) then exit end if
+        printf(1,"\t\t|\t%s\n",{join(T[i*2][1..nctp],fmt:="%8.3g")})
+        printf(1,"\t\t|\t%s\n",{join(repeat("--------",nctp)," ")})
+        nctp -= 1
+    end for
+    printf(1,"\n\n")
+end procedure
+
+--# Performs additional n-2 tests using the Jury table
+function additional_tests(sequence T, integer n_order)
+    bool stability = True
+
+    for i=1 to n_order-2 do
+        integer riga = 2*i+1,
+                idx_last_coeff = n_order-i+1
+
+        atom val_first = T[riga, 1],
+             val_last = T[riga, idx_last_coeff]
+
+        bool current_test = (abs(val_first) > abs(val_last))
+
+        printf(1,"\t| %9.3g | > | %9.3g | \t\t => %t\n",{val_first,val_last,current_test})
+        if not current_test then
+            stability = False
+        end if
+    end for
+    return stability
+end function
+
+// Returns the coefficients of a polynomial following differentiation.
+function diffPoly(sequence coefs)
+    integer c = length(coefs) - 1
+    assert(c>=0 and coefs[$]!=0)
+    if c == 0 then return {0} end if
+    sequence deriv = repeat(0,c)
+    for i=1 to c do
+        deriv[i] = i * coefs[i+1]
+    end for
+    return deriv
+end function
+
+// Attempts to find a real root of a polynomial using Newton's method from
+// an initial guess, a given tolerance, a maximum number of iterations
+// and a given multiplicity (usually 1).
+// If a root is found, it (an atom) is returned otherwise {} is returned.
+// If the root is near an integer checks if the integer is in fact the root.
+function rootPoly(sequence coefs, atom guess=0.001, tol=1e-15, maxIter=100, mult=1)
+    integer deg = length(coefs) - 1
+    if deg == 0 then return {} end if
+    if deg == 1 then return -coefs[1]/coefs[2] end if
+    if deg == 2 and coefs[2]*coefs[2] - 4*coefs[3]*coefs[1] < 0 then return {} end if
+    if eval_poly(coefs, 0) == 0 then return 0 end if
+    atom eps = 0.001
+    sequence deriv = diffPoly(coefs)
+    atom x0 = guess
+    integer iter = 1
+    for iter=1 to maxIter do
+        atom den = eval_poly(deriv, x0)
+        if den == 0 then
+            x0 = iff(x0 >= 0 ? x0 + eps : x0 - eps)
+        else
+            atom num = eval_poly(coefs, x0),
+                 x1 = x0 - num/den * mult
+            if abs(x1-x0) <= tol then
+                atom r = round(x1)
+                if abs(r-x1) <= eps and eval_poly(coefs, r) == 0 then return r end if
+                return x1
+            end if
+            x0 = x1
+        end if
+    end for
+    x0 = round(x0)
+    if eval_poly(coefs, x0) == 0 then return x0 end if
+    return null
+end function
+
+// Assumes real coefficients, highest to lowest order.
+function quadratic(atom a, b, c)
+    atom d = b*b - 4*a*c
+    if d == 0 then
+        // single real root
+        atom root = -b/(a*2)
+        return {root, root}
+    end if
+    if d > 0 then
+        // two real roots
+        atom sr = sqrt(d)
+        d = iff(b<0 ? sr-b : -sr-b)
+        return {d/(2*a), 2*c/d}
+    end if
+    // two complex roots
+    atom den = 1 / (2*a),
+           r = -b*den,
+           i = sqrt(-d) * den
+    return {{r,i},{r,-i}}
+end function
+
+function canonical(sequence c)
+    if c[$] != 0 then return c end if
+    integer newLen = length(c)
+    while newLen > 1 do
+        if c[newLen] != 0 then return c[1..newLen] end if
+        newLen -= 1
+    end while
+    return c[1..1]
+end function
+
+function polydiv(sequence a,b)
+    sequence curr = canonical(a),
+            right = canonical(b),
+           result = {}
+    integer base = length(curr) - length(right)
+    while base >= 0 do
+        atom res = curr[-1] / right[-1]
+        result &= res
+        curr = curr[1..-2]
+        for i=1 to length(right)-1 do
+            curr[base + i] -= res * right[i]
+        end for
+        base -= 1
+    end while
+    sequence quot = reverse(result),
+              rem = canonical(curr)
+    return {quot, rem}
+end function
+
+// Finds the roots of a polynomial.
+// Assumes coeffs are ordered from the lowest to highest degree.
+function polyRoots(sequence coeffs)
+    integer l = length(coeffs)
+    if l<2 then return {} end if
+    if l=2 then return {-coeffs[1]} end if
+    sequence roots = {}
+    while true do
+        if length(coeffs) == 3 then
+            sequence qroots = quadratic(coeffs[3], coeffs[2], coeffs[1])
+            roots &= qroots
+            exit
+        end if
+        object root = rootPoly(coeffs)
+        if not atom(root) then exit end if
+        roots &= root
+        coeffs = polydiv(coeffs,{-root,1})[1]
+    end while
+    return roots
+end function
+
+include complex.e
+
+// Prints roots of the polynomial.
+procedure printRoots(sequence coeffs)
+    assert(length(coeffs)>1 and coeffs[1]!=0)
+    printf(1," The roots are:\n\n")
+    // Check if trailing coefficient is zero, which means polynomial order is effectively lower.
+    coeffs = trim_tail(coeffs,0)
+    assert(length(coeffs)>1)
+    sequence calculatedRoots = polyRoots(coeffs)
+    for i,root in calculatedRoots do
+        atom modulus = complex_abs(root)
+        if complex(root) and abs(complex_imag(root)) < 1e-9 then // treat as real
+            root = complex_real(root)
+        end if
+        printf(1,"\t z%d = %-18s => modulus = %7.3F\n", {i, complex_sprint(root), modulus})
+    end for
+end procedure
+
+--# Main Jury criterion function
+procedure jury_c(integer test_case, sequence coeffs)
+    assert(length(coeffs) and coeffs==flatten(coeffs))
+
+    --# Remove trailing zeros, as Jury criterion assumes an != 0
+    coeffs = trim_tail(coeffs,0)
+    assert(length(coeffs)>2)
+    if coeffs[$] < 0 then
+        coeffs = sq_mul(coeffs,-1)  --# Ensure an > 0
+    end if
+
+    integer n_order = length(coeffs) - 1
+    printf(1,"Test case %d: %s , polynomial order = %d\n\n",{test_case,print_poly(coeffs),n_order})
+    string andsuff = iff(n_order<=2?"and sufficient ":"")
+    printf(1,"necessary %sconditions:\n\n",{andsuff})
+    bool stability_flag = my_test3(coeffs, n_order)
+    if n_order <= 2 then
+        if stability_flag then
+            printf(1,"\nThe system is stable.")
+        else
+            printf(1,"\n*** The system IS NOT STABLE ***.")
+        end if
+    else  --# n_order > 2
+        if stability_flag then
+            printf(1,"\nThe necessary conditions are met.\n\n")
+            printf(1,"It is necessary to build the Jury table.\n\n")
+
+            sequence T_table = jury_table(coeffs, n_order)
+            print_jury_table(T_table, n_order)
+
+            printf(1,"\t\tAdditional conditions to test: %d\n\n",n_order-2)
+            stability_flag = additional_tests(T_table, n_order)
+
+            if stability_flag then
+                printf(1,"\nThe system is stable.")
+            else
+                printf(1,"\n*** The system IS NOT STABLE ***.")
+            end if
+        else
+            print(1,"\n*** The system IS NOT STABLE because the necessary conditions are not met***.")
+        end if
+    end if
+    printRoots(coeffs)
+    printf(1,"\n\n")
+end procedure
+
+jury_c(1,{0.8,4,3.3,1})
+jury_c(2,{0.012,0.154,0.71,1.4,1})

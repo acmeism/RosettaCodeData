@@ -1,0 +1,65 @@
+with javascript_semantics
+atom t0 = time()
+--requires(64,true) -- (optional: 1e19 limit on 64bit, 1e15 on 32bit)
+constant APERYS_CONSTANT = 1.20205690315959428539973816151144999,
+         prime_limit = iff(machine_bits()=32 ? 51567 : 1574895),
+         SmallPrimes = get_primes(-prime_limit),
+         PrmCubed = sq_power(SmallPrimes,3),
+         MaxPrimeFactor = power(SmallPrimes[$],2)
+
+function highestDiv(atom n)
+  // (you'll have to work out the new test limits yourself)
+  atom res = n
+  for p in SmallPrimes do
+    if p*p>res then exit end if
+    while res>p and rmdr(res,p)=0 do
+      res /= p
+    end while
+  end for
+  if res>MaxPrimeFactor then
+    ?{res,MaxPrimeFactor} -- (helps find limits)
+    res = 0
+  end if
+  return res
+end function
+
+function check(atom cnt, lmt=cnt, integer i=0, flip=-1)
+  for j,p in PrmCubed from i+1 do
+    if lmt<p then exit end if
+    p := floor(lmt/p)
+    cnt += flip*p
+    if p>=PrmCubed[j+1] then
+      cnt = check(cnt,p,j,-flip)
+    end if
+  end for
+  return cnt
+end function
+
+function GetLmtfromCnt(atom inCnt)
+  atom res = trunc(APERYS_CONSTANT*inCnt), cnt
+  do
+    cnt = check(res)
+    //new approximation
+    res += trunc(APERYS_CONSTANT*(inCnt-cnt))
+  until cnt=inCnt;
+  //maybe lmt is not cubefree, like 1200 for cnt 1000
+  //faster than checking for cubefree of lmt for big lmt
+  do
+    res -= 1
+    cnt = check(res)
+  until cnt<inCnt
+  res += 1
+  return res
+end function
+
+sequence r = apply(apply(tagset(100),GetLmtfromCnt),highestDiv)
+printf(1,"%s",{join_by(r,1,25,"",fmt:="%4d")})
+
+printf(1,"\nTested with Aperys Constant approximation of %.20f\n\n",APERYS_CONSTANT)
+printf(1,"%26s %26s %19s\n",{"Limit","cube free numbers","max prime factor"})
+atom n = 1
+for i=0 to iff(machine_bits()=32?15:19) do
+    atom lmt = GetLmtfromCnt(n)
+    printf(1,"%,26d%,27d%,20d\n",{lmt,n,highestDiv(lmt)})
+    n *= 10
+end for

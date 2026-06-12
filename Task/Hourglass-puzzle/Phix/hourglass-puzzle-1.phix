@@ -1,0 +1,93 @@
+-- demo\rosetta\Hourglass_puzzle.exw
+with javascript_semantics
+procedure print_solution(sequence eggtimers, tries, integer target, pdx)
+    sequence soln = {tries[$]}, remain
+    integer n = length(eggtimers), tdx = tries[$][3], t, flipbits
+    string et = ""
+    for timer=1 to n do
+        if timer=n then et &= " and "
+        elsif timer>1 then et &= ", " end if
+        et &= sprintf("%d",eggtimers[timer])
+    end for
+    printf(1,"\nSolution for %d minutes with %s minute eggtimers:\n",{target,et})
+    while tdx do
+        if tdx=pdx then soln &= 0 end if
+        soln = append(soln,tries[tdx])
+        tdx = tries[tdx][3]
+    end while
+    soln = reverse(soln[1..$-1])
+    integer tp = 0, ro = 0
+    sequence premain = repeat(0,n)
+    for i=1 to length(soln) do
+        if soln[i]=0 then
+            puts(1,"start timer\n")
+        else
+            {remain,t,?,flipbits} = soln[i]
+            sequence flip = int_to_bits(flipbits,n)
+            string fs = "", lv = ""
+            for timer=1 to n do
+                if flip[timer] then
+                    if length(fs) then fs &= " and " end if
+                    fs &= sprintf("%d",eggtimers[timer])
+                    if premain[timer] then
+                        fs &= sprintf(" (leaving %d)",eggtimers[timer]-premain[timer])
+                    end if
+                end if
+                if remain[timer]=0 then
+                    if flip[timer] or premain[timer]!=0 then
+                        ro = eggtimers[timer]
+                    end if
+                else
+                    if length(lv) then lv &= " and " end if
+                    lv &= sprintf("%d in %d",{remain[timer],eggtimers[timer]})
+                end if
+            end for
+            lv = iff(length(lv)?" (leaving "&lv&")":"")
+            printf(1,"At t=%d, flip %s, then when %d runs out%s...\n",{tp,fs,ro,lv})
+            tp = t
+            premain = remain
+        end if
+    end for
+    printf(1,"At t=%d, stop timer\n",{tp})
+end procedure
+
+procedure solve(sequence eggtimers, integer target)
+    integer n = length(eggtimers), tdx = 1, t, pdx
+    sequence remain = repeat(0,n),
+             tries = {{remain,0,0,0}} -- {Remain,t,link,flip}
+    while tdx<=length(tries) do
+        for flipbits=1 to power(2,n)-1 do
+            {remain,t} = deep_copy(tries[tdx])
+            sequence flip = int_to_bits(flipbits,n)
+            for timer=1 to n do
+                if flip[timer] then
+                    remain[timer] = eggtimers[timer]-remain[timer]
+                end if
+            end for
+            integer mr = min(filter(remain,">",0))
+            remain = sq_max(sq_sub(remain,mr),0)
+            mr += t
+            tries = append(tries,{remain,mr,tdx,flipbits})
+            pdx = tdx
+            while pdx do
+                mr -= tries[pdx][2]
+                if mr>=target then
+                    if mr>target then exit end if
+                    print_solution(eggtimers, tries, target, pdx)
+                    return
+                end if
+                mr += tries[pdx][2]
+                pdx = tries[pdx][3]
+            end while
+        end for
+        tdx += 1
+        -- totally arbitrary sanity crash:
+        if length(tries)>20000 then crash("no solution") end if
+    end while
+end procedure
+solve({4,7},9)
+solve({4,7},15)
+solve({5,7,31},36) -- (slightly better output than Julia, I think...)
+solve({4,5},7)   -- (logo solution stops timer at t=12, this manages t=11)
+solve({7,11},15) -- (logo solution stops timer at t=22, this manages t=15)
+solve({5,8},14)  -- (logo solution stops timer at t=24, this manages t=19)

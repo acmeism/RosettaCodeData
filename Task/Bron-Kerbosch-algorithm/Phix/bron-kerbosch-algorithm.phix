@@ -1,0 +1,77 @@
+with javascript_semantics
+requires("1.0.6")
+include sets2.e
+
+// Cliques: List to store all maximal cliques (List of Lists of strings)
+sequence cliques = {}
+
+procedure BronKerbosch(integer r, p, x, g)
+    // r: Current clique (Set of strings)
+    // p: Potential candidates to expand the clique (Set of strings)
+    // x: Vertices already processed (Set of strings)
+    // g: Graph represented as an adjacency list (Dict of strings to List of Strings)
+
+    if is_empty(p) and is_empty(x) then
+        if set_size(r)>2 then
+            cliques = append(cliques,get_members(r))
+        end if
+        return
+    end if
+
+    // Select a pivot vertex from union(p,x) with the maximum degree.
+    object pivot
+    integer maxC = -1
+    for v in union(p,x) do
+        integer l = length(getd(v,g))
+        if l>maxC then
+            {maxC,pivot} = {l,v}
+        end if
+    end for
+
+    // Candidates are vertices in P that are not neighbours of the pivot.
+    sequence candidates = difference(p, getd(pivot,g), symmetric:=false)
+
+    for v in candidates do
+        // New clique including vertex v.
+        integer newR = new_set(r)
+        add_member(newR,v)
+
+        // New potential candidates are neighbours of v in p.
+        // New excluded vertices are neighbours of v in x.
+        sequence neighbours = getd(v,g)
+        integer newP = intersection(p,neighbours,-1),
+                newX = intersection(x,neighbours,-1)
+
+        // Recursive call with updated sets.
+        BronKerbosch(newR, newP, newX, g)
+
+        // Move vertex v from p to x.
+        remove_member(p,v)
+        add_member(x,v)
+    end for
+end procedure
+
+// Define the input edges as a list of tuples.
+constant input = {
+    {"a", "b"}, {"b", "a"}, {"a", "c"}, {"c", "a"},
+    {"b", "c"}, {"c", "b"}, {"d", "e"}, {"e", "d"},
+    {"d", "f"}, {"f", "d"}, {"e", "f"}, {"f", "e"}
+}
+
+// Build the graph as an adjacency list.
+integer graph = new_dict()
+for t in input do
+    setd(t[1],unique(deep_copy(getdd(t[1],{},graph))&{t[2]}),graph)
+end for
+
+// Initialize r, p, x.
+integer r = new_set(),
+        p = new_set(getd_all_keys(graph)),
+        x = new_set()
+
+// Execute the Bron-Kerbosch algorithm.
+BronKerbosch(r, p, x, graph)
+
+// Sort cliques for consistent output.
+cliques = sort(deep_copy(cliques))
+?cliques

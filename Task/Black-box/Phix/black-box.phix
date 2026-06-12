@@ -1,0 +1,769 @@
+-- demo\rosetta\Black_Box.exw
+constant title = "Black Box",
+help_text = """
+Discover the location of objects/atoms using the fewest probes/rays.
+
+See distributed version for much longer help text and other comments.
+"""
+integer size,           -- eg 8
+        s1, s2,         -- size+1|2
+        count,          -- eg 4
+        mask            -- eg #0b100000 (first such >size^2-count+1)
+                        -- Note that new_game() contains limiting code.
+
+sequence gameboard, -- actual, count 1's and size*size-count 0's.
+         eboard,    -- one of "", as being enumerated through
+         results,   -- results of rays/probes, {x,y,c,x,y} format
+         guessxy,   -- locations (each element is {x,y})
+         guessclr,  -- colours of "" (CD_BLUE for a guess,
+                    --                CD_GREEN for correct,
+                    --                CD_RED for wrong,
+                    --                CD_YELLOW/CYAN for hints.
+         hidden,    -- "" as saved during setup
+         possibles, -- up to 635,376 integer codes for 8*8 with 4 game,
+                    -- each entry being possible for content of results,
+                    -- but never deliberately driven over 100,000.
+         knowns,    -- these "are" atoms (but "maybe" if tried<maxtry)
+         minmaxmove -- best move available, see minmaxcount
+
+integer possible,   -- # of possibles checked to be plausible(), ie
+                    -- [posssible+1..$] are all subject to imminent
+                    -- deletion by the idle handler, if invalid.
+        hinted,     -- # of probes analysed by hint_explore().
+        minmaxcount -- best (so far)
+
+atom tried, maxtry  -- # of enumerations attempted/theoretical max.
+bool hints_used = false -- (affects the scoring)
+
+function probe(integer x, y, sequence board, bool bSort=true)
+--
+-- returns {x,y,c,rx,ry} primarily for use in redraw_cb(), and
+--                       secondarily for use in plausible().
+-- where c is: -1 for reflection, 0 for hit, and +1 otherwise.
+-- Note that for the latter you need to allocate an actual colour
+-- elsewhere (if this did that it would spanner plausible() etc),
+-- and also note that -2 is now in use for the ray/probe hint.
+-- Also x,y and rx,ry re-ordered lowest-first to avoid duplicates,
+-- except for hint exploration, which passes a bSort of false.
+--
+    integer rx = x, ry = y, -- current/emerge point (ray)
+            dx = 0, dy = 0, -- direction of travel
+            moves = 0       -- debug aid
+
+    if    x=0 then  dx = +1     -- left entry, moving right
+    elsif y=0 then  dy = +1     -- top        "		   down
+    elsif x=s1 then dx = -1     -- right      "		   left	
+    elsif y=s1 then dy = -1     -- btm        "			 up
+    else ?9/0 -- (sanity check)
+    end if
+
+    while true do
+
+        integer nx = rx+dx,     -- next logical position
+                ny = ry+dy,
+                idx = (ny-1)*size+nx
+
+        if nx=0 or nx=s1 or ny=0 or ny=s1 then
+            if x=nx and y=ny then
+                return {x,y,-1,0,0} -- Reflection
+            elsif bSort then
+                {{x,y},{nx,ny}} = sort({{x,y},{nx,ny}})
+            end if
+            return {x,y,1,nx,ny}    -- Emerges here
+        elsif idx<=0 then
+            ?9/0                    -- (sanity check)
+        elsif board[idx] then
+            return {x,y,0,0,0}      -- Hit
+        --
+        -- aside: rather than check diagonally, nx/ny are
+        --      simply discarded when a deflection occurs,
+        --      and we actually check things laterally.
+        --
+        elsif dx=0 then
+            -- up/down movement, check sides
+            if nx>1 and board[idx-1] then
+                if nx<size and board[idx+1] then
+                    dy = -dy            -- 180
+                else
+                    {dx,dy} = {1,0}     -- right
+                    -- (yep, both up & down deflected
+                    --  right by an atom on the left)
+                end if
+            elsif nx<size and board[idx+1] then
+                {dx,dy} = {-1,0}        -- left
+                --  (ditto left by one on the right)
+            else
+                {rx,ry} = {nx,ny}
+            end if
+        elsif dy=0 then
+            -- left/right movement, check above/below
+            if ny>1 and board[idx-size] then
+                if ny<size and board[idx+size] then
+                    dx = -dx            -- 180
+                else
+                    {dx,dy} = {0,1}     -- down
+                    -- (yep, left & right are both
+                    --  deflected down by one above)
+                end if
+            elsif ny<size and board[idx+size] then
+                {dx,dy} = {0,-1}        -- up
+                -- (ditto up by one below)
+            else
+                {rx,ry} = {nx,ny}
+            end if
+        else
+            ?9/0 -- (sanity check, dx,dy=={0,0}!?)
+        end if
+        if rx=0 or rx=s1 or ry=0 or ry=s1 then
+            {dx,dy} = {0,0} -- (outer swivel===reflection)
+        end if
+        -- guard against infinite loops, why not.
+        -- *2 because swivel/move counted separately.
+        moves += 1
+        if moves>2*size*size then ?9/0 end if
+    end while
+end function
+
+function plausible(sequence board)
+    for i=1 to length(results) do
+        sequence ri = results[i]
+        integer {x,y} = ri
+        if probe(x,y,board)!=ri then return false end if
+    end for
+    return true
+end function
+
+--
+-- For the smaller games we could use almost any storage method, but to facilitate larger
+-- boards with more atoms we should be as stingy with memory as possible. To that end an
+-- enumeration is stored as a compact set of offsets to the next piece. For instance the
+-- board {0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,....1} is stored as offsets {4,6,8,64-18}
+-- further using an appropriate mask to give (((((46*#40)+8)*#40)+6)*#40)+4 which can be
+-- stored as a single integer/atom, yet unpacked quite easily, see next. Note there is
+-- code in new_game(), for valuechanged_cb(), that ensures we can store count*bits, and
+-- more by luck than judgement that (partly) helps avoid configurations that would take
+-- far longer than the universe has existed to enumerate and scan even just the once.
+--
+function unpack(atom code)
+    sequence board = repeat(0,size*size)
+    integer offset = 0, r, check = 0
+    while code do
+        r = remainder(code,mask)
+        if r<=0 then ?9/0 end if        -- sanity check
+        offset += r
+        board[offset] = 1
+        code = floor(code/mask)
+        check += 1
+    end while
+    if check!=count then ?9/0 end if    -- sanity check
+    return board
+end function
+
+function pack(sequence board)
+    atom code = 0, pmask = 1
+    integer idx = 0, check = 0
+    while true do
+        integer prev = idx
+        idx = find(1,board,idx+1)
+        if idx=0 then exit end if
+        code = code + (idx-prev)*pmask
+        check += 1
+        pmask *= mask
+    end while
+    if check!=count then ?9/0 end if    -- sanity check
+--  if unpack(code)!=board then ?9/0 end if -- ""
+    return code
+end function
+
+procedure trim_possibles()
+--
+-- Re-process the possibles table as follows:
+--  111...222322323...$
+-- where 111... is possibly empty ok [1..possible],
+-- and 222322323 is some chunk [possible+1..limit],
+-- with 2s for oks and 3s for now-failing entries,
+-- which gets processed in a right-to-left order,
+-- such that fails(3) get replaced from the (1)s,
+-- being careful to quit early on any overlap, and
+-- /or re-test same slot if the 111... exhausted.
+-- Finally, trim off the dead head of possibles[].
+-- The result is quite scrambled, but care we not.
+--
+    integer limit = min(possible+100_000,length(possibles)),
+            limit0 = limit,
+            kill = 1 -- (actually 1 over)
+    while limit>max(possible,kill-1) do
+        if not plausible(unpack(possibles[limit])) then
+            possibles[limit] = possibles[kill]
+            if kill<=possible then
+                limit -= 1
+            end if
+            kill += 1
+        else
+            limit -= 1
+        end if
+    end while
+    possibles = possibles[kill..$]
+    possible = limit0-kill+1
+end procedure
+
+procedure enumerate()
+    atom limit = min(tried+100_000,maxtry)
+    while tried<limit and length(possibles)<100_000 do
+        tried += 1
+        if plausible(eboard) then
+            possibles &= pack(eboard)
+            possible += 1
+        end if
+        --
+        -- think abacus: find the first bead you can shift left,
+        --                and slam the rest of them hard right.
+        -- similar to binary counting, but you must always have
+        --                exactly 'count' beads (ie 1's), eg
+        -- choose(2*2,2) is 6:
+        --       0b0011  0b0101  0b0110  0b1001  0b1010  0b1100
+        --
+        -- However, because we are scanning from top left down
+        -- to bottom right, it turned out better to do them in
+        -- reverse order, hence shift right and slam left (not
+        -- quite an exact mirror, but close enough).
+        --
+        integer idx = find(1,eboard), last = 1
+        while true do
+            eboard[idx] = 0
+            idx += 1
+            if idx>size*size then exit end if
+            if eboard[idx]=0 then
+                eboard[idx] = 1
+                exit
+            end if
+            eboard[last] = 1
+            last += 1
+        end while
+        if idx=0 then exit end if
+    end while
+end procedure
+
+function idx_from_edge(integer x,y)
+-- convert {x,y}, where one but not both of x,y are either 0
+-- or s1, and the other is strictly 1..size, into 1..4*size.
+--  if x=0 then x = 0  -- (logically, but obvs. pointless)
+    if x=s1 then x = size
+    elsif y=0 then y = size*2
+    elsif y=s1 then y = size*3
+    elsif x!=0 then ?9/0 end if -- not an edge?!
+    return x+y
+end function
+
+function edge_from_idx(integer xy)
+-- convert 1..4*size into {0,1..size}/{s1,1..size}/{1..size,0}/{1..size,s1}
+    sequence res
+    integer c = floor((xy-1)/size)
+    switch c do
+        case 0: res = {0,xy}
+        case 1: res = {s1,xy-size}
+        case 2: res = {xy-size*2,0}
+        case 3: res = {xy-size*3,s1}
+        default: ?9/0
+    end switch
+    return res
+end function
+
+-- this is currently inlined, in case you were looking for it:
+--procedure idx_from_x_y(integer x, y)
+-- convert {1,1}..{size,size} to 1..size*size, for flat indexing
+--  return (y-1)*size+x
+--end function
+
+function x_y_from_idx(integer idx)
+-- convert 1..size*size to {1,1}..{size,size}
+-- (absence of floor() on /size is a deliberate sanity check)
+    integer x = remainder(idx-1,size)+1,
+            y = (idx-x)/size + 1
+    return {x,y}
+end function
+
+function next_hint()
+    sequence edges = repeat(0,size*4)
+    integer x,y,r
+    for i=1 to length(results) do
+        {x,y,r} = results[i]
+        for j=1 to 1+(r==1) do
+            integer idx = idx_from_edge(x,y)
+            if edges[idx] then ?9/0 end if
+            edges[idx] = 1
+            {?,?,?,x,y} = results[i]
+        end for
+    end for
+    integer new_hinted = find(0,edges,hinted+1)
+    return new_hinted
+end function
+
+procedure explore_hints(integer new_hinted)
+    if new_hinted then
+        -- originally, it proved better to scan these backwards...
+        -- it now breaks (wrong tiles, I guess) if not flipped...
+        new_hinted = size*4+1-new_hinted
+        integer {x,y} = edge_from_idx(new_hinted), k
+        sequence rxy = {}, counts = {}
+        for i=1 to possible do
+            sequence p = probe(x,y,unpack(possibles[i]),false)
+            k = find(p,rxy)
+            if k=0 then
+                rxy = append(rxy,p)
+                counts = append(counts,1)
+            else
+                counts[k] += 1
+            end if
+        end for
+        k = max(counts)
+        if hinted=0
+        or minmaxcount=0
+        or k<minmaxcount then
+            minmaxcount = k
+            k = maxsq(counts,true)
+            minmaxmove = rxy[k]
+            minmaxmove[3] = -2
+        end if
+        new_hinted = size*4+1-new_hinted  -- unflip
+        hinted = new_hinted
+    else
+        hinted = size*4
+    end if
+end procedure
+
+procedure find_common()
+    sequence all = repeat(1,size*size),
+             none = repeat(0,size*size)
+    for i=1 to possible do
+        all = sq_and(all,unpack(possibles[i]))
+        if all==none then exit end if
+    end for
+    knowns = {}
+    for i=1 to length(all) do
+        if all[i] then
+            knowns = append(knowns,x_y_from_idx(i))
+        end if
+    end for
+end procedure
+
+include pGUI.e
+Ihandle dlg, game_canvas, gridsize, atoms, score, hints, debug,
+        progress, declare
+
+constant colour_table = {CD_RED,
+                         CD_LIGHT_GREEN,
+                         CD_YELLOW,
+                         CD_BLUE,
+                         CD_ORANGE,
+                         CD_PURPLE,
+                         CD_CYAN,
+                         CD_MAGENTA,
+                         CD_GREEN,
+                         CD_DARK_GREEN,
+                         #bfef45,   -- Lime
+                         #fabebe,   -- Pink
+                         #469990,   -- Teal
+                         #e6beff,   -- Lavender
+                         #9A6324,   -- Brown
+                         #fffac8,   -- Beige
+                         #800000,   -- Maroon
+                         #aaffc3,   -- Mint
+                         #808000,   -- Olive
+                         #ffd8b1,   -- Apricot
+                         #000075}   -- Navy
+
+function colour(integer c)
+    c = mod(c-1,length(colour_table))+1
+    return colour_table[c]
+end function
+
+constant CD_HINTS = CD_DARK_GREY,   -- (where to fire probe)
+         CD_MAYBE = CD_YELLOW,      -- (probably an atom [scan not yet finished])
+         CD_KNOWN = CD_CYAN         -- (known atoms [scan finished])
+
+procedure redraw()
+    IupUpdate(game_canvas)
+end procedure
+
+function idle_action()
+    integer new_hinted = 0
+    if possible<length(possibles) then
+        trim_possibles()
+        hinted = 0
+    elsif tried<maxtry and length(possibles)<100_000 then
+        enumerate()
+        hinted = 0
+    elsif IupGetInt(hints,"VALUE")
+      and hinted<size*4 then
+        if possible>1
+        and hinted<size*4 then
+            new_hinted = next_hint()
+            explore_hints(new_hinted)
+            redraw()
+        end if
+        if possible=1
+        or hinted=size*4 then
+            hinted = size*4
+            find_common()
+            redraw()
+        end if
+    else
+        return IUP_IGNORE -- (disables idle)
+    end if
+    string title = sprintf("%,d / %,d (%d%%)",{possible,tried,100*(tried/maxtry)})
+    if new_hinted then
+        title &= sprintf(", move %d/%d",{new_hinted,size*4})
+    end if
+    IupSetStrAttribute(progress,"TITLE",title)
+    return IUP_DEFAULT
+end function
+constant idle_action_cb = Icallback("idle_action")
+
+procedure start_idle()
+    IupSetAttribute(progress,"TITLE","-")
+    IupSetGlobalFunction("IDLE_ACTION",idle_action_cb)
+end procedure
+
+procedure new_game()
+    size = IupGetInt(gridsize,"VALUE")
+    s1 = size+1
+    s2 = size+2
+    count = IupGetInt(atoms,"VALUE")
+    while true do -- in case count too big
+        mask = #02
+        integer bits = 1
+        while mask<=size*size-count+1 do mask*=2 bits+=1 end while
+        --
+        -- Prevent overflow: must be able to store count*bits in a Phix atom.
+        -- count limits are therefore 13 on 5x5, 7 on 10x10, and 5 on 20x20,
+        -- on 32-bit, but 64-bit does 16 on 5x5, 9 on 10x10, and 7 on 20x20.
+        -- Many if not all of the silly-sized games this prohibits could not
+        -- possibly be fully analysed within a typical human lifespan anyway.
+        -- Besides just 5 atoms allows ambiguous/therefore unplayable games.
+        -- See also the comments before unpack() above. Trying to store too
+        -- many bits would trigger the sanity checks in pack()/unpack().
+        --
+        integer mb = iff(machine_bits()=32?53:64),
+                maxcount = min(floor(mb/bits),size*size)
+        if count<=maxcount then exit end if
+        count = maxcount
+        IupSetInt(atoms,"VALUE",count)
+    end while
+
+    eboard = repeat(0,size*size)
+    eboard[1..count] = 1
+    tried = 0
+    maxtry = choose(size*size,count)
+    possibles = {}
+    possible = 0
+    results = {}
+    guessxy = {}
+    guessclr = {}
+    hidden = {}
+    knowns = {}
+    minmaxcount = 0
+    gameboard = repeat(0,size*size)
+    bool active = IupGetInt(debug,"VALUE")
+    integer done = 0, x, y, xy
+    while done<count do
+        x = rand(size)
+        y = rand(size)
+        xy = (y-1)*size+x
+        if gameboard[xy]=0 then
+            gameboard[xy] = 1
+            hidden = append(hidden,{x,y})
+            done += 1
+        elsif not find(0,gameboard) then
+            ?9/0 -- let's not loop forever!
+                 -- (should now be prevented by maxcount above)
+        end if
+    end while
+    IupSetInt(declare, "ACTIVE", active)
+    if active then
+        guessxy = hidden
+        guessclr = repeat(CD_BLUE,length(guessxy))
+    end if
+    hints_used = (IupGetInt(hints,"VALUE") and not active)
+    start_idle()
+end procedure
+
+-- saved in redraw_cb(), for click testing in button_cb():
+integer wh, -- width and height
+        mx, my  -- margins
+
+-- saved in declare_cb(), for adding to the score (10 each)
+integer wrong = 0
+
+function redraw_cb(Ihandle ih, integer /*posx*/, integer /*posy*/)
+    integer {w,h} = IupGetIntInt(ih, "DRAWSIZE")
+    -- calc width/height and margins (saved for button_cb):
+    wh = min(floor((w-10)/s2),floor((h-10)/s2))
+    mx = floor((w-wh*(s2))/2)
+    my = floor((h-wh*(s2))/2)
+
+    cdCanvas cddbuffer = IupGetAttributePtr(ih,"DBUFFER")
+    IupGLMakeCurrent(ih)
+    cdCanvasActivate(cddbuffer)
+    cdCanvasClear(cddbuffer)
+
+    -- outer edges (using one huge '+' shape)
+    cdCanvasSetForeground(cddbuffer,CD_GREY)
+    cdCanvasBox(cddbuffer,mx+wh,mx+wh*s1,my,my+wh*s2)
+    cdCanvasBox(cddbuffer,mx,mx+wh*s2,my+wh,my+wh*s1)
+    -- the inner size*size board (square)
+    cdCanvasSetForeground(cddbuffer,CD_LIGHT_GREY)
+    cdCanvasBox(cddbuffer,mx+wh,mx+wh*s1,my+wh,my+wh*s1)
+    -- draw the grid lines
+    cdCanvasSetForeground(cddbuffer,CD_WHITE)
+    integer {lx,ly} = {mx,my}
+    for i=1 to size+1 do
+        lx += wh
+        ly += wh
+        cdCanvasLine(cddbuffer,lx,my,lx,my+wh*s2)
+        cdCanvasLine(cddbuffer,mx,ly,mx+wh*s2,ly)
+    end for
+
+    sequence edges = repeat(0,size*4)
+    integer x,y,c = 1, h2 = floor(wh/2), r,
+            rfrom = (minmaxcount==0 or IupGetInt(hints,"VALUE")=0)
+    for i=rfrom to length(results) do
+        {x,y,r} = iff(i=0?minmaxmove:results[i])
+        integer cb, ct
+        string txt
+        {txt,cb,ct} = iff(r=-2?{"+",CD_HINTS,CD_BLACK}:
+                      iff(r=-1?{"R",CD_WHITE,CD_BLACK}:
+                      iff(r==0?{"H",CD_BLACK,CD_WHITE}:
+                   {sprintf("%d",c),CD_GREY,colour(c)})))
+        for j=1 to 1+(r==1) do
+            cdCanvasSetForeground(cddbuffer,cb)
+            integer cx = mx+wh*x,
+                    cy = my+wh*(s1-y)
+            cdCanvasBox(cddbuffer,cx+1,cx+wh,cy+1,cy+wh)
+            cdCanvasSetForeground(cddbuffer,ct)
+            cdCanvasFont(cddbuffer, "Helvetica", CD_BOLD, h2)
+            cdCanvasText(cddbuffer, cx+h2, cy+h2, txt)
+            if i!=0 then
+                integer idx = idx_from_edge(x,y)
+                if edges[idx] then ?9/0 end if
+                edges[idx] = 1
+                if r=1 then
+                    {?,?,?,x,y} = results[i]
+                    c += (j=2)
+                end if
+            end if
+        end for
+    end for
+    sequence gxy = guessxy,
+             gclr = guessclr
+    if IupGetInt(hints,"VALUE") then
+        for i=1 to length(knowns) do
+            sequence ki = knowns[i]
+            if not find(ki,gxy) then
+                gxy = append(gxy,ki)
+                gclr = append(gclr,iff(tried<maxtry?CD_MAYBE:CD_KNOWN))
+            end if
+        end for
+    end if
+    for i=1 to length(gxy) do
+        {x,y} = gxy[i]
+        atom cx = mx+(x+0.5)*wh,
+             cy = my+(s1-y+0.5)*wh
+        r = floor(wh*4/5)
+        cdCanvasSetForeground(cddbuffer,gclr[i])
+        cdCanvasCircle(cddbuffer, cx, cy, r)
+    end for
+    cdCanvasFlush(cddbuffer)
+--  IupSetStrAttribute(score,"TITLE","%d",{iff(hints_used?9999:sum(edges)+wrong*10)})
+    IupSetStrAttribute(score,"TITLE","%d",{sum(edges)+wrong*10})
+    return IUP_DEFAULT
+end function
+
+function map_cb(Ihandle ih)
+    IupGLMakeCurrent(ih)
+    atom res = IupGetDouble(NULL, "SCREENDPI")/25.4
+    cdCanvas cddbuffer = cdCreateCanvas(CD_GL, "10x10 %g", {res})
+    IupSetAttributePtr(ih,"DBUFFER",cddbuffer)
+    cdCanvasSetBackground(cddbuffer, CD_PARCHMENT)
+    {} = cdCanvasTextAlignment(cddbuffer, CD_CENTER)
+    return IUP_DEFAULT
+end function
+
+function canvas_resize_cb(Ihandle canvas)
+    cdCanvas cddbuffer = IupGetAttributePtr(canvas,"DBUFFER")
+    integer {canvas_width, canvas_height} = IupGetIntInt(canvas, "DRAWSIZE")
+    atom res = IupGetDouble(NULL, "SCREENDPI")/25.4
+    cdCanvasSetAttribute(cddbuffer, "SIZE", "%dx%d %g", {canvas_width, canvas_height, res})
+    return IUP_DEFAULT
+end function
+
+function declare_cb(Ihandle /*declare*/)
+    sequence add_h = repeat(true,length(hidden))
+    wrong = max(0,count-length(guessxy))
+    for i=1 to length(guessxy) do
+        integer k = find(guessxy[i],hidden)
+        if k then
+            guessclr[i] = CD_GREEN
+            add_h[k] = false
+        else
+            guessclr[i] = CD_RED
+            wrong += 1
+        end if
+    end for
+    for i=1 to length(add_h) do
+        if add_h[i] then
+            guessxy = append(guessxy,hidden[i])
+            guessclr = append(guessclr,CD_BLUE)
+        end if
+    end for
+    IupSetAttribute(declare, "ACTIVE", "NO")
+    redraw()
+    return IUP_DEFAULT
+end function
+
+function button_cb(Ihandle canvas, integer button, pressed, x, y, atom /*pStatus*/)
+    Ihandle frame = IupGetParent(canvas)
+    string title = IupGetAttribute(frame,"TITLE")
+    if button=IUP_BUTTON1 and not pressed then      -- (left button released)
+        x = floor((x-mx)/wh)
+        y = floor((y-my)/wh)
+        -- obviously, an x/y of 0 means left/top,
+        --            whereas s1 means right/btm,
+        --            and 1..size(both) is inner.
+        bool outerx = (x>=0 and x<=s1),
+             outery = (y>=0 and y<=s1),
+             innerx = (x>=1 and x<=size),
+             innery = (y>=1 and y<=size)
+        if innerx and innery then
+            sequence guess = {x,y}
+            integer k = find(guess,guessxy)
+            if k then
+                guessxy[k..k] = {}
+                guessclr[k..k] = {}
+            else
+                guessxy = append(guessxy,guess)
+                guessclr = append(guessclr,CD_BLUE)
+            end if
+            bool bActive = (length(guessxy)==count)
+            IupSetInt(declare, "ACTIVE", bActive)
+            if IupGetInt(debug,"VALUE")
+            and length(guessxy)=count then
+                hidden = guessxy
+                gameboard = repeat(0,size*size)
+                for i=1 to count do
+                    {x,y} = hidden[i]
+                    integer xy = (y-1)*size+x
+                    gameboard[xy] = 1
+                end for
+                results = {}
+            end if
+            redraw()
+        elsif (outerx and innery)
+           or (outery and innerx) then
+            sequence r = probe(x,y,gameboard)
+            if not find(r,results) then
+                results = append(results,r)
+                possible = 0
+                start_idle()
+            end if
+            redraw()
+        end if
+    end if
+    return IUP_CONTINUE
+end function
+
+function new_game_cb(Ihandle /*ih*/)
+    new_game()
+    redraw()
+    return IUP_DEFAULT
+end function
+
+function exit_cb(Ihandle /*ih*/)
+    return IUP_CLOSE
+end function
+
+function help_cb(Ihandln /*ih*/)
+    IupMessage(title,help_text)
+    return IUP_DEFAULT
+end function
+
+function key_cb(Ihandle /*dlg*/, atom c)
+    if c=K_ESC then return IUP_CLOSE end if
+    if c=K_F1 then return help_cb(NULL) end if
+    if c='?' then
+        -- an old diagnostic that I kept in...
+        for i=1 to min(5,length(possibles)) do
+            sequence s = unpack(possibles[i])
+            for j=1 to size do
+                ?s[1..size]
+                s = s[size+1..$]
+            end for
+            puts(1,"\n")
+        end for
+        possible = 0
+        start_idle()
+    end if
+    return IUP_CONTINUE
+end function
+
+function valuechanged_cb(Ihandle ih)
+    if ih=hints then
+        hints_used = true
+        start_idle()
+    else
+        new_game()
+    end if
+    redraw()
+    return IUP_DEFAULT
+end function
+constant cb_valuechanged = Icallback("valuechanged_cb")
+
+procedure main()
+    IupOpen()
+
+    gridsize = IupText("SPIN=Yes, SPINMIN=1, SPINMAX=20, VALUE=8, RASTERSIZE=34x")
+    atoms = IupText("SPIN=Yes, SPINMIN=1, SPINMAX=16, VALUE=4, RASTERSIZE=34x")
+    score = IupLabel("","EXPAND=HORIZONTAL, PADDING=5x4")
+    hints = IupToggle("  Show Hints?","VALUE=YES, RIGHTBUTTON=YES, PADDING=5x4")
+    debug = IupToggle("Debug Mode?","VALUE=NO, RIGHTBUTTON=YES, PADDING=5x4")
+    progress = IupLabel("-","EXPAND=HORIZONTAL, PADDING=5x4")
+    declare = IupButton("Declare",Icallback("declare_cb"),"PADDING=5x4, ACTIVE=NO")
+    game_canvas = IupGLCanvas("RASTERSIZE=400x400")
+    Ihandle newgame = IupButton("New Game",Icallback("new_game_cb"),"PADDING=5x4"),
+            help = IupButton("Help (F1)",Icallback("help_cb"),"PADDING=5x4"),
+            quit = IupButton("E&xit",Icallback("exit_cb"),"PADDING=5x4"),
+            vbox = IupVbox({IupHbox({IupLabel("Size","PADDING=5x4"),gridsize,
+                                     IupFill(),
+                                     IupLabel("Atoms","PADDING=5x4"),atoms}),
+                            IupHbox({hints,IupFill(),debug}),
+                            IupHbox({progress}),
+                            IupHbox({IupLabel("Score","PADDING=5x4"),score}),
+                            IupHbox({declare,newgame,help,quit})},"MARGIN=5x5"),
+            game_frame = IupFrame(IupHbox({game_canvas},"MARGIN=3x3"),"TITLE=Game"),
+            option_frame = IupFrame(vbox,"TITLE=Options"),
+            full = IupHbox({game_frame,option_frame})
+    IupSetCallbacks({gridsize,atoms,hints,debug}, {"VALUECHANGED_CB", cb_valuechanged})
+    IupSetCallbacks(game_canvas, {"ACTION", Icallback("redraw_cb"),
+                                  "MAP_CB", Icallback("map_cb"),
+                                  "RESIZE_CB", Icallback("canvas_resize_cb"),
+                                  "BUTTON_CB", Icallback("button_cb")})
+    dlg = IupDialog(IupHbox({full},"MARGIN=3x3"))
+    IupSetAttribute(dlg, "TITLE", title)
+    IupSetCallback(dlg, "K_ANY", Icallback("key_cb"))
+    IupSetAttributeHandle(dlg,"DEFAULTENTER", declare)  --erm...??
+
+    new_game()
+
+    IupShowXY(dlg,IUP_CENTER,IUP_CENTER)
+    IupSetAttribute(dlg, "RASTERSIZE", NULL)
+    IupSetStrAttribute(dlg, "MINSIZE", IupGetAttribute(dlg,"RASTERSIZE"))
+    sequence fixsize = {score,progress}
+    for i=1 to length(fixsize) do
+        Ihandle fi = fixsize[i]
+        IupSetAttributes(fi, "RASTERSIZE=%s, EXPAND=NO", {IupGetAttribute(fi,"RASTERSIZE")})
+    end for
+    IupMainLoop()
+    IupClose()
+end procedure
+
+main()

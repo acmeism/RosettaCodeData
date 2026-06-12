@@ -1,0 +1,91 @@
+#include once "AgentAPI.bas"
+
+Type Agent Extends AgentAPI
+    sectorColor As String
+    ballColor As String
+    ball As String
+    anywhere As Integer
+
+    Declare Constructor(host As String, port As Integer)
+    Declare Constructor(Byref rhs As Const Agent)
+
+    Declare Sub MoveBehavior()
+    Declare Sub BallBehavior()
+End Type
+
+Constructor Agent(host As String, port As Integer)
+    Base(host, port)
+
+    sectorColor = ""
+    ballColor = ""
+    ball = ""
+    anywhere = 0
+End Constructor
+
+Constructor Agent(Byref rhs As Const Agent)
+    Base(rhs)
+
+    This.sectorColor = rhs.sectorColor
+    This.ballColor = rhs.ballColor
+    This.ball = rhs.ball
+    This.anywhere = rhs.anywhere
+End Constructor
+
+Sub Agent.MoveBehavior()
+    ball = ""
+    Do
+        'Try moving forward multiple times
+        Do While Rnd() < 0.5
+            ' Move forward and check for errors
+            Dim As Boolean gameOver = ForwardStep()
+            If gameOver Then Exit Sub
+
+            ' Update state based on current sector and ball
+            sectorColor = ColorToString(GetSectorColor())
+            ballColor = ColorToString(GetBallColor())
+
+            ' Handle any balls
+            This.BallBehavior()
+        Loop
+
+        ' Turn randomly
+        If Rnd() < 0.5 Then
+            TurnLeft()
+        Else
+            TurnRight()
+        End If
+    Loop
+End Sub
+
+Sub Agent.BallBehavior()
+    ' Update state based on current sector and ball
+    sectorColor = ColorToString(GetSectorColor())
+    ballColor = ColorToString(GetBallColor())
+
+    ' If we don't have a ball and there's one to pick up that doesn't match the sector
+    If ball = "" Andalso ballColor <> "" Andalso ballColor <> sectorColor Then
+        ball = ballColor
+        anywhere = 0
+        GetBall()
+
+        ' If we have a ball and it matches the sector or we're willing to drop it anywhere
+    Elseif ball <> "" Andalso (ball = sectorColor Orelse anywhere) Then
+        ' Try to drop the ball
+        Dim As Boolean gameOver = DropBall()
+
+        ' If successful or game is over, clear the ball
+        If gameOver Orelse GetLastError() <> ERROR_SECTOR_FULL Then
+            ball = ""
+        Else
+            ' If we got a sector full error, set anywhere flag
+            anywhere = 1
+        End If
+    End If
+End Sub
+
+' Main program
+' Create agent and connect to server
+Dim As Agent myAgent = Type<Agent>("localhost", 12345)
+myAgent.MoveBehavior()
+
+Sleep

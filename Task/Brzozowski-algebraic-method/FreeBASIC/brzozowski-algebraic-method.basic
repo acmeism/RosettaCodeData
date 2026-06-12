@@ -1,0 +1,222 @@
+Type RegularExpression Extends Object
+    tipo As Integer
+    Declare Virtual Function toString() As String
+    Declare Virtual Function equals(other As RegularExpression Ptr) As Boolean
+End Type
+
+Function RegularExpression.toString() As String
+    Return ""
+End Function
+
+Function RegularExpression.equals(other As RegularExpression Ptr) As Boolean
+    Return tipo = other->tipo
+End Function
+
+Type EmptyExpr Extends RegularExpression
+    Declare Constructor()
+    Declare Virtual Function toString() As String
+End Type
+
+Constructor EmptyExpr()
+    tipo = 1
+End Constructor
+
+Function EmptyExpr.toString() As String
+    Return "0"
+End Function
+
+Type EpsilonExpr Extends RegularExpression
+    Declare Constructor()
+    Declare Virtual Function toString() As String
+End Type
+
+Constructor EpsilonExpr()
+    tipo = 2
+End Constructor
+
+Function EpsilonExpr.toString() As String
+    Return "1"
+End Function
+
+Type CarExpr Extends RegularExpression
+    c As String
+    Declare Constructor(ch As String)
+    Declare Virtual Function toString() As String
+    Declare Virtual Function equals(other As RegularExpression Ptr) As Boolean
+End Type
+
+Constructor CarExpr(ch As String)
+    tipo = 3
+    c = ch
+End Constructor
+
+Function CarExpr.toString() As String
+    Return c
+End Function
+
+Function CarExpr.equals(other As RegularExpression Ptr) As Boolean
+    Return other->tipo = 3 Andalso Cast(CarExpr Ptr, other)->c = c
+End Function
+
+Type UnionExpr Extends RegularExpression
+    e As RegularExpression Ptr : f As RegularExpression Ptr
+    Declare Constructor(e1 As RegularExpression Ptr, f1 As RegularExpression Ptr)
+    Declare Virtual Function toString() As String
+    Declare Virtual Function equals(other As RegularExpression Ptr) As Boolean
+End Type
+
+Constructor UnionExpr(e1 As RegularExpression Ptr, f1 As RegularExpression Ptr)
+    tipo = 4
+    e = e1
+    f = f1
+End Constructor
+
+Function UnionExpr.toString() As String
+    Return e->toString() & "+" & f->toString()
+End Function
+
+Function UnionExpr.equals(other As RegularExpression Ptr) As Boolean
+    If other->tipo <> 4 Then Return False
+    Dim As UnionExpr Ptr otherUnion = Cast(UnionExpr Ptr, other)
+    Return e->equals(otherUnion->e) AndAlso f->equals(otherUnion->f)
+End Function
+
+Type ConcatExpr Extends RegularExpression
+    e As RegularExpression Ptr
+    f As RegularExpression Ptr
+    Declare Constructor(e1 As RegularExpression Ptr, f1 As RegularExpression Ptr)
+    Declare Virtual Function toString() As String
+    Declare Virtual Function equals(other As RegularExpression Ptr) As Boolean
+End Type
+
+Constructor ConcatExpr(e1 As RegularExpression Ptr, f1 As RegularExpression Ptr)
+    tipo = 5
+    e = e1
+    f = f1
+End Constructor
+
+Function ConcatExpr.toString() As String
+    Return "(" & e->toString() & ")(" & f->toString() & ")"
+End Function
+
+Function ConcatExpr.equals(other As RegularExpression Ptr) As Boolean
+    If other->tipo <> 5 Then Return False
+    Dim As ConcatExpr Ptr otherConcat = Cast(ConcatExpr Ptr, other)
+    Return e->equals(otherConcat->e) AndAlso f->equals(otherConcat->f)
+End Function
+
+Type StarExpr Extends RegularExpression
+    e As RegularExpression Ptr
+    Declare Constructor(e1 As RegularExpression Ptr)
+    Declare Virtual Function toString() As String
+    Declare Virtual Function equals(other As RegularExpression Ptr) As Boolean
+End Type
+
+Constructor StarExpr(e1 As RegularExpression Ptr)
+    tipo = 6
+    e = e1
+End Constructor
+
+Function StarExpr.toString() As String
+    Return "(" & e->toString() & ")*"
+End Function
+
+Function StarExpr.equals(other As RegularExpression Ptr) As Boolean
+    Return other->tipo = 6 Andalso Cast(StarExpr Ptr, other)->e->equals(e)
+End Function
+
+Dim Shared As RegularExpression Ptr emptyRE, epsilonRE
+
+Function brzozowski(a() As RegularExpression Ptr, b() As RegularExpression Ptr) As RegularExpression Ptr
+    Dim As Integer m, n, j, i
+
+    m = Ubound(a, 1) + 1
+    For n = m-1 To 0 Step -1
+        b(n) = New ConcatExpr(New StarExpr(a(n,n)), b(n))
+
+        For j = 0 To n-1
+            a(n,j) = New ConcatExpr(New StarExpr(a(n,n)), a(n,j))
+        Next
+
+        For i = 0 To n-1
+            b(i) = New UnionExpr(b(i), New ConcatExpr(a(i,n), b(n)))
+            For j = 0 To n-1
+                a(i,j) = New UnionExpr(a(i,j), New ConcatExpr(a(i,n), a(n,j)))
+            Next
+        Next
+
+        For i = 0 To n-1
+            a(i,n) = emptyRE
+        Next
+    Next
+
+    Return b(0)
+End Function
+
+Function simplifyExpression(e As RegularExpression Ptr, isTopLevel As Boolean = True) As RegularExpression Ptr
+    If isTopLevel Then
+        Dim As RegularExpression Ptr prevExpr = 0
+        Do
+            prevExpr = e
+            e = simplifyExpression(e, False)
+        Loop Until e->equals(prevExpr)
+        Return e
+    End If
+
+    Select Case e->tipo
+    Case 4 ' UnionExpr
+        Dim As UnionExpr Ptr u = Cast(UnionExpr Ptr, e)
+        Dim As RegularExpression Ptr ee = simplifyExpression(u->e, False)
+        Dim As RegularExpression Ptr ef = simplifyExpression(u->f, False)
+
+        If ee->equals(ef) Then Return ee
+        If ee->tipo = 4 Then
+            Dim As UnionExpr Ptr ue = Cast(UnionExpr Ptr, ee)
+            Return simplifyExpression(New UnionExpr(ue->e, New UnionExpr(ue->f, ef)), False)
+        End If
+        If ee->tipo = 1 Then Return ef
+        If ef->tipo = 1 Then Return ee
+        Return New UnionExpr(ee, ef)
+
+    Case 5 ' ConcatExpr
+        Dim As ConcatExpr Ptr c = Cast(ConcatExpr Ptr, e)
+        Dim As RegularExpression Ptr ee = simplifyExpression(c->e, False)
+        Dim As RegularExpression Ptr ef = simplifyExpression(c->f, False)
+
+        If ee->tipo = 2 Then Return ef
+        If ef->tipo = 2 Then Return ee
+        If ee->tipo = 1 Or ef->tipo = 1 Then Return emptyRE
+        If ee->tipo = 5 Then
+            Dim As ConcatExpr Ptr ce = Cast(ConcatExpr Ptr, ee)
+            Return simplifyExpression(New ConcatExpr(ce->e, New ConcatExpr(ce->f, ef)), False)
+        End If
+        Return New ConcatExpr(ee, ef)
+
+    Case 6 ' StarExpr
+        Dim As StarExpr Ptr s = Cast(StarExpr Ptr, e)
+        Dim As RegularExpression Ptr ee = simplifyExpression(s->e, False)
+
+        If ee->tipo = 1 Or ee->tipo = 2 Then Return epsilonRE
+        Return New StarExpr(ee)
+    End Select
+
+    Return e
+End Function
+
+' Main program
+emptyRE = New EmptyExpr()
+epsilonRE = New EpsilonExpr()
+
+Dim As RegularExpression Ptr a(2,2)
+a(0,0) = emptyRE         : a(0,1) = New CarExpr("a") : a(0,2) = New CarExpr("b")
+a(1,0) = New CarExpr("b"): a(1,1) = emptyRE          : a(1,2) = New CarExpr("a")
+a(2,0) = New CarExpr("a"): a(2,1) = New CarExpr("b") : a(2,2) = emptyRE
+
+Dim As RegularExpression Ptr b(2) = {epsilonRE, emptyRE, emptyRE}
+
+Dim As RegularExpression Ptr result = brzozowski(a(), b())
+Print result->toString()
+Print !"\nwhich simplifies to:\n"
+Print simplifyExpression(result)->toString()
+
+Sleep

@@ -1,0 +1,2 @@
+use MONKEY-SEE-NO-EVAL;
+EVAL slurp

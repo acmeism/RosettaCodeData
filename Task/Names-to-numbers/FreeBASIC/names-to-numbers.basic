@@ -1,0 +1,134 @@
+Dim Shared As String names(1 To 33)
+Data "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety", "hundred", "thousand", "million", "billion", "trillion", "quadrillion"
+For i As Byte = 1 To 33 : Read names(i) : Next
+
+Dim Shared As Double values(1 To 33) = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 30, 40, 50, 60, 70, 80, 90, 100, 1000, 1000000, 1000000000, 1E12, 1E15}
+
+Dim Shared As String zeros(1 To 5)
+zeros(1) = "zero": zeros(2) = "nought": zeros(3) = "nil"
+zeros(4) = "none": zeros(5) = "nothing"
+
+Function parseWords(text As String) As String Ptr
+    Dim As String Ptr words = New String[100] 'Maximum expected words
+    Dim As Integer wordCount = 0
+    Dim As String currentWord = ""
+
+    For i As Integer = 1 To Len(text)
+        Dim As String c = Mid(text, i, 1)
+        If c = " " Then
+            If Len(currentWord) > 0 Then
+                words[wordCount] = currentWord
+                wordCount += 1
+                currentWord = ""
+            End If
+        Else
+            currentWord &= c
+        End If
+    Next
+
+    If Len(currentWord) > 0 Then
+        words[wordCount] = currentWord
+        wordCount += 1
+    End If
+
+    Return words
+End Function
+
+Function nameToNum(nombre As String) As Double
+    Dim As Integer i, j
+    Dim As String text = Lcase(Trim(nombre))
+    Dim As Integer isNegative = Instr(text, "minus ")
+
+    If isNegative Then text = Mid(text, 7)
+    If Instr(text, "a ") = 1 Then text = "one" & Mid(text, 2)
+
+    ' Convert hyphens to spaces  (text = REPLACE(text, "-", " ") en otors lenguajes)
+    Dim As String newText = ""
+    For i = 1 To Len(text)
+        If Mid(text, i, 1) = "-" Then
+            newText &= " "
+        Else
+            newText &= Mid(text, i, 1)
+        End If
+    Next
+    text = newText
+
+    Dim As String word
+    Dim As Integer wordCount = 0
+    Dim As String words(100)
+
+    ' Parse words manually
+    word = ""
+    For i = 1 To Len(text)
+        If Mid(text, i, 1) = " " Or Mid(text, i, 1) = "," Then
+            If Len(word) > 0 Then
+                If word <> "and" Then
+                    words(wordCount) = word
+                    wordCount += 1
+                End If
+                word = ""
+            End If
+        Else
+            word += Mid(text, i, 1)
+        End If
+    Next
+
+    If Len(word) > 0 Then
+        If word <> "and" Then
+            words(wordCount) = word
+            wordCount += 1
+        End If
+    End If
+
+    For i = 0 To 4
+        If wordCount = 1 And words(0) = zeros(i + 1) Then Return 0
+    Next i
+
+    ' Calculate value
+	Dim As Double multiplier = 1, lastNum = 0, sum = 0
+
+    For i = wordCount - 1 To 0 Step -1
+        Dim As Double num = 0
+
+        For j = 0 To 32
+            If words(i) = names(j + 1) Then num = values(j + 1)
+        Next j
+
+        If num = 0 Then
+            If words(i) <> "and" Then  ' Skip error for "and" words
+                Print "'" & words(i) & "' is not a valid number": Exit Function
+            End If
+            Continue For
+        End If
+
+        If num = lastNum Then Print "'" & nombre & "' is not a well formed numeric string": Exit Function
+
+        If num >= 1000 Then
+            If lastNum >= 100 Then Print "'" & nombre & "' is not a well formed numeric string": Exit Function
+            multiplier = num
+            If i = 0 Then sum += multiplier
+        Elseif num >= 100 Then
+            multiplier = multiplier * 100
+            If i = 0 Then sum += multiplier
+        Elseif num >= 20 Then
+            If lastNum >= 10 And lastNum <= 90 Then Print "'" & nombre & "' is not a well formed numeric string": Exit Function
+            sum += num * multiplier
+        Else
+            If lastNum >= 1 And lastNum <= 90 Then Print "'" & nombre & "' is not a well formed numeric string": Exit Function
+            sum += num * multiplier
+        End If
+
+        lastNum = num
+    Next i
+
+    Return Iif(isNegative, -sum, sum)
+End Function
+
+Dim As String tests(1 To 14)
+Data "none", "one", "twenty-five", "minus one hundred and seventeen", "hundred and fifty-six", "minus two thousand two", "nine thousand, seven hundred, one", "minus six hundred and twenty six thousand, eight hundred and fourteen", "four million, seven hundred thousand, three hundred and eighty-six", "fifty-one billion, two hundred and fifty-two million, seventeen thousand, one hundred eighty-four", "two hundred and one billion, twenty-one million, two thousand and one", "minus three hundred trillion, nine million, four hundred and one thousand and thirty-one", "one quadrillion and one", "minus nine quadrillion, one hundred thirty-seven"
+For i As Byte = 1 To Ubound(tests)
+    Read tests(i)
+    Print Using "################## = &"; nameToNum(tests(i)); tests(i)
+Next i
+
+Sleep

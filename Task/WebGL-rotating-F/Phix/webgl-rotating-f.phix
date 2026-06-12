@@ -1,0 +1,384 @@
+(phixonline)-->
+ <span style="color: #000080;font-style:italic;">--
+ -- demo\pGUI\HelloF.exw
+ -- ====================
+ --
+ --  Translation of https://webglfundamentals.org/webgl/webgl-3d-textures-good-npot.html
+ --          but using a manually generated texture rather than one loaded from an image.
+ --
+ --  Converted to pGUI by Pete Lomax
+ --
+ --  This can be run online [http://phix.x10.mx/p2js/HelloF.htm here], and also works on desktop/Phix
+ --</span>
+ <span style="color: #008080;">with</span> <span style="color: #008080;">javascript_semantics</span>   <span style="color: #000080;font-style:italic;">-- (OpenGL ES 2.0 compatible) [YEAH!!]</span>
+ <span style="color: #7060A8;">requires</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"1.0.1"</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">include</span> <span style="color: #000000;">pGUI</span><span style="color: #0000FF;">.</span><span style="color: #000000;">e</span>
+ <span style="color: #008080;">include</span> <span style="color: #000000;">opengl</span><span style="color: #0000FF;">.</span><span style="color: #000000;">e</span>
+ <span style="color: #000080;font-style:italic;">--
+ -- Pete's super quick intro to OpenGL/WebGL		(copied from the docs)
+ -- ========================================
+ --
+ --  First and foremost you need to define all the points/vertices and faces of the model.
+ --  For a 2D 'F' draw three rectangles, one upright and two rungs. We will treat that as 3 faces.
+ --  There are four distinct x (left/right) values and five distinct y (up/down) values, and 12 vertices,
+ --  two of which are the same point (where the upright and the top rung meet).
+ --  For a 3D 'F' replicate that with a different z (front/back), now we have 24 vertices.
+ --  The right hand side of the upright needs (splitting into) two faces and the left hand side of both rungs have none, plus
+ --  the top of the upright and the top of the top rung are in practice merged together into a single face.
+ --  In total we have 16 faces[1], each of which we are going to specify as two triangles[2].
+ --  [1] Just to clarify and not of any great significance, 6 of those faces are flat and 5 each are horizonal/vertical edge-on.
+ --  [2] While OpenGL 1.0's glBegin() supported quads and polygons, OpenGL ES 2.0 and WebGL stop at triangles.
+ --
+ --  Let that all sink in. If you cannot imagine or arrange a few suitable things on the desktop in front of you to resemble
+ --  a 3D 'F', and verify the numbers above (esp 16), then I'm afraid to say you are a lost cause.
+ --  Don't worry about the units: internally OpenGL maps everything to 0.0..1.0 or -1.0..+1.0 as needed anyway (I think),
+ --  along with the "camera" position, so just use the numbers you find easiest. Do however bear in mind that we are
+ --  (probably) going to be rotating about {0,0,0}, so making that the "centre of gravity" usually helps, though of
+ --  course you can specify things more naturally and then add/subtract some {dx,dy,dz} to/from every point.
+ --  See sequence F_positions below.
+ --
+ --  It is important to note that each face can be drawn using two triangles in 144 different ways, which could have a significant
+ --  impact when it comes to applying textures. There are two diagonals that split a rectangle into two triangles, but you can start
+ --  on any one of those four, and draw by starting on any of the three corners of a triangle and go clockwise or anticlockwise, so
+ --  4*3*2*3*2=144. On top of that we have different pixel coordinates for Canvas Draw and OpenGL, as well as low-level differences
+ --  between OpenGL (on the desktop) and WebGL (as in a browser). We need to take the simplest possible route here (and we do).
+ --
+ --  Next we want to apply a texture to each of those faces. This is a simple matter of matching each and every vertex previously
+ --  specified to the corresponding position on the texture. We can make things much simpler by declaring the faces in a consistent
+ --  manner and applying textures using a standard platform-specific approach, which means opengl.e vs opengl.js in this context.
+ --  Applying a world map to a sphere needs a bit more math and probably more triangles, but it is basically the same.
+ --
+ --  The rest is fairly standard: store it with glBufferData(), and specify what it all means first by calling glVertexAttribPointer()
+ --  with the right size, type, and possibly stride settings, and finally glDrawArrays() with the desired mode, here GL_TRIANGLES, not
+ --  forgetting the total length. Of course there are all sorts of other things to achieve smoothing, rotation, lighting effects, and
+ --  so on, but this quick little intro endeth here. The following notes are all very specific to this particular program.
+ --
+ -- First define a 2D 'F' as follows
+ --
+ --      [1] {0,150}  {30,150}  {100,150}
+ --            +---------+----------+
+ --            |         |          |
+ --      [2]   | {30,120}+----------+{100,120}
+ --            |         |
+ --            |         |
+ --      [3]   |  {30,90}+------+{67,90}
+ --            |         |  X   |
+ --      [4]   |  {30,60}+------+{67,60}
+ --            |         |
+ --            |         |
+ --            |         |
+ --            +---------+
+ --      [5] {0,0}    {30,0}
+ --
+ -- Use twelve 3-letter contants named (up|tr|mr)((l|r)|(t|b)),
+ --              eg upl is the x co-ord for the upright's left.
+ --
+ -- [1] aka {upl,upt}, {upr,upt}=={trl,trt}, {trr,trt}
+ -- [2] aka                       {trl,trb}, {trr,trb}
+ -- [3] aka                       {mrl,mrt}, {mrr,mrt}
+ -- [4] aka                       {mrl,mrb}, {mrr,mrb}
+ -- [5] aka {upl,upb}, {upr,upb}
+ --
+ -- The translations simply shift {x,y,z} such that {0,0,0} is the
+ --  "centre of gravity" (X) rather than front upright botton left,
+ --  because rotating about that X point looks so very much better.
+ --
+ -- Obviously replicate that with z of 0 and 30 for the front and
+ --  back panes, then out of that mess define all of the 16 faces
+ --  that we need to draw the whole thing properly.
+ --</span>
+ <span style="color: #008080;">constant</span> <span style="color: #000000;">tx</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">-</span><span style="color: #000000;">50</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">ty</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">-</span><span style="color: #000000;">75</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">tz</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">-</span><span style="color: #000000;">15</span><span style="color: #0000FF;">,</span> <span style="color: #000080;font-style:italic;">-- translations</span>
+           <span style="color: #000000;">f</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">+</span><span style="color: #000000;">tz</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">b</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">30</span><span style="color: #0000FF;">+</span><span style="color: #000000;">tz</span><span style="color: #0000FF;">,</span>    <span style="color: #000080;font-style:italic;">-- front and back planes
+ -- name the left/right/top/bottom on the 3 front faces:</span>
+  <span style="color: #000000;">upl</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">+</span><span style="color: #000000;">tx</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">upr</span> <span style="color: #0000FF;">=</span>  <span style="color: #000000;">30</span><span style="color: #0000FF;">+</span><span style="color: #000000;">tx</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">upt</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">150</span><span style="color: #0000FF;">+</span><span style="color: #000000;">ty</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">upb</span> <span style="color: #0000FF;">=</span>   <span style="color: #000000;">0</span><span style="color: #0000FF;">+</span><span style="color: #000000;">ty</span><span style="color: #0000FF;">,</span>  <span style="color: #000080;font-style:italic;">-- upright </span>
+  <span style="color: #000000;">trl</span> <span style="color: #0000FF;">=</span>  <span style="color: #000000;">upr</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">trr</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">100</span><span style="color: #0000FF;">+</span><span style="color: #000000;">tx</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">trt</span> <span style="color: #0000FF;">=</span>    <span style="color: #000000;">upt</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">trb</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">120</span><span style="color: #0000FF;">+</span><span style="color: #000000;">ty</span><span style="color: #0000FF;">,</span>  <span style="color: #000080;font-style:italic;">-- top rung</span>
+  <span style="color: #000000;">mrl</span> <span style="color: #0000FF;">=</span>  <span style="color: #000000;">upr</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">mrr</span> <span style="color: #0000FF;">=</span>  <span style="color: #000000;">67</span><span style="color: #0000FF;">+</span><span style="color: #000000;">tx</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">mrt</span> <span style="color: #0000FF;">=</span>  <span style="color: #000000;">90</span><span style="color: #0000FF;">+</span><span style="color: #000000;">ty</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">mrb</span> <span style="color: #0000FF;">=</span>  <span style="color: #000000;">60</span><span style="color: #0000FF;">+</span><span style="color: #000000;">ty</span>   <span style="color: #000080;font-style:italic;">-- middle rung
+
+ -- Define all 24 vertices:- (up|tr|mr)(t|b)(l|r)(f|b)</span>
+ <span style="color: #008080;">constant</span> <span style="color: #000000;">uptlf</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">upl</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upt</span><span style="color: #0000FF;">,</span><span style="color: #000000;">f</span><span style="color: #0000FF;">},</span>   <span style="color: #000000;">uptrf</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">upr</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upt</span><span style="color: #0000FF;">,</span><span style="color: #000000;">f</span><span style="color: #0000FF;">},</span>
+          <span style="color: #000000;">upblf</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">upl</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">f</span><span style="color: #0000FF;">},</span>   <span style="color: #000000;">upbrf</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">upr</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">f</span><span style="color: #0000FF;">},</span>
+          <span style="color: #000000;">trtlf</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">trl</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trt</span><span style="color: #0000FF;">,</span><span style="color: #000000;">f</span><span style="color: #0000FF;">},</span>   <span style="color: #000000;">trtrf</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">trr</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trt</span><span style="color: #0000FF;">,</span><span style="color: #000000;">f</span><span style="color: #0000FF;">},</span>
+          <span style="color: #000000;">trblf</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">trl</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">f</span><span style="color: #0000FF;">},</span>   <span style="color: #000000;">trbrf</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">trr</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">f</span><span style="color: #0000FF;">},</span>
+          <span style="color: #000000;">mrtlf</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">mrl</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrt</span><span style="color: #0000FF;">,</span><span style="color: #000000;">f</span><span style="color: #0000FF;">},</span>   <span style="color: #000000;">mrtrf</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">mrr</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrt</span><span style="color: #0000FF;">,</span><span style="color: #000000;">f</span><span style="color: #0000FF;">},</span>
+          <span style="color: #000000;">mrblf</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">mrl</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">f</span><span style="color: #0000FF;">},</span>   <span style="color: #000000;">mrbrf</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">mrr</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">f</span><span style="color: #0000FF;">},</span>
+
+          <span style="color: #000000;">uptlb</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">upl</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upt</span><span style="color: #0000FF;">,</span><span style="color: #000000;">b</span><span style="color: #0000FF;">},</span>   <span style="color: #000000;">uptrb</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">upr</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upt</span><span style="color: #0000FF;">,</span><span style="color: #000000;">b</span><span style="color: #0000FF;">},</span>
+          <span style="color: #000000;">upblb</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">upl</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">b</span><span style="color: #0000FF;">},</span>   <span style="color: #000000;">upbrb</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">upr</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">b</span><span style="color: #0000FF;">},</span>
+          <span style="color: #000000;">trtlb</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">trl</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trt</span><span style="color: #0000FF;">,</span><span style="color: #000000;">b</span><span style="color: #0000FF;">},</span>   <span style="color: #000000;">trtrb</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">trr</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trt</span><span style="color: #0000FF;">,</span><span style="color: #000000;">b</span><span style="color: #0000FF;">},</span>
+          <span style="color: #000000;">trblb</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">trl</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">b</span><span style="color: #0000FF;">},</span>   <span style="color: #000000;">trbrb</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">trr</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">b</span><span style="color: #0000FF;">},</span>
+          <span style="color: #000000;">mrtlb</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">mrl</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrt</span><span style="color: #0000FF;">,</span><span style="color: #000000;">b</span><span style="color: #0000FF;">},</span>   <span style="color: #000000;">mrtrb</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">mrr</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrt</span><span style="color: #0000FF;">,</span><span style="color: #000000;">b</span><span style="color: #0000FF;">},</span>
+          <span style="color: #000000;">mrblb</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">mrl</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">b</span><span style="color: #0000FF;">},</span>   <span style="color: #000000;">mrbrb</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">mrr</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">b</span><span style="color: #0000FF;">}</span>
+ <span style="color: #000080;font-style:italic;">--
+ -- Referring back to the above diagram, we now have:
+ -- [1] aka uptlf/b, uptrf/b==trtlf/b, trtrf/b
+ -- [2] aka                   trblf/b, trbrf/b
+ -- [3] aka                   mrtlf/b, mrtrf/b
+ -- [4] aka                   mrblf/b, mrbrf/b
+ -- [5] aka upblf/b, upbrf/b
+ --
+ -- Now define the 16 faces.
+ --
+ -- Note that while the 24 vertices were named corresponding
+ -- to two upright 'F's, when we define each face we will
+ -- use the corners in an order suitable for texture mapping.
+ -- I hereby define the "A7" format as {bl,tl,br,tl,tr,br},
+ -- ie the six points (aka two triangles) needed to draw it,
+ -- when looking at it from the texture side and orientated
+ -- the right way up for that, as a way to simplify things.
+ -- The two front faces of the rungs are orientated the same
+ -- as the vertex naming, the rest all [up]side[down]ways.
+ --
+ -- While the following is fairly difficult to type in, and
+ -- the polar opposite of flexible, the hope is it will be
+ -- less daunting than the more usual "wall of 288 numbers".
+ -- Trust me I had a furrowed brow and used lots of pencil
+ -- and paper and rotated my notepad in order to pen these.
+ -- Of course you can generate all the vertices and faces
+ -- programmatically in a much more abstract fashion, too.
+ --</span>
+ <span style="color: #008080;">constant</span> <span style="color: #000000;">faces</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{{</span><span style="color: #000000;">upbrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upblf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">uptrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upblf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">uptlf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">uptrf</span><span style="color: #0000FF;">},</span>    <span style="color: #000080;font-style:italic;">-- left column front</span>
+                   <span style="color: #0000FF;">{</span><span style="color: #000000;">trblf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trtlf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trbrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trtlf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trtrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trbrf</span><span style="color: #0000FF;">},</span>    <span style="color: #000080;font-style:italic;">-- top rung front</span>
+                   <span style="color: #0000FF;">{</span><span style="color: #000000;">mrblf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrtlf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrbrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrtlf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrtrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrbrf</span><span style="color: #0000FF;">},</span>    <span style="color: #000080;font-style:italic;">-- middle rung front</span>
+                   <span style="color: #0000FF;">{</span><span style="color: #000000;">upblb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upbrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">uptlb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upbrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">uptrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">uptlb</span><span style="color: #0000FF;">},</span>    <span style="color: #000080;font-style:italic;">-- left column back</span>
+                   <span style="color: #0000FF;">{</span><span style="color: #000000;">trbrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trtrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trblb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trtrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trtlb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trblb</span><span style="color: #0000FF;">},</span>    <span style="color: #000080;font-style:italic;">-- top rung back</span>
+                   <span style="color: #0000FF;">{</span><span style="color: #000000;">mrbrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrtrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrblb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrtrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrtlb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrblb</span><span style="color: #0000FF;">},</span>    <span style="color: #000080;font-style:italic;">-- middle rung back</span>
+                   <span style="color: #0000FF;">{</span><span style="color: #000000;">uptlf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">uptlb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trtrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">uptlb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trtrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trtrf</span><span style="color: #0000FF;">},</span>    <span style="color: #000080;font-style:italic;">-- joined up top</span>
+                   <span style="color: #0000FF;">{</span><span style="color: #000000;">trbrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trtrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trbrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trtrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trtrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trbrb</span><span style="color: #0000FF;">},</span>    <span style="color: #000080;font-style:italic;">-- top rung right</span>
+                   <span style="color: #0000FF;">{</span><span style="color: #000000;">trblb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trblf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trbrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trblf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trbrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trbrb</span><span style="color: #0000FF;">},</span>    <span style="color: #000080;font-style:italic;">-- under top rung</span>
+                   <span style="color: #0000FF;">{</span><span style="color: #000000;">mrtlb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrtlf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trblb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrtlf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trblf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">trblb</span><span style="color: #0000FF;">},</span>    <span style="color: #000080;font-style:italic;">-- between rungs right</span>
+                   <span style="color: #0000FF;">{</span><span style="color: #000000;">mrtlf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrtlb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrtrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrtlb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrtrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrtrf</span><span style="color: #0000FF;">},</span>    <span style="color: #000080;font-style:italic;">-- middle rung top </span>
+                   <span style="color: #0000FF;">{</span><span style="color: #000000;">mrbrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrtrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrbrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrtrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrtrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrbrb</span><span style="color: #0000FF;">},</span>    <span style="color: #000080;font-style:italic;">-- middle rung right</span>
+                   <span style="color: #0000FF;">{</span><span style="color: #000000;">mrblb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrblf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrbrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrblf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrbrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrbrb</span><span style="color: #0000FF;">},</span>    <span style="color: #000080;font-style:italic;">-- under middle rung</span>
+                   <span style="color: #0000FF;">{</span><span style="color: #000000;">upbrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upbrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrblb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upbrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrblf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">mrblb</span><span style="color: #0000FF;">},</span>    <span style="color: #000080;font-style:italic;">-- below rungs right</span>
+                   <span style="color: #0000FF;">{</span><span style="color: #000000;">upblb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upblf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upbrb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upblf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upbrf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upbrb</span><span style="color: #0000FF;">},</span>    <span style="color: #000080;font-style:italic;">-- upright bottom (match under rungs)
+         --        {upbrb,upblb,upbrf,upblb,upblf,upbrf},    -- upright bottom (match the uprights)</span>
+                   <span style="color: #0000FF;">{</span><span style="color: #000000;">upblf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upblb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">uptlf</span><span style="color: #0000FF;">,</span><span style="color: #000000;">upblb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">uptlb</span><span style="color: #0000FF;">,</span><span style="color: #000000;">uptlf</span><span style="color: #0000FF;">}},</span>   <span style="color: #000080;font-style:italic;">-- left hand side
+         --
+         -- And sqidge together into the 32 triangles / 96 points that OpenGL likes:
+         --</span>
+         <span style="color: #000000;">F_positions</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">flatten</span><span style="color: #0000FF;">(</span><span style="color: #000000;">faces</span><span style="color: #0000FF;">,{}),</span> <span style="color: #000080;font-style:italic;">-- (nb be sure to ask for a dword-sequence)
+         --
+         -- Now for the final flourish: since we defined our faces in a consistent manner
+         -- we can reach out to opengl.e/js for a standard texture mapping for all faces.
+         -- More details can be found in the documentation for glSimpleA7texcoords().
+         --</span>
+         <span style="color: #000000;">F_texture_coordinates</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glSimpleA7texcoords</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">length</span><span style="color: #0000FF;">(</span><span style="color: #000000;">faces</span><span style="color: #0000FF;">))</span>
+
+ <span style="color: #004080;">Ihandln</span> <span style="color: #000000;">dlg</span>
+ <span style="color: #004080;">Ihandle</span> <span style="color: #000000;">canvas</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">timer</span>
+ <span style="color: #004080;">cdCanvas</span> <span style="color: #000000;">cd_canvas</span>
+
+ <span style="color: #008080;">constant</span> <span style="color: #000000;">fragment_shader</span> <span style="color: #0000FF;">=</span> <span style="color: #008000;">`
+ precision mediump float;
+
+ // Passed in from the vertex shader.
+ varying vec2 v_texcoord;
+
+ // The texture.
+ uniform sampler2D u_texture;
+
+ void main() {
+    gl_FragColor = texture2D(u_texture, v_texcoord);
+ }`</span>
+
+ <span style="color: #008080;">constant</span> <span style="color: #000000;">vertex_shader</span> <span style="color: #0000FF;">=</span> <span style="color: #008000;">`
+ attribute vec4 a_position;
+ attribute vec2 a_texcoord;
+
+ uniform mat4 u_matrix;
+
+ varying vec2 v_texcoord;
+
+ void main() {
+   // Multiply the position by the matrix.
+   gl_Position = u_matrix * a_position;
+
+   // Pass the texcoord to the fragment shader.
+   v_texcoord = a_texcoord;
+ }`</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">load_shader</span><span style="color: #0000FF;">(</span><span style="color: #004080;">string</span> <span style="color: #000000;">shaderSource</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">integer</span> <span style="color: #000000;">shaderType</span><span style="color: #0000FF;">)</span>
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">shader</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glCreateShader</span><span style="color: #0000FF;">(</span><span style="color: #000000;">shaderType</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">glShaderSource</span><span style="color: #0000FF;">(</span><span style="color: #000000;">shader</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">shaderSource</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">glCompileShader</span><span style="color: #0000FF;">(</span><span style="color: #000000;">shader</span><span style="color: #0000FF;">)</span>
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">compiled</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glGetShaderParameter</span><span style="color: #0000FF;">(</span><span style="color: #000000;">shader</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_COMPILE_STATUS</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">if</span> <span style="color: #008080;">not</span> <span style="color: #000000;">compiled</span> <span style="color: #008080;">then</span>
+         <span style="color: #004080;">string</span> <span style="color: #000000;">fmt</span> <span style="color: #0000FF;">=</span> <span style="color: #008000;">"*** Error compiling shader \'%d\': %s\n"</span><span style="color: #0000FF;">,</span>
+                <span style="color: #000000;">msg</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">sprintf</span><span style="color: #0000FF;">(</span><span style="color: #000000;">fmt</span><span style="color: #0000FF;">,{</span><span style="color: #000000;">shader</span><span style="color: #0000FF;">,</span><span style="color: #7060A8;">glGetShaderInfoLog</span><span style="color: #0000FF;">(</span><span style="color: #000000;">shader</span><span style="color: #0000FF;">)})</span>
+         <span style="color: #004080;">sequence</span> <span style="color: #000000;">lines</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">split</span><span style="color: #0000FF;">(</span><span style="color: #000000;">shaderSource</span><span style="color: #0000FF;">,</span><span style="color: #008000;">'\n'</span><span style="color: #0000FF;">,</span><span style="color: #004600;">false</span><span style="color: #0000FF;">)</span>
+         <span style="color: #008080;">for</span> <span style="color: #000000;">i</span><span style="color: #0000FF;">=</span><span style="color: #000000;">1</span> <span style="color: #008080;">to</span> <span style="color: #7060A8;">length</span><span style="color: #0000FF;">(</span><span style="color: #000000;">lines</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">do</span>
+             <span style="color: #000000;">lines</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">sprintf</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"%d: %s\n"</span><span style="color: #0000FF;">,{</span><span style="color: #000000;">i</span><span style="color: #0000FF;">,</span><span style="color: #000000;">lines</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]})</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">for</span>
+         <span style="color: #7060A8;">puts</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #000000;">msg</span> <span style="color: #0000FF;">&</span> <span style="color: #7060A8;">join</span><span style="color: #0000FF;">(</span><span style="color: #000000;">lines</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"\n"</span><span style="color: #0000FF;">))</span>
+         <span style="color: #000000;">shader</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glDeleteShader</span><span style="color: #0000FF;">(</span><span style="color: #000000;">shader</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">return</span> <span style="color: #000000;">shader</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">create_program</span><span style="color: #0000FF;">(</span><span style="color: #004080;">sequence</span> <span style="color: #000000;">shaders</span><span style="color: #0000FF;">)</span>
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">program</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glCreateProgram</span><span style="color: #0000FF;">()</span>
+     <span style="color: #008080;">for</span> <span style="color: #000000;">i</span><span style="color: #0000FF;">=</span><span style="color: #000000;">1</span> <span style="color: #008080;">to</span> <span style="color: #7060A8;">length</span><span style="color: #0000FF;">(</span><span style="color: #000000;">shaders</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">do</span>
+       <span style="color: #7060A8;">glAttachShader</span><span style="color: #0000FF;">(</span><span style="color: #000000;">program</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">shaders</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">])</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">for</span>
+     <span style="color: #7060A8;">glLinkProgram</span><span style="color: #0000FF;">(</span><span style="color: #000000;">program</span><span style="color: #0000FF;">)</span>
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">linked</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glGetProgramParameter</span><span style="color: #0000FF;">(</span><span style="color: #000000;">program</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_LINK_STATUS</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">if</span> <span style="color: #008080;">not</span> <span style="color: #000000;">linked</span> <span style="color: #008080;">then</span>
+         <span style="color: #004080;">string</span> <span style="color: #000000;">lastError</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glGetProgramInfoLog</span><span style="color: #0000FF;">(</span><span style="color: #000000;">program</span><span style="color: #0000FF;">)</span>
+         <span style="color: #7060A8;">puts</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"Error in program linking:"</span> <span style="color: #0000FF;">&</span> <span style="color: #000000;">lastError</span><span style="color: #0000FF;">)</span>
+         <span style="color: #000000;">program</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glDeleteProgram</span><span style="color: #0000FF;">(</span><span style="color: #000000;">program</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">return</span> <span style="color: #000000;">program</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #004080;">integer</span> <span style="color: #000000;">program</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">canvas_action_cb</span><span style="color: #0000FF;">(</span><span style="color: #004080;">Ihandle</span> <span style="color: #000080;font-style:italic;">/*canvas*/</span><span style="color: #0000FF;">)</span>
+
+     <span style="color: #008080;">if</span> <span style="color: #000000;">program</span><span style="color: #0000FF;">=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span> <span style="color: #000080;font-style:italic;">-- (do this lot once only! but not b4 desktop/Phix is ready)</span>
+
+         <span style="color: #000000;">program</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">create_program</span><span style="color: #0000FF;">({</span><span style="color: #000000;">load_shader</span><span style="color: #0000FF;">(</span><span style="color: #000000;">vertex_shader</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_VERTEX_SHADER</span><span style="color: #0000FF;">),</span>
+                                   <span style="color: #000000;">load_shader</span><span style="color: #0000FF;">(</span><span style="color: #000000;">fragment_shader</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_FRAGMENT_SHADER</span><span style="color: #0000FF;">)})</span>
+
+         <span style="color: #000080;font-style:italic;">// Create a buffer for the F_positions and fill it</span>
+         <span style="color: #004080;">integer</span> <span style="color: #000000;">position_buffer</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glCreateBuffer</span><span style="color: #0000FF;">()</span>
+         <span style="color: #000080;font-style:italic;">// Bind to ARRAY_BUFFER (think of it as ARRAY_BUFFER:=position_buffer)</span>
+         <span style="color: #7060A8;">glBindBuffer</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_ARRAY_BUFFER</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">position_buffer</span><span style="color: #0000FF;">)</span>
+         <span style="color: #0000FF;">{</span><span style="color: #004080;">integer</span> <span style="color: #000000;">size</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">atom</span> <span style="color: #000000;">pData</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glFloat32Array</span><span style="color: #0000FF;">(</span><span style="color: #000000;">F_positions</span><span style="color: #0000FF;">)</span>
+         <span style="color: #7060A8;">glBufferData</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_ARRAY_BUFFER</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">size</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">pData</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_STATIC_DRAW</span><span style="color: #0000FF;">)</span>
+
+         <span style="color: #000080;font-style:italic;">// Create a matching buffer for the F_texture_coordinates and fill it</span>
+         <span style="color: #004080;">integer</span> <span style="color: #000000;">texcoord_buffer</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glCreateBuffer</span><span style="color: #0000FF;">()</span>
+         <span style="color: #7060A8;">glBindBuffer</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_ARRAY_BUFFER</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">texcoord_buffer</span><span style="color: #0000FF;">)</span>
+         <span style="color: #0000FF;">{</span><span style="color: #000000;">size</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">pData</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glFloat32Array</span><span style="color: #0000FF;">(</span><span style="color: #000000;">F_texture_coordinates</span><span style="color: #0000FF;">)</span>
+         <span style="color: #7060A8;">glBufferData</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_ARRAY_BUFFER</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">size</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">pData</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_STATIC_DRAW</span><span style="color: #0000FF;">)</span>
+
+         <span style="color: #000080;font-style:italic;">// Put some text in the center of a canvas/pixel array.
+         // note this is a (bit of a|complete) hack, see docs...</span>
+         <span style="color: #004080;">integer</span> <span style="color: #000000;">w</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">100</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">h</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">26</span>
+         <span style="color: #004080;">atom</span> <span style="color: #000000;">cdx</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glCanvasSpecialText</span><span style="color: #0000FF;">(</span><span style="color: #000000;">cd_canvas</span><span style="color: #0000FF;">,</span><span style="color: #000000;">w</span><span style="color: #0000FF;">,</span><span style="color: #000000;">h</span><span style="color: #0000FF;">,</span><span style="color: #000000;">20</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"Hello!"</span><span style="color: #0000FF;">)</span>
+
+         <span style="color: #004080;">integer</span> <span style="color: #000000;">texture</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glCreateTexture</span><span style="color: #0000FF;">()</span>
+         <span style="color: #7060A8;">glBindTexture</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_TEXTURE_2D</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">texture</span><span style="color: #0000FF;">)</span>
+         <span style="color: #7060A8;">glTexImage2Dc</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_TEXTURE_2D</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_RGBA</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">w</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">h</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_RGBA</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_UNSIGNED_BYTE</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">cdx</span><span style="color: #0000FF;">)</span>
+         <span style="color: #000080;font-style:italic;">// make sure we can render it even if it's not a power of 2</span>
+         <span style="color: #7060A8;">glTexParameteri</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_TEXTURE_2D</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_TEXTURE_MIN_FILTER</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_LINEAR</span><span style="color: #0000FF;">)</span>
+         <span style="color: #7060A8;">glTexParameteri</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_TEXTURE_2D</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_TEXTURE_WRAP_S</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_CLAMP_TO_EDGE</span><span style="color: #0000FF;">)</span>
+         <span style="color: #7060A8;">glTexParameteri</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_TEXTURE_2D</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_TEXTURE_WRAP_T</span><span style="color: #0000FF;">,</span> <span style="color: #004600;">GL_CLAMP_TO_EDGE</span><span style="color: #0000FF;">)</span>
+
+         <span style="color: #004080;">integer</span> <span style="color: #000000;">position_location</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glGetAttribLocation</span><span style="color: #0000FF;">(</span><span style="color: #000000;">program</span><span style="color: #0000FF;">,</span> <span style="color: #008000;">"a_position"</span><span style="color: #0000FF;">)</span>
+         <span style="color: #7060A8;">glEnableVertexAttribArray</span><span style="color: #0000FF;">(</span><span style="color: #000000;">position_location</span><span style="color: #0000FF;">)</span>    <span style="color: #000080;font-style:italic;">// Turn on the position attribute</span>
+         <span style="color: #7060A8;">glBindBuffer</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_ARRAY_BUFFER</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">position_buffer</span><span style="color: #0000FF;">)</span>  <span style="color: #000080;font-style:italic;">// Bind the position buffer.
+         // Tell the position attribute how to get data out of position_buffer (ARRAY_BUFFER)</span>
+         <span style="color: #004080;">atom</span> <span style="color: #000000;">size3</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">3</span><span style="color: #0000FF;">,</span>         <span style="color: #000080;font-style:italic;">// 3 components per iteration (obvs you can inline all these)</span>
+           <span style="color: #000000;">datatype</span> <span style="color: #0000FF;">=</span> <span style="color: #004600;">GL_FLOAT</span><span style="color: #0000FF;">,</span>  <span style="color: #000080;font-style:italic;">// the data is 32bit floats</span>
+          <span style="color: #000000;">normalize</span> <span style="color: #0000FF;">=</span> <span style="color: #004600;">false</span><span style="color: #0000FF;">,</span>     <span style="color: #000080;font-style:italic;">// don't normalize the data</span>
+             <span style="color: #000000;">stride</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span>         <span style="color: #000080;font-style:italic;">// 0 = move fwd size*sizeof(type) each iteration to get next</span>
+             <span style="color: #000000;">offset</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>          <span style="color: #000080;font-style:italic;">// start at the beginning of the buffer</span>
+         <span style="color: #7060A8;">glVertexAttribPointer</span><span style="color: #0000FF;">(</span><span style="color: #000000;">position_location</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">size3</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">datatype</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">normalize</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">stride</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">offset</span><span style="color: #0000FF;">)</span>
+
+         <span style="color: #004080;">integer</span> <span style="color: #000000;">texcoord_location</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glGetAttribLocation</span><span style="color: #0000FF;">(</span><span style="color: #000000;">program</span><span style="color: #0000FF;">,</span> <span style="color: #008000;">"a_texcoord"</span><span style="color: #0000FF;">)</span>
+         <span style="color: #7060A8;">glEnableVertexAttribArray</span><span style="color: #0000FF;">(</span><span style="color: #000000;">texcoord_location</span><span style="color: #0000FF;">)</span>    <span style="color: #000080;font-style:italic;">// Turn on the texcoord attribute</span>
+         <span style="color: #7060A8;">glBindBuffer</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_ARRAY_BUFFER</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">texcoord_buffer</span><span style="color: #0000FF;">)</span>  <span style="color: #000080;font-style:italic;">// bind the texcoord buffer.
+         // Tell the texcoord attribute how to get data out of texcoord_buffer (ARRAY_BUFFER)</span>
+         <span style="color: #004080;">atom</span> <span style="color: #000000;">size2</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">2</span>          <span style="color: #000080;font-style:italic;">// 2 components per iteration (the rest are same as above)</span>
+         <span style="color: #7060A8;">glVertexAttribPointer</span><span style="color: #0000FF;">(</span><span style="color: #000000;">texcoord_location</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">size2</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">datatype</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">normalize</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">stride</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">offset</span><span style="color: #0000FF;">)</span>
+
+         <span style="color: #7060A8;">glEnable</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_CULL_FACE</span><span style="color: #0000FF;">)</span>
+         <span style="color: #7060A8;">glEnable</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_DEPTH_TEST</span><span style="color: #0000FF;">)</span>
+
+         <span style="color: #000080;font-style:italic;">// Tell it to use our program (pair of shaders)</span>
+         <span style="color: #7060A8;">glUseProgram</span><span style="color: #0000FF;">(</span><span style="color: #000000;">program</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">return</span> <span style="color: #004600;">IUP_DEFAULT</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">map_cb</span><span style="color: #0000FF;">(</span><span style="color: #004080;">Ihandle</span> <span style="color: #000080;font-style:italic;">/*ih*/</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">IupGLMakeCurrent</span><span style="color: #0000FF;">(</span><span style="color: #000000;">canvas</span><span style="color: #0000FF;">)</span>
+     <span style="color: #000000;">cd_canvas</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">cdCreateCanvas</span><span style="color: #0000FF;">(</span><span style="color: #004600;">CD_IUP</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">canvas</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">return</span> <span style="color: #004600;">IUP_DEFAULT</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #004080;">atom</span> <span style="color: #000000;">field_of_view_radians</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">60</span><span style="color: #0000FF;">*</span><span style="color: #004600;">CD_DEG2RAD</span><span style="color: #0000FF;">,</span>     <span style="color: #000080;font-style:italic;">-- (currently fixed)</span>
+      <span style="color: #000000;">model_x_rotation_radians</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">20</span><span style="color: #0000FF;">*</span><span style="color: #004600;">CD_DEG2RAD</span><span style="color: #0000FF;">,</span>  <span style="color: #000080;font-style:italic;">-- +0.3 per second</span>
+      <span style="color: #000000;">model_y_rotation_radians</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">*</span><span style="color: #004600;">CD_DEG2RAD</span><span style="color: #0000FF;">,</span>   <span style="color: #000080;font-style:italic;">-- -0.2 per second</span>
+      <span style="color: #000000;">last_time</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">time</span><span style="color: #0000FF;">()</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">timer_cb</span><span style="color: #0000FF;">(</span><span style="color: #004080;">Ihandle</span> <span style="color: #000080;font-style:italic;">/*ih*/</span><span style="color: #0000FF;">)</span>
+
+     <span style="color: #004080;">atom</span> <span style="color: #000000;">this_time</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">time</span><span style="color: #0000FF;">(),</span>
+         <span style="color: #000000;">delta_time</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">this_time</span><span style="color: #0000FF;">-</span><span style="color: #000000;">last_time</span>
+     <span style="color: #000000;">last_time</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">this_time</span>   <span style="color: #000080;font-style:italic;">// (remember for the next frame)
+
+     // Animate the rotation</span>
+     <span style="color: #000000;">model_x_rotation_radians</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">0.3</span> <span style="color: #0000FF;">*</span> <span style="color: #000000;">delta_time</span>
+     <span style="color: #000000;">model_y_rotation_radians</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">0.2</span> <span style="color: #0000FF;">*</span> <span style="color: #000000;">delta_time</span>
+
+     <span style="color: #000080;font-style:italic;">// Tell WebGL how to convert from clip space to pixels</span>
+     <span style="color: #004080;">integer</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">w</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">h</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">IupGetIntInt</span><span style="color: #0000FF;">(</span><span style="color: #000000;">canvas</span><span style="color: #0000FF;">,</span> <span style="color: #008000;">"RASTERSIZE"</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">glViewport</span><span style="color: #0000FF;">(</span><span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">w</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">h</span><span style="color: #0000FF;">)</span>
+
+     <span style="color: #000080;font-style:italic;">// Clear the canvas AND the depth buffer.</span>
+     <span style="color: #7060A8;">glClear</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_COLOR_BUFFER_BIT</span> <span style="color: #0000FF;">||</span> <span style="color: #004600;">GL_DEPTH_BUFFER_BIT</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">glClearColor</span><span style="color: #0000FF;">(</span><span style="color: #000000;">0.3</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0.3</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0.3</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">1.0</span><span style="color: #0000FF;">)</span>
+
+     <span style="color: #000080;font-style:italic;">// Compute the projection, camera, and final view matrices.
+     // Use your favourite search engine for more info on this,
+     // that is the core matrix usage, rather than the m4_xxx().</span>
+     <span style="color: #004080;">atom</span> <span style="color: #000000;">aspect</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">w</span><span style="color: #0000FF;">/</span><span style="color: #000000;">h</span>
+     <span style="color: #004080;">sequence</span> <span style="color: #000000;">projection</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">m4_perspective</span><span style="color: #0000FF;">(</span><span style="color: #000000;">field_of_view_radians</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">aspect</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">1</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">2000</span><span style="color: #0000FF;">),</span>
+         <span style="color: #000000;">camera_position</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">200</span><span style="color: #0000FF;">},</span> <span style="color: #000000;">up</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">1</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">},</span> <span style="color: #000000;">target</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">},</span>
+                  <span style="color: #000000;">camera</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">m4_lookAt</span><span style="color: #0000FF;">(</span><span style="color: #000000;">camera_position</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">target</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">up</span><span style="color: #0000FF;">),</span>
+         <span style="color: #000000;">view_projection</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">m4_multiply</span><span style="color: #0000FF;">(</span><span style="color: #000000;">projection</span><span style="color: #0000FF;">,</span> <span style="color: #7060A8;">m4_inverse</span><span style="color: #0000FF;">(</span><span style="color: #000000;">camera</span><span style="color: #0000FF;">)),</span>
+         <span style="color: #000000;">rotated_about_x</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">m4_xRotate</span><span style="color: #0000FF;">(</span><span style="color: #000000;">view_projection</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">model_x_rotation_radians</span><span style="color: #0000FF;">),</span>
+       <span style="color: #000000;">final_view_matrix</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">m4_yRotate</span><span style="color: #0000FF;">(</span><span style="color: #000000;">rotated_about_x</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">model_y_rotation_radians</span><span style="color: #0000FF;">)</span>
+
+     <span style="color: #000080;font-style:italic;">// Set the final view matrix.</span>
+     <span style="color: #0000FF;">{</span><span style="color: #004080;">integer</span> <span style="color: #000000;">size</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">atom</span> <span style="color: #000000;">pData</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glFloat32Array</span><span style="color: #0000FF;">(</span><span style="color: #000000;">final_view_matrix</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">glUniformMatrix4fv</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">glGetUniformLocation</span><span style="color: #0000FF;">(</span><span style="color: #000000;">program</span><span style="color: #0000FF;">,</span> <span style="color: #008000;">"u_matrix"</span><span style="color: #0000FF;">),</span> <span style="color: #004600;">false</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">pData</span><span style="color: #0000FF;">)</span>
+
+     <span style="color: #000080;font-style:italic;">// Tell the shader to use texture unit 0 for u_texture</span>
+     <span style="color: #7060A8;">glUniform1i</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">glGetUniformLocation</span><span style="color: #0000FF;">(</span><span style="color: #000000;">program</span><span style="color: #0000FF;">,</span> <span style="color: #008000;">"u_texture"</span><span style="color: #0000FF;">),</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">)</span>
+
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">num_points</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">length</span><span style="color: #0000FF;">(</span><span style="color: #000000;">F_positions</span><span style="color: #0000FF;">)/</span><span style="color: #000000;">3</span><span style="color: #0000FF;">,</span>        <span style="color: #000080;font-style:italic;">-- {x,y,z} per</span>
+             <span style="color: #000000;">num_coords</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">length</span><span style="color: #0000FF;">(</span><span style="color: #000000;">F_texture_coordinates</span><span style="color: #0000FF;">)/</span><span style="color: #000000;">2</span> <span style="color: #000080;font-style:italic;">-- {x,y} per</span>
+     <span style="color: #7060A8;">assert</span><span style="color: #0000FF;">(</span><span style="color: #000000;">num_points</span><span style="color: #0000FF;">==</span><span style="color: #000000;">num_coords</span><span style="color: #0000FF;">)</span> <span style="color: #000080;font-style:italic;">-- sanity check
+
+     // Draw the geometry.</span>
+     <span style="color: #7060A8;">glDrawArrays</span><span style="color: #0000FF;">(</span><span style="color: #004600;">GL_TRIANGLES</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">num_points</span><span style="color: #0000FF;">)</span>
+
+     <span style="color: #000080;font-style:italic;">// Check for errors.</span>
+     <span style="color: #008080;">while</span> <span style="color: #004600;">true</span> <span style="color: #008080;">do</span>
+         <span style="color: #004080;">integer</span> <span style="color: #000000;">e</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">glGetError</span><span style="color: #0000FF;">()</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">e</span><span style="color: #0000FF;">=</span><span style="color: #004600;">GL_NO_ERROR</span> <span style="color: #008080;">then</span> <span style="color: #008080;">exit</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #7060A8;">printf</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"GL error %d\n"</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">e</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">while</span>
+
+     <span style="color: #7060A8;">glFlush</span><span style="color: #0000FF;">()</span>
+     <span style="color: #008080;">return</span> <span style="color: #004600;">IUP_DEFAULT</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">key_cb</span><span style="color: #0000FF;">(</span><span style="color: #004080;">Ihandle</span> <span style="color: #000000;">ih</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">atom</span> <span style="color: #000000;">c</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">c</span><span style="color: #0000FF;">=</span><span style="color: #008000;">' '</span> <span style="color: #008080;">then</span>
+         <span style="color: #7060A8;">IupSetInt</span><span style="color: #0000FF;">(</span><span style="color: #000000;">timer</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"RUN"</span><span style="color: #0000FF;">,</span><span style="color: #008080;">not</span> <span style="color: #7060A8;">IupGetInt</span><span style="color: #0000FF;">(</span><span style="color: #000000;">timer</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"RUN"</span><span style="color: #0000FF;">))</span>
+         <span style="color: #000000;">last_time</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">time</span><span style="color: #0000FF;">()</span> <span style="color: #000080;font-style:italic;">-- (avoids sudden jumping)</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">return</span> <span style="color: #008080;">iff</span><span style="color: #0000FF;">(</span><span style="color: #000000;">c</span><span style="color: #0000FF;">=</span><span style="color: #004600;">K_ESC</span><span style="color: #0000FF;">?</span><span style="color: #004600;">IUP_CLOSE</span><span style="color: #0000FF;">:</span><span style="color: #004600;">IUP_CONTINUE</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">main</span><span style="color: #0000FF;">()</span>
+     <span style="color: #7060A8;">IupOpen</span><span style="color: #0000FF;">()</span>
+     <span style="color: #000000;">canvas</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">IupGLCanvas</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"RASTERSIZE=640x480"</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">IupSetCallbacks</span><span style="color: #0000FF;">(</span><span style="color: #000000;">canvas</span><span style="color: #0000FF;">,</span> <span style="color: #0000FF;">{</span><span style="color: #008000;">"MAP_CB"</span><span style="color: #0000FF;">,</span> <span style="color: #7060A8;">Icallback</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"map_cb"</span><span style="color: #0000FF;">),</span>
+                              <span style="color: #008000;">"ACTION"</span><span style="color: #0000FF;">,</span> <span style="color: #7060A8;">Icallback</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"canvas_action_cb"</span><span style="color: #0000FF;">),</span>
+                              <span style="color: #008000;">"KEY_CB"</span><span style="color: #0000FF;">,</span> <span style="color: #7060A8;">Icallback</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"key_cb"</span><span style="color: #0000FF;">)})</span>
+     <span style="color: #000000;">dlg</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">IupDialog</span><span style="color: #0000FF;">(</span><span style="color: #000000;">canvas</span><span style="color: #0000FF;">,</span> <span style="color: #008000;">`TITLE="Hello! F", SHRINK=YES, MINSIZE=120x90`</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">IupShow</span><span style="color: #0000FF;">(</span><span style="color: #000000;">dlg</span><span style="color: #0000FF;">)</span>
+     <span style="color: #000000;">timer</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">IupTimer</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">Icallback</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"timer_cb"</span><span style="color: #0000FF;">),</span> <span style="color: #000000;">1000</span><span style="color: #0000FF;">/</span><span style="color: #000000;">40</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">if</span> <span style="color: #7060A8;">platform</span><span style="color: #0000FF;">()!=</span><span style="color: #004600;">JS</span> <span style="color: #008080;">then</span>
+         <span style="color: #7060A8;">IupMainLoop</span><span style="color: #0000FF;">()</span>
+         <span style="color: #000000;">dlg</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">IupDestroy</span><span style="color: #0000FF;">(</span><span style="color: #000000;">dlg</span><span style="color: #0000FF;">)</span>
+         <span style="color: #7060A8;">IupClose</span><span style="color: #0000FF;">()</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+ <span style="color: #000000;">main</span><span style="color: #0000FF;">()</span>
+<!--

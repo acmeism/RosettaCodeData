@@ -1,0 +1,24 @@
+FUNCTION getLantern (arr())
+    res = 0
+    FOR i = 1 TO UBOUND(arr)
+        IF arr(i) <> 0 THEN
+            arr(i) = arr(i) - 1
+            res = res + getLantern(arr())
+            arr(i) = arr(i) + 1
+        END IF
+    NEXT i
+    IF res = 0 THEN res = 1
+    getLantern = res
+END FUNCTION
+
+n = 4
+DIM a(n)
+FOR i = 1 TO UBOUND(a)
+    a(i) = i
+    PRINT "[";
+    FOR j = 1 TO i
+        PRINT a(j); " ";
+    NEXT j
+    PRINT "] = "; getLantern(a())
+NEXT i
+END

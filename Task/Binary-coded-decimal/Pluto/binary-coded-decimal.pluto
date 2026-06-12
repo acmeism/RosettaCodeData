@@ -1,0 +1,75 @@
+local int = require "int"
+local fmt = require "fmt"
+
+local bin <const> = {
+    "0000", "0001", "0010", "0011", "0100",
+    "0101", "0110", "0111", "1000", "1001"
+}
+
+local dec <const> = {
+    ["0000"] = "0", ["0001"] = "1", ["0010"] = "2", ["0011"] = "3", ["0100"] = "4",
+    ["0101"] = "5", ["0110"] = "6", ["0111"] = "7", ["1000"] = "8", ["1001"] = "9"
+}
+
+class BCD
+    function __construct(n)
+        if type(n) == "string" then
+            if n:startswith("0x") then n = n:sub(3) end
+            n = math.round(tonumber(n))
+        end
+        assert(n >= 0 and n % 1 == 0, "Argument must be a non-negative integer.")
+        self.b = ""
+        for int.digits(n) as digit do self.b ..= bin[digit + 1] end
+    end
+
+    function toint()
+        local ns = ""
+        for self.b:split(""):chunk(4) as nibble do ns ..= dec[nibble:concat("")] end
+        return tonumber(ns)
+    end
+
+    function __add(other)
+        if not(other instanceof BCD) then other = new BCD(other) end
+        return new BCD(self:toint() + other:toint())
+    end
+
+    function __sub(other)
+        if not(other instanceof BCD) then other = new BCD(other) end
+        return new BCD(self:toint() - other:toint())
+    end
+
+    function __tostring()
+        local ret = self.b:lstrip("0")
+        if ret == "" then ret = "0" end
+        return ret
+    end
+
+    function to_unpacked()
+        local ret = ""
+        for self.b:split(""):chunk(4) as nibble do ret ..= "0000" .. nibble:concat("") end
+        ret = ret:lstrip("0")
+        if ret == "" then ret = "0" end
+        return ret
+    end
+
+    function tohex() return "0x" .. tostring(self:toint()) end
+end
+
+local hexs = {"0x19", "0x30", "0x99"}
+local ops  = {"+", "-", "+"}
+for {true, false} as packed do
+    for i = 1, #hexs do
+        local op = ops[i]
+        local bcd = new BCD(hexs[i])
+        local bcd2 = (op == "+") ? bcd + 1 : bcd - 1
+        local str = packed ? tostring(bcd) : (bcd:to_unpacked())
+        local str2 = packed ? tostring(bcd2) : (bcd2:to_unpacked())
+        local hex = bcd:tohex()
+        local hex2 = bcd2:tohex()
+        local un = packed ? "" : "un"
+        local w = packed ? 8 : 12
+        local f = $"%s %s 1 = %-5s or, in %spacked BCD, %{w}s %s 1 = %s"
+        fmt.print(f, hex, op, hex2, un, str, op, str2)
+    end
+    if packed then print() end
+end

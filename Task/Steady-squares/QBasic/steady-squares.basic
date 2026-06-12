@@ -1,0 +1,15 @@
+FUNCTION isSteady! (n!)
+  mask = 1
+  d = n
+  WHILE d <> 0
+    mask = mask * 10
+    d = INT(d / 10)
+  WEND
+  isSteady = ((n * n) MOD mask = n)
+END FUNCTION
+
+FOR i = 1 TO 9999
+  IF isSteady(i) THEN
+    PRINT USING ("####^2 = ########"); i; i * i
+  END IF
+NEXT i

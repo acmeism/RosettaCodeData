@@ -1,0 +1,77 @@
+require "bignum"
+local fmt = require "fmt"
+
+local function posit_decode(ps, max_exp_size)
+    local p = range(1, #ps):map(|i| -> ps[i] == '0' ? 0 : 1)
+
+    -- Deal with exceptional values.
+    if p:slice(2):checkall(|e| -> e == 0) then
+        return p[1] == 0 ? bigrat.int(0) : math.inf
+    end
+
+    -- Convert bits after sign bit to two's complement if negative.
+    local n = #p
+    if p[1] == 1 then
+        for i = 2, n do p[i] = (p[i] == 0) ? 1 : 0 end
+        for i = n, 2, -1 do
+            if p[i] == 1 then
+                p[i] = 0
+            else
+                p[i] = 1
+                break
+            end
+        end
+    end
+    local first = p[2]
+    local rs = n - 1  -- regime size
+    for i = 2, n - 1 do
+        if p[i + 1] != first then
+            rs = i - 1
+            break
+        end
+    end
+    local regime = p:slice(2, rs + 1)
+    local es = (rs == n - 1) ? 0 : math.min(max_exp_size, n - 2 - rs)  -- actual exponent size
+    local exponent = {0}
+    if es > 0 then exponent = p:slice(rs + 3, rs + 3 + es - 1) end
+    local fs = (es == 0) ? 0 : n - 2 - rs - es  -- function size
+    local s = (p[1] == 0) ? 1 : -1  -- sign
+    local k = regime:checkall(|i| -> i == 0) ? -rs : rs - 1
+    local u = bigint.two ^ (2 ^ max_exp_size)
+    local e = tonumber(exponent:concat(""), 2)
+    local f = bigrat.int(1)
+    if fs > 0 then
+        local fraction = p:concat("")
+        fraction = fraction:sub(#fraction - fs + 1)
+        f = tonumber(fraction, 2)
+        f = bigrat.int(1) + bigrat.of(f, 2 ^ fs)
+    end
+    return f * (bigrat.of(u, 1) ^ k) * s * (2 ^ e)
+end
+
+local tests = {
+    {3, "0000110111011101"},
+    {3, "1000000000000000"},
+    {3, "0000000000000000"},
+    {1, "0110110010101000"},
+    {1, "1001001101011000"},
+    {2, "0000000000000001"},
+    {0, "0111111111111111"},
+    {6, "0111111111111110"},
+    {1, "01000000"},
+    {1, "11000000"},
+    {1, "00110000"},
+    {1, "00100000"},
+    {2, "00000001"},
+    {2, "01111111"},
+    {7, "01111110"},
+    {2, "00000000000000000000000000000001"},
+    {2, "01111111111111111111111111111111"},
+    {5, "01111111111111111111111111111110"}
+}
+
+for tests as test do
+    local res = posit_decode(test[2], test[1])
+    local res2 = (res instanceof bigrat) ? (res:tofloat()) : math.inf
+    fmt.print("%s(es = %d) -> %s or %s", test[2], test[1], res, tostring(res2))
+end

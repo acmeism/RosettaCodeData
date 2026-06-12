@@ -1,0 +1,191 @@
+' Constants for array sizes
+Const MAX_NODES = 200005
+Const ALPHABET_SIZE = 26
+
+' Node structure for the AC Automaton
+Type Node
+    As Integer son(25)  ' Links to child nodes
+    As Integer ans      ' Answer count
+    As Integer fail     ' Failure link
+    As Integer du       ' Degree (for topological sort)
+    As Integer idx      ' Pattern index
+End Type
+
+' AC Automaton structure
+Type ACAutomaton
+    As Node tr(MAX_NODES)           ' Array of nodes
+    As Integer tot                  ' Total number of nodes
+    As Integer final_ans(MAX_NODES) ' Final answers
+    As Integer pidx                 ' Pattern index counter
+End Type
+
+' Declare the shared automaton
+Dim Shared ac As ACAutomaton
+
+' Initialize the automaton
+Sub ac_init()
+    ac.tot = 0
+    ac.pidx = 0
+
+    ' Clear all nodes
+    For i As Integer = 0 To MAX_NODES
+        For j As Integer = 0 To ALPHABET_SIZE - 1
+            ac.tr(i).son(j) = 0
+        Next j
+        ac.tr(i).ans = 0
+        ac.tr(i).fail = 0
+        ac.tr(i).du = 0
+        ac.tr(i).idx = 0
+        ac.final_ans(i) = 0
+    Next
+End Sub
+
+' Insert a pattern into the trie
+Function ac_insert(pattern As String) As Integer
+    Dim As Integer i, u, char_code
+
+    u = 0
+    For i = 0 To Len(pattern) - 1
+        char_code = Asc(Mid(pattern, i + 1, 1)) - Asc("a")
+
+        If ac.tr(u).son(char_code) = 0 Then
+            ac.tot += 1
+            ac.tr(u).son(char_code) = ac.tot
+        End If
+
+        u = ac.tr(u).son(char_code)
+    Next
+
+    If ac.tr(u).idx = 0 Then
+        ac.pidx += 1
+        ac.tr(u).idx = ac.pidx
+    End If
+
+    Return ac.tr(u).idx
+End Function
+
+' Build the AC Automaton (construct failure links)
+Sub ac_build()
+    Dim As Integer i, u
+    ' Queue for BFS
+    Dim As Integer queue(MAX_NODES)
+    Dim As Integer front = 0, rear = 0
+
+    ' Push the first level nodes to the queue
+    For i = 0 To ALPHABET_SIZE - 1
+        If ac.tr(0).son(i) <> 0 Then
+            queue(rear) = ac.tr(0).son(i)
+            rear += 1
+        End If
+    Next
+
+    ' BFS to build failure links
+    While front < rear
+        u = queue(front)
+        front += 1
+
+        For i = 0 To ALPHABET_SIZE - 1
+            Dim As Integer son_node_idx = ac.tr(u).son(i)
+            Dim As Integer fail_node_idx = ac.tr(u).fail
+
+            If son_node_idx <> 0 Then
+                ac.tr(son_node_idx).fail = ac.tr(fail_node_idx).son(i)
+                ac.tr(ac.tr(son_node_idx).fail).du += 1
+                queue(rear) = son_node_idx
+                rear += 1
+            Else
+                ac.tr(u).son(i) = ac.tr(fail_node_idx).son(i)
+            End If
+        Next
+    Wend
+End Sub
+
+' Query the automaton with a text
+Sub ac_query(text As String)
+    Dim As Integer i, u, char_code
+
+    u = 0
+    For i = 0 To Len(text) - 1
+        char_code = Asc(Mid(text, i + 1, 1)) - Asc("a")
+        u = ac.tr(u).son(char_code)
+        ac.tr(u).ans += 1
+    Next
+End Sub
+
+' Calculate final answers using topological sort
+Sub ac_calculate_final_answers()
+    Dim As Integer i, u, v, node_idx
+    ' Queue for topological sort
+    Dim As Integer queue(MAX_NODES)
+    Dim As Integer front = 0, rear = 0
+
+    ' Find nodes with no incoming edges
+    For i = 0 To ac.tot
+        If ac.tr(i).du = 0 Then
+            queue(rear) = i
+            rear += 1
+        End If
+    Next
+
+    ' Process the queue
+    While front < rear
+        u = queue(front)
+        front += 1
+
+        node_idx = ac.tr(u).idx
+        If node_idx <> 0 Then
+            ac.final_ans(node_idx) = ac.tr(u).ans
+        End If
+
+        v = ac.tr(u).fail
+        ac.tr(v).ans += ac.tr(u).ans
+        ac.tr(v).du -= 1
+
+        If ac.tr(v).du = 0 Then
+            queue(rear) = v
+            rear += 1
+        End If
+    Wend
+End Sub
+
+' Main program
+Sub Main()
+    ac_init()
+
+    ' Sample data from the Python code
+    Dim As Integer i, n
+    n = 5
+    Dim pattern_end_node_ids(n) As Integer
+
+    Dim patterns(n-1) As String
+    patterns(0) = "a"
+    patterns(1) = "bb"
+    patterns(2) = "aa"
+    patterns(3) = "abaa"
+    patterns(4) = "abaaa"
+
+    Dim text As String = "abaaabaa"
+
+    Print "Inserting patterns..."
+    For i = 1 To n
+        pattern_end_node_ids(i) = ac_insert(patterns(i-1))
+    Next
+
+    Print "Building failure links..."
+    ac_build()
+
+    Print "Querying text..."
+    ac_query(text)
+
+    Print "Calculating final answers..."
+    ac_calculate_final_answers()
+
+    Print !"\nResults:"
+    For i = 1 To n
+        Print "Pattern """; patterns(i-1); """ count:"; ac.final_ans(pattern_end_node_ids(i))
+    Next
+End Sub
+
+main()
+
+Sleep

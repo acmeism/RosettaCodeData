@@ -1,0 +1,269 @@
+//
+// Powerful Numbers
+//
+// Using FutureBasic 7.0.35, October 2025, R.W.
+//
+// A positive integer n such that for every prime
+// number p dividing n, p ^ k also divides n, e.g
+//
+// (for a,b >= 1)
+// 2-powerful = a^2 * b^3,
+// 3-powerful = a^3 * b^4 * c^5,
+// ... etc.
+//
+// Except, this version doesn't consider primes at all...
+
+include "gmp.incl"
+
+CFMutableArrayRef gRes  // collects CFStringRef entries
+
+// So this is how we get away without having to calculate
+// primes:
+//
+// It Ensures v is not divisible by any square, i.e., each
+// prime factor appears only once. This is a proxy for working
+// with unique prime factors, but it never enumerates primes.
+// So no need for prime tables as the other codes do
+//
+// v>=1; true if v is square-free
+
+local fn SquareFree( v as UInt32 ) as BOOL
+  UInt32 x, p
+  if v < 1 then return _false
+  x = v
+  if (x AND 1) == 0
+    x = x >> 1
+    if (x AND 1) == 0 then return _false
+    if x == 1 then return _true
+  end if
+  p = 3
+  while p * p <= x
+    if (x mod p) == 0
+      x = x / p
+      if (x mod p) == 0 then return _false
+      if x == 1 then return _true
+    end if
+    p = p + 2
+  wend
+end fn = _True
+
+// out = v^r using mpz base
+local fn MpzPowUI( out as mpz_t, v as UInt32, r as UInt32 )
+  mpz_t base
+  fn mpz_init( base )
+  fn mpz_set_ui( base, v )
+  fn mpz_pow_ui( out, base, r )
+  fn mpz_clear( base )
+end fn
+
+//
+// powerful numbers recursive
+//
+local fn powerful_recur( n as mpz_t, k as Int, m as mpz_t, r as Int )
+  if r < k
+    CFStringRef s
+    s = fn mpz_cf2( m )
+    fn CFArrayAppendValue( gRes, s )
+    exit fn
+  end if
+  mpz_t t, mnext
+  fn mpz_init( t )
+  fn mpz_init( mnext )
+  fn mpz_fdiv_q( t, n, m )
+  fn mpz_root( t, t, r )
+  UInt32 lim
+  lim = fn mpz_get_ui( t )
+  UInt32 v
+  for v = 1 to lim
+    // we use GCD to ensure independence between candidates
+    // in effect ensuring prime-factor method
+    if ( r <= k ) || ( fn SquareFree( v ) && ( fn mpz_gcd_ui( 0, m, v ) == 1 ) )
+      fn MpzPowUI( t, v, r )
+      fn mpz_mul( mnext, t, m )          // mnext = v ^ r * m
+      fn powerful_recur( n, k, mnext, r - 1 )
+    end if
+  next
+  fn mpz_clear( mnext )
+  fn mpz_clear( t )
+end fn
+
+// --------------------------------------
+// fn powerful(n,k) -> CFMutableArrayRef
+//
+local fn powerful( n as mpz_t, k as Int ) as CFMutableArrayRef
+  // fresh results array
+  gRes = fn CFArrayCreateMutable( _kCFAllocatorDefault, 0, 0 )
+  mpz_t m
+  fn mpz_init_set_ui( m, 1 )
+  fn powerful_recur( n, k, m, 2 * k - 1 )
+  fn mpz_clear( m )
+end fn = gRes
+
+// --------------------------------------
+// fn powercount(n,k) -> UInt64
+//
+local fn powercount_recur( n as mpz_t, k as Int, m as mpz_t, r as Int ) as UInt64
+  mpz_t t, mnext
+  fn mpz_init( t )
+  fn mpz_init( mnext )
+
+  fn mpz_fdiv_q( t, n, m )
+  fn mpz_root( t, t, r )
+  UInt64 lim
+  lim = fn mpz_get_ui( t )
+
+  UInt64 res
+  res = 0
+
+  if r <= k
+    res = res + lim
+    fn mpz_clear( mnext )
+    fn mpz_clear( t )
+    return res
+  end if
+
+  UInt32 v
+  for v = 1 to lim
+    if fn SquareFree( v ) && ( fn mpz_gcd_ui( 0, m, v ) == 1 )
+      fn MpzPowUI( t, v, r )
+      fn mpz_mul( mnext, t, m )
+      res = res + fn powercount_recur( n, k, mnext, r - 1 )
+    end if
+  next
+
+  fn mpz_clear( mnext )
+  fn mpz_clear( t )
+end fn = res
+
+local fn powercount( n as mpz_t, k as Int ) as UInt64
+  mpz_t m
+  fn mpz_init_set_ui( m, 1 )
+  UInt64 c
+  c = fn powercount_recur( n, k, m, 2 * k - 1 )
+  fn mpz_clear( m )
+end fn = c
+
+// ------------------------------------------------------
+// Sorting CFMutableArray of numeric strings (simple n^2)
+//
+local fn SortCFArrayNumericStrings( arr as CFMutableArrayRef )
+  CFIndex n, i, j
+  CFStringRef si, sj, tmp
+  double vi, vj
+  n = fn CFArrayGetCount( arr )
+  for i = 0 to n - 2
+    for j = i + 1 to n - 1
+      si = fn CFArrayGetValueAtIndex( arr, i )
+      sj = fn CFArrayGetValueAtIndex( arr, j )
+      vi = DblVal( si )
+      vj = DblVal( sj )
+      if vi > vj
+        tmp = si
+        fn CFArraySetValueAtIndex( arr, i, sj )
+        fn CFArraySetValueAtIndex( arr, j, tmp )
+      end if
+    next
+  next
+end fn
+
+// Rosetta task did not specify that we cannot abbreviate
+// outputs, so the reasonable thing to do is build the long
+// string with ellipsis in it, keeping 4 on each side
+
+local fn EllipsizedJoin( arr as CFArrayRef ) as CFStringRef
+  CFIndex n, i, start
+  CFMutableStringRef s
+  n = fn CFArrayGetCount( arr )
+  s = fn CFStringCreateMutable( _kCFAllocatorDefault, 0 )
+  if n <= 10
+    for i = 0 to n - 1
+      if i > 0
+        fn CFStringAppend( s, @", " )
+      end if
+      fn CFStringAppend( s, fn CFArrayGetValueAtIndex( arr, i ) )
+    next
+    return s
+  end if
+  // left 5
+  for i = 0 to 3    // left 4
+    if i > 0
+      fn CFStringAppend( s, @", " )
+    end if
+    fn CFStringAppend( s, fn CFArrayGetValueAtIndex( arr, i ) )
+  next
+  fn CFStringAppend( s, @", ..." )
+  // right 5
+  start = n - 4      // right 4
+  for i = start to n - 1
+    fn CFStringAppend( s, @", " )
+    fn CFStringAppend( s, fn CFArrayGetValueAtIndex( arr, i ) )
+  next
+end fn = s
+
+// -----------------------------------
+//  Main
+//
+window 1,@"Powerful Numbers",(0,0,900,360)
+print @
+
+// start the clock
+CFTimeInterval t
+t = fn CACurrentMediaTime
+
+mpz_t p
+fn mpz_init_set_ui( p, 10.0 )
+
+// Lists k=2..10
+Int k
+for k = 2 to 10
+  fn mpz_mul_si( p, p, 10.0 )   // signed multiply to be safe
+  CFMutableArrayRef arr
+  arr = fn powerful( p, k )
+
+  CFIndex L
+  L = fn CFArrayGetCount( arr )
+  BOOL sorted = _true
+  CFIndex i
+  for i = 1 to L - 1
+    if DblVal( fn CFArrayGetValueAtIndex( arr, i - 1 ) ) > DblVal( fn CFArrayGetValueAtIndex( arr, i ) ) then sorted = _false : exit for
+  next
+  if sorted == _false then fn SortCFArrayNumericStrings( arr )
+
+  L = fn CFArrayGetCount( arr )
+  CFStringRef shown
+  shown = fn EllipsizedJoin( arr )
+  printf  @"%ld %2ld-powerful numbers <= 10^%2ld: %@", L, k, k, shown
+next
+
+print @
+
+// Counts k=2..10; j=0..k+9
+for k = 2 to 10
+  fn mpz_set_ui( p, 1 )
+  CFMutableStringRef pline
+  pline = fn CFStringCreateMutable( _kCFAllocatorDefault, 0 )
+  fn CFStringAppend( pline, @"[" )
+  Int j, up
+  up = k + 9
+  for j = 0 to up
+    UInt64 c
+    c = fn powercount( p, k )
+    if j > 0
+      fn CFStringAppend( pline, @", " )
+    end if
+    CFStringRef cs
+    cs = fn CFStringCreateWithFormat( _kCFAllocatorDefault, 0, @"%llu", c )
+    fn CFStringAppend( pline, cs )
+    fn mpz_mul_si( p, p, 10 )
+  next
+  fn CFStringAppend( pline, @"]" )
+  printf @"Counts of %2ld-powerfuls <= 10^(0..%ld): %@", k, up, pline
+next
+
+fn mpz_clear( p )
+
+printf @"\nElapsed time: %.3f ms", (fn CACurrentMediaTime-t)*1000
+
+HandleEvents
+
+//

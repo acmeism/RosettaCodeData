@@ -1,0 +1,44 @@
+# This helper function should be called with `words` as the list of words so far.
+create or replace function continues_with_word(words, string, dictionary) as table (
+  select entry as entry,
+         words || [entry] as words,
+         string[ 1+length(entry):] as remainder
+  from unnest(dictionary) _(entry)
+  where starts_with(string, entry)
+);
+
+create or replace function word_break(string, dictionary) as table (
+  with recursive cte as (
+   -- entry, words, remainder
+   select entry as entry, [entry] as words, string[ 1+length(entry):] as remainder
+   from (select entry
+         from unnest(dictionary) _(entry)
+         where starts_with(string, entry))
+   union all
+   select tvf.entry, tvf.words, tvf.remainder
+   from cte,
+        continues_with_word(cte.words, cte.remainder, dictionary) AS tvf
+  )
+  select string as string, words
+  from cte
+  where remainder = ''
+);
+
+# Produce a summary table for all the strings
+create or replace function word_breaks(strings, dictionary) as table (
+  with recursive cte0 as (
+    select 1 as i, *
+    from word_break(strings[1], dictionary)
+    union all
+    select i+1 as i, tvf.*
+    from cte0, word_break(strings[i+1], dictionary) as tvf
+    where i < length(strings)
+  )
+  select distinct *
+  from cte0
+  order by i
+);
+
+### Examples
+set variable words = ['abcd', 'abbc', 'abcbcd', 'acdbc', 'abcdd'];
+set variable dictionary =  ['a', 'bc', 'abc', 'cd', 'b'];

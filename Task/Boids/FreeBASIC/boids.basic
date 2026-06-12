@@ -1,0 +1,128 @@
+Const MAP_WIDTH = 86
+Const MAP_HEIGHT = 20
+
+Type Punto
+    As Integer x
+    As Integer y
+End Type
+
+Type Boid
+    As Punto posic
+End Type
+
+Type Environment
+    As Ubyte buffer(MAP_HEIGHT, MAP_WIDTH)
+    As Boid boids(17)
+    As Integer boidCnt
+End Type
+
+Dim Shared As Environment env
+
+' Initialize map with walls and spaces
+Sub initMap()
+    Dim As Integer x, y, posic = 1
+
+    ' Add cave obstacles (hardcoded pattern)
+    Dim As String cave = _
+    "       ###############                                                               " & Chr(10) & _
+    "       ###############                                                               " & Chr(10) & _
+    "      #################                                                              " & Chr(10) & _
+    "O      ###############                                                               " & Chr(10) & _
+    "OO     ###############                                                               " & Chr(10) & _
+    "OO     ###############                    #                         #                " & Chr(10) & _
+    "OO      #############                   #####                   #########            " & Chr(10) & _
+    "OO      #############                   #####                  ###########           " & Chr(10) & _
+    "OO       ###########                   #######                #############          " & Chr(10) & _
+    "OO         #######                      #####                ###############         " & Chr(10) & _
+    "OO            #                         #####               #################        " & Chr(10) & _
+    "OO                                        #                 #################        " & Chr(10) & _
+    "O                                                           #################        " & Chr(10) & _
+    "                                                            #################        " & Chr(10) & _
+    "                                                           ###################       " & Chr(10) & _
+    "                                                            #################        "
+    ' Process the map line by line
+    For y = 1 To 16
+        For x = 1 To 85
+            Select Case Mid(cave, posic, 1)
+            Case "#"
+                env.buffer(y, x) = Asc("#")
+            Case "O"
+                env.boids(env.boidCnt).posic.x = x
+                env.boids(env.boidCnt).posic.y = y
+                env.boidCnt += 1
+                env.buffer(y, x) = Asc(" ")
+            Case Else
+                env.buffer(y, x) = Asc(" ")
+            End Select
+            posic += 1
+        Next x
+        posic += 1  ' Skip Chr(10)
+    Next y
+
+    ' Add frame
+    For x = 0 To MAP_WIDTH-1
+        env.buffer(0, x) = Asc("#")
+        env.buffer(MAP_HEIGHT-1, x) = Asc("#")
+    Next x
+    For y = 0 To MAP_HEIGHT-1
+        env.buffer(y, 0) = Asc("#")
+        env.buffer(y, MAP_WIDTH-1) = Asc("#")
+    Next y
+    '
+End Sub
+
+' Check if position is free
+Function isFree(x As Integer, y As Integer) As Boolean
+    If env.buffer(y,x) = Asc(" ") Then
+        For i As Integer = 0 To env.boidCnt-1
+            If env.boids(i).posic.x = x Andalso env.boids(i).posic.y = y Then Return False
+        Next
+        Return True
+    End If
+    Return False
+End Function
+
+Sub moveBoids()
+    For i As Integer = 0 To env.boidCnt-1
+        Dim As Integer nx = env.boids(i).posic.x + 1
+        Dim As Integer ny = env.boids(i).posic.y
+
+        ' Try to move right
+        If isFree(nx, ny) Then
+            env.boids(i).posic.x = nx
+            ' If blocked, try up or down
+        Elseif isFree(env.boids(i).posic.x, ny-1) Then
+            env.boids(i).posic.y -= 1
+        Elseif isFree(env.boids(i).posic.x, ny+1) Then
+            env.boids(i).posic.y += 1
+        End If
+    Next
+End Sub
+
+Sub drawState()
+    Dim As Integer x, y, i
+    Cls
+    ' Draw environment
+    For y = 0 To MAP_HEIGHT-1
+        For x = 0 To MAP_WIDTH-1
+            Draw String (x*8, y*16), Chr(env.buffer(y,x))
+        Next x
+    Next y
+
+    ' Draw boids
+    For i = 0 To env.boidCnt-1
+        Draw String (env.boids(i).posic.x*8, env.boids(i).posic.y*16), "O"
+    Next
+End Sub
+
+' Main program
+Screenres MAP_WIDTH*8, MAP_HEIGHT*16, 32
+Windowtitle "Boids in FreeBASIC"
+
+initMap()
+
+Do
+    moveBoids()
+    drawState()
+    Sleep 100
+Loop Until Multikey(&h01)

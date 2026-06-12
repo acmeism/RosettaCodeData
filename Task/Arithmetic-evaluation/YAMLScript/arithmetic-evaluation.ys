@@ -1,0 +1,51 @@
+!ys-0
+
+# Recursive descent parser building an AST of [op lhs rhs] vectors.
+# Each parse function returns a [ast remaining-tokens] pair.
+# Division is integer division, via the YS quot operator '//'.
+
+defn main(expr='(1+3)*7'):
+  ast =: expr:tokenize:parse-expr.0
+  say: "$expr = $(evaluate(ast))"
+
+defn tokenize(expr):
+  expr: .re-seq(/\d+|[-+*\/()]/).map(\(_:N ||| _))
+
+defn parse-expr(tokens):
+  parse-binary: tokens parse-term '+-'
+
+defn parse-term(tokens):
+  parse-binary: tokens parse-factor '*/'
+
+# Parse a left-associative chain of binary operators at one
+# precedence level; sub parses the next tighter level.
+defn parse-binary(tokens sub ops):
+  ast more =: sub(tokens)
+  loop ast ast, more more:
+    op =: more:first
+    if op && op.in?(ops):
+      then:
+        rhs more2 =: sub(more:rest)
+        recur: +[op ast rhs] more2
+      else: +[ast more]
+
+defn parse-factor(tokens):
+  if tokens:first == '(':
+    then:
+      ast more =: parse-expr(tokens:rest)
+      =>: +[ast more:rest]
+    else: +[tokens:first tokens:rest]
+
+defn evaluate(ast):
+  if ast:number?:
+    then: ast
+    else:
+      op lhs rhs =: ast
+      x =: evaluate(lhs)
+      y =: evaluate(rhs)
+      case op:
+        '+': x + y
+        '-': x - y
+        '*': x * y
+        '/': x // y
+        else: die("bad op $op")

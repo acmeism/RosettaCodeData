@@ -1,0 +1,78 @@
+!ys-0
+
+# Tonelli-Shanks: solve x^2 == n (mod p) for odd prime p.
+# n and p are promoted to bignums so the 10^50 case stays exact;
+# YS '**' returns a float for big exponents, so modpow squares by hand.
+
+cases =::
+- [10, 13]
+- [56, 101]
+- [1030, 10009]
+- [1032, 10009]
+- [44402, 100049]
+- [665820697, 1000000009]
+- [881398088036, 1000000000039]
+- [41660815127637347468140745042827704103445750172002,
+   100000000000000000000000000000000000000000000000577]
+
+defn main():
+  each [n p] cases:
+    r =: tonelli(n p)
+    if r:
+      say: "n = $n, p = $p: roots $(r.0) and $(r.1)"
+      say: "n = $n, p = $p: no solution"
+
+defn modpow(base exp m):
+  loop b (base % m), e exp, result 1N:
+    if e:zero?:
+      then: result
+      else:
+        nr =: odd?(e).if(mulmod(result b m) result)
+        recur: mulmod(b b m), (e // 2), nr
+
+defn mulmod(a b m):
+  (a * b) % m
+
+defn legendre(a p):
+  modpow: a (p.-- // 2) p
+
+defn tonelli(n0 p0):
+  # Promote to bignums so the larger primes don't overflow Long.
+  n =: bigint(n0)
+  p =: bigint(p0)
+  when legendre(n p) == 1:
+    q s =: factor2(p.--)
+    if s == 1:
+      then:
+        r =: modpow(n (p.++ // 4) p)
+        V+: r (p - r)
+      else: ts-loop(n p q s)
+
+defn factor2(m):
+  loop q m, s 0:
+    if odd?(q):
+      V+: q s
+      else: recur((q // 2) s.++)
+
+defn ts-loop(n p q s):
+  z =: find-nonresidue(p)
+  c =: modpow(z q p)
+  r =: modpow(n (q.++ // 2) p)
+  t =: modpow(n q p)
+  loop r r, t t, c c, m s:
+    if t == 1:
+      V+: r (p - r)
+      else:
+        i =: lowest-i(t p)
+        b =: modpow(c (2N ** (m.-- - i)) p)
+        b2 =: mulmod(b b p)
+        recur:
+          mulmod(r b p) mulmod(mulmod(t b p) b p) b2 i
+
+defn find-nonresidue(p):
+  loop z 2N:
+    if legendre(z p) == p.--: z recur(z.++)
+
+defn lowest-i(t p):
+  loop i 1, x mulmod(t t p):
+    if x == 1: i recur(i.++ mulmod(x x p))

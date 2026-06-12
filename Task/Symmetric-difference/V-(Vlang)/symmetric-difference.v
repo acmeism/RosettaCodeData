@@ -1,8 +1,5 @@
-const
-(
-	alist = ["john", "bob", "mary", "serena"]
-	blist = ["jim", "mary", "john", "bob"]
-)
+const alist = ["john", "bob", "mary", "serena"]
+const blist = ["jim", "mary", "john", "bob"]
 
 fn main() {
 	mut rlist := []string{}

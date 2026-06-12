@@ -1,0 +1,85 @@
+!ys-0
+
+# Depth-first-search maze generator. The maze is a set of "links": each
+# link is a pair of adjacent cell [x y] coords with no wall between them.
+# Cells are carved by recursively visiting random unvisited neighbors.
+
+defn main(w=11 h=8):
+  links =: carve(w h)
+  say: render(w h links)
+
+defn carve(w h):
+  start =: +[rand-int(w) rand-int(h)]
+  loop stack [start], seen set([start]), links \{}:
+    if stack:empty?:
+      then: links
+      else:
+        cell =: stack.$
+        nbrs =:
+          shuffle: unvisited(cell w h seen)
+        if nbrs:empty?:
+          then:
+            recur: pop(stack), seen, links
+          else:
+            nb =: nbrs.0
+            recur:
+              stack.conj(nb)
+              seen.conj(nb)
+              links.conj(link(cell nb))
+
+# Neighbors of [x y] that are in bounds and not yet visited.
+defn unvisited([x y] w h seen):
+  cands =::
+  - ! +[x.-- y]
+  - ! +[x.++ y]
+  - ! +[x y.--]
+  - ! +[x y.++]
+  filter _ cands:
+    fn([nx ny]):
+      in-x =: (nx >= 0) && (nx < w)
+      in-y =: (ny >= 0) && (ny < h)
+      in-x &&: in-y && in?([nx ny] seen).!
+
+# A link is the canonical (sorted) pair of two cells, so the lookup
+# during rendering is order-independent.
+defn link(a b):
+  if compare(a b) < 0: +
+    [a b]
+    [b a]
+
+defn render(w h links):
+  rows =:
+    for y (0 .. h.--):
+      top =: row-top(w y links)
+      mid =: row-mid(w y links)
+      =>: "$top\n$mid"
+  bottom =: +'+' + ('--+' * w)
+  lines =: rows + [bottom]
+  lines: .join("\n")
+
+# The wall line above row y: "+--+  +..." with a gap where a vertical
+# passage connects [x y-1] and [x y].
+defn row-top(w y links):
+  cells =:
+    for x (0 .. w.--):
+      open =: link([x y.--] [x y]).in?(links)
+      if open: +
+        '+  '
+        '+--'
+  cells:join +: '+'
+
+# The cell line for row y: "|  |  |..." with a gap where a horizontal
+# passage connects [x y] and [x+1 y].
+defn row-mid(w y links):
+  cells =:
+    for x (0 .. w.--):
+      open =: in?(link([x y] [x.++ y]) links)
+      wall =:
+        if x == w.--:
+          then: '|'
+          else:
+            if open: +
+              ' '
+              '|'
+      =>: "  $wall"
+  +'|' +: cells:join

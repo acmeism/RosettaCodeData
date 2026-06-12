@@ -1,6 +1,7 @@
 -- Taken from https://www.rosettacode.org/wiki/Sum_and_product_of_an_array#Lua
+local unpackTable = table.unpack or unpack -- allow compatibility with 5.1, 5.2, etc.
 function prodf(a, ...) return a and a * prodf(...) or 1 end
-function prodt(t) return prodf(unpack(t)) end
+function prodt(t) return prodf(unpackTable(t)) end
 
 function mulInv(a, b)
     local b0 = b

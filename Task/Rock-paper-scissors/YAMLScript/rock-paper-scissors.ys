@@ -1,0 +1,68 @@
+!ys-0
+
+# Rock-paper-scissors with a predictive AI. The computer tracks how
+# often the human has thrown each weapon, predicts the next throw by a
+# weighted random pick over those frequencies, then plays the weapon
+# that beats the prediction. Type r/p/s to throw; anything else quits.
+
+# 'beats' maps each weapon to the one it defeats.
+beats =:: {rock: scissors, paper: rock, scissors: paper}
+
+# 'counter' maps a predicted human throw to the weapon that beats it
+# (the inverse of 'beats').
+counter =:: {scissors: rock, rock: paper, paper: scissors}
+
+# Seed each weapon at 1 so the first prediction is a uniform random
+# pick rather than a divide-by-zero.
+init-freq =:: {rock: 1, paper: 1, scissors: 1}
+
+# Map each input letter to its weapon name; a missing key reads as nil.
+weapons =:: {r: rock, p: paper, s: scissors}
+
+defn main():
+  say: "Rock-paper-scissors. Enter r, p, or s (q to quit)."
+  loop freq init-freq, me 0, you 0, ties 0:
+    human =: read-throw()
+    if human.!:
+      say: "Final score - you: $you, me: $me, ties: $ties."
+      else:
+        pred =: predict(freq)
+        ai =: counter.$pred
+        say: "You: $human  Me: $ai"
+        result =: outcome(ai human)
+        say: result.0
+        recur:
+          freq.update(human inc)
+          (me + result.1)
+          (you + result.2)
+          (ties + result.3)
+
+# Decide a round from the AI's and human's throws. Returns a vector of
+# the message plus the me/you/ties score deltas for this round.
+defn outcome(ai human):
+  cond:
+    ai == human: +['Tie.' 0 0 1]
+    beats.$ai == human: +['I win.' 1 0 0]
+    else: +['You win.' 0 1 0]
+
+# Weighted random pick of the human's likely next throw, biased toward
+# whatever weapon they have thrown most so far.
+defn predict(freq):
+  n =: freq:vals:sum:rand-int
+  loop acc 0, pairs freq:seq:
+    pair =: pairs.0
+    if (acc + pair.1) > n:
+      then: pair.0
+      else:
+        recur:
+          (acc + pair.1)
+          pairs:rest
+
+# Read one throw from stdin. Returns the full weapon name, or nil to
+# signal quit on EOF or any non-r/p/s input.
+defn read-throw():
+  print: 'Your throw: '
+  line =: read-line()
+  when line:
+    letter =: trim(line):lc.0:S
+    weapons: .$letter

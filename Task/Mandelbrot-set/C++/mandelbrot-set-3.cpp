@@ -1,16 +1,3 @@
-/*
- * Mandelbrot Set High-Fidelity Renderer
- *
- * Key Features:
- * - 80-bit Extended Precision (long double)
- * - 8x8 Super-Sampling Anti-Aliasing (64 samples per pixel)
- * - OpenMP Parallel Processing
- * - Direct RGB-Space Integration (24-bit TrueColor)
- *
- * Original project and full source code:
- * https://github.com/Divetoxx/Mandelbrot
- */
-
 #include <iostream>
 #include <fstream>
 #include <vector>

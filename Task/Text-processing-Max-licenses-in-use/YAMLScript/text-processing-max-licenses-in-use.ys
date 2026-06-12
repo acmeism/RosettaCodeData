@@ -1,0 +1,30 @@
+!ys-0
+
+# Scan a license-manager log for the peak number of licenses checked
+# out at once, plus every timestamp where that peak occurs. Each line
+# is "License OUT/IN @ <timestamp> for job <n>"; the 3rd whitespace
+# field is the timestamp, the 2nd tells direction. State is carried
+# through a reduce as [out max times] since YS bindings are immutable.
+
+defn main(file='mlijobs.txt'):
+  events =:
+    file:read:lines
+      .filter(\(_.starts?('License')))
+  init =:: [0, 0, []]
+  state =:
+    reduce step: init events
+  max =: state.1
+  times =: state.2
+  say: "Maximum simultaneous license use is $max at the following times:"
+  each t times:
+    say: t
+
+defn step([out max times] line):
+  fields =: line:words
+  delta =: (fields.1 == 'OUT').if(1 -1)
+  out =: out + delta
+  stamp =: fields.3
+  cond:
+    out > max: +[out out [stamp]]
+    out == max: +[out max times.conj(stamp)]
+    else: +[out max times]

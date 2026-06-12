@@ -1,10 +1,11 @@
+local unpackTable = table.unpack or unpack -- allow compatibility with 5.1, 5.2, etc.
 function variadicSort (...)
   local t = {}
   for _, x in pairs{...} do
     table.insert(t, x)
   end
   table.sort(t)
-  return unpack(t)
+  return unpackTable(t)
 end
 
 local testCases = {

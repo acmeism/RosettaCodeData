@@ -1,0 +1,77 @@
+#!/usr/bin/env ys-0
+#
+# Dijkstra's algorithm: single-source shortest paths.
+# dist holds best known cost per node; prev holds the predecessor
+# on the best path, so the tree edges and full paths both come
+# from one prev map.
+
+edges =::
+- [a, b, 7]
+- [a, c, 9]
+- [a, f, 14]
+- [b, c, 10]
+- [b, d, 15]
+- [c, d, 11]
+- [c, f, 2]
+- [d, e, 6]
+- [e, f, 9]
+
+defn main(src='a'):
+  prev =: dijkstra(edges src)
+  say: 'Shortest-path tree edges:'
+  each node sort(keys(prev)):
+    say: "  $(prev.$node) -> $node"
+  say:
+  each dest qw(e f):
+    path =: trace(prev src dest)
+    say: "$src -> $dest: $(path.join(' -> '))"
+
+defn dijkstra(edges src):
+  graph =: adjacency(edges)
+  loop dist {src 0}, prev {}, seen \{}:
+    node =: closest(dist seen)
+    if node:
+      then:
+        nbrs =: graph.$node || {}
+        new-dist new-prev =:
+          relax(node dist prev seen nbrs)
+        recur: new-dist, new-prev, seen.conj(node)
+      else: prev
+
+# Build node -> {neighbor cost} map from the directed edge list.
+defn adjacency(edges):
+  reduce _ {} edges:
+    fn(g [u v w]):
+      g.assoc-in([u v] w)
+
+# Unseen node with the smallest tentative distance, or nil.
+defn closest(dist seen):
+  cands =:
+    remove \(seen.has?(_.0)): dist
+  when cands:seq:
+    apply(min-key val cands).0
+
+# Update neighbors of node, returning [dist prev].
+defn relax(node dist prev seen nbrs):
+  init =: +[dist prev]
+  reduce _ init nbrs:
+    fn([d p] [nbr w]):
+      if seen.has?(nbr):
+        list: d p
+        better: d p node nbr w
+
+# Keep the cheaper of the old and new tentative cost for nbr.
+defn better(d p node nbr w):
+  alt =: d.$node + w
+  old =: d.$nbr
+  if old && (old <= alt):
+    list: d p
+    list: d.assoc(nbr alt) p.assoc(nbr node)
+
+# Walk prev back from dest to src to build the path node list.
+defn trace(prev src dest):
+  loop node dest, acc []:
+    nodes =: acc.cons(node)
+    if node != src:
+      recur: prev.$node nodes
+      else: nodes

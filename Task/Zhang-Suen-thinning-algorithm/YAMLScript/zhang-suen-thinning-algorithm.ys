@@ -1,0 +1,85 @@
+!ys-0
+#
+# Zhang-Suen thinning: repeatedly run two passes that strip border
+# pixels until a full iteration changes nothing.
+
+image =: |-
+  00000000000000000000000000000000
+  01111111110000000111111110000000
+  01110001111000001111001111000000
+  01110000111000001110000111000000
+  01110001111000001110000000000000
+  01111111110000001110000000000000
+  01110111100000001110000111000000
+  01110011110011101111001111011100
+  01110001111011100111111110011100
+  00000000000000000000000000000000
+
+defn main(text=image):
+  grid =: text:lines.map(\(_.split("").map(N):V)):V
+  each row grid:thin: row:show
+
+# Each pass mutates the whole grid at once: collect all pixels that
+# satisfy that pass's conditions, then clear them together.
+defn thin(grid):
+  loop g grid:
+    g1 =: pass(g 1)
+    g2 =: pass(g1 2)
+    if g2 == g:
+      =>: g2
+      recur: g2
+
+defn pass(grid step):
+  rows =: grid.#
+  cols =: grid.0.#
+  marked =:
+    for r (1 .. (rows - 2)), c (1 .. (cols - 2)):
+      when strip?(grid r c step): +[r c]
+  reduce _ grid marked.remove(nil?):
+    fn(g rc):
+      g.assoc-in(rc 0)
+
+# A pixel is stripped when it is black and meets the connectivity,
+# neighbour-count, and the step-specific white-neighbour conditions.
+defn strip?(grid r c step):
+  when grid.$r.$c == 1:
+    ns =: neighbours(grid r c)
+    b =: sum(ns)
+    a =: transitions(ns)
+    p2 p4 p6 p8 =: ns.0 ns.2 ns.4 ns.6
+    c1 =:
+      if step == 1:
+        (p2 * p4 * p6)
+        (p2 * p4 * p8)
+    c2 =:
+      if step == 1:
+        (p4 * p6 * p8)
+        (p2 * p6 * p8)
+    (2 <= b <= 6) &&:
+      (a == 1) &&
+      (c1 == 0) &&
+      (c2 == 0)
+
+# P2 P3 P4 P5 P6 P7 P8 P9 clockwise from the top neighbour.
+defn neighbours(grid r c):
+  up =: grid.nth(r.--)
+  mid =: grid.$r
+  down =: grid.nth(r.++)
+  vector:
+    up.$c
+    up.nth(c.++)
+    mid.nth(c.++)
+    down.nth(c.++)
+    down.$c
+    down.nth(c.--)
+    mid.nth(c.--)
+    up.nth(c.--)
+
+# Count 0 -> 1 transitions around the circular neighbour ring.
+defn transitions(ns):
+  ring =: ns.conj(ns.0)
+  ring: .partition(2 1)
+        .filter(\((_.0 == 0) &&& (_.1 == 1))).#
+
+defn show(row):
+  say: row.map(\((_ == 1).if('#' ' '))):join

@@ -1,0 +1,88 @@
+!ys-0
+
+# Insert +/-/concat before each digit of 123456789 and evaluate.
+# Each of the 9 digit slots gets a sign in {+1, -1, 0}, where 0 means
+# "no operator" (glue this digit onto the previous number). The first
+# slot cannot be 0 (nothing to glue to). 3^9 sign tuples cover every
+# expression; we evaluate each and tally the resulting sums.
+
+defn main(target=100):
+  sums =: all-sums()
+  freq =: frequencies(sums)
+
+  say: "Solutions that sum to $target:"
+  solutions =: expressions-for(target)
+  each expr solutions:
+    say: "  $expr"
+
+  # Sort by solution count, then by sum, so a tie (e.g. +9 and -9
+  # both have 46) reports the positive sum, matching the task example.
+  best =: freq.sort-by(\([_.$ _.0])):last
+  say:
+  say: "Sum with most solutions: $(best.0) ($(best.$) solutions)"
+
+  lowest =: lowest-unexpressible(freq)
+  say: "Lowest positive sum with no solutions: $lowest"
+
+  top =: distinct(sums):sort:reverse.take(10)
+  say: "Ten highest expressible sums: $(top:joins)"
+
+# All sign tuples: slot 0 is +1 or -1; slots 1..8 are +1, -1, or 0.
+# Enumerate base-3 numbers 0..3^9-1, mapping each trit to a sign via
+# the choices vector, then drop any tuple whose first slot is 0.
+defn sign-tuples():
+  choices =: +[1 -1 0]
+  last =: pow(3 9):I.--
+  keep _ (0 .. last):
+    fn(n):
+      tuple =:
+        for k (0 .. 8):
+          choices.nth((n // pow(3 k):I) % 3)
+      when-not tuple.0:zero?:
+        tuple:vec
+
+# Evaluate the expression for one sign tuple, returning its integer sum.
+defn eval-signs(signs):
+  digits =: (1 .. 9):vec
+  loop idx 0, total 0, sign 0, num 0:
+    if idx == 9:
+      then: total + (sign * num)
+      else:
+        s =: signs.$idx
+        d =: digits.$idx
+        if s:zero?:
+          recur: idx.++ total sign ((num * 10) + d)
+          recur: idx.++ (total + (sign * num)) s d
+
+# Map every sign tuple to its sum.
+defn all-sums():
+  map(eval-signs sign-tuples())
+
+# Build the printable expression string for one sign tuple.
+defn render(signs):
+  loop idx 0, out '':
+    if idx == 9:
+      then: out
+      else:
+        s =: signs.$idx
+        d =: (1 .. 9).$idx
+        first? =: out:empty?
+        piece =:
+          cond:
+            s:zero?: d:S
+            s == 1: first?.if("$d" " + $d")
+            first?: "-$d"
+            else: " - $d"
+        recur: idx.++ (out + piece)
+
+# All rendered expressions whose sum equals target.
+defn expressions-for(target):
+  keep _ sign-tuples():
+    fn(signs):
+      when eval-signs(signs) == target:
+        render(signs)
+
+# Smallest positive integer that never appears as a sum.
+defn lowest-unexpressible(freq):
+  loop n 1:
+    if freq.$n: recur(n.++) n

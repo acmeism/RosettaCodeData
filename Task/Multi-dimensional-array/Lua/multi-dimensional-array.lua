@@ -1,3 +1,4 @@
+local unpackTable = table.unpack or unpack -- allow compatibility with 5.1, 5.2, etc.
 -- Variadic, first argument is the value with which to populate the array.
 function multiArray (initVal, ...)
     local function copy (t)
@@ -29,7 +30,7 @@ function show4dArray (a)
         for l, w in ipairs(v) do
             print("\t" .. l)
                 for m, x in ipairs(w) do
-                    print("\t", m, unpack(x))
+                    print("\t", m, unpackTable(x))
                 end
         end
     end

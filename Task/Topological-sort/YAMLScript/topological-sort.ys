@@ -1,0 +1,77 @@
+!ys-0
+
+# Topological sort via Kahn's algorithm.
+# Input is one "lib dep dep ..." line per library; the first word is
+# the library and the rest are its dependencies. Self-deps are dropped
+# and any library named only as a dependency is added with no deps.
+
+data =: |
+  des_system_lib std synopsys std_cell_lib des_system_lib dw02 dw01 ramlib ieee
+  dw01             ieee dw01 dware gtech
+  dw02             ieee dw02 dware
+  dw03             std synopsys dware dw03 dw02 dw01 ieee gtech
+  dw04             dw04 ieee dw01 dware gtech
+  dw05             dw05 ieee dware
+  dw06             dw06 ieee dware
+  dw07             ieee dware
+  dware            ieee dware
+  gtech            ieee gtech
+  ramlib           std ieee
+  std_cell_lib     ieee std_cell_lib
+  synopsys
+
+defn main(text=data):
+  deps =: parse-deps(text)
+  result =: toposort(deps)
+  if result:
+    say: result:joins
+    else:
+      say: 'Un-orderable: dependency cycle detected'
+
+# Build a map of lib -> set of deps, dropping self-deps and ensuring
+# every library mentioned anywhere (even only as a dep) has an entry.
+defn parse-deps(text):
+  rows =:
+    text:lines
+      .map(words)
+      .remove(empty?)
+  loop deps {}, rs rows:
+    if rs:empty?:
+      ensure-all: deps
+      else:
+        row =: rs:first
+        lib =: row.0
+        ds =: row:rest:set.disj(lib)
+        recur: deps.assoc(lib ds) rs:rest
+
+# Add a no-dep entry for any dep that isn't already a key.
+defn ensure-all(deps):
+  all-deps =: apply(concat deps:vals):set
+  loop m deps, ds all-deps:seq:
+    if nil?(ds):
+      then: m
+      else:
+        d =: ds:first
+        m2 =: get(m d).if(m m.assoc(d \{}))
+        recur: m2 ds:next
+
+# Kahn: repeatedly emit libraries whose deps are all already emitted
+# (sorted for a stable order). Returns the ordered vector, or nil if a
+# cycle leaves nodes that can never be emitted.
+defn toposort(deps):
+  loop done [], remaining deps:
+    if remaining:empty?:
+      then: done
+      else:
+        ready =: ready-libs(remaining done)
+        when-not ready:empty?:
+          recur: into(done ready) dissoc(remaining ready*)
+
+defn ready-libs(remaining done):
+  ready =:
+    remaining:keys
+      .filter(\(deps-met?(remaining.get(_) done)))
+  sort: ready
+
+defn deps-met?(ds done):
+  ds.every?(\(_.in?(done)))

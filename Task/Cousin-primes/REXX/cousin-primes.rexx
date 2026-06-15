@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 12 Jun 2026
 include Setting
 numeric digits 4
 
@@ -10,7 +10,7 @@ say Format(Time('e'),,3) 'seconds'
 exit
 
 ShowCousins:
-procedure expose Memo.
+procedure expose Glob.
 arg x,y
 n = 0
 do i = x to y-4

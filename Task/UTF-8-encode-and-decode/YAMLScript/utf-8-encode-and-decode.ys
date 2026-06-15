@@ -1,0 +1,56 @@
+!ys-0
+
+defn main():
+  chars =: 'A¢€'
+  bytes =: utf8-encode(chars)
+  say: bytes.map(\(format('%02X' _))):joins
+  say: utf8-decode(bytes)
+
+defn utf8-encode(s):
+  mapcat encode-codepoint:
+    map int: s:seq
+
+defn encode-codepoint(cp):
+  cond:
+    cp < 0x80:
+      +[cp]
+    cp < 0x800:
+      +[(0xC0 + (cp // 0x40))
+        (0x80 + (cp % 0x40))]
+    cp < 0x10000:
+      +[(0xE0 + (cp // 0x1000))
+        (0x80 + ((cp // 0x40) % 0x40))
+        (0x80 + (cp % 0x40))]
+    else:
+      +[(0xF0 + (cp // 0x40000))
+        (0x80 + ((cp // 0x1000) % 0x40))
+        (0x80 + ((cp // 0x40) % 0x40))
+        (0x80 + (cp % 0x40))]
+
+defn utf8-decode(bytes):
+  loop bs bytes, out '':
+    if bs.!:
+      then: out
+      else:
+        b =: bs.0
+        len =:
+          cond:
+            b < 0x80: 1
+            b < 0xE0: 2
+            b < 0xF0: 3
+            else: 4
+        cp =: decode-one(take(len bs))
+        rest =: drop(len bs)
+        out =: out + C(cp):S
+        recur: rest, out
+
+defn decode-one(bs):
+  case bs.#:
+    1: bs.0
+    2: ((bs.0 % 0x20) * 0x40) + (bs.1 % 0x40)
+    3: ((bs.0 % 0x10) * 0x1000) +
+      ((bs.1 % 0x40) * 0x40) + (bs.2 % 0x40)
+    else:
+      ((bs.0 % 0x08) * 0x40000) +
+        ((bs.1 % 0x40) * 0x1000) +
+        ((bs.2 % 0x40) * 0x40) + (bs.3 % 0x40)

@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 13 Jun 2026
 include Setting
 
 call Time('r')
@@ -14,7 +14,7 @@ call Timer 'r'
 exit
 
 Pritchard:
-procedure expose Memo.
+procedure
 arg xx,yy
 say 'Primes up to' xx 'by Pritchard...'
 memb. = 0; memb.1 = 1; mcpy. = 0; prim. = 0; nwpr. = 0

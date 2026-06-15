@@ -11,8 +11,17 @@ roman-to-arabic: function [
     arabic: 0
     parse roman [
         some [
-            copy roman: [
-              #"I" [ #"V" (a: 4  )| #"X" (a: 9  )| none (a: 1  )]
+            [
+              "IIIX" (a: 7  ) | "IIX"  (a: 8  )  ; 8-7 exceptions
+            | "XXXC" (a: 70 ) | "XXC"  (a: 80 )  ; 80-70 exceptions
+            | "CCXM" (a: 700) | "CCM"  (a: 800)  ; 800-700 exceptions
+            ; other exceptions
+            | "IM"   (a: 999)
+            | "IC"   (a: 99 )
+            | "XM"   (a: 990)  ; debatable
+            | "VC"   (a: 95 )  ; debatable
+            ; normal rules
+            | #"I" [ #"V" (a: 4  )| #"X" (a: 9  )| none (a: 1  )]
             | #"X" [ #"L" (a: 40 )| #"C" (a: 90 )| none (a: 10 )]
             | #"C" [ #"D" (a: 400)| #"M" (a: 900)| none (a: 100)]
             | #"V" (a: 5)
@@ -30,10 +39,19 @@ roman-to-arabic: function [
 
 ;; tests:
 foreach roman [
-    "XXXfoo"
-    "XXXIII"
-    "MDCCCLXXXVIII"
-    "MMXVI"
+    "XIV"      ;= 14
+    "CMI"      ;= 901
+    "MCMXC"    ;= 1990
+    "MDCLXVI"  ;= 1666
+    "MMVIII"   ;= 2008
+    "MMXIX"    ;= 2019
+    "MMMCMXCV" ;= 3995
+    ; not standard:
+    "IIII"     ;= 4
+    "IIXX"     ;= 18
+    "MIC"      ;= 1099
+    ; invalid:
+    "XXfoo"    ;= none
 ][
     printf [-15 " -> "] [:roman roman-to-arabic :roman]
 ]

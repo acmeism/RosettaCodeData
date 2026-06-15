@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 13 Jun 2026
 include Setting
 numeric digits 100
 arg xx
@@ -14,7 +14,7 @@ call Timer
 exit
 
 GetYellow:
-procedure expose yell. work. Memo.
+procedure expose yell. work.
 arg xx
 say 'Get yellowstones...'
 yell. = 0; work. = 0; n = 0

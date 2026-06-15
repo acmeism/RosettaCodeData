@@ -1,4 +1,4 @@
--- 25 Apr 2026
+-- 13 Jun 2026
 include Setting
 numeric digits 16
 
@@ -12,7 +12,7 @@ exit
 
 Task:
 -- Runge-Kutta method
-procedure expose Memo.
+procedure
 arg x0,xn,dx,y0
 say 'From' x0 'to' xn 'step' dx
 say ' x   Calc y      True y    Abs err    Rel err'
@@ -40,7 +40,7 @@ return
 
 Dy:
 -- Differential equation
-procedure expose Memo.
+procedure
 arg xx,yy
 return xx*SqRt(yy)
 

@@ -1,4 +1,4 @@
--- 3 Mar 2026
+-- 13 Jun 2026
 include Setting
 arg xx
 if xx = '' then
@@ -16,7 +16,7 @@ call Timer 'R'
 exit
 
 Tasks1:
-procedure expose squa. memo.
+procedure expose Squa. Glob.
 arg xx
 say 'Tasks using Sieve...'
 call Squarefrees 2*xx
@@ -51,7 +51,7 @@ say 'M1 thru M'xx 'crosses zero' b 'times'
 return
 
 Tasks2:
-procedure expose squa. memo.
+procedure expose Squa.
 arg xx
 say 'Tasks using Moebius function...'
 if xx < 100 then
@@ -78,7 +78,7 @@ say 'M1 thru M'xx 'crosses zero' b 'times'
 return
 
 Tasks3:
-procedure expose squa. memo.
+procedure expose Squa. Glob.
 arg xx
 say 'Tasks using Squarefree function...'
 if xx < 100 then

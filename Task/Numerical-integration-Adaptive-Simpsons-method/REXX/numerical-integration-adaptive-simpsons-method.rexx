@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 12 Jun 2026
 include Setting
 say
 arg digs
@@ -31,7 +31,7 @@ call Timer
 exit
 
 Task:
-procedure expose Memo.
+procedure
 arg ff,aa,bb,true
 eps='1E'||-Digits(); depth=20; steps=2**16
 w=Digits()+2
@@ -48,7 +48,7 @@ say
 return
 
 Recursive:
-procedure expose Memo.
+procedure
 arg ff,aa,bb,eps,depth
 numeric digits Digits()+3
 x=aa; interpret 'fa='ff
@@ -57,7 +57,7 @@ parse value SimpsonRule(ff,aa,fa,bb,fb) with mm fm whole
 return RecursiveSimpson(ff,aa,fa,bb,fb,eps,whole,mm,fm,depth)
 
 RecursiveSimpson:
-procedure expose Memo.
+procedure
 arg ff,aa,fa,bb,fb,eps,whole,mm,fm,depth
 parse value SimpsonRule(ff,aa,fa,mm,fm) with lm flm ll
 parse value SimpsonRule(ff,mm,fm,bb,fb) with rm frm rr
@@ -69,13 +69,13 @@ else
           RecursiveSimpson(ff,mm,fm,bb,fb,eps1,rr,rm,frm,depth-1)
 
 SimpsonRule:
-procedure expose Memo.
+procedure
 arg ff,aa,fa,bb,fb
 mm=(aa+bb)/2; x=mm; interpret 'fm='ff
 return mm fm ((bb-aa)/6)*(fa+4*fm+fb)
 
 Simpson:
-procedure expose Memo.
+procedure
 arg ff,aa,bb,eps,steps
 numeric digits Digits()+3
 s0=Eval(ff,aa)+Eval(ff,bb); h0=bb-aa
@@ -93,7 +93,7 @@ end
 return rr
 
 Boole:
-procedure expose Memo.
+procedure
 arg ff,aa,bb,eps,steps
 numeric digits Digits()+3
 s0=7*(Eval(ff,aa)+Eval(ff,bb)); h0=bb-aa

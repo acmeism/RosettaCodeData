@@ -1,4 +1,4 @@
--- 21 Feb 2026
+-- 13 Jun 2026
 include Setting
 numeric digits 40
 
@@ -21,7 +21,7 @@ say
 return
 
 GetPierpont:
-procedure expose smoo. firs. seco. Memo.
+procedure expose smoo. firs. seco. glob.
 say 'Get Pierpont primes...'
 n1 = 0; firs. = 0; n2 = 0; seco. = 0; p = 0
 do i = 1 to smoo.0

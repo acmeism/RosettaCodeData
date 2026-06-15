@@ -1,4 +1,4 @@
--- 12 Sep 2025
+-- 12 Jun 2026
 include Setting
 
 say 'FUNCTION COMPOSITION'
@@ -13,7 +13,7 @@ say 'Compose('ff','gg','xx')' '=' Compose(ff,gg,xx) ',' ff'('gg'('xx'))' '=' Zet
 exit
 
 Compose:
-procedure expose Memo.
+procedure
 arg ff,gg,xx
 interpret 'rr='ff'('gg'('xx'))'
 return rr

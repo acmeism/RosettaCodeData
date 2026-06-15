@@ -1,4 +1,4 @@
--- 4 Mar 2026
+-- 13 Jun 2026
 include Setting
 numeric digits 30
 
@@ -19,7 +19,7 @@ call MillerRabin 1e21,1e21+999
 exit
 
 TrialDivision:
-procedure expose Memo. Glob.
+procedure expose Glob.
 arg xx,yy
 say 'Primes between' Std(xx) 'and' Std(yy) 'by trial division...'
 n = 0; w = Xpon(yy)+2
@@ -55,7 +55,7 @@ call Timer 'R'
 return
 
 Isprime:
-procedure expose Memo.
+procedure
 arg xx
 if xx < 3 then
    return (xx = 2)

@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 12 Jun 2026
 include Setting
 
 say 'ISQRT (INTEGER SQUARE ROOT)'
@@ -30,7 +30,7 @@ call Timer
 return
 
 Task2:
-procedure expose Memo. glob.
+procedure expose glob.
 arg xx,yy,zz,mm
 call Timer 'x'
 select

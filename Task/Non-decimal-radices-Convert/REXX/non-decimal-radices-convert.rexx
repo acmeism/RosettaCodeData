@@ -1,11 +1,11 @@
--- 10 Oct 2025
+-- 13 Jun 2026
 include Setting
 numeric digits 100
 arg xx
-if xx = '' then
-   xx = 255
+if xx='' then
+   xx=1234
 else
-   interpret 'xx='xx
+   xx/=1
 
 say 'NON-DECIMAL RADICES CONVERT'
 say version
@@ -19,13 +19,8 @@ N2d:
 -- Convert base n to base 10
 procedure
 arg xx,yy
-xx=Upper(xx)
-if yy=2 then
-   return X2D(B2X(xx))+0
-if yy=16 then
-   return X2D(xx)+0
-b=XRange('0','9')XRange('A','Z'); l=Length(xx)
-rr=0
+b=XRange('0','9')XRange('A','Z')
+l=Length(xx); rr=0
 do i=1 to l
    d=Pos(SubStr(xx,i,1),b)-1; rr=rr*yy+d
 end i
@@ -35,10 +30,6 @@ D2n:
 -- Convert base 10 to base n
 procedure
 arg xx,yy
-if yy=2 then
-   return X2B(D2X(xx))+0
-if yy=16 then
-   return D2X(xx)
 b=XRange('0','9')XRange('A','Z')
 rr=''
 do while xx>0
@@ -46,4 +37,5 @@ do while xx>0
 end
 return rr
 
-include Abend
+-- N2d, D2n (full versions support up to base62, negatives and fractions)
+include Math

@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 12 Jun 2026
 include Setting
 numeric digits 16
 arg xx
@@ -32,7 +32,7 @@ call Timer 'R'
 exit
 
 Rational1:
-procedure expose Memo. Bern.
+procedure expose Bern.
 arg xx
 say 'Rational arithmetic'
 say 'cf Generating function'
@@ -48,7 +48,7 @@ end n
 return
 
 Rational2:
-procedure expose Memo. Bern.
+procedure expose Bern.
 arg xx
 say 'Numerator and denominator calculations'
 say 'cf Double sum formula optimized'
@@ -79,7 +79,7 @@ end i
 return
 
 Decimal1:
-procedure expose Bern. Memo.
+procedure expose Bern.
 arg xx
 say 'Floating point calculations'
 say 'cf Generating function'
@@ -95,7 +95,7 @@ end n
 return xx
 
 Decimal2:
-procedure expose Bern. Memo.
+procedure expose Bern.
 arg xx
 say 'Floating point calculations'
 say 'cf Akiyama-Tanigawa'

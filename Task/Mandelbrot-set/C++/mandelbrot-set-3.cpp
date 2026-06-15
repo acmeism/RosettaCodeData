@@ -1,3 +1,6 @@
+/*
+ * The freely distributable C++ compiler is called g++.
+ */
 #include <iostream>
 #include <fstream>
 #include <vector>

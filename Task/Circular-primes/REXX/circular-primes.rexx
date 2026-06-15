@@ -1,4 +1,4 @@
--- 25 Apr 2026
+-- 12 Jun 2026
 include Setting
 
 say 'CIRCULAR PRIMES'
@@ -13,7 +13,7 @@ call Timer 'r'
 exit
 
 First19:
-procedure expose Memo. Prim.
+procedure expose Prim. Glob.
 numeric digits 10
 say 'First 19 circular primes:'
 p = Primes(200000)
@@ -36,7 +36,7 @@ say
 return
 
 Next3:
-procedure expose Memo.
+procedure expose Glob.
 numeric digits 1000
 say 'Next 3 circular primes:'
 do i = 7 to 320
@@ -48,7 +48,7 @@ say
 return
 
 Rep1031:
-procedure expose Memo.
+procedure expose Glob.
 call Time('r')
 numeric digits 10000
 say 'Primality of R(1031):'

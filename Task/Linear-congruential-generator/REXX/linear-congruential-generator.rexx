@@ -1,11 +1,11 @@
--- 29 Aug 2025
+-- 13 Jun 2026
 include Setting
 
 say 'LINEAR CONGRUENTIAL GENERATOR'
 say version
 say
 numeric digits 20
-Memo. = 0
+Save. = 0
 say '-------------------'
 say ' n        BSD    MS'
 say '-------------------'
@@ -16,13 +16,13 @@ say '-------------------'
 exit
 
 MSD:
-procedure expose Memo.
-Memo.msd = (1103515245*Memo.msd+12345)//(2**31)
-return Memo.msd
+procedure expose Save.
+Save.msd = (1103515245*Save.msd+12345)//(2**31)
+return Save.msd
 
 MS:
-procedure expose Memo.
-Memo.ms = (214013*Memo.ms+2531011)//(2**31)
-return Memo.ms%(2**16)
+procedure expose Save.
+Save.ms = (214013*Save.ms+2531011)//(2**31)
+return Save.ms%(2**16)
 
 include Math

@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 13 Jun 2026
 include Setting
 parse arg xx','yy','zz
 if xx = '' then
@@ -27,7 +27,7 @@ say
 return
 
 Get:
-procedure expose work. coun. Memo.
+procedure expose work. coun.
 parse arg xx,yy
 say 'Get uniform distributed integers 1 thru 7...'
 work. = 0; coun. = 0

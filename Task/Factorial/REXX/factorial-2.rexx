@@ -1,8 +1,7 @@
--- 15 May 2026
+-- 12 Jun 2026
 include Setting
-Memo.cache=0
 
-say 'Factorial'
+say 'FACTORIAL'
 say version
 say
 call First20

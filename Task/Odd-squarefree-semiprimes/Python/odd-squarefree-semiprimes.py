@@ -11,7 +11,7 @@ if __name__ == '__main__':
     for p in range(3, 999):
         if not isPrime(p):
             continue
-        for q in range(p+1, 1000//p):
+        for q in range(p+1, 1000//p+1):
             if not isPrime(q):
                 continue
             print(p*q, end = " ");

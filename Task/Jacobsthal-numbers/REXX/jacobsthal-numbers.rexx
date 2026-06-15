@@ -1,4 +1,4 @@
--- 25 Apr 2026
+-- 12 Jun 2026
 include Setting
 numeric digits 250
 
@@ -65,7 +65,7 @@ return
 
 Show2:
 -- Display Jacobsthal primes
-procedure expose Jaco. Memo.
+procedure expose Jaco. Glob.
 parse arg header,count
 say 'First' count header 'Primes'
 say

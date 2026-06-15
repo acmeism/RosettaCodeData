@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 13 Jun 2026
 include Setting
 arg digs
 if digs = '' then
@@ -30,7 +30,7 @@ call Timer
 exit
 
 Task:
-procedure expose Memo.
+procedure
 arg ff,aa,bb,true
 w=Digits()+2
 do steps = 1 to 6
@@ -42,7 +42,7 @@ say
 return
 
 TanhSinh:
-procedure expose Memo.
+procedure
 arg ff,aa,bb,steps
 h=0.1; h0=(bb-aa)/2; h1=(aa+bb)/2
 do k = 1 to steps

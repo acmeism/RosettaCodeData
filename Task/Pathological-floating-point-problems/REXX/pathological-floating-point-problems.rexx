@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 13 Jun 2026
 include Setting
 arg digs
 if digs = '' then
@@ -29,7 +29,7 @@ say
 return
 
 Society:
-procedure expose Memo.
+procedure
 say 'The Chaotic Bank Society...'
 e=e()/1; b=e-1
 say Right(0,2) Left(b,18)

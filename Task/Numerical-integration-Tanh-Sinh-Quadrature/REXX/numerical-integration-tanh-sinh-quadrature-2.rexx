@@ -1,4 +1,4 @@
--- 29 Aug 2025
+-- 13 Jun 2026
 include Setting
 numeric digits 4
 
@@ -40,7 +40,7 @@ call Timer
 exit
 
 Task:
-procedure expose Memo. Glob.
+procedure expose Glob.
 arg ff,aa,bb,prim
 eps='1E'||-Digits(); steps=2**20; w=Digits()+7
 true=Eval(prim,bb)-Eval(prim,aa)

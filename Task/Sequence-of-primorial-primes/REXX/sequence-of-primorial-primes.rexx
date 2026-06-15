@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 13 Jun 2026
 include Setting
 
 say 'SEQUENCE OF PRIMORIAL PRIMES'
@@ -10,7 +10,7 @@ say Format(Time('e'),,3) 'seconds'
 exit
 
 GetPrimorials:
-procedure expose prim. prmo. Memo.
+procedure expose prim. prmo.
 arg xx
 say 'Get enough primorials...'
 call Primorials(-xx)
@@ -19,7 +19,7 @@ say
 return
 
 ShowPrimes:
-procedure expose prmo. Memo.
+procedure expose prmo. glob.
 arg xx
 say 'Index of first 15 primorial primes is...'
 n = 0

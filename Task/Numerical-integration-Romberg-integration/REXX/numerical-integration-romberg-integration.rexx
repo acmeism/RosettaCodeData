@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 13 Jun 2026
 include Setting
 arg digs
 if digs = '' then
@@ -31,7 +31,7 @@ call Timer
 exit
 
 Task:
-procedure expose Memo.
+procedure expose Save.
 arg ff,aa,bb,true
 w=Digits()+2
 do steps = 1 to 15
@@ -43,21 +43,21 @@ say
 return
 
 Romberg:
-procedure expose Memo. memo.
+procedure expose Save.
 arg ff,aa,bb,steps
 h0=bb-aa; s0=Eval(ff,aa)+Eval(ff,bb)
-memo.0.0=0.5*s0*h0
+Save.0.0=0.5*s0*h0
 n=1
 do i = 1 to steps
    n=2*n; h=h0/n; s=0.5*s0
    do j = 1 to n-1
       s=s+Eval(ff,aa+j*h)
    end
-   f=1; memo.i.0=s*h
+   f=1; Save.i.0=s*h
    do k = 1 to i
-      k1=k-1; r1=memo.i.k1
-      i1=i-1; r2=memo.i1.k1
-      f=4*f; rr=(f*r1-r2)/(f-1); memo.i.k=rr
+      k1=k-1; r1=Save.i.k1
+      i1=i-1; r2=Save.i1.k1
+      f=4*f; rr=(f*r1-r2)/(f-1); Save.i.k=rr
    end
 end
 return rr

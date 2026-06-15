@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 13 Jun 2026
 include Setting
 numeric digits 10
 
@@ -14,7 +14,7 @@ end
 exit
 
 ShowWilson:
-procedure expose Memo.
+procedure
 arg xx,yy
 call Time('r')
 say 'Primes between' Std(xx) 'and' Std(yy)
@@ -33,7 +33,7 @@ say Format(Time('e'),,3) 'seconds'; say
 return
 
 CompareWilsonMR:
-procedure
+procedure expose Glob.
 arg xx,yy
 call Time('r')
 do i = xx to yy
@@ -50,7 +50,7 @@ say 'For n between' Right(Std(xx),7) 'and' Right(Std(yy),7),
 return
 
 Isprime:
-procedure expose Memo.
+procedure
 arg xx
 if xx < 2 then
    return 0

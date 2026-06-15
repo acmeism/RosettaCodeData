@@ -1,4 +1,4 @@
--- 25 Apr 2026
+-- 13 Jun 2026
 include Setting
 arg digs
 if digs = '' then
@@ -32,7 +32,7 @@ call Timer
 exit
 
 Task:
-procedure expose Memo.
+procedure
 arg ff,aa,bb,steps,true
 w=Digits()+2
 res=LeftRect(ff,aa,bb,steps); diff=res-true
@@ -57,7 +57,7 @@ say
 return
 
 LeftRect:
-procedure expose Memo.
+procedure
 arg ff,aa,bb,steps
 h=(bb-aa)/steps
 s=0
@@ -67,7 +67,7 @@ end
 return s*h
 
 MidRect:
-procedure expose Memo.
+procedure
 arg ff,aa,bb,steps
 h=(bb-aa)/steps; aa=aa-h/2
 s=0
@@ -77,7 +77,7 @@ end
 return s*h
 
 RightRect:
-procedure expose Memo.
+procedure
 arg ff,aa,bb,steps
 h=(bb-aa)/steps
 s=0
@@ -87,7 +87,7 @@ end
 return s*h
 
 Trapezoid:
-procedure expose Memo.
+procedure
 arg ff,aa,bb,steps
 h=(bb-aa)/steps
 s=0.5*(Eval(ff,aa)+Eval(ff,bb))
@@ -97,7 +97,7 @@ end
 return s*h
 
 Simpson:
-procedure expose Memo.
+procedure
 arg ff,aa,bb,steps
 h=(bb-aa)/steps
 s0=Eval(ff,aa)+Eval(ff,bb); s1=0; s2=0
@@ -110,7 +110,7 @@ end
 return (s0+4*s1+2*s2)*h/3
 
 Boole:
-procedure expose Memo.
+procedure
 arg ff,aa,bb,steps
 h=(bb-aa)/steps
 s0=7*(Eval(ff,aa)+Eval(ff,bb)); s1=0; s2=0; s3=0

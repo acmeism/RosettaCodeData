@@ -1,4 +1,4 @@
--- 21 Feb 2026
+-- 13 Jun 2026
 include Setting
 numeric digits 10
 
@@ -11,7 +11,7 @@ call Timer
 exit
 
 GetNumbers:
-procedure expose Luca. Ufac. Memo.
+procedure expose Luca. Ufac. Glob.
 arg xx,yy
 say 'Get LuCa numbers...'
 xx=xx+Even(xx)

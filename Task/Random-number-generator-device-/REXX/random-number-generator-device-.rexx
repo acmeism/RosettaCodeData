@@ -1,4 +1,4 @@
--- 25 Apr 2026
+-- 13 Jun 2026
 include Setting
 numeric digits 12
 
@@ -25,7 +25,7 @@ say
 return
 
 Examples:
-procedure expose Memo.
+procedure expose Glob.
 -- Reset seed
 call Rand(12345)
 -- Real uniform distributed

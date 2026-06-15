@@ -1,4 +1,4 @@
--- 16 May 2026
+-- 13 Jun 2026
 include Setting
 numeric digits 40
 
@@ -25,7 +25,7 @@ Test.0=i-1
 return
 
 Selected:
-procedure expose Mult. Test. Memo.
+procedure expose Mult. Test.
 call Time('r')
 say 'Find a factor for 30 selected numbers...'
 do t=1 for Test.0
@@ -55,7 +55,7 @@ say
 return
 
 Randomized:
-procedure expose Mult. Memo.
+procedure expose Mult.
 say 'Find a factor for 30 random numbers...'
 x=1
 do until x=30

@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 12 Jun 2026
 include Setting
 
 say 'APERY''S CONSTANT'
@@ -29,7 +29,7 @@ return y+0
 
 Markov:
 -- Markov series
-procedure expose fact. Memo.
+procedure expose Fact.
 fact. = 0
 numeric digits digits()+2
 y = 0
@@ -42,7 +42,7 @@ return y+0
 
 Wedeniwski:
 -- Wedeniwski series
-procedure expose fact. Memo.
+procedure expose Fact.
 fact. = 0
 numeric digits Digits()+2
 y = 0

@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 13 Jun 2026
 include Setting
 arg n
 if n = '' then
@@ -20,7 +20,7 @@ say 'True value' a '('e 'seconds)'
 exit
 
 BruteForce:
-procedure expose Memo.
+procedure expose Glob.
 numeric digits Digits()+2
 y = 0.5-Ln(2)
 do n = 3 by 2 to 1000000
@@ -33,7 +33,7 @@ numeric digits Digits()-2
 return y+0
 
 UsingSieve:
-procedure expose Memo. prim. flag.
+procedure expose Prim. Flag.
 numeric digits Digits()+2
 n = Primes(1000000); y = 0
 do i = 1 to n
@@ -44,7 +44,7 @@ numeric digits Digits()-2
 return y+0
 
 Analytic:
-procedure expose Memo. fact.
+procedure expose Fact.
 numeric digits Digits()+2
 y = 0; v = 0
 do n = 2 to 1000

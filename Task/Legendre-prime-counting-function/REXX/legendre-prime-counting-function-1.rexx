@@ -1,4 +1,4 @@
--- 21 Feb 2026
+-- 12 Jun 2026
 include Setting
 
 say 'LEGENDRE PRIME COUNTER (NO MEMOIZATION)'
@@ -13,7 +13,7 @@ end
 exit
 
 Pie:
-procedure expose Prim. Memo.
+procedure expose Prim.
 arg xx
 if xx < 3 then
    return 0+(xx=2)

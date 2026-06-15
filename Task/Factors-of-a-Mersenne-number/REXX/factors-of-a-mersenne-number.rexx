@@ -1,4 +1,4 @@
--- 25 Apr 2026
+-- 12 Jun 2026
 include Setting
 
 say 'FACTORS OF A MERSENNE NUMBER'
@@ -21,7 +21,7 @@ call Timer
 exit
 
 Task:
-procedure expose Memo.
+procedure
 arg x
 a = x; a = 'M'a; m = 2**x
 do k = 1 by 2*x to Isqrt(m)

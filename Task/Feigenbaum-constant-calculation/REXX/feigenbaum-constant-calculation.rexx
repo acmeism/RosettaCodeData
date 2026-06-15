@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 12 Jun 2026
 include Setting
 arg n
 if n = '' then
@@ -19,7 +19,7 @@ say 'True value' a '('e 'seconds)'
 exit
 
 Original:
-procedure expose Memo.
+procedure
 -- Outer 2 loops with a fixed value
 numeric digits Digits()+2
 im = 20; jm = 10
@@ -40,7 +40,7 @@ numeric digits Digits()-2
 return d+0
 
 Optimized:
-procedure expose Memo.
+procedure
 -- Center loop stops on achieving desired accuracy
 numeric digits Digits()+4; numeric fuzz 4
 -- Only outer loop maximum
@@ -67,7 +67,7 @@ numeric digits Digits()-4
 return d+0
 
 TrueValue:
-procedure expose Memo.
+procedure
 return 4.66920160910299067185320382046620161725818557747576863274565134300413433021131473713868974402394801381716+0
 
 include Abend

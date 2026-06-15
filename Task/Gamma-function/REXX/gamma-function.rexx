@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 12 Jun 2026
 include Setting
 arg n
 if n = '' then
@@ -50,7 +50,7 @@ end
 exit
 
 Stirling:
-procedure expose Memo. fact.
+procedure expose Fact.
 arg x
 return Sqrt(2*Pi()/x) * Power(x/e(),x)
 

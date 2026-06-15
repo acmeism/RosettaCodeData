@@ -1,4 +1,4 @@
--- 4 Mar 2026
+-- 13 Jun 2026
 include Setting
 numeric digits 15
 
@@ -14,7 +14,7 @@ end
 exit
 
 ShowTrial:
-procedure expose memo.
+procedure
 arg xx,yy,zz
 call Time('r')
 say 'Primes between' Std(xx) 'and' Std(yy) 'by trial division'
@@ -33,7 +33,7 @@ say Format(Time('e'),,3) 'seconds'; say
 return
 
 ShowMR:
-procedure expose memo.
+procedure expose Glob.
 arg xx,yy,zz
 call Time('r')
 say 'Primes between' Std(xx) 'and' Std(yy) 'by Miller-Rabin'
@@ -52,7 +52,7 @@ say Format(Time('e'),,3) 'seconds'; say
 return
 
 CompareTrialMR:
-procedure expose memo.
+procedure expose Glob.
 arg xx,yy
 call Time('r')
 do i = xx to yy
@@ -69,7 +69,7 @@ say 'For n between' Right(Std(xx),14) 'and' Right(Std(yy),14),
 return
 
 Isprime:
-procedure expose memo.
+procedure
 arg xx
 if xx < 2 then
    return 0

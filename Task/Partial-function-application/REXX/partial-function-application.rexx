@@ -1,4 +1,4 @@
--- 11 Sep 2025
+-- 13 Jun 2026
 include Setting
 
 say 'PARTIAL FUNCTION APPLICATION'
@@ -30,7 +30,7 @@ exit
 Fs:
 -- Partial function application
 -- Mimics 'map' operation
-procedure expose Memo.
+procedure
 arg function,list
 dd=''
 do w = 1 for Words(list)

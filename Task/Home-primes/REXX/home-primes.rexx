@@ -1,4 +1,4 @@
--- 16 May 2026
+-- 12 Jun 2026
 include Setting
 numeric digits 200
 
@@ -14,7 +14,7 @@ call Timer 'r'
 exit
 
 Home:
-procedure expose Fact. Memo. Work.
+procedure expose Fact. Glob.
 arg xx
 if xx = 1 then
    call Charout ,'HP1 = 1'

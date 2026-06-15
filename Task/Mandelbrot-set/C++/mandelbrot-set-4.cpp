@@ -1,4 +1,5 @@
 /*
+ * The freely distributable C++ compiler is called g++.
  * Original project:
  * https://github.com/Divetoxx/Mandelbrot
  */

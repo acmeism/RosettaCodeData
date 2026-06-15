@@ -1,4 +1,4 @@
--- 21 Feb 2026
+-- 13 Jun 2026
 include Setting
 
 say 'RATIONAL ARITHMETIC'
@@ -22,12 +22,7 @@ say '-a  =' Rat2form(NegQ(a))
 say '1/a =' Rat2form(InvQ(a))
 say
 say 'COMPARE'
-say 'a<b  =' LtQ(a,b)
-say 'a<=b =' LeQ(a,b)
-say 'a=b  =' EqQ(a,b)
-say 'a>=b =' GeQ(a,b)
-say 'a>b  =' GtQ(a,b)
-say 'a<>b =' NeQ(a,b)
+say 'CompareQ(a,b) =' CompareQ(a,b)
 say
 say 'BONUS'
 say 'Abs(c)      =' Rat2form(AbsQ(c))
@@ -36,9 +31,9 @@ say 'Neg(d)      =' Rat2form(NegQ(d))
 say 'Power(a,e)  =' Rat2form(PowQ(a,e))
 say 'Rational(f) =' Rat2form(RatQ(f))
 say
-say 'FORMULA'
-g=SquareQ(a); h=MulQ(-2,MulQ(a,b)); i=MulQ(3,c); j=MulQ(-4,MulQ(a,PowQ(d,4))); k=5
-say 'a^2-2ab+3c-4ad^4+5 =' Rat2form(AddQ(g,AddQ(h,AddQ(i,AddQ(j,k)))))
+say 'EXPRESSION'
+say 'a^2-2ab+3c-4ad^4+5 =' ,
+Rat2form(AddQ(SquareQ(a) , MulQ(-2,a,b) , ScaleQ(c,3) , MulQ(-4,a,PowQ(d,4)) ,5))
 say
 say 'PERFECT NUMBERS'
 numeric digits 20
@@ -46,13 +41,13 @@ do c=6 to 2**19
    s=1 c; m=Isqrt(c)
    do f=2 to m
       if c//f=0 then
-         s=AddQ(s,AddQ(1 f,f c))
+         s=AddQ(s,1 f,f c)
    end f
-   if EqQ(s,1) then
+   if CompareQ(s,1)=1 then
       say c 'is a perfect number'
 end
 call Timer
 exit
 
--- All procedures ending with 'Q'; Rat2form; Isqrt; Timer
+-- All XxxQ, Rat2form, Timer
 include Math

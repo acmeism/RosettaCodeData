@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 12 Jun 2026
 include Setting
 numeric digits 5
 
@@ -15,7 +15,7 @@ say; say Format(Time('e'),,3) 'seconds'; say
 exit
 
 Task:
-procedure expose prim. flag. fact. Memo.
+procedure expose Prim. Flag. Fact.
 arg x
 say 'Erdos primes <' x':'
 n = 0; fact. = 0
@@ -38,7 +38,7 @@ say; say n 'Erdos primes found'
 return
 
 Stretch:
-procedure expose prim. flag. fact. Memo.
+procedure expose Prim. Flag. Fact.
 arg x
 say x'th Erdos prime:'
 n = 0; fact. = 0

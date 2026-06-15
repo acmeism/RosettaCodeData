@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 12 Jun 2026
 include Setting
 
 say 'EULER-MASCHERONI CONSTANT'
@@ -13,7 +13,7 @@ say 'True value' a '('e 'seconds)'
 exit
 
 Brent:
-procedure expose fact. Memo. work.
+procedure expose fact.
 numeric digits Digits()+2
 -- Brent McMillan
 n = Ceil((Digits()*Ln(10)+Ln(Pi()))*0.25); m = Ceil(2.07*Digits())

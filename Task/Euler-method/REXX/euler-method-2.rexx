@@ -1,4 +1,4 @@
--- 18 Sep 2025
+-- 12 Jun 2026
 include Setting
 
 say "EULER METHOD FOR ODE y'=-0.07(y-20)"
@@ -12,7 +12,7 @@ exit
 
 Task:
 -- Euler method
-procedure expose Memo.
+procedure
 arg x0,xn,dx,y0
 say 'From' x0 'to' xn 'step' dx
 say '  x   Calc y      True y    Abs error Rel error'
@@ -27,7 +27,7 @@ return
 
 Show:
 -- Display a line
-procedure expose Memo.
+procedure
 arg xx,yy
 yt=True(xx)
 say Format(xx,3,0) Format(yy,3,7) Format(yt,3,7),
@@ -42,7 +42,7 @@ return -0.07*(yy-20)
 
 True:
 -- Real solution
-procedure expose Memo.
+procedure
 arg xx
 return 20+(100-20)*Exp(-0.07*xx)
 

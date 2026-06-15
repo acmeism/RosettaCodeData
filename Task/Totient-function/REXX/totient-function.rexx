@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 13 Jun 2026
 include Setting
 
 say 'TOTIENT FUNCTION (PHI)'
@@ -6,15 +6,14 @@ say version
 numeric digits 10; m = 6
 call First25A
 call PrimeCountA m
-say Format(Time('e'),,3) 'seconds'; say
-call Time('r')
+call Timer 'r'
 call First25B m
 call PrimeCountB m
-say Format(Time('e'),,3) 'seconds'
+call Timer 'r'
 exit
 
 First25A:
-procedure
+procedure expose Fact.
 say 'A: using calls to function Totient()'; say
 say ' N Phi(N) Prime?'
 say Copies('-',16)
@@ -29,11 +28,11 @@ do i = 1 to 25
    say Right(i,2) Right(p,6) pr
 end
 say Copies('-',16); say
-say 'Found' Right(n,6) 'PrimeS <' Right(25,8)
+say 'Found' Right(n,6) 'primes <' Right(25,8)
 return
 
 PrimeCountA:
-procedure
+procedure expose Fact. Toti.
 arg x
 n = 0; d = 1
 do i = 1
@@ -42,7 +41,7 @@ do i = 1
       n = n+1
    e = Xpon(i)
    if e > d then do
-      say 'Found' Right(n,6) 'PrimeS <' Right(10**e,8)
+      say 'Found' Right(n,6) 'primes <' Right(10**e,8)
       if e > x-1 then
          leave i
       d = e
@@ -52,9 +51,9 @@ say
 return
 
 First25B:
-procedure expose toti.
+procedure expose Toti.
 arg m
-say 'B: generate and save all TotientS, use the stored values'; say
+say 'B: generate and save all totients, use the stored values'; say
 call TotientS 10**m
 say ' N Phi(N) Prime?'
 say Copies('-',16)
@@ -70,11 +69,11 @@ do i = 1 to 25
 end
 say Copies('-',16)
 say
-say 'Found' Right(n,6) 'PrimeS <' Right(25,8)
+say 'Found' Right(n,6) 'primes <' Right(25,8)
 return
 
 PrimeCountB:
-procedure expose toti.
+procedure expose Toti.
 arg x
 n = 0; d = 1
 do i = 1
@@ -83,7 +82,7 @@ do i = 1
       n = n+1
    e = Xpon(i)
    if e > d then do
-      say 'Found' Right(n,6) 'PrimeS <' Right(10**e,8)
+      say 'Found' Right(n,6) 'primes <' Right(10**e,8)
       if e > x-1 then
          leave i
       d = e
@@ -92,4 +91,5 @@ end
 say
 return
 
+-- Totient, TotientS, Xpon, Timer
 include Math

@@ -1,4 +1,4 @@
--- 23 May 2026
+-- 12 Jun 2026
 include Setting
 arg digs
 if digs = '' then
@@ -30,7 +30,7 @@ call Timer
 exit
 
 Task:
-procedure expose Memo.
+procedure
 arg ff,aa,bb,true
 w=Digits()+2
 do nn = 1 to 20
@@ -42,7 +42,7 @@ say
 return
 
 GaussQuad:
-procedure expose Memo.
+procedure
 -- Gaussion-Legendre quadrature on function f in range a...b taking n points
 arg ff,aa,bb,nn
 -- Legendre polynomials

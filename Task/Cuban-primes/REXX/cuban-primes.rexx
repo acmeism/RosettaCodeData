@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 12 Jun 2026
 include Setting
 numeric digits 20
 
@@ -12,7 +12,7 @@ say Format(Time('e'),,3) 'seconds'
 exit
 
 ShowCubans:
-procedure expose Memo.
+procedure expose Glob.
 arg x,y,z
 if y = ''
    then y = x

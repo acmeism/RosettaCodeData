@@ -1,4 +1,4 @@
--- 23 Aug 2025
+-- 12 Jun 2026
 include Setting
 
 say 'HIGHER-ORDER FUNCTIONS'
@@ -14,7 +14,7 @@ call Calculate 'x**2-3*x+Arcsin(x)-Sinh(x)/x-Pi()+E()',1/3
 exit
 
 Calculate:
-procedure expose Memo.
+procedure
 parse arg ff,xx
 say ff 'for x='xx 'makes' Eval(ff,xx)+0
 return

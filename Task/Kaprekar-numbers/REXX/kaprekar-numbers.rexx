@@ -1,4 +1,4 @@
--- 21 Feb 2026
+-- 12 Jun 2026
 include Setting
 numeric digits 30
 
@@ -58,7 +58,7 @@ return
 Generator:
 -- Generate Kaprekar numbers up to threshold*10
 -- Cf paper 'The Kaprekar numbers' Iannuci 2000
-procedure expose Divi. Kapr. Memo. Udiv.
+procedure expose Divi. Kapr. Udiv.
 arg xx
 say 'Generate up to 10x'xx'...'
 xx*=10
@@ -79,7 +79,7 @@ return 0
 
 UnitDivs:
 -- Unitary divisors of an integer
-procedure expose Divi. Memo. Udiv.
+procedure expose Divi. Udiv.
 arg xx
 -- Fast
 Udiv.=1

@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 13 Jun 2026
 include Setting
 
 say 'VERIFY DISTRIBUTION UNIFORMITY / CHI-SQUARED TEST'
@@ -12,7 +12,7 @@ call Timer
 exit
 
 Check:
-procedure expose stat. Memo.
+procedure expose stat.
 arg xx
 -- Dataset
 stat. = 0

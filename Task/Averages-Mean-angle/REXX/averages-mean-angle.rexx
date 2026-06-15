@@ -1,4 +1,4 @@
--- 21 Feb 2026
+-- 13 Jun 2026
 include Setting
 
 say 'MEAN ANGLE'
@@ -19,14 +19,14 @@ call Task '135;305'
 exit
 
 Task:
-procedure expose Memo.
+procedure
 arg xx
 say 'Mean angle of list {'xx'} =' DegL(CmeanL(RadL(xx)))/1
 return
 
 CmeanL:
 -- Returns circular mean of a list
-procedure expose Memo.
+procedure
 arg xx
 ss=0; sc=0
 do while xx<>''

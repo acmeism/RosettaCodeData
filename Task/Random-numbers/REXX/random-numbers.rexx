@@ -1,4 +1,4 @@
--- 25 Apr 2026
+-- 13 Jun 2026
 include Setting
 
 say 'RANDOM NUMBERS'
@@ -19,7 +19,7 @@ call Timer
 exit
 
 GetUniform:
-procedure expose Memo. Work.
+procedure expose Glob. Work.
 arg xx
 say 'Get' xx 'uniform distributed random numbers...'
 Work. = 0
@@ -32,7 +32,7 @@ say
 return
 
 GetNormal:
-procedure expose Memo. Work.
+procedure expose Glob. Work.
 arg xx
 say 'Get' xx 'normal(1,1/2) distributed random numbers...'
 Work. = 0
@@ -54,7 +54,7 @@ say; say
 return
 
 ShowStats:
-procedure expose Memo. Work.
+procedure expose Work.
 say 'Statistics for' Work.0 'items...'
 parse value StatsSt('Work.') with mean dev vari
 say 'Average  ' mean
@@ -64,7 +64,7 @@ say
 return
 
 ShowExact:
-procedure expose Memo.
+procedure
 say 'Exact statistics for infinite items...'
 say 'Average  ' 1/2 '(1/2)'
 say 'Deviation' Std(SqRt(1/12)) '(SqRt(1/12))'

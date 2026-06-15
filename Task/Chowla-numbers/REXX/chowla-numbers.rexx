@@ -1,4 +1,4 @@
--- 21 Feb 2026
+-- 12 Jun 2026
 include Setting
 numeric digits 12
 
@@ -14,7 +14,7 @@ call Timer 'R'
 exit
 
 ChowlaNumbers:
-procedure expose Memo.
+procedure
 call Time('r'); sep = Copies('-',12)
 say sep; say ' n Chowla(n)'; say sep
 m = 37
@@ -25,7 +25,7 @@ say sep
 return
 
 PrimeCount:
-procedure expose Memo. work.
+procedure
 sep = Copies('-',17)
 say sep; say Right('n',8) Right('Primes<n',8); say sep
 d = 1; work. = 1; m = 1e7; n = 0
@@ -51,7 +51,7 @@ say sep
 return
 
 PerfectNumbers:
-procedure expose Divi. Memo.
+procedure expose Divi.
 sep = Copies('-',12)
 say sep; say Right('Perfect',12); say sep
 k = 2; kk = 3; m = 140e9; n = 0

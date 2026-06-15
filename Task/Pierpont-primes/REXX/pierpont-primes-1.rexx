@@ -1,4 +1,4 @@
--- 21 Feb 2026
+-- 13 Jun 2026
 include Setting
 numeric digits 40
 
@@ -14,7 +14,7 @@ call Timer
 exit
 
 GetPierpont:
-procedure expose firs. Memo. seco.
+procedure expose firs. seco. glob.
 say 'Get Pierpont primes...'
 n1 = 0; firs. = 0; n2 = 0; seco. = 0
 p = 0; m = 1e40

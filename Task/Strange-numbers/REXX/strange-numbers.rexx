@@ -1,4 +1,4 @@
--- 24 Aug 2025
+-- 13 Jun 2026
 include Setting
 numeric digits 20
 
@@ -8,7 +8,7 @@ say version
 say
 call Task
 call Stretch
-say Format(Time('e'),,3) 'seconds'; say
+call Timer
 exit
 
 Task:
@@ -40,28 +40,29 @@ end
 return 1
 
 Stretch:
-procedure expose digs. work1. work2.
+procedure expose digs. Wrk1. Wrk2.
 say 'Strange numbers beginning with 1...'
 digs.0 = 2 3 5 7; digs.1 = 3 4 6 8; digs.2 = 0 4 5 7 9; digs.3 = 0 1 5 6 8; digs.4 = 1 2 6 7 9
 digs.5 = 0 2 3 7 8; digs.6 = 1 3 4 8 9; digs.7 = 0 2 4 5 9; digs.8 = 1 3 5 6; digs.9 = 2 4 6 7
 do d =  2 to 12
-   work1.0 = 1; work1.1 = 1; n = 1
+   Wrk1.0 = 1; Wrk1.1 = 1; n = 1
    do i = 2 to d
-      work2.0 = 0
-      do j = 1 to work1.0
-         a = work1.j
+      Wrk2.0 = 0
+      do j = 1 to Wrk1.0
+         a = Wrk1.j
          do k = 1 to Words(digs.a)
-            b = Word(digs.a,k); work2.0 = work2.0 + 1; c = work2.0; work2.c = b
+            b = Word(digs.a,k); Wrk2.0 = Wrk2.0 + 1; c = Wrk2.0; Wrk2.c = b
          end
       end
-      do j = 1 to work2.0
-         work1.j = work2.j
+      do j = 1 to Wrk2.0
+         Wrk1.j = Wrk2.j
       end
-      work1.0 = work2.0; n = work1.0
+      Wrk1.0 = Wrk2.0; n = Wrk1.0
    end
    say n 'found with' d 'digits'
 end
 say
 return
 
+-- Timer
 include Math

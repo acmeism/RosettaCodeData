@@ -1,7 +1,7 @@
 const std = @import("std");
-var stdout = std.fs.File.stdout().writer(&.{});
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
+    var stdout = std.Io.File.stdout().writer(init.io, &.{});
     const list1 = [_]u32{1, 2, 3, 4, 5, 6, 7, 8, 9};
     const list2 = [_]u32{10, 11, 12, 13, 14, 15, 16, 17, 18};
     const list3 = [_]u32{19, 20, 21, 22, 23, 24, 25, 26, 27};

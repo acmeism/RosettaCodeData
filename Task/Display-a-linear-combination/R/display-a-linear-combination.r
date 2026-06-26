@@ -1,27 +1,25 @@
 library(stringr)
 
-basisify <- function(v){
-  terms <- character(0)
-  for(i in seq_along(v)){
-    if(v[i]!=0){
-      terms <- c(terms, str_glue("{v[i]}*e({i})"))
-    }
-  }
-  if(length(terms)==0) return("0")
-  terms <- str_replace_all(terms, fixed("1*"), "")
-  series <- str_flatten(terms, collapse=" + ")
-  str_replace_all(series, fixed("+ -"), "- ")
+basisify <- function(v) {
+  out <- ifelse(v == 0, "", str_glue("{v}*e({seq_along(v)})")) |>
+    Filter(function(s) str_length(s) > 0, x = _)
+  if(length(out) == 0) return("0")
+  str_replace_all(out, fixed("1*"), "") |>
+    str_flatten(collapse = " + ") |>
+    str_replace_all(fixed("+ -"), "- ")
 }
 
-test_vectors <- list(c(1, 2, 3),
-                     c(0, 1, 2, 3),
-                     c(1, 0, 3, 4),
-                     c(1, 2, 0),
-                     c(0, 0, 0),
-                     0,
-                     c(1, 1, 1),
-                     c(-1, -1, -1),
-                     c(-1, -2, 0, -3),
-                     -1)
+test_vectors <- list(
+  c(1, 2, 3),
+  c(0, 1, 2, 3),
+  c(1, 0, 3, 4),
+  c(1, 2, 0),
+  c(0, 0, 0),
+  0,
+  c(1, 1, 1),
+  c(-1, -1, -1),
+  c(-1, -2, 0, -3),
+  -1
+)
 
 writeLines(sapply(test_vectors, basisify))

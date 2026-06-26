@@ -4,7 +4,7 @@ sub extension (Str $path --> Str) {
 
 # Testing:
 
-printf "%-35s %-11s %-12s\n", $_, extension($_).perl, $_.IO.extension.perl
+printf "%-35s %-11s %-12s\n", $_, .&extension.raku, .IO.extension.raku
 for <
     http://example.com/download.tar.gz
     CharacterModel.3DS

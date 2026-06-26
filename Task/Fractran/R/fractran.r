@@ -1,22 +1,22 @@
 library(gmp)
-library(stringr)
 
-fractran <- function(s, n, lim){
-  P <- str_split_1(s, " ") |> str_split("/")
-  read_frac <- function(index) as.bigq(n=P[[index]][1], d=P[[index]][2])
-  fracs <- sapply(seq_along(P), read_frac)
-  first_integer <- function(bigv, n){
-    for(q in bigv){
-      if(denominator(n*q)==1) return(q)
-    }
-    return(NA)
+first_integer <- function(bigv, n) {
+  for (q in bigv) {
+    if (denominator(n*q) == 1) return(q)
   }
+}
+
+fractran <- function(s, n, lim) {
+  fracs <- strsplit(s, " ") |>
+    unlist() |>
+    strsplit("/") |>
+    sapply(function(v) as.bigq(n = v[1], d = v[2]))
   iters <- 0
-  while(!is.na(first_integer(fracs, n))){
+  while (!is.null(first_integer(fracs, n))) {
     n <- n*first_integer(fracs, n)
-    print(n, initLine=FALSE)
+    cat(sprintf("%s ", n))
     iters <- iters+1
-    if(iters>=lim) break
+    if (iters >= lim) break
   }
 }
 

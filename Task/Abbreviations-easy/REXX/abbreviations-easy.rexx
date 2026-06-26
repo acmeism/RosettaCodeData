@@ -33,10 +33,3 @@ validate: Procedure Expose keyws
      res=res '*error*'          /* no match found. indicate error                   */
      End
    Return strip(res)            /* get rid of leading böank                         */
-syntaxhighlight>
-{{out|output|text=&nbsp; when using the default input:}}
-<pre>
-user words:  riG   rePEAT copies  put mo   rest    types   fup.    6       poweRin
-full words:  RIGHT REPEAT *error* PUT MOVE RESTORE *error* *error* *error* POWERINPUT
-</pre>
-

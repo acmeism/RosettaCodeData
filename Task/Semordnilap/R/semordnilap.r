@@ -1,16 +1,10 @@
 library(stringi)
 
-unixdict <- read.table("unixdict.txt", col.names = "forwards")
-unixdict$backwards <- stri_reverse(unixdict$forwards)
-
-#Remove all actual palindromes, as we do not want those
-unixdict <- subset(unixdict, forwards != backwards)
-
-unixdict$semordnilap <- with(unixdict, sapply(forwards, function(x) x %in% backwards))
-
-semordnilaps <- subset(unixdict,
-                       semordnilap & forwards > backwards,
-                       select = -semordnilap)
+semordnilaps <- read.table("unixdict.txt", col.names = "forwards") |>
+  transform(backwards = stri_reverse(forwards)) |>
+  subset(forwards != backwards) |> #Remove all palindromes
+  transform(semordnilap = sapply(forwards, function(x) x %in% backwards)) |>
+  subset(semordnilap & forwards > backwards, select = -semordnilap)
 
 nsemordnilaps <- nrow(semordnilaps)
 cat("There are", nsemordnilaps, "semordnilaps in unixdict.txt.\n")

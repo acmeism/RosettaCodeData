@@ -151,7 +151,10 @@ var printBoard = Fn.new {
 
 var getIntInRange = Fn.new { |prompt, lo, hi|
     var i = Input.integer(prompt, lo, hi)
-    if (i == "0") Fiber.abort("You have quit!")
+    if (i == "0") {
+        System.print("You have quit!")
+        Fiber.suspend()
+    }
     return i
 }
 
@@ -195,7 +198,10 @@ var capturePiece = Fn.new { |enemy|
     // true if all enemy pieces are in mills.
     while (true) {
         posic = Input.integer("Choose enemy piece to capture (1-24): ", 1, 24)
-        if (posic == "0") Fiber.abort("You have quit!")
+        if (posic == "0") {
+            System.print("You have quit!")
+            Fiber.suspend()
+        }
         if (board[posic] != enemy) continue
         if (!allowMill && isMill.call(posic, enemy)) {
             System.print("You can't capture a piece in a mill while others are available.")

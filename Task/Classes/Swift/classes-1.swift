@@ -1,18 +1,18 @@
-class MyClass{
+class MyClass {
 
   // stored property
-  var variable : Int
+  var variable: Int
 
   /**
-  * The constructor
-  */
+   * The constructor
+   */
   init() {
     self.variable = 42
   }
 
   /**
-  * A method
-  */
+   * A method
+   */
   func someMethod() {
     self.variable = 1
   }

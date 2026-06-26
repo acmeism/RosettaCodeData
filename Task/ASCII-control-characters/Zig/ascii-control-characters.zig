@@ -37,8 +37,9 @@ const Ctrl = enum(u8) {
     del = 127,
 };
 
-pub fn main() !void {
-    const stdout = std.io.getStdOut().writer();
-    try stdout.print("{s} {d}\n", .{@tagName(Ctrl.em), @intFromEnum(Ctrl.em)});
-    try stdout.print("{s} {d}\n", .{@tagName(Ctrl.del), @intFromEnum(Ctrl.del)});
+pub fn main(init: std.process.Init) !void {
+    var stdout = std.Io.File.stdout().writer(init.io, &.{});
+
+    try stdout.interface.print("{t} {d}\n", .{Ctrl.em, @intFromEnum(Ctrl.em)});
+    try stdout.interface.print("{t} {d}\n", .{Ctrl.del, @intFromEnum(Ctrl.del)});
 }

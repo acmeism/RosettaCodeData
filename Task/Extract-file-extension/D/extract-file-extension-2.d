@@ -10,7 +10,7 @@ void main()
                     ".desktop",
                     "document",
                     "document.txt_backup",
-                    "/etc/pam.d/login"]
+                    "/etc/pam.d/login"];
 
   foreach(filename; filenames)
   {
@@ -19,11 +19,8 @@ void main()
     if(idx >= 0)
     {
       auto tmp = filename.drop(idx);
-      if(!tmp.canFind("/", "\\", "_", "*");
-        ext = tmp;
+      if(!tmp.canFind("/", "\\", "_", "*")) ext = tmp;
     }
     writeln(filename, " -> ", ext);
   }
-
 }
-

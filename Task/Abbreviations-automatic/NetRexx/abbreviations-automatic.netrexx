@@ -1,0 +1,102 @@
+/* NetRexx */
+options replace java comments format utf8
+
+-- . ... 1 ... ... 2 ... ... 3 ... ... 4 ... ... 5
+  name_s = 'data/daynames.txt'
+  name_q =  stream(name_s, 'C', 'QUERY EXISTS')
+  if name_q = '' then do
+    say 'unable to confirm file stream '''name_s''' exists'
+    return
+  end
+
+  line = streamReader(name_s) -- move data into a stem
+
+  loop r_ = 1 to line[0]
+    inspectWeek(r_, line[r_]) -- process day names
+  end r_
+
+  parse 'abbrev_len' abbrev_len
+
+  hl = '\U2500' -- U+2500, Box Drawings Light Horizontal
+  vl = '\U2502' -- U+2502, Box Drawings Light Vertical
+  dr = '\U250C' -- U+250C, Box Drawings Light Down and Right
+  ur = '\U2514' -- U+2514, Box Drawings Light Up and Right
+  vr = '\U251C' -- U+251C, Box Drawings Light Vertical and Right
+  dh = '\U252C' -- U+252C, Box Drawings Light Down and Horizontal
+  uh = '\U2534' -- U+2534, Box Drawings Light Up and Horizonta
+  vh = '\U253C' -- U+253C, Box Drawings Light Vertical and Horizontal
+
+  say dr || hl.copies(6) || dh || hl.copies(80)
+  say vl || ' abbr' vl ' days'
+  say vr || hl.copies(6) || vh || hl.copies(80)
+  loop ln = 1 to line[0]
+    say vl || line[ln, abbrev_len].right(5) vl line[ln]
+  end ln
+  say ur || hl.copies(6) || uh || hl.copies(80)
+
+  return
+
+-- . ... 1 ... ... 2 ... ... 3 ... ... 4 ... ... 5
+method streamReader(name_s) private static returns Rexx
+
+  line = Rexx '' -- day names stem
+  rjkt = Rexx 0  -- rejected records stem
+  ix_ = 0
+  rct_ = 0
+  line[0] = rct_
+  loop label s_ str = 1 while lines(name_s)
+    l_in = linein(name_s)  -- read a line from stream
+    if l_in \= '' then do
+      line[0]    = line[0] + 1 -- bump line count
+      rct_       = line[0]
+      line[rct_] = l_in        -- stow line
+      line[rct_, 0] = l_in.words       -- stow day names in substem
+      loop w_ = 1 to l_in.words
+        line[rct_, w_] = l_in.word(w_) -- break line down into days
+      end w_
+    end
+    else do -- rejected lines
+      ix_       = ix_ + 1
+      rjkt[0]   = ix_
+      rjkt[ix_] = str
+    end
+  end s_
+
+  say
+  say 'records read:' (str - 1).right(2)', records processed:' line[0].right(2)
+  say 'null records:' rjkt[0].right(2)
+  loop ix_ = 1 to rjkt[0]
+    say '  record nr.:' rjkt[ix_].right(2)
+  end ix_
+  say
+
+  return line
+
+-- . ... 1 ... ... 2 ... ... 3 ... ... 4 ... ... 5
+method inspectWeek(rnr = Rexx, record = Rexx) private static
+
+  parse 'abbrev_len' abbrev_len
+
+  day_sz = 0
+  loop d_ = 1 to record[0]
+    day_sz = day_sz.max(record[d_].length)
+  end d_
+
+  loop abr_sz = 1 to day_sz
+    abbrevlist = ''
+    loop dn = 1 to record[0]
+      abbrev = (record[dn].left(abr_sz)).strip
+      if abbrevlist.wordpos(abbrev) > 0 then
+        iterate abr_sz -- not unique, try a longer abbreviation
+      if abbrev.length >= abr_sz then
+        abbrevlist = abbrevlist abbrev  -- thus far it's a good abbrev
+    end dn
+    leave abr_sz
+  end abr_sz
+
+  if abr_sz > day_sz then
+    abr_sz = -1
+
+  record[abbrev_len] = abr_sz
+
+  return

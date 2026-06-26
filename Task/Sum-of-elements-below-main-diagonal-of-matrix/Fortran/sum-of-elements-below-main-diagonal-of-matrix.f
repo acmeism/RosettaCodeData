@@ -24,4 +24,3 @@ program sum_below_diagonal
     print *, "The sum of elements below the main diagonal is: ", total_sum
 
 end program sum_below_diagonal
-.

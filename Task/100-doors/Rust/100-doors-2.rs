@@ -3,7 +3,7 @@ fn main() {
         .iter_mut()
         .enumerate()
         .map(|(door, door_state)| {
-            (1..100)
+            (1..101)
                 .into_iter()
                 .filter(|pass| (door + 1) % pass == 0)
                 .map(|_| {

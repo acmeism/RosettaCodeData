@@ -1,13 +1,13 @@
 struct PCG32 {
-    multiplier: u64,
     state: u64,
     inc: u64,
 }
 
 impl PCG32 {
+    const MULTIPLIER: u64 = 6364136223846793005;
+
     fn new() -> Self {
         PCG32 {
-            multiplier: 6364136223846793005,
             state: 0x853c49e6748fea9b,
             inc: 0xda3e39cb94b95bdb,
         }
@@ -15,22 +15,30 @@ impl PCG32 {
 
     fn next_int(&mut self) -> u32 {
         let old = self.state;
-        self.state = old.wrapping_mul(self.multiplier).wrapping_add(self.inc);
+        self.step();
+
         let xorshifted = (((old >> 18) ^ old) >> 27) as u32;
         let rot = (old >> 59) as u32;
-        (xorshifted >> rot) | (xorshifted << ((!rot).wrapping_add(1) & 31))
+
+        xorshifted.rotate_right(rot)
     }
 
     fn next_float(&mut self) -> f64 {
         (self.next_int() as f64) / ((1u64 << 32) as f64)
     }
 
+    fn step(&mut self) {
+        self.state = self
+            .state
+            .wrapping_mul(Self::MULTIPLIER)
+            .wrapping_add(self.inc);
+    }
+
     fn seed(&mut self, seed_state: u64, seed_sequence: u64) {
-        self.state = 0;
-        self.inc = (seed_sequence << 1) | 1;
-        self.next_int();
-        self.state = self.state.wrapping_add(seed_state);
-        self.next_int();
+        self.inc = seed_sequence.wrapping_shl(1) | 1;
+        self.state = seed_state.wrapping_add(self.inc);
+
+        self.step();
     }
 }
 

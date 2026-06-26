@@ -1,4 +1,11 @@
-Red [ "Real Currying in Red - Hinjolicious" ]
+Red [
+	title: "Real Currying in Red"
+	author: "hinjolicious"
+	note: {
+		June 18, 2026 - Added "^" as the postfix to the name "curry" to indicate it's
+		a special "higher-order" function.
+	}
+]
 
 ; helper func
 get-args: function [f][
@@ -9,7 +16,7 @@ get-args: function [f][
 ]
 
 ; currying
-curry: function [f v][
+curry^: function [f v][
 	f?: function? :f ; a func?
 	ff: either f? [:f][get f] ; get func directly or by its name
 	
@@ -43,7 +50,7 @@ curry: function [f v][
 	either empty? ca [f][:f] ; return function or result
 ]
 
-->: make op! :curry ; curry operator
+->: make op! :curry^ ; curry operator (shortcut)
 
 ; This function will print a string as a heading and print any codes
 ; to the screen before executing it.
@@ -51,7 +58,7 @@ demo: function [s b] [print ["^/==" s "==^/^/" mold/only b "^/>>"] do b]
 
 demo "Real Currying in Red" [
 
-sum: func [a b c][a + b + c] ;
+sum: func [a b c][a + b + c]
 ]
 
 demo "Curry one arg from 'sum', return func with two args (s1)" [

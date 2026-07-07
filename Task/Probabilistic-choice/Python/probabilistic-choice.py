@@ -1,4 +1,6 @@
-import random, bisect
+from random import random, choice
+from bisect import bisect
+from collections import defaultdict
 
 def probchoice(items, probs):
   '''\
@@ -13,10 +15,10 @@ def probchoice(items, probs):
     accumulator.append(prob_accumulator)
 
   while True:
-    r = random.random()
-    yield items[bisect.bisect(accumulator, r)]
+    r = random()
+    yield items[bisect(accumulator, r)]
 
-def probchoice2(items, probs, bincount=10000):
+def probchoice2(items, probs, bincount = 10000):
   '''\
   Puts items in bins in proportion to probs
   then uses random.choice() to select items.
@@ -26,39 +28,41 @@ def probchoice2(items, probs, bincount=10000):
   '''
 
   bins = []
-  for item,prob in zip(items, probs):
-    bins += [item]*int(bincount*prob)
+  for item, prob in zip(items, probs):
+    bins += [item] * int(bincount * prob)
   while True:
-    yield random.choice(bins)
+    yield choice(bins)
 
 
-def tester(func=probchoice, items='good bad ugly'.split(),
-                    probs=[0.5, 0.3, 0.2],
-                    trials = 100000
-                    ):
+def tester(
+    func = probchoice,
+    items = 'good bad ugly'.split(),
+    probs = [0.5, 0.3, 0.2],
+    trials = 100000
+):
   def problist2string(probs):
     '''\
     Turns a list of probabilities into a string
     Also rounds FP values
     '''
-    return ",".join('%8.6f' % (p,) for p in probs)
-
-  from collections import defaultdict
+    return ", ".join('%8.6f' % (p,) for p in probs)
 
   counter = defaultdict(int)
   it = func(items, probs)
-  for dummy in xrange(trials):
-    counter[it.next()] += 1
-  print "\n##\n## %s\n##" % func.func_name.upper()
-  print "Trials:              ", trials
-  print "Items:               ", ' '.join(items)
-  print "Target probability:  ", problist2string(probs)
-  print "Attained probability:", problist2string(
-    counter[x]/float(trials) for x in items)
+  for _ in range(trials):
+    counter[next(it)] += 1
+  print("\n##\n## %s\n##" % func.__name__.upper())
+  print("Trials:              ", trials)
+  print("Items:               ", ' '.join(items))
+  print("Target probabilities:  ", problist2string(probs))
+  print(
+    "Attained probabilities:",
+    problist2string(counter[x] / trials for x in items)
+  )
 
 if __name__ == '__main__':
   items = 'aleph beth gimel daleth he waw zayin heth'.split()
-  probs = [1/(float(n)+5) for n in range(len(items))]
+  probs = [1 / (n+5) for n in range(len(items))]
   probs[-1] = 1-sum(probs[:-1])
   tester(probchoice, items, probs, 1000000)
   tester(probchoice2, items, probs, 1000000)

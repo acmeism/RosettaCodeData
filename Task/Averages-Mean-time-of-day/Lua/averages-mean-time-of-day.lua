@@ -13,7 +13,7 @@ local function meanAngle(angles)
 		sumSin = sumSin + math.sin(v)
 		sumCos = sumCos + math.cos(v)
 	end
-	return math.atan2(sumSin,sumCos)
+	return math.atan(sumSin,sumCos)
 end
 
 -- converts and angle back to a time string

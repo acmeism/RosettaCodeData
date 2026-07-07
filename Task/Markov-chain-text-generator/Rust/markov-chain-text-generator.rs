@@ -4,7 +4,7 @@ use std::fs;
 use std::collections::HashMap;
 
 extern crate rand;
-use rand::{seq::index::sample, thread_rng};
+use rand::{seq::index::sample, rng};
 
 fn read_data(filename: &str) -> String {
     fs::read_to_string(filename).expect("Something went wrong reading the file")
@@ -75,6 +75,6 @@ fn make_string(rule: &HashMap<String, Vec<String>>, length: usize) -> String {
 }
 
 fn get_random_index(max: usize) -> usize {
-    let mut rng = thread_rng();
+    let mut rng = rng();
     sample(&mut rng, max, 1).into_vec()[0]
 }

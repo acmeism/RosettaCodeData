@@ -4,7 +4,7 @@ defmodule Align do
                   |> Enum.map(fn row -> String.split(row, "$", trim: true) end)
     maxfields = Enum.map(fieldsbyrow, fn field -> length(field) end) |> Enum.max
     colwidths = Enum.map(fieldsbyrow, fn field -> field ++ List.duplicate("", maxfields - length(field)) end)
-                |> List.zip
+                |> Enum.zip
                 |> Enum.map(fn column ->
                      Tuple.to_list(column) |> Enum.map(fn col-> String.length(col) end) |> Enum.max
                    end)

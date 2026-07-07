@@ -1,3 +1,4 @@
+call testMedian .array~of(9, 8, 7, 6, 5, 4, 3, 2, 1)
 call testMedian .array~of(10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
 call testMedian .array~of(10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 0, 0, .11)
 call testMedian .array~of(10, 20, 30, 40, 50, -100, 4.7, -11e2)
@@ -21,8 +22,13 @@ call testMedian .array~new
   -- sort and return the middle element
   numbers~sortWith(.numbercomparator~new)
   size = numbers~items
+  say 'size='size
+  if size//2=0 Then
+    med=(numbers[size/2]+numbers[size/2+1])/2
+  else
+    med=numbers[size%2+1]
   -- this handles the odd value too
-  return numbers[size%2 + size//2]
+  return med
 
 
 -- a custom comparator that sorts strings as numeric values rather than

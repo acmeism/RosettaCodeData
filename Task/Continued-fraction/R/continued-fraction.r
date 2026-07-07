@@ -1,26 +1,22 @@
 #Only print to 17 digits due to floating-point imprecision
-options(digits=17)
+options(digits = 17)
 
-a_sqrt2 <- function(n) ifelse(n==1, 1, 2)
-b_sqrt2 <- function(n) return(1)
+ab_sqrt2 <- function(n) c(ifelse(n == 1, 1, 2), 1)
+ab_e <- function(n) c(ifelse(n == 1, 2, n-1), ifelse(n == 1, 1, n-1))
+ab_pi <- function(n) c(ifelse(n == 1, 3, 6), (2*n - 1)^2)
 
-a_e <- function(n) ifelse(n==1, 2, n-1)
-b_e <- function(n) ifelse(n==1, 1, n-1)
-
-a_pi <- function(n) ifelse(n==1, 3, 6)
-b_pi <- function(n) (2*n-1)^2
-
-continued_fraction <- function(a, b, n){
-  frac <- function(x, d) a(x)+b(x)/d
-  Reduce(frac, 1:n, 1, right=TRUE)
+continued_fraction <- function(f) function(n) {
+  frac <- function(x, d) sum(f(x) / c(1, d))
+  Reduce(frac, seq_len(n), 1, right = TRUE)
 }
 
-sqrt(2)
-continued_fraction(a_sqrt2, b_sqrt2, 100)
-
-exp(1)
-continued_fraction(a_e, b_e, 100)
-
-pi
-sapply(cumprod(c(100, rep(10,3))),
-       function(n) continued_fraction(a_pi, b_pi, n))
+cat(
+  "Square root of 2:", sqrt(2),
+  "Estimate (n = 100):", continued_fraction(ab_sqrt2)(100),
+  "\ne:", exp(1),
+  "Estimate (n = 100):", continued_fraction(ab_e)(100),
+  "\nPi:", pi,
+  "Estimates (n = 100 to 100,000):",
+  sapply(cumprod(c(100, rep(10, 3))), continued_fraction(ab_pi)),
+  sep = "\n"
+)

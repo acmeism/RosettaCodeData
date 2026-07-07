@@ -1,10 +1,9 @@
 library(gmp)
 
-is_wieferich <- function(p){
-  p_big <- as.bigz(p)
-  (2^(p_big-1)-1)%%(p_big^2)==0
+conjunct <- function(f, g) function(x) f(x) & g(x)
+
+wieferich <- function(p) {
+  as.bigz(p) |> (function(x) (2^(x-1) - 1) %% (x^2) == 0)()
 }
 
-primes <- which(isprime(1:5000)!=0)
-
-primes[is_wieferich(primes)]
+cat(Filter(conjunct(isprime, wieferich), 1:5000))

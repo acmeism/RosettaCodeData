@@ -1,5 +1,4 @@
--- 15 May 2026
-Main:
+-- 26 Jun 2026
 include Setting
 numeric digits 1000
 
@@ -24,7 +23,7 @@ call Timer 'r'
 exit
 
 Uf:
-procedure expose Ufac. Memo.
+procedure expose Ufac. Glob.
 arg n
 nn=Ufactors(n)
 if nn>1 then do

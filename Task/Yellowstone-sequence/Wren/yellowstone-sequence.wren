@@ -23,8 +23,6 @@ var yellowstone = Fn.new { |n|
     return a[1..-1]
 }
 
-var x = List.filled(30, 0)
-for (i in 0...30) x[i] = i + 1
 var y = yellowstone.call(30)
 System.print("The first 30 Yellowstone numbers are:")
 System.print(y)

@@ -1,5 +1,7 @@
 # v0.6
 
+using LinearAlgebra
+
 function pascal(n::Int)
     r = ones(Int, n, n)
     for i in 2:n, j in 2:n

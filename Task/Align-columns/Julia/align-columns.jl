@@ -26,7 +26,7 @@ for line in parts
     max_widths[i] = max(max_widths[i], length(word))
   end
 end
-max_widths += 1 # separate cols by at least one space
+max_widths .+= 1 # separate cols by at least one space
 
 for (label, justify) in (("Left", ljust), ("Right",rjust), ("Center",center))
   println(label, " column-aligned output:")

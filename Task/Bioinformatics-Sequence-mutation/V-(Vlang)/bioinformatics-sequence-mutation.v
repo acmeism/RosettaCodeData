@@ -22,7 +22,7 @@ fn mutate(dna string, w [3]int) string {
 			println("  Delete @${p:3} ${bytes[p]}")
 			bytes.delete(p)
 			//copy(bytes[p:], bytes[p+1:])
-			bytes = bytes[0..le-1]
+			bytes = bytes[0..le-1].clone()
 		}
 		else { // insert
 			base := bases[rand.intn(4) or {0}]

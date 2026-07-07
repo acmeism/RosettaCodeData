@@ -28,7 +28,7 @@ function validate(commands::AbstractVector{<:AbstractString},
 end
 
 commands = split(strip(table))
-minlens  = count.(isupper, commands)
+minlens  = count.(isuppercase, commands)
 sentence = "riG   rePEAT copies  put mo   rest    types   fup.    6       poweRin"
 words    = split(sentence)
 result   = validate(commands, minlens, words)

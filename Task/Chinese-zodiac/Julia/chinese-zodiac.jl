@@ -1,3 +1,5 @@
+using Dates
+
 function chinese(year::Int)
     pinyin = Dict(
         "甲" => "jiă",
@@ -53,6 +55,6 @@ function chinese(year::Int)
     return "$year: $stemhan$branchhan ($stempinyin-$branchpinyin, $element $animal; $aspect - year $index of the cycle)"
 end
 
-curryr = Dates.year(now())
-yrs = [1935, 1938, 1968, 1972, 1976, curryr]
-foreach(println, map(chinese, yrs))
+const CURRENT_YEAR = Dates.year(now())
+const YEARS = [1935, 1938, 1968, 1972, 1976, CURRENT_YEAR]
+foreach(println, map(chinese, YEARS))

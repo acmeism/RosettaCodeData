@@ -18,7 +18,7 @@ fn entropy(hist map[string]int, l int) f64 {
         c := f64(v) / f64(l)
         elist << -c * math.log2(c)
     }
-    return arrays.sum<f64>(elist) or {-1}
+    return arrays.sum[f64](elist) or { -1.0 }
 }
 
 fn main(){

@@ -2,12 +2,13 @@ extern crate rand;
 
 use std::io::{stdin, stdout, Write};
 use std::thread;
+use rand::RngExt;
 use std::time::Duration;
 
 use rand::Rng;
 
 fn toss_coin<R: Rng>(rng: &mut R, print: bool) -> char {
-    let c = if rng.gen() { 'H' } else { 'T' };
+    let c = if rng.random::<bool>() { 'H' } else { 'T' };
     if print {
         print!("{}", c);
         stdout().flush().expect("Could not flush stdout");
@@ -55,13 +56,13 @@ fn read_sequence(used_seq: Option<&str>) -> String {
 }
 
 fn main() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     println!("--Penney's game--");
     loop {
         let useq: String;
         let aiseq: String;
-        if rng.gen::<bool>() {
+        if rng.random::<bool>() {
             println!("You choose first!");
             useq = read_sequence(None);
             println!("Your sequence: {}", useq);
@@ -103,4 +104,3 @@ fn main() {
         }
     }
 }
-

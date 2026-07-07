@@ -1,7 +1,7 @@
-// main.rs
-
-use rand::Rng; // For random number generation
-use std::mem; // For std::mem::swap
+// For random number generation
+use rand::{RngExt, rngs::ThreadRng};
+// For std::mem::swap
+use std::mem;
 
 // Equivalent to the C++ cSort class
 struct CSort {
@@ -72,26 +72,25 @@ impl CSort {
             while p < vlen && self.sq[p] == item {
                 p += 1;
                 // Need to check bounds again if p potentially reached vlen
-                 if p == vlen {
+                if p == vlen {
                     // This case should ideally not happen if logic is correct
                     // but safety first. If it happens, it means all remaining elements
                     // were equal to item, but p should have been found earlier.
                     // Let's break or handle error - for now, just break loop for safety.
-                     eprintln!("Warning: Unexpected condition p == vlen in duplicate check.");
-                     // Re-evaluate if this break is the right recovery.
-                     // It likely implies item should have stayed at c.
-                     // Let's try continuing the outer loop instead.
-                     continue; // Go to next c
-                 }
-
+                    eprintln!("Warning: Unexpected condition p == vlen in duplicate check.");
+                    // Re-evaluate if this break is the right recovery.
+                    // It likely implies item should have stayed at c.
+                    // Let's try continuing the outer loop instead.
+                    continue; // Go to next c
+                }
             }
-             // If after handling duplicates, we end up back at the start,
-             // it means all elements between c and the original p were duplicates.
-             // The element at c is effectively in the right spot relative to non-duplicates.
-             if p == c { // Added check after duplicate handling
-                 continue;
+            // If after handling duplicates, we end up back at the start,
+            // it means all elements between c and the original p were duplicates.
+            // The element at c is effectively in the right spot relative to non-duplicates.
+            if p == c {
+                // Added check after duplicate handling
+                continue;
             }
-
 
             // Perform the swap: place 'item' into its correct position sq[p].
             // 'item' is updated with the value originally at sq[p].
@@ -110,33 +109,29 @@ impl CSort {
                 }
 
                 // Skip duplicates again for the current 'item'
-                 while p < vlen && self.sq[p] == item {
-                     p += 1;
-                     if p == vlen {
-                         eprintln!("Warning: Unexpected condition p == vlen in cycle duplicate check.");
-                         // This likely means the cycle completed unexpectedly due to duplicates.
-                         // The item should probably end up back at 'c' eventually.
-                         // Let's break the inner while loop here, assuming cycle finished.
-                         break; // Break while p != c loop
-                     }
-                 }
-                  // If duplicate handling leads back to c, the cycle is finished for this item.
-                 if p == c { // Check added after duplicate handling in cycle
-                     break; // Break while p != c loop
-                 }
-
+                while p < vlen && self.sq[p] == item {
+                    p += 1;
+                    if p == vlen {
+                        eprintln!(
+                            "Warning: Unexpected condition p == vlen in cycle duplicate check."
+                        );
+                        // This likely means the cycle completed unexpectedly due to duplicates.
+                        // The item should probably end up back at 'c' eventually.
+                        // Let's break the inner while loop here, assuming cycle finished.
+                        break; // Break while p != c loop
+                    }
+                }
 
                 // Perform the swap, updating 'item' again
-                 // Check added to prevent infinite loop if p ended up >= vlen somehow
-                 if p < vlen {
+                // Check added to prevent infinite loop if p ended up >= vlen somehow
+                if p < vlen {
                     mem::swap(&mut item, &mut self.sq[p]);
                     self.wr += 1;
-                 } else {
-                     // Safety break if p went out of bounds, should not happen
-                     eprintln!("Error: p {} out of bounds (len {})", p, vlen);
-                     break; // Break while p != c loop
-                 }
-
+                } else {
+                    // Safety break if p went out of bounds, should not happen
+                    eprintln!("Error: p {} out of bounds (len {})", p, vlen);
+                    break; // Break while p != c loop
+                }
             }
         }
     }
@@ -146,13 +141,13 @@ impl CSort {
 }
 
 fn main() {
-    let mut rng = rand::thread_rng();
+    let mut rng = ThreadRng::default();
     let mut s: Vec<u32> = Vec::new();
 
     // Generate random numbers (equivalent to C++ loop)
     for _ in 0..20 {
         // rand() % 100 + 21 -> range [21, 120] inclusive
-        s.push(rng.gen_range(21..=120));
+        s.push(rng.random_range(21..=120));
     }
 
     // Create a CSort instance and run the sort

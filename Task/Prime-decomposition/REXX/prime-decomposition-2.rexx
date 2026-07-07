@@ -1,4 +1,4 @@
--- 23 May 2026
+-- 6 Jul 2026
 Main:
 include Setting
 
@@ -31,9 +31,9 @@ do 30
    if f=0 then
       say l 'failed'
    else
-      say l Stem2struct('Fact.')
+      say l Stem2vectSt('Fact.')
 end
 exit
 
--- FactorS Stem2struct Elaps
+-- FactorS Elaps Stem2vectSt
 include Math

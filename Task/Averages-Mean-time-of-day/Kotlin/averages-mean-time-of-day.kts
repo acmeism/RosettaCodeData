@@ -1,8 +1,8 @@
 // version 1.0.6
 
 fun meanAngle(angles: DoubleArray): Double {
-    val sinSum = angles.sumByDouble {  Math.sin(it * Math.PI / 180.0) }
-    val cosSum = angles.sumByDouble {  Math.cos(it * Math.PI / 180.0) }
+    val sinSum = angles.sumOf {  Math.sin(it * Math.PI / 180.0) }
+    val cosSum = angles.sumOf {  Math.cos(it * Math.PI / 180.0) }
     return Math.atan2(sinSum / angles.size, cosSum / angles.size) * 180.0 / Math.PI
 }
 

@@ -1,4 +1,4 @@
--- 13 Jun 2026
+-- 26 Jun 2026
 include Setting
 
 say 'MEAN ANGLE'
@@ -21,19 +21,23 @@ exit
 Task:
 procedure
 arg xx
-say 'Mean angle of list {'xx'} =' DegL(CmeanL(RadL(xx)))/1
+say 'Mean angle of list {'xx'} =' Round(DegL(CmeanL(RadL(xx)))/1)
 return
 
 CmeanL:
--- Returns circular mean of a list
+-- Circular mean number list
 procedure
 arg xx
-ss=0; sc=0
+numeric digits Digits()+1
+rs=0; rc=0
 do while xx<>''
-   parse var xx xw';'xx
-   ss+=Sin(xw); sc+=Cos(xw)
+   parse var xx xs';'xx
+   rs+=Sin(xs); rc+=Cos(xs)
 end
-return Arctan2(sc,ss)
+rr=Arctan2(rs,rc)
+if rr<0 then
+   rr+=Twopi()
+return rr
 
--- CmeanL (full); DegL; RadL; Sin; Cos; Arctan2
+-- DegL RadL Sin Cos Arctan2 Twopi
 include Math

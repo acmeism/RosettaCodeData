@@ -3,7 +3,7 @@ using Primes
 ispernicious(n::Integer) = isprime(count_ones(n))
 nextpernicious(n::Integer) = begin n += 1; while !ispernicious(n) n += 1 end; return n end
 function perniciouses(n::Int)
-    rst = Vector{Int}(n)
+    rst = Vector{Int}(undef, n)
     rst[1] = 3
     for i in 2:n
         rst[i] = nextpernicious(rst[i-1])

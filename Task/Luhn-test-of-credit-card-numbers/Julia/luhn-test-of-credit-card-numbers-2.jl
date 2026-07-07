@@ -1,5 +1,5 @@
 function luhntest(x::Integer)
-    d = reverse(digits(x))
+    d = digits(x)
     s = sum(d[1:2:end])
     s += sum(sum.(digits.(2d[2:2:end])))
     return s % 10 == 0

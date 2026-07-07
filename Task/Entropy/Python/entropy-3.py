@@ -1,19 +1,22 @@
-def Entropy(text):
-    import math
-    log2=lambda x:math.log(x)/math.log(2)
-    exr={}
-    infoc=0
+from math import log2
+
+def entropy(text):
+    exr = {}
+    infoc = 0
     for each in text:
         try:
-            exr[each]+=1
+            exr[each] += 1
         except:
-            exr[each]=1
-    textlen=len(text)
-    for k,v in exr.items():
-        freq  =  1.0*v/textlen
-        infoc+=freq*log2(freq)
-    infoc*=-1
+            exr[each] = 1
+    textlen = len(text)
+    for _, v in exr.items():
+        freq  =  v / textlen
+        infoc += freq * log2(freq)
+    infoc *= -1
     return infoc
 
 while True:
-    print Entropy(raw_input('>>>'))
+    text = input("Enter a string (or q to quit): ")
+    if text == "q":
+        break
+    print(entropy(text))

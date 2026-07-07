@@ -1,11 +1,11 @@
 defmodule RC do
   def spiral_matrix(n) do
-    wide = length(to_char_list(n*n-1))
+    wide = length(to_charlist(n*n-1))
     fmt = String.duplicate("~#{wide}w ", n) <> "~n"
     runs = Enum.flat_map(n..1, &[&1,&1]) |> tl
     delta = Stream.cycle([{0,1},{1,0},{0,-1},{-1,0}])
     running(Enum.zip(runs,delta),0,-1,[])
-    |> Enum.with_index |> Enum.sort |>  Enum.chunk(n)
+    |> Enum.with_index |> Enum.sort |>  Enum.chunk_every(n)
     |> Enum.each(fn row -> :io.format fmt, (for {_,i} <- row, do: i) end)
   end
 

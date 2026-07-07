@@ -2,7 +2,7 @@ defmodule RC do
   def spiral_matrix(n) do
     wide = String.length(to_string(n*n-1))
     fmt = String.duplicate("~#{wide}w ", n) <> "~n"
-    right(n,n-1,0,[]) |> Enum.reverse |> Enum.with_index |> Enum.sort |> Enum.chunk(n) |>
+    right(n,n-1,0,[]) |> Enum.reverse |> Enum.with_index |> Enum.sort |> Enum.chunk_every(n) |>
       Enum.each(fn row ->
         :io.format fmt, (for {_,i} <- row, do: i)
       end)

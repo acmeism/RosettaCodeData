@@ -1,5 +1,3 @@
-// version 1.2.10
-
 import java.util.Random
 
 val rand = Random()
@@ -14,7 +12,7 @@ fun getUserSequence(): String {
     var userSeq: String
     do {
         print("Enter your sequence: ")
-        userSeq = readLine()!!.toUpperCase()
+        userSeq = readln().uppercase()
     }
     while (userSeq.length != 3 || userSeq.any { it != 'H' && it != 'T' })
     return userSeq

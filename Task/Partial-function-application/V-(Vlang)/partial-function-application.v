@@ -17,11 +17,7 @@ fn f2(n int) int { return n * n }
 fn main() {
     fsf1 := PartialFs{f: f1, fs: fs}
     fsf2 := PartialFs{f: f2, fs: fs}
-
-    seqs := [
-        [0, 1, 2, 3],
-        [2, 4, 6, 8],
-    ]
+    seqs := [[0, 1, 2, 3], [2, 4, 6, 8]]
 
     for seq in seqs {
         println(fs(f1, seq))

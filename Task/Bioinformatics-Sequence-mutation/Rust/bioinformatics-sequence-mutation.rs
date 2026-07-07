@@ -1,11 +1,12 @@
-use rand::prelude::*;
+use rand::rng;
+use rand::RngExt;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter, Error};
 
 pub struct Seq<'a> {
     alphabet: Vec<&'a str>,
-    distr: rand::distributions::Uniform<usize>,
-    pos_distr: rand::distributions::Uniform<usize>,
+    distr: rand::distr::Uniform<usize>,
+    pos_distr: rand::distr::Uniform<usize>,
     seq: Vec<&'a str>,
 }
 
@@ -39,35 +40,35 @@ impl Display for Seq<'_> {
 }
 
 impl Seq<'_> {
-    pub fn new(alphabet: Vec<&str>, len: usize) -> Seq {
-        let distr = rand::distributions::Uniform::new_inclusive(0, alphabet.len() - 1);
-        let pos_distr = rand::distributions::Uniform::new_inclusive(0, len - 1);
+    pub fn new(alphabet: Vec<&str>, len: usize) -> Seq<'_> {
+        let distr = rand::distr::Uniform::new_inclusive(0, alphabet.len() - 1).unwrap();
+        let pos_distr = rand::distr::Uniform::new_inclusive(0, len - 1).unwrap();
 
         let seq: Vec<&str> = (0..len)
             .map(|_| {
-                alphabet[thread_rng().sample(distr)]
+                alphabet[rng().sample(distr)]
             })
             .collect();
         Seq { alphabet, distr, pos_distr, seq }
     }
 
     pub fn insert(&mut self) {
-        let pos = thread_rng().sample(self.pos_distr);
-        let nt = self.alphabet[thread_rng().sample(self.distr)];
+        let pos = rng().sample(self.pos_distr);
+        let nt = self.alphabet[rng().sample(self.distr)];
         println!("Inserting {} at position {}", nt, pos);
         self.seq.insert(pos, nt);
     }
 
     pub fn delete(&mut self) {
-        let pos = thread_rng().sample(self.pos_distr);
+        let pos = rng().sample(self.pos_distr);
         println!("Deleting {} at position {}", self.seq[pos], pos);
         self.seq.remove(pos);
     }
 
     pub fn swap(&mut self) {
-        let pos = thread_rng().sample(self.pos_distr);
+        let pos = rng().sample(self.pos_distr);
         let cur_nt = self.seq[pos];
-        let new_nt = self.alphabet[thread_rng().sample(self.distr)];
+        let new_nt = self.alphabet[rng().sample(self.distr)];
         println!("Replacing {} at position {} with {}", cur_nt, pos, new_nt);
         self.seq[pos] = new_nt;
     }
@@ -76,12 +77,12 @@ impl Seq<'_> {
 fn main() {
 
     let mut seq = Seq::new(vec!["A", "C", "T", "G"], 200);
-    println!("Initial sequnce:\n{}", seq);
+    println!("Initial sequence:\n{}", seq);
 
-    let mut_distr = rand::distributions::Uniform::new_inclusive(0, 2);
+    let mut_distr = rand::distr::Uniform::new_inclusive(0, 2).unwrap();
 
     for _ in 0..10 {
-        let mutation = thread_rng().sample(mut_distr);
+        let mutation = rng().sample(mut_distr);
 
         if mutation == 0 {
             seq.insert()

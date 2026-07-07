@@ -2,7 +2,7 @@ function digitalroot(n::Integer, bs::Integer=10)
     if n < 0 || bs < 2 throw(DomainError()) end
     ds, pers = n, 0
     while bs ≤ ds
-        ds = sum(digits(ds, bs))
+        ds = sum(digits(ds, base = bs))
         pers += 1
     end
     return pers, ds

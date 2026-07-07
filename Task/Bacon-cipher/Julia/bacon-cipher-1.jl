@@ -1,6 +1,6 @@
 module BaconCipher
 
-using Formatting, IterTools.chain
+using IterTools: chain
 
 const text = """All children, except one, grow up. They soon know that they will grow
     up, and the way Wendy knew was this. One day when she was two years old
@@ -19,8 +19,7 @@ const text = """All children, except one, grow up. They soon know that they will
     her sweet mocking mouth had one kiss on it that Wendy could never get,
     though there it was, perfectly conspicuous in the right-hand corner.""" |> lowercase
 
-const byte = FormatSpec("05b")
-const lc2bin = Dict{Char,String}(ch => fmt(byte, i) for (i, ch) in
+const lc2bin = Dict{Char,String}(ch => lpad(string(i, base=2), 5, '0') for (i, ch) in
     enumerate(chain('a':'z', '.', ' ')))
 const bin2lc = Dict{String,Char}(v => k for (k, v) in lc2bin)
 
@@ -32,8 +31,8 @@ function encrypt(msg::AbstractString, text::AbstractString=text)::String
     out = IOBuffer()
     for capitalise in bin5
         while !isempty(tlist)
-            ch = shift!(tlist)
-            if isalpha(ch)
+            ch = popfirst!(tlist)
+            if isletter(ch)
                 if capitalise
                     ch = uppercase(ch)
                 end
@@ -45,22 +44,23 @@ function encrypt(msg::AbstractString, text::AbstractString=text)::String
         end
     end
     println(out, "...")
-    return take!(out)
+    return prod(Char.(take!(out)))
 end
 
 function decrypt(text::AbstractString)::String
     binary = Char[]
     out    = IOBuffer()
     for ch in text
-        if isalpha(ch)
-            push!(binary, ifelse(isupper(ch), '1', '0'))
+        if isletter(ch)
+            push!(binary, ifelse(isuppercase(ch), '1', '0'))
             if length(binary) == 5
                 print(out, bin2lc[join(binary)])
                 empty!(binary)
             end
         end
     end
-    return take!(out)
+    return prod(Char.(take!(out)))
 end
+
 
 end  # module BaconCipher

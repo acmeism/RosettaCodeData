@@ -1,5 +1,5 @@
 function thuemorse(len::Int)
-    rst = Vector{Int8}(len)
+    rst = Vector{Int8}(undef, len)
     rst[1] = 0
     i, imax = 2, 1
     while i ≤ len

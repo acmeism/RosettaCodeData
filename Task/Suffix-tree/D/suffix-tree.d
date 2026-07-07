@@ -31,7 +31,7 @@ struct SuffixTree {
                 auto children = nodes[n].ch;
                 if (x2 == children.length) {
                     // no matching child, remainder of suf becomes new node.
-                    n2 = nodes.length;
+                    n2 = cast(int) nodes.length;
                     nodes ~= Node(suf[i..$]);
                     nodes[n].ch ~= n2;
                     return;
@@ -50,7 +50,7 @@ struct SuffixTree {
                     // split n2
                     auto n3 = n2;
                     // new node for the part in common
-                    n2 = nodes.length;
+                    n2 = cast(int) nodes.length;
                     nodes ~= Node(sub2[0..j], n3);
                     nodes[n3].sub = sub2[j..$];  // old node loses the part in common
                     nodes[n].ch[x2] = n2;

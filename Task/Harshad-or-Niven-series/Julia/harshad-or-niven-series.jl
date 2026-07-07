@@ -1,8 +1,8 @@
 isharshad(x)   = x % sum(digits(x)) == 0
 nextharshad(x) = begin while !isharshad(x+1) x += 1 end; return x + 1 end
 
-function harshads(n::Integer)
-	h = Vector{typeof(n)}(n)
+function harshads(n::T) where T<:Integer
+	h = Vector{T}(undef, n)
 	h[1] = 1
 	for j in 2:n
 		h[j] = nextharshad(h[j-1])

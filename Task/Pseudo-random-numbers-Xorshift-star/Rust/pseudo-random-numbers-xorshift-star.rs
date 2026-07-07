@@ -1,12 +1,12 @@
 struct XorShiftStar {
-    magic: u64,
     state: u64,
 }
 
 impl XorShiftStar {
+    const MAGIC: u64 = 0x2545_F491_4F6C_DD1D;
+
     fn new() -> Self {
         Self {
-            magic: 0x2545_F491_4F6C_DD1D,
             state: 0,
         }
     }
@@ -21,7 +21,7 @@ impl XorShiftStar {
         x ^= x << 25;
         x ^= x >> 27;
         self.state = x;
-        ((x.wrapping_mul(self.magic)) >> 32) as u32
+        ((x.wrapping_mul(Self::MAGIC)) >> 32) as u32
     }
 
     fn next_float(&mut self) -> f32 {

@@ -22,16 +22,16 @@ defmodule Holiday do
   end
 
   defp holidays(year) do
-    IO.write String.rjust("#{year}:", 5)
+    IO.write String.pad_leading("#{year}:", 5)
     gday = :calendar.date_to_gregorian_days(easter_date(year))
     Enum.map_join(Keyword.values(@offsets), fn d ->
       {_year, month, day} = :calendar.gregorian_days_to_date(gday + d)
-      String.rjust("#{day}  #{elem(@mon, month-1)}", 11)
+      String.pad_leading("#{day}  #{elem(@mon, month-1)}", 11)
     end)
   end
 
   def task do
-    IO.puts "Year:" <> Enum.map_join(Keyword.keys(@offsets), &String.rjust("#{&1}",11))
+    IO.puts "Year:" <> Enum.map_join(Keyword.keys(@offsets), &String.pad_leading("#{&1}",11))
     Enum.each(Enum.take_every(400..2100, 100), fn year -> IO.puts holidays(year) end)
     IO.puts ""
     Enum.each(2010..2020, fn year -> IO.puts holidays(year) end)

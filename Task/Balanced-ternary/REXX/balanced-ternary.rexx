@@ -1,51 +1,128 @@
-/*REXX program converts decimal  ◄───►  balanced ternary;  it also performs arithmetic. */
-numeric digits 10000                             /*be able to handle  gihugic  numbers. */
-Ao = '+-0++0+' ;    Abt =      Ao                /*   [↓]  2 literals used by subroutine*/
-Bo =    '-436' ;    Bbt = d2bt(Bo);                    @ = "(decimal)"
-Co =   '+-++-' ;    Cbt =      Co ;                   @@ = "balanced ternary ="
-                  call btShow  '[a]',       Abt
-                  call btShow  '[b]',       Bbt
-                  call btShow  '[c]',       Cbt
-                  say;                      $bt = btMul(Abt, btSub(Bbt, Cbt) )
-                  call btShow '[a*(b-c)]',  $bt
-exit 0                                           /*stick a fork in it,  we're all done. */
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-d2bt: procedure; parse arg x 1;  x= x / 1;    p= 0;  $.= '-';   $.1= "+";   $.0= 0;     #=
-                    do  until x==0;           _= (x // (3** (p+1) ) )  %  3**p
-                    if _== 2  then _= -1
-                              else if _== -2  then _= 1
-                    x= x  -  _ * (3**p);      p= p + 1;                     #= $._  ||  #
-                    end   /*until*/;          return #
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-bt2d: procedure; parse arg x;  r= reverse(x);  $.= -1;  $.0= 0;  #= 0;    _= '+';   $._= 1
-                    do j=1  for length(x);  _= substr(r, j, 1);  #= #  +  $._ * 3 ** (j-1)
-                    end   /*j*/;                         return #
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-btAdd: procedure; parse arg x,y;    rx= reverse(x);      ry= reverse(y);          carry= 0
-       @.= 0;   _= '-';   @._= -1;   _= "+";  @._= 1;  $.= '-';   $.0= 0;   $.1= "+";   #=
-                                           do j=1  for max( length(x), length(y) )
-                                           x_= substr(rx, j, 1);            xn= @.x_
-                                           y_= substr(ry, j, 1);            yn= @.y_
-                                           s= xn + yn + carry;           carry= 0
-                                           if s== 2  then do;   s=-1;    carry= 1;    end
-                                           if s== 3  then do;   s= 0;    carry= 1;    end
-                                           if s==-2  then do;   s= 1;    carry=-1;    end
-                                           #= $.s || #
-                                           end   /*j*/
-       if carry\==0  then #= $.carry || #;                      return btNorm(#)
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-btMul: procedure; parse arg x 1 x1 2, y 1 y1 2; if x==0 | y==0  then return 0;  S= 1;  P=0
-       x= btNorm(x); y= btNorm(y); Lx= length(x); Ly= length(y)  /*handle: 0-xxx values.*/
-       if x1=='-'  then do;   x= btNeg(x);   S= -S;   end        /*positate the number. */
-       if y1=='-'  then do;   y= btNeg(y);   S= -S;   end        /*    "     "    "     */
-       if Ly>Lx    then parse value  x y  with  y x              /*optimize  "    "     */
-                                             do   until  y==0    /*keep adding 'til done*/
-                                             P= btAdd(P,  x )    /*multiple the hard way*/
-                                             y= btSub(y, '+')    /*subtract  1  from  Y.*/
-                                             end   /*until*/
-       if S==-1  then P= btNeg(P);  return P       /*adjust the product's sign;  return.*/
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-btNeg:  return translate( arg(1), '-+', "+-")                    /*negate bal_ternary #.*/
-btNorm: _= strip(arg(1), 'L', 0);  if _==''  then _=0;  return _ /*normalize the number.*/
-btSub:  return btAdd( arg(1), btNeg( arg(2) ) )                  /*subtract two BT args.*/
-btShow: say center( arg(1), 9)  right( arg(2), 20)  @@  right( bt2d(arg(2)), 9) @;  return
+/*REXX program converts decimal  ?---?  balanced ternary;  it also performs arithmetic. */
+  Numeric Digits 10000              /* be able to handle  gihugic  numbers              */
+  ao='+-0++0+'
+  abt=ao
+  bo='-436'
+  bbt=d2bt(bo)
+  co='+-++-'
+  cbt=co
+  c1='balanced ternary ='           /* two literals used by subroutine                  */
+  c2='(decimal)'
+  Call btShow '[a]',abt
+  Call btShow '[b]',bbt
+  Call btShow '[c]',cbt
+  Say
+  btp=btmul(abt,btsub(bbt,cbt))     /* compute a*(b-c)                                  */
+  Call btShow '[a*(b-c)]',btp
+  Exit 0                            /* stick a fork in it,  we're all done              */
+/*--------------------------------------------------------------------------------------*/
+d2bt: Procedure
+  Parse Arg x 1
+  x=x/1
+  p=0
+  d.='-'
+  d.1='+'
+  d.0=0
+  btn=''
+  Do Until x==0
+    _=(x//(3**(p+1)))%3**p
+    If _==2 Then
+      _=-1
+    Else
+      If _==-2 Then
+        _=1
+      x=x-_*(3**p)
+    p=p+1
+    btn=d._||btn
+    End
+  Return btn
+/*--------------------------------------------------------------------------------------*/
+bt2d: Procedure
+  Parse Arg x
+  r=reverse(x)
+  d.=-1
+  d.0=0
+  btn=0
+  _='+'
+  d._=1
+  Do j=1 For length(x)
+    _=substr(r,j,1)
+    btn=btn+d._*3**(j-1)
+    End
+  Return btn
+/*--------------------------------------------------------------------------------------*/
+btadd: Procedure
+  Parse Arg x,y
+  rx=reverse(x)
+  ry=reverse(y)
+  carry=0
+  a.=0
+  _='-'
+  a._=-1
+  _='+'
+  a._=1
+  d.='-'
+  d.0=0
+  d.1='+'
+  btn=''
+  Do j=1 For max(length(x),length(y))
+    x_=substr(rx,j,1)
+    xn=a.x_
+    y_=substr(ry,j,1)
+    yn=a.y_
+    s=xn+yn+carry
+    carry=0
+    Select
+      When s==2  Then Parse Value '-1  1' with s carry .
+      When s==3  Then Parse Value ' 0  1' with s carry .
+      When s==-2 Then Parse Value ' 1 -1' with s carry .
+      When s==-3 Then Parse Value ' 0 -1' with s carry .
+      Otherwise
+        Nop
+      End
+    btn=d.s||btn
+    End
+  If carry\==0 Then
+    btn=d.carry||btn
+  Return btnorm(btn)
+/*--------------------------------------------------------------------------------------*/
+btmul: Procedure
+  Parse Arg x 1 x1 2,y 1 y1 2
+  If x==0|y==0 Then
+    Return 0
+  s=1
+  p=0
+  x=btnorm(x)
+  y=btnorm(y)
+  lx=length(x)
+  ly=length(y)
+  If x1=='-' Then Do
+    x=btneg(x)
+    s=-s
+    End
+  If y1=='-' Then Do
+    y=btneg(y)
+    s=-s
+    End
+  If ly>lx Then
+    Parse Value x y With y x        /* optimize                                         */
+  Do Until y==0                     /* keep adding 'til done                            */
+    p=btadd(p,x)                    /* multiple the hard way                            */
+    y=btsub(y,'+')                  /* subtract  1  from  Y.                            */
+    End                             /* until                                            */
+  If s==-1 Then
+    p=btneg(p)
+  Return p                          /* adjust the product's sign;  ret                  */
+/*--------------------------------------------------------------------------------------*/
+btneg:                              /* negate bal_ternary number                        */
+  Return translate(arg(1),'-+','+-')
+btnorm:                             /* normalize the number.                            */
+  _=strip(arg(1),'L',0)
+  If _=='' Then
+    _=0
+  Return _
+btsub:                              /* subtract two BT args.                            */
+  Return btadd(arg(1),btneg(arg(2)))
+btshow:
+  Say center(arg(1),9) right(arg(2),20) c1 right(bt2d(arg(2)),9) c2
+  Return

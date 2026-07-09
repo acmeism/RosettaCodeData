@@ -1,4 +1,4 @@
--- 13 Jun 2026
+-- 7 Jul 2026
 include Setting
 numeric digits 16
 
@@ -15,19 +15,19 @@ call Zeta2
 call Timer
 exit
 
-Zeta2:
-say Zeta(2) '= Zeta(2)'
-return
-
 Task:
 procedure
 arg n
 -- Generate array 1,2...n
-call MakeSt 'Zeta.','N',n,'A'
+call MakeSt 'Zeta.',n,'n','a'
 -- Map 1/x^2 to all items
 call MapSt 'Zeta.','1/(x*x)'
 -- Add all items
-say AddSt('Zeta.') '= sum' n 'terms'
+say SumSt('Zeta.') '= sum' n 'terms'
+return
+
+Zeta2:
+say Zeta(2) '= Zeta(2)'
 return
 
 -- Zeta MakeSt MapSt SumSt Timer

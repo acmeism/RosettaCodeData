@@ -1,6 +1,6 @@
 using Printf
 
-function showflaggedbits{T<:BitArray{1}}(a::T, f::T)
+function showflaggedbits(a::T, f::T) where T <: AbstractVector{Bool}
     tf = map(x->x ? "T" : "F", a)
     flg = map(x->x ? "*" : " ", f)
     join(tf .* flg, " ")
@@ -12,7 +12,7 @@ const props = [s -> length(s) == 12,
                s -> !s[5] || (s[6] & s[7]),
                s -> !any(s[2:4]),
                s -> sum(s[1:2:end]) == 4,
-               s -> s[2] $ s[3],
+               s -> s[2] ⊻ s[3],
                s -> !s[7] || (s[5] & s[6]),
                s -> sum(s[1:6]) == 3,
                s -> s[11] & s[12],
@@ -20,7 +20,6 @@ const props = [s -> length(s) == 12,
                s -> sum(s[1:end-1]) == 4]
 
 const NDIG = length(props)
-NDIG < WORD_SIZE || println("WARNING, too many propositions!")
 
 mhist = zeros(Int, NDIG+1)
 
@@ -32,9 +31,9 @@ end
 println()
 
 for i in 0:(2^NDIG-1)
-    s = bitpack(digits(i, 2, NDIG))
-    t = bitpack([p(s) for p in props])
-    misses = s$t
+    s = BitVector(digits(i, base=2, pad=NDIG))
+    t = BitVector([p(s) for p in props])
+    misses = s .⊻ t
     mcnt = sum(misses)
     mhist[NDIG-mcnt+1] += 1
     mcnt < 2 || mcnt == NDIG || continue

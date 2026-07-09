@@ -1,3 +1,5 @@
+using Random
+
 # This is not optimized, but tries to follow the pseudocode given the Wikipedia entry below.
 # Reference: https://en.wikipedia.org/wiki/Stable_marriage_problem#Algorithm
 
@@ -92,12 +94,8 @@ function tableprint(txt, ans, stab)
     println(txt)
     println("   Man     Woman")
     println("   -----   -----")
-    show(STDOUT, "text/plain", ans)
-    if(stab)
-        println("\n  ----STABLE----\n\n")
-    else
-        println("\n  ---UNSTABLE---\n\n")
-    end
+    foreach(p -> println("   $(p[1])     $(p[2])"), ans)
+    println("----$(stab ? "" : "UN")STABLE----\n")
 end
 
 println("Use the Gale Shapley algorithm to find a stable set of engagements.")
@@ -123,4 +121,3 @@ answer[2][fia1] = "bob"
 answer[2][fia2] = "abe"
 stabl = isstable(answer[1], answer[2], malepreferences, femalepreferences)
 tableprint("Original Data With Bob and Abe Switched", answer[1], stabl)
-

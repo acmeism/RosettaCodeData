@@ -1,3 +1,5 @@
+using Printf
+
 mutable struct Cheb
     c::Vector{Float64}
     min::Float64
@@ -5,9 +7,9 @@ mutable struct Cheb
 end
 
 function Cheb(min::Float64, max::Float64, ncoeff::Int, nnodes::Int, fn::Function)::Cheb
-    c = Cheb(Vector{Float64}(ncoeff), min, max)
-    f = Vector{Float64}(nnodes)
-    p = Vector{Float64}(nnodes)
+    c = Cheb(Vector{Float64}(undef, ncoeff), min, max)
+    f = Vector{Float64}(undef, nnodes)
+    p = Vector{Float64}(undef, nnodes)
     z = (max + min) / 2
     r = (max - min) / 2
     for k in 0:nnodes-1

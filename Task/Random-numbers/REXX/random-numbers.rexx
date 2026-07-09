@@ -1,9 +1,10 @@
--- 13 Jun 2026
+-- 7 Jul 2026
 include Setting
 
 say 'RANDOM NUMBERS'
 say version
 say
+call Rand 123456789
 call GetUniform 1e3
 call ShowFirst
 call ShowStats

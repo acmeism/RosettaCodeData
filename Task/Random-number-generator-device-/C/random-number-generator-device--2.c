@@ -1,10 +1,12 @@
-#include <inttypes.h> /* PRIu32 */
-#include <stdlib.h> /* arc4random */
-#include <stdio.h>  /* printf */
+#include <stdio.h>
+#define RDRANDMAX 0x7fffffff
+int rdrand() {
+    asm("69:    rdrand %eax\n"
+        "       jnc 69b\n"
+        "       shr $1, %eax\n");
+    }
 
-int
-main()
-{
-  printf("%" PRIu32 "\n", arc4random());
-  return 0;
-}
+int main() {
+    printf("%i\n", rdrand());
+    return (0);
+    }

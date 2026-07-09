@@ -1,23 +1,18 @@
-#include <stdio.h>  /* printf */
-#include <windows.h>
-#include <wincrypt.h> /* CryptAcquireContext, CryptGenRandom */
+#include <inttypes.h>
+#include <stdio.h>
+
+#include <openssl/err.h>
+#include <openssl/rand.h>
 
 int
 main()
 {
-  HCRYPTPROV p;
-  ULONG i;
+  uint32_t v;
 
-  if (CryptAcquireContext(&p, NULL, NULL,
-      PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) == FALSE) {
-    fputs("CryptAcquireContext failed.\n", stderr);
+  if (RAND_bytes((unsigned char *)&v, sizeof v) == 0) {
+    ERR_print_errors_fp(stderr);
     return 1;
   }
-  if (CryptGenRandom(p, sizeof i, (BYTE *)&i) == FALSE) {
-    fputs("CryptGenRandom failed.\n", stderr);
-    return 1;
-  }
-  printf("%lu\n", i);
-  CryptReleaseContext(p, 0);
+  printf("%" PRIu32 "\n", v);
   return 0;
 }

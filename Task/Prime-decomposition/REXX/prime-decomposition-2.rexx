@@ -1,4 +1,4 @@
--- 6 Jul 2026
+-- 7 Jul 2026
 Main:
 include Setting
 
@@ -9,6 +9,7 @@ arg digs
 if digs='' then
    digs=30
 digs/=1
+call Random ,,12345
 say '30 numbers max' digs 'digits'
 say
 numeric digits 2*digs+10

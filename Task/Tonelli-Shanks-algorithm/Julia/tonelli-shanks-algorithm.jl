@@ -14,21 +14,23 @@ function solve(n::T, p::T) where T <: Union{Int, Int128, BigInt}
         r = powermod(n, (p + 1) >> 2, p)
         return r, p - r
     end
-    local z::T
-    for z in 2:(p - 1)
-        p - 1 == legendre(z, p) && break
+
+    z = T(2)
+    while z <= (p - 1) && p - 1 != legendre(z, p)
+        z += one(z)
     end
-    local c::T = powermod(z, q, p)
-    local r::T = powermod(n, (q + 1) >> 1, p)
-    local t::T = powermod(n, q, p)
-    local m::T = s
-    local t2::T = zero(p)
+    c::T = powermod(z, q, p)
+    r::T = powermod(n, (q + 1) >> 1, p)
+    t::T = powermod(n, q, p)
+    m::T = s
+    t2::T = zero(p)
     while !iszero((t - 1) % p)
         t2 = (t * t) % p
-        local i::T
-        for i in Base.OneTo(m)
+        i = one(T)
+        while i <= m
             iszero((t2 - 1) % p) && break
             t2 = (t2 * t2) % p
+            i += one(T)
         end
         b = powermod(c, 1 << (m - i - 1), p)
         r = (r * b) % p
@@ -40,3 +42,14 @@ function solve(n::T, p::T) where T <: Union{Int, Int128, BigInt}
 end
 
 end  # module TonelliShanks
+
+
+using .TonelliShanks
+
+@show TonelliShanks.solve(10, 13)
+@show TonelliShanks.solve(56, 101)
+@show TonelliShanks.solve(1030, 10009)
+@show TonelliShanks.solve(44402, 100049)
+@show TonelliShanks.solve(665820697, 1000000009)
+@show TonelliShanks.solve(881398088036, 1000000000039)
+@show TonelliShanks.solve(41660815127637347468140745042827704103445750172002, big"10" ^ 50 + 577)

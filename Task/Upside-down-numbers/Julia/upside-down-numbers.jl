@@ -1,4 +1,4 @@
-using Formatting
+using Format
 using ResumableFunctions
 
 @resumable function gen_upsidedowns()
@@ -16,7 +16,9 @@ using ResumableFunctions
                 odd_index += 1
             else
                 # build next odds, but switch to evens
-                odds = [hi * 10^(ndigits + 1) + 10 * i + lo for i in odds, (hi, lo) in wrappings]
+                odds = let src = odds, nd = ndigits
+                    [hi * 10^(nd + 1) + 10 * i + lo for i in src, (hi, lo) in wrappings]
+                end
                 ndigits += 1
                 odd_index = 0
                 olen = length(odds)
@@ -27,7 +29,9 @@ using ResumableFunctions
                 even_index += 1
             else
                 # build next evens, but switch to odds
-                evens = [hi * 10^(ndigits + 1) + 10 * i + lo for i in evens, (hi, lo) in wrappings]
+                evens = let src = evens, nd = ndigits
+                    [hi * 10^(nd + 1) + 10 * i + lo for i in src, (hi, lo) in wrappings]
+                end
                 ndigits += 1
                 even_index = 0
                 elen = length(evens)
@@ -52,4 +56,4 @@ for (udcount, udnumber) in enumerate(gen_upsidedowns())
         println("Five millionth: ", format(udnumber, commas = true))
         break
     end
- end
+end

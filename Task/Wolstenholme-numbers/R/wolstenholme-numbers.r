@@ -1,9 +1,10 @@
 library(gmp)
 
-h_n2 <- function(n) Reduce(`+`, 1/as.bigz(1:n)^2)
-wolstenholme <- function(n) numerator(h_n2(n))
-wols <- sapply(1:20, wolstenholme)
-wols_primes <- wols[sapply(wols, isprime)!=0]
+pp_bigv <- function(title, bigv) {
+  cat(title, sapply(bigv, as.character), sep = "\n")
+}
 
-print(wols, initLine=FALSE)
-print(wols_primes, initLine=FALSE)
+wols <- sapply(1:20, function(n) Reduce(`+`, 1/as.bigz(1:n)^2) |> numerator())
+
+pp_bigv("First 20 Wolstenholme numbers:", wols)
+pp_bigv("\nFirst 4 prime Wolstenholme numbers:", Filter(isprime, wols))

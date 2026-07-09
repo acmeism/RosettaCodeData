@@ -1,18 +1,18 @@
 const std = @import("std");
 
-const File = std.fs.File;
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
 
-pub fn main() (File.OpenError || File.SeekError || std.os.MMapError)!void {
-    const cwd = std.fs.cwd();
+    const file = try std.Io.Dir.cwd().openFile(io, "input_file.txt", .{});
+    defer file.close(io);
 
-    var file = try cwd.openFile("input_file.txt", .{ .mode = .read_only });
-    defer file.close();
+    var mmap = try file.createMemoryMap(io, .{ .len = (try file.stat(io)).size, .protection = .{
+        .read = true,
+        .write = false,
+    } });
 
-    const file_size = (try file.stat()).size;
+    defer mmap.destroy(io);
 
-    const file_content = try std.os.mmap(null, file_size, std.os.PROT.READ, std.os.MAP.PRIVATE, file.handle, 0);
-    defer std.os.munmap(file_content);
-
-    std.debug.print("Read {d} octets. File content:\n", .{file_content.len});
-    std.debug.print("{s}", .{file_content});
+    std.debug.print("Read {d} bytes. File content:\n", .{mmap.memory.len});
+    std.debug.print("{s}", .{mmap.memory});
 }

@@ -1,4 +1,4 @@
--- 13 Jun 2026
+-- 7 Jul 2026
 include Setting
 
 say 'VERIFY DISTRIBUTION UNIFORMITY / CHI-SQUARED TEST'
@@ -7,6 +7,7 @@ say
 call Check '200000 200000 200000 200000 200000'
 call Check '199809 200665 199607 200270 199649'
 call Check '522573 244456 139979  71531  21461'
+call Random ,,12345
 call Check 'Random'
 call Timer
 exit
@@ -60,4 +61,5 @@ say 'Is dataset uniform?' Word('Yes No',(Abs(pv)<csv*sl)+1)
 say
 return
 
+-- Timer Rligamma
 include Math

@@ -1,0 +1,113 @@
+#include once "SDL2/SDL.bi"
+
+' Mathematical parameters of the Lorenz attractor
+Const sigma As Double = 10.0
+Const rho   As Double = 28.0
+Const beta  As Double = 8.0 / 3.0
+
+' Starting position and time step
+Dim Shared As Double x = 0.01, y = 0.0, z = 0.0
+Dim Shared As Double dt = 0.01
+
+' Screen and zoom settings
+Const SCREEN_W = 800, SCREEN_H = 600
+Const offset_x = 400, offset_y = 300
+Const scale    = 7.0
+
+' Point buffer
+Const MAX_POINTS = 2000
+Type Point2D
+    x As Integer
+    y As Integer
+End Type
+
+Dim Shared points(MAX_POINTS) As Point2D
+Dim Shared pCount As Integer = 0
+
+' Add protected dot
+Sub AddPoint(px As Integer, py As Integer)
+    If pCount < MAX_POINTS Then
+        points(pCount).x = px
+        points(pCount).y = py
+        pCount += 1
+    Else
+        ' Shift all 1 position
+        For i As Integer = 1 To MAX_POINTS - 1
+            points(i - 1) = points(i)
+        Next
+        points(MAX_POINTS - 1).x = px
+        points(MAX_POINTS - 1).y = py
+    End If
+End Sub
+
+' Update Lorenz physics
+Sub UpdateLorenz()
+    Dim dx As Double = (sigma * (y - x)) * dt
+    Dim dy As Double = (x * (rho - z) - y) * dt
+    Dim dz As Double = (x * y - beta * z) * dt
+
+    x += dx
+    y += dy
+    z += dz
+
+    Dim sx As Integer = Cint(x * scale + offset_x)
+    Dim sy As Integer = Cint(y * scale + offset_y)
+
+    AddPoint(sx, sy)
+End Sub
+
+' Draw attractor
+Sub DrawLorenz(renderer As SDL_Renderer Ptr)
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255)
+    SDL_RenderClear(renderer)
+
+    SDL_SetRenderDrawColor(renderer, 0, 200, 255, 255)
+
+    If pCount > 1 Then
+        For i As Integer = 0 To pCount - 2
+            SDL_RenderDrawLine(renderer, _
+            points(i).x, points(i).y, _
+            points(i+1).x, points(i+1).y)
+        Next
+    End If
+
+    SDL_RenderPresent(renderer)
+End Sub
+
+'--- Main program ---
+If SDL_Init(SDL_INIT_VIDEO Or SDL_INIT_TIMER) <> 0 Then
+    Print "SDL error: "; *SDL_GetError()
+    Sleep: End
+End If
+
+Dim ventana As SDL_Window Ptr
+Dim renderer As SDL_Renderer Ptr
+
+ventana = SDL_CreateWindow("Lorenz Attractor - FreeBASIC SDL2", _
+SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _
+SCREEN_W, SCREEN_H, SDL_WINDOW_SHOWN)
+
+renderer = SDL_CreateRenderer(ventana, -1, SDL_RENDERER_ACCELERATED)
+
+Dim running As Boolean = True
+Dim event As SDL_Event
+Dim lastTick As Uint32 = SDL_GetTicks()
+
+While running
+    While SDL_PollEvent(@event) <> 0
+        If event.type = SDL_QUIT_ Then running = False
+    Wend
+
+    ' ~60 FPS -> 16 ms
+    If SDL_GetTicks() - lastTick >= 16 Then
+        UpdateLorenz()
+        DrawLorenz(renderer)
+        lastTick = SDL_GetTicks()
+    End If
+
+    SDL_Delay(1)
+Wend
+
+SDL_DestroyRenderer(renderer)
+SDL_DestroyWindow(ventana)
+SDL_Quit()

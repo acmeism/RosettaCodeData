@@ -1,4 +1,4 @@
--- 13 Jun 2026
+-- 7 Jul 2026
 include Setting
 parse arg xx','yy','zz
 if xx = '' then
@@ -12,6 +12,7 @@ say 'VERIFY DISTRIBUTION UNIFORMITY / NAIVE'
 say version
 say
 call Parameters xx,yy,zz
+call Random ,,12345
 call Get xx,yy
 call Check yy,zz
 call Timer
@@ -68,4 +69,5 @@ say 'The set' e 'pass the test'
 say
 return
 
+-- Timer
 include Math

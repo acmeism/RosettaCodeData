@@ -1,5 +1,6 @@
 #pragma once
-/* gcc/clang flags
+/*
+gcc/clang:
 CFLAGS="
 -march=native
 -mfpmath=<your SIMD>
@@ -9,7 +10,16 @@ CFLAGS="
 -fopenmp-simd
 -std=gnu2x"
 
-For MSVC see: https://learn.microsoft.com/en-us/cpp/parallel/openmp/openmp-simd?view=msvc-180
+msvc:
+CFLAGS ="
+/std:clatest
+/Zc:preprocessor
+/Zc:__STDC__
+/Z
+/Gv
+/O2
+/openmp:experimental"
+
 */
 #include <stdlib.h>
 #include <stddef.h>
@@ -28,12 +38,14 @@ typedef double flt;
 
 #ifdef _MSC_VER
 #define ALIGN(x) __declspec(align(x))
-#define INLINE __force_inline __flatten __declspec(nothrow)
-#define CONST __declspec(noalias)
+#define INLINE   __forceinline [[msvc::flatten]] [[msvc::forceinline]]
+#define CONST    __declspec(noalias)
+#define INTRIN   __declspec(intrin_type)
 #else
 #define ALIGN(x) __attribute__((aligned(x)))
-#define INLINE __attribute__((always_inline,flatten,nothrow)) inline
-#define CONST __attribute__((const))
+#define INLINE   __attribute__((always_inline,flatten,nothrow)) inline
+#define CONST    __attribute__((const))
+#define INTRIN   __attribute__((__may_alias__))
 #endif
 
 /* use preprocessor bitceil instead of stdc_bit_ceil because of numeric constexpr */
@@ -46,23 +58,22 @@ typedef double flt;
 #define sh6(v)     (__typeof__((v)))(sh5(v) | sh5(v) >> (1 << 5))
 #define bitceil(v) (__typeof__((v)))(sh6((uint64_t)v) + 1)
 
-/* n-dim array of arbitrary type (aligned to power of 2 if n == bitceil(n)) */
 #ifdef _MSC_VER
-#define arr(n,t) __typeof__(__typeof__(t)[n])
+#define arr(n,t) INTRIN __typeof__(__typeof__(t)[n])
 #else
-#define arr(n,t) ALIGN((n == bitceil(n) ? n : 1) * __alignof__(t)) __typeof__(__typeof__(t)[n])
+#define arr(n,t) INTRIN ALIGN((n == bitceil(n) ? n : 1) * __alignof__(t)) __typeof__(__typeof__(t)[n])
 #endif
 
 #pragma pack(push,1)
 /* vector type vec(n,t) based on compiler extensions */
-#if defined(__GNUC__) && !defined(__clang__) && !defined(_MSC_VER)
+#if     defined(_MSC_VER)
+#define vec(n,t) arr(n,t)
+#elif   defined(__clang__)
+#define vec(n,t) __typeof__(__attribute__((ext_vector_type(bitceil(n)))) __typeof__(t))
+#elif   defined(__GNU__)
 #define vec(n,t) __typeof__(__attribute__((vector_size(bitceil((uint32_t)n) * __alignof__(__typeof__(t))))) __typeof__(t))
 #else
-#if defined(__clang__)
-#define vec(n,t) __typeof__(__attribute__((ext_vector_type(bitceil(n)))) __typeof__(t))
-#else
 #define vec(n,t) arr(n,t)
-#endif
 #endif
 #pragma pack(pop)
 

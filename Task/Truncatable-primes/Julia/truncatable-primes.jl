@@ -1,4 +1,6 @@
-function isltruncprime{T<:Integer}(n::T, base::T=10)
+using Primes
+
+function isltruncprime(n::T, base::T=10) where T <: Integer
     isprime(n) || return false
     p = n
     f = prevpow(base, p)
@@ -11,7 +13,7 @@ function isltruncprime{T<:Integer}(n::T, base::T=10)
     return true
 end
 
-function isrtruncprime{T<:Integer}(n::T, base::T=10)
+function isrtruncprime(n::T, base::T=10) where T <: Integer
     isprime(n) || return false
     p = n
     while base < p

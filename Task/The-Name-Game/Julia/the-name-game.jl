@@ -1,5 +1,3 @@
-import Compat: uppercasefirst
-
 function printverse(name::AbstractString)
     X = uppercasefirst(lowercase(name))
     Y = X[1] ∈ ('A', 'E', 'I', 'O', 'U') ? X : SubString(X, 2)
@@ -15,4 +13,4 @@ function printverse(name::AbstractString)
     return nothing
 end
 
-foreach(TheNameGame.printverse, ("gARY", "Earl", "Billy", "Felix", "Mary", "sHIRley"))
+foreach(printverse, ("gARY", "Earl", "Billy", "Felix", "Mary", "sHIRley"))

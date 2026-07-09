@@ -1,4 +1,4 @@
--- 6 Jul 2026
+-- 7 Jul 2026
 include Setting
 arg rows
 if rows='' then
@@ -10,6 +10,7 @@ say version
 say
 
 say 'Prepare a integer array with' rows 'rows...'
+call Random ,,12345
 call MakeSt 'stem.',rows
 if rows<=100 then
    call Showst 'stem.','Input',10,10

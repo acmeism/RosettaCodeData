@@ -1,11 +1,13 @@
 #ifdef _MSC_VER
 #define ALIGN(x) __declspec(align(x))
-#define INLINE __force_inline __flatten __declspec(nothrow)
-#define CONST __declspec(noalias)
+#define INLINE   __forceinline [[msvc::flatten]] [[msvc::forceinline]]
+#define CONST    __declspec(noalias)
+#define INTRIN   __declspec(intrin_type)
 #else
 #define ALIGN(x) __attribute__((aligned(x)))
-#define INLINE __attribute__((always_inline,flatten,nothrow)) inline
-#define CONST __attribute__((const))
+#define INLINE   __attribute__((always_inline,flatten,nothrow)) inline
+#define CONST    __attribute__((const))
+#define INTRIN   __attribute__((__may_alias__))
 #endif
 
 #if defined(__clang__)
@@ -23,7 +25,7 @@
 #define bitceil(v) (__typeof__((v)))(sh6((uint64_t)v) + 1)
 
 #ifdef _MSC_VER
-#define arr(n,t) __typeof__(__typeof__(t)[n])
+#define arr(n,t) INTRIN __typeof__(__typeof__(t)[n])
 #else
-#define arr(n,t) ALIGN((n == bitceil(n) ? n : 1) * __alignof__(t)) __typeof__(__typeof__(t)[n])
+#define arr(n,t) INTRIN ALIGN((n == bitceil(n) ? n : 1) * __alignof__(t)) __typeof__(__typeof__(t)[n])
 #endif

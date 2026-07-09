@@ -1,4 +1,4 @@
--- 6 Jul 2026
+-- 7 Jul 2026
 include Setting
 
 say 'KNUTH SHUFFLE'
@@ -6,6 +6,7 @@ say version
 say
 call MakeSt 'stem.',52,'n','a'
 call ShowSt 'stem.','a card deck...',,3
+call Random ,,12345
 call ShuffleSt
 call ShowSt 'stem.','shuffled!',,3
 exit

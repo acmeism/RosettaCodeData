@@ -1,4 +1,4 @@
-module StateNamePuzzle
+Module StateNamePuzzle
 
 const realnames = ["Alabama", "Alaska", "Arizona", "Arkansas", "California",
 "Colorado", "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho",
@@ -21,7 +21,7 @@ end
 function solve(input::Vector{<:AbstractString})
     dict = Dict{String,String}()
     for state in input
-        key = replace(state, " ", "") |> lowercase
+        key = replace(state, " " => "") |> lowercase
         if !haskey(dict, key)
             dict[key] = state
         end
@@ -29,10 +29,10 @@ function solve(input::Vector{<:AbstractString})
     keyset = collect(keys(dict))
     solutions = String[]
     duplicates = String[]
-    for i in eachindex(keyset), j in (i+1):endof(keyset)
+    for i in eachindex(keyset), j in (i+1):lastindex(keyset)
         len1 = length(keyset[i]) + length(keyset[j])
         combined1 = combine(keyset[i], keyset[j])
-        for k in eachindex(keyset), l in k+1:endof(keyset)
+        for k in eachindex(keyset), l in k+1:lastindex(keyset)
             k ∈ (i, j) && continue
             l ∈ (i, j) && continue
             len2 = length(keyset[k]) + length(keyset[l])
@@ -53,3 +53,12 @@ function solve(input::Vector{<:AbstractString})
 end
 
 end  # module StateNamePuzzle
+
+using .StateNamePuzzle
+
+println("Real states:")
+foreach(println, StateNamePuzzle.solve(StateNamePuzzle.realnames))
+
+println("\nReal + fictitious state:")
+foreach(println, StateNamePuzzle.solve(vcat(StateNamePuzzle.realnames,
+    StateNamePuzzle.fictitious)))

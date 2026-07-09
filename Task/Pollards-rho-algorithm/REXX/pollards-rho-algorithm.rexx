@@ -1,4 +1,4 @@
--- 13 Jun 2026
+-- 7 Jul 2026
 include Setting
 numeric digits 200
 
@@ -7,6 +7,7 @@ say version
 say
 call TestNumbers
 call Selected
+call Random ,,12345
 call Randomized
 exit
 

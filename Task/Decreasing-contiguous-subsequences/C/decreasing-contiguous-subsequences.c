@@ -11,7 +11,7 @@ int main() {
     fp = fopen("data.txt", "r");
     while (!feof(fp))
         fscanf(fp, "%d", &data[dataLength++]);
-    close(fp);
+    fclose(fp);
 
     for (i = 0; i < dataLength; i++) {
         for (j = i; j+1 < dataLength && data[j+1] <= data[j]; j++) ;

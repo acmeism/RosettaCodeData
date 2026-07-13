@@ -21,7 +21,7 @@ function main(n::Integer)
         avg = test(n)
         theory = analytical(n)
         diff = (avg / theory - 1) * 100
-        @printf(STDOUT, "%2d %8.4f %8.4f %6.3f%%\n", n, avg, theory, diff)
+        @printf("%2d %8.4f %8.4f %6.3f%%\n", n, avg, theory, diff)
     end
 end
 

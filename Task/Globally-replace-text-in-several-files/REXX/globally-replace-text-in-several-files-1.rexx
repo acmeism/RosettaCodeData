@@ -1,27 +1,61 @@
-/*REXX program  reads  the  files specified  and  globally replaces  a string.          */
-old= "Goodbye London!"                           /*the  old text     to be replaced.    */
-new= "Hello New York!"                           /* "   new   "   used for replacement. */
-parse  arg  fileList                             /*obtain required list of files from CL*/
-#= words(fileList)                               /*the number of files in the file list.*/
+-- 12 Jul 2026
+include Setting
 
-   do f=1  for #;     fn= translate( word(fileList, f), , ',');     say;     say
-   say '──────── file is being read: '    fn    " ("f   'out of'     #     "files)."
-   call linein fn,1,0                            /*position the file for input.         */
-   changes= 0                                    /*the number of changes in file so far.*/
-             do rec=0  while lines(fn)\==0       /*read a file   (if it exists).        */
-             @.rec= linein(fn)                   /*read a record (line)  from the file. */
-             if pos(old, @.rec)==0  then iterate /*Anything to change?   No, then skip. */
-             changes= changes + 1                /*flag that file contents have changed.*/
-             @.rec= changestr(old, @.rec, new)   /*change the @.rec record, old ──► new.*/
-             end   /*rec*/
+say 'GLOBALLY REPLACE TEXT IN SEVERAL FILES'
+say version
+say
+files='A.txt;B.txt'
+repla='Goodbye London!;Hello New York!'
+call Testfiles
+call Show files,'Original'
+call ReplaceTxt files,repla
+call Show files,'Updated'
+exit
 
-   say '──────── file has been read: '         fn", with "      rec      'records.'
-   if changes==0  then do;  say '──────── file  not  changed: '   fn;   iterate;   end
-   call lineout fn,,1                            /*position file for output at 1st line.*/
-   say '──────── file being changed: '   fn
+Testfiles:
+procedure
+a='A.txt'; b='B.txt'
+call Stream a,'c','open write replace'
+call Stream b,'c','open write replace'
+call Lineout a,'The UK is the place to be'
+call Lineout a,'but now for the USA'
+call Lineout a,'So we say Goodbye London!'
+call Lineout b,'Now we say Goodbye London!'
+call Lineout b,'We had a wonderful time in the UK'
+call Lineout b,'but the USA is our new destination'
+call Stream a,'c','close'
+call Stream b,'c','close'
+return
 
-       do r=0  for rec;     call lineout fn, @.r /*re─write the contents of the file.   */
-       end   /*r*/
+ReplaceTxt:
+procedure
+parse arg files,repla
+parse var repla fromtxt';'totxt
+do while files<>''
+   parse var files file';'files
+   len=Chars(file)
+   call Stream file,'c','open read'
+   record=Changestr(fromtxt,Charin(file,,len),totxt)
+   call Stream file,'c','close'
+   call Stream file,'c','open write replace'
+   call Charout file,record
+   call Stream file,'c','close'
+end
+return
 
-   say '──────── file was   changed: '   fn    " with"   changes   'lines changed.'
-   end   /*f*/                                   /*stick a fork in it,  we're all done. */
+Show:
+procedure
+parse arg files,text
+do while files<>''
+   parse var files file';'files
+   say text file
+   call Stream file,'c','open read'
+   do while Lines(file)
+      say Linein(file)
+   end
+   call Stream file,'c','close'
+   say
+end
+return
+
+include Math

@@ -1,16 +1,7 @@
-/*REXX program reads a file and stores it as a continuous character str.*/
-Parse Version v
-iFID = 'st.in'                         /*name of the input file.        */
-If left(v,11)='REXX-Regina' |,
-   left(v,11)='REXX-ooRexx' Then Do
-  len=chars(iFid)                      /*size of the file               */
-  v = charin(iFid,,len)                /*read entire file               */
-  End
-Else Do                                /* for other Rexx Interpreters   */
-  v=''
-  Do while chars(iFid)>0               /* read the file chunk by chunk  */
-    v=v||charin(iFid,,500)
-    End
-  End
-say 'v='v
-say 'length(v)='length(v)
+/*REXX program reads an entire file line-by-line  and  stores it as a continuous string.*/
+parse arg iFID .                                 /*obtain optional argument from the CL.*/
+if iFID==''  then iFID= 'a_file'                 /*Not specified?  Then use the default.*/
+$=                                               /*a string of file's contents (so far).*/
+             do  while lines(iFID)\==0           /*read the file's lines until finished.*/
+             $=$ || linein(iFID)                 /*append a (file's) line to the string,*/
+             end   /*while*/                     /*stick a fork in it,  we're all done. */

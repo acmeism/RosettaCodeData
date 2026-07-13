@@ -6,9 +6,9 @@ struct PartialFs {
 type Func = fn (int) int
 type FuncS = fn (Func, []int) []int
 
-fn fs(f Func, seq []int) []int { return seq.map(f) }
+fn (p PartialFs) call(seq []int) []int { return p.fs(p.f, seq) } // method of PartialFs
 
-fn (p PartialFs) call(seq []int) []int { return p.fs(p.f, seq) }
+fn fs(f Func, seq []int) []int { return seq.map(f) }
 
 fn f1(n int) int { return 2 * n }
 

@@ -1,4 +1,5 @@
 using Printf
+using Statistics
 
 function hist(numbers)
     maxwidth = 50

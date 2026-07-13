@@ -32,34 +32,29 @@ generate: function [
     values
 ]
 
-;; Show histogram of the values vector
-printHistogram: function [
-    values [vector!]
+print-histogram: function [
+    "Print a histogram of values in a vector, assuming range [-3.0, 3.0)."
+    values [vector!] "Input data vector"
 ][
     width: 50.0           ;; width of histogram bars
-    low: -3.0             ;; lower bound of histogram
-    high: 3.0             ;; upper bound of histogram
+    low:  -3.0            ;; lower bound of histogram
+    high:  3.0            ;; upper bound of histogram
     delta: 0.1            ;; bin width
     n: values/length      ;; length of data
-    nbins: to integer! ((high - low) / delta)  ;; number of bins (60)
+    nbins: to integer! ((high - low) / delta)  ;; number of bins
     bins: make vector! [i32! :nbins]  ;; initialize bins vector
     repeat i n [
-        j: to integer! ((values/:i - low) / delta)
+        j: 1 + round/floor ((values/:i - low) / delta)
         if all [(j >= 1) (j <= nbins)] [
             bins/:j: bins/:j + 1  ;; increment bin counter
         ]
     ]
     maxi: bins/maximum  ;; max count in any bin
     repeat j nbins [
-        lbin: round/to (low + j * delta - high + 0.25) 0.01  ;; low limit for bin
-        hbin: round/to (low + j + 1 * delta - high + 0.25) 0.01  ;; high limit for bin
-        s: ajoin ["[" lbin " " hbin "] "]  ;; bin label string
-        pad s -15  ;; pad string left for alignment
-        k: width * bins/:j / maxi  ;; number of block characters to print
-        while [k > 0] [
-            append s to-char 9609  ;; append block character (unicode 9609)
-            k: k - 1
-        ]
+        lbin: round/to (j - 1 * delta + low) 0.01
+        hbin: round/to (j     * delta + low) 0.01
+        s: ajoin ["[" pad lbin -5 SP pad hbin -5 "] "]  ;; bin label string
+        append/dup s #"▉" width * bins/:j / maxi       ;; bar scaled to max count
         append s ajoin [" " round/to (bins/:j * 100 / n) 0.01 "%"]  ;; append percentage
         print s
     ]
@@ -72,7 +67,7 @@ print-hline
 
 time: dt [
     values: generate nMax   ;; generate nMax pairs of random values
-    printHistogram values   ;; print histogram of generated values
+    print-histogram values  ;; print histogram of generated values
 ]
 
 print-hline

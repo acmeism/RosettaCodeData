@@ -1,0 +1,110 @@
+include "NSLog.incl"
+
+// Check equivalence of two arrays using structural/bag composition
+BOOL local fn CheckEquivalence( a as CFArrayRef, b as CFArrayRef )
+  if ( fn ArrayCount( a ) != fn ArrayCount( b ) ) then return NO
+
+  CountedSetRef bagA = fn CountedSetWithArray( a )
+  CountedSetRef bagB = fn CountedSetWithArray( b )
+
+  return fn ObjectIsEqual( bagA, bagB )
+end fn
+
+
+// Convert a list of edges into a single perimeter pathway
+CFArrayRef local fn EdgeToPeriphery( inputEdges as CFArrayRef )
+  CFArrayRef edge
+
+  if ( fn ArrayCount( inputEdges ) == 0 ) then return NULL
+
+  // Flatten and check if every vertex appears exactly twice
+  CFMutableArrayRef flatEdges = fn MutableArrayNew
+  for edge in inputEdges
+    MutableArrayAddObjectsFromArray( flatEdges, edge )
+  next
+
+  CountedSetRef vertexCounts = fn CountedSetWithArray( flatEdges )
+  for CFTypeRef vertex in vertexCounts
+    if ( fn CountedSetCountForObject( vertexCounts, vertex ) != 2 ) then return NULL
+  next
+
+  CFMutableArrayRef remainingEdges = fn MutableArrayWithArray( inputEdges )
+  CFMutableArrayRef perimeter = fn MutableArrayNew
+
+  // Initialize with the first edge
+  CFArrayRef firstEdge = remainingEdges[0]
+  MutableArrayAddObjectsFromArray( perimeter, firstEdge )
+  MutableArrayRemoveObjectAtIndex( remainingEdges, 0 )
+
+  while ( fn ArrayCount( remainingEdges ) > 1 )
+    BOOL foundNext = NO
+    CFTypeRef currentTail = fn ArrayLastObject( perimeter )
+
+    for NSUInteger i = 0 to fn ArrayCount( remainingEdges )
+      edge = remainingEdges[i]
+
+      if ( fn ObjectIsEqual( edge[0], currentTail ) )
+        MutableArrayAddObject( perimeter, edge[1] )
+        MutableArrayRemoveObjectAtIndex( remainingEdges, i )
+        foundNext = YES
+        break
+      else if ( fn ObjectIsEqual( edge[1], currentTail ) )
+        MutableArrayAddObject( perimeter, edge[0] )
+        MutableArrayRemoveObjectAtIndex( remainingEdges, i )
+        foundNext = YES
+        break
+      end if
+    next
+    if (!foundNext) then break // Break loop if edges are disjoint
+  wend
+
+  return perimeter
+end fn
+
+
+local fn EqualityChecks
+  CFArrayRef result
+
+  NSLog( @"Perimeter format equality checks:" )
+
+  CFArrayRef pairs = @[@[ @[ @8, @1, @3 ], @[ @1, @3, @8 ] ],
+  @[ @[ @18, @8, @14, @10, @12, @17, @19 ], @[ @8, @14, @10, @12, @17, @19, @18 ] ] ]
+
+  CFStringRef eqivalency
+  for CFArrayRef pair in pairs
+    CFArrayRef a = pair[0]
+    CFArrayRef b = pair[1]
+    if fn CheckEquivalence( a, b ) then eqivalency = @"True" else eqivalency = @"False"
+    NSLog( @"(%@) equivalent to (%@)? %@", fn ArrayComponentsJoinedByString( a, @", " ), fn ArrayComponentsJoinedByString( b, @", " ), eqivalency )
+  next
+
+  NSLog( @"\nEdge to perimeter format translations:" )
+
+  CFArrayRef edgeTestCases = @[@[ @[ @1, @11 ], @[ @7, @11 ], @[ @1, @7 ] ],
+  @[ @[ @11, @23 ], @[ @1, @17 ], @[ @17, @23 ], @[ @1, @11 ] ],
+  @[ @[ @8, @14 ], @[ @17, @19 ], @[ @10, @12 ], @[ @10, @14 ], @[ @12, @17 ], @[ @8, @18 ], @[ @18, @19 ] ],
+  @[ @[ @1, @3 ], @[ @9, @11 ], @[ @3, @11 ], @[ @1, @11 ] ] ]
+
+  for CFArrayRef edges in edgeTestCases
+    // Reconstruct the gist string visualization manually
+    CFMutableArrayRef edgeStrings = fn MutableArrayNew
+    for CFArrayRef edge in edges
+      MutableArrayAddObject( edgeStrings, fn StringWithFormat( @"(%@)", fn ArrayComponentsJoinedByString( edge, @" " ) ) )
+    next
+    CFStringRef gist = fn StringWithFormat( @"(%@)", fn ArrayComponentsJoinedByString( edgeStrings, @" " ) )
+    result = fn EdgeToPeriphery( edges )
+    CFStringRef outputStr
+    if (result)
+      CFStringRef joinedString = fn ArrayComponentsJoinedByString( result, @" " )
+      outputStr = fn StringWithFormat( @"(%@)", joinedString )
+    else
+      outputStr = @"Invalid edge format"
+    end if
+
+    NSLog( @"%@  ==>  %@", gist, outputStr )
+  next
+end fn
+
+fn EqualityChecks
+
+HandleEvents

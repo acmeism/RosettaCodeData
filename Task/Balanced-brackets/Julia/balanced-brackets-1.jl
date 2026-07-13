@@ -1,4 +1,5 @@
 using Printf
+using Random
 
 function balancedbrackets(str::AbstractString)
     i = 0

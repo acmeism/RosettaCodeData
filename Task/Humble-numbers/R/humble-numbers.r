@@ -1,16 +1,21 @@
-next_humble <- function(n) nextn(n, c(2,3,5,7))
-humblenums <- function(n) Reduce(function(x, f) 1+f(x),
-                                 rep(list(next_humble),n-1),
-                                 init=2,
-                                 accumulate=TRUE)-1
+humble <- function(n) -1 + Reduce(
+  function(x, f) 1 + f(x),
+  rep(list(function(n) nextn(n, c(2, 3, 5, 7))), n-1),
+  init = 2,
+  accumulate = TRUE
+)
 
-humblenums(50)
+cat(humble(50))
 
-humble_digits <- function(n){
-  digcounts <- rle(floor(log10(humblenums(n))))$lengths
-  for(i in seq_along(digcounts[-1])){
-    cat("There are", digcounts[i], "humble numbers with", i, "digit(s)", "\n")
-  }
+group_by_digits <- function(f, fname, lim) {
+  f(lim) |>
+    log10() |>
+    floor() |>
+    (function(x) rle(x)$lengths)() |>
+    head(-1) |>
+    (function(x) paste(
+      "There are", x, fname, "numbers with", seq_along(x), "digit(s)"
+    ))()
 }
 
-humble_digits(5000)
+group_by_digits(humble, "humble", 5000) |> writeLines()

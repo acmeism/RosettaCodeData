@@ -1,14 +1,14 @@
 const alpha = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
-function encodebase58(hsh::AbstractString, base::Integer=16)
-    x = if base == 16 && hsh[1:2] == "0x" parse(BigInt, hsh[3:end], 16)
-        else parse(BigInt, hsh, base) end
-    sb = IOBuffer()
+function encodebase58(hsh::AbstractString, base::Integer = 16)
+    x = if base == 16 && hsh[1:2] == "0x" parse(BigInt, hsh[3:end], base = 16)
+        else parse(BigInt, hsh, base = base) end
+    sb = ""
     while x > 0
         x, r = divrem(x, 58)
-        print(sb, alpha[r + 1])
+        sb *= alpha[r + 1]
     end
-    return String(sb) |> reverse
+    return reverse(sb)
 end
 
 s = "25420294593250030202636073700053352635053786165627414518"

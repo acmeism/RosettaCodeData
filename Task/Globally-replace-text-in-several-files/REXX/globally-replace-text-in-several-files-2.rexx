@@ -1,92 +1,27 @@
-/* REXX ***************************************************************
-* Copy all files *.txt to *.rpl
-* replacing all occurrences of old by new
-* Execute in the directory containing the files to be processed
-* 16.01.2013 Walter Pachl
-*                         ...if file names contain blanks
-**********************************************************************/
-Parse Arg a
-If a='?' Then Do
-  Do i=2 To 5
-    Say substr(sourceline(i),3)
-    End
-  Exit
-  End
-'dir *.rpl'
-Say 'May I erase *.rpl?'
-Parse Upper Pull answer
-If answer='Y' | answer='J' Then
-  'erase *.rpl'
-Else Do
-  Say 'Giving up..'
-  Exit
-  End
-old='Goodbye London!'
-new='Hello New York!'
-dir='dir.dir'
-'dir *.* >' dir
-Do While lines(dir)>0
-  Parse Value linein(dir) With 37 f
-  Select
-    When f='' |,
-         left(f,1)='.' |,
-         pos(' Bytes',f)>0 Then Iterate
-    When right(f,4)='.txt' Then
-      Call replace
-    Otherwise
-      Say left(f,50) 'not eligible for replacing'
-    End
-  End
-Exit
+/*REXX program  reads  the  files specified  and  globally replaces  a string.          */
+old= "Goodbye London!"                           /*the  old text     to be replaced.    */
+new= "Hello New York!"                           /* "   new   "   used for replacement. */
+parse  arg  fileList                             /*obtain required list of files from CL*/
+#= words(fileList)                               /*the number of files in the file list.*/
 
-replace:
-/* REXX ***************************************************************
-* Copy a file fn.txt to fn.rpl
-* replacing all occurrences of old by new
-**********************************************************************/
-oid=fn(f)'.rpl'
-cnt.=0
-Do ii=1 By 1 While lines(f)>0
-  l=linein(f)
-  ol=repl(l,new,old)
-  Call lineout oid,ol
-  End
-Call lineout f
-Call lineout oid
-Select
-  When cnt.0changes=0 Then Do
-    'erase' oid
-    Say left(f,50) 'no changes'
-    End
-  When cnt.0changes=1 Then
-    Say left(f,50) '1 change'
-  Otherwise
-    Say left(f '->' oid,50) cnt.0changes 'changes'
-  End
-Return
+   do f=1  for #;     fn= translate( word(fileList, f), , ',');     say;     say
+   say '──────── file is being read: '    fn    " ("f   'out of'     #     "files)."
+   call linein fn,1,0                            /*position the file for input.         */
+   changes= 0                                    /*the number of changes in file so far.*/
+             do rec=0  while lines(fn)\==0       /*read a file   (if it exists).        */
+             @.rec= linein(fn)                   /*read a record (line)  from the file. */
+             if pos(old, @.rec)==0  then iterate /*Anything to change?   No, then skip. */
+             changes= changes + 1                /*flag that file contents have changed.*/
+             @.rec= changestr(old, @.rec, new)   /*change the @.rec record, old ──► new.*/
+             end   /*rec*/
 
-fn: Procedure
-/* REXX ***************************************************************
-* Get the file name of a file id
-**********************************************************************/
-parse Arg fid
-Parse Var fid fn '.' ft
-Return fn
+   say '──────── file has been read: '         fn", with "      rec      'records.'
+   if changes==0  then do;  say '──────── file  not  changed: '   fn;   iterate;   end
+   call lineout fn,,1                            /*position file for output at 1st line.*/
+   say '──────── file being changed: '   fn
 
-repl: Procedure Expose cnt.
-/* REXX ***************************************************************
-* Replace an old string by a new one
-**********************************************************************/
-  Parse Arg s,new,old
-  ol=''
-  Do Until p=0
-    p=pos(old,s)
-    If p>0 Then Do
-      ol=ol||left(s,p-1)||new
-      s=substr(s,p+length(old))
-      cnt.0changes=cnt.0changes+1
-      End
-    Else
-      ol=ol||s
-    End
-  Return ol
+       do r=0  for rec;     call lineout fn, @.r /*re─write the contents of the file.   */
+       end   /*r*/
+
+   say '──────── file was   changed: '   fn    " with"   changes   'lines changed.'
+   end   /*f*/                                   /*stick a fork in it,  we're all done. */

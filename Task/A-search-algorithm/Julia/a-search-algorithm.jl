@@ -1,4 +1,4 @@
-using LightGraphs, SimpleWeightedGraphs
+using Graphs, SimpleWeightedGraphs
 
 const chessboardsize = 8
 const givenobstacles = [(2,4), (2,5), (2,6), (3,6), (4,6), (5,6), (5,5), (5,4), (5,3), (5,2), (4,2), (3,2)]
@@ -20,14 +20,17 @@ function kinggraph(N)
     for row in 1:N, col in 1:N, p in surround(row, col, N)
         origin = vfromcart(CartesianIndex(row, col), N)
         targ = vfromcart(p, N)
-        hcost = (targ in obstacles || origin in obstacles) ? 100 : 1
+        hcost = (targ in obstacles || origin in obstacles) ? 100.0 : 1.0
         add_edge!(graph, origin, targ, hcost)
     end
     graph
 end
 
+chebyshev(v) = max(7 - div(v - 1, chessboardsize), 7 - (v - 1) % chessboardsize)
+
 kgraph = kinggraph(chessboardsize)
-path = enumerate_paths(dijkstra_shortest_paths(kgraph, 1), 64)
+path_edges = a_star(kgraph, 1, 64, weights(kgraph), chebyshev)
+path = [src(first(path_edges)); dst.(path_edges)]
 println("Solution has cost $(pathcost(path)):\n", zbasedpath(path, chessboardsize))
 
 path2graphic(x, path) = (x in obstacles ? '█' : x in path ? 'x' : '.')

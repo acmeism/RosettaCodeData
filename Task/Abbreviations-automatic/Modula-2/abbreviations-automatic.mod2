@@ -1,0 +1,179 @@
+MODULE AutomaticAbbreviations;
+FROM STextIO IMPORT WriteString, WriteLn;
+FROM SWholeIO IMPORT WriteCard;
+FROM TextIO IMPORT ReadString, ReadToken,  SkipLine;
+FROM SeqFile IMPORT ChanId, OpenRead, OpenResults, Close, read;
+IMPORT MemStream; (* OpenRead, Close; *)
+FROM IOChan IMPORT ReadResult;
+FROM IOConsts IMPORT ReadResults;
+FROM SYSTEM IMPORT ADR;
+FROM Storage IMPORT ALLOCATE, DEALLOCATE;
+FROM Strings IMPORT Length, Extract, Compare, Capitalize, Assign, equal;
+
+CONST
+     File_Name = "week_days.txt";
+TYPE
+     DaysId = (Sun,Mon,Tue,Wed,Thu,Fri,Sat);
+     DayName = ARRAY [0 .. 127] OF CHAR;
+     Days = ARRAY [Sun .. Sat] OF DayName;
+
+     Node = POINTER TO NodeDesc;
+     NodeDesc = RECORD
+	  Data: DayName;
+	  Next: Node;
+     END;
+
+     List = POINTER TO ListDesc;
+     ListDesc = RECORD
+	  Size: CARDINAL;
+	  First: Node;
+     END;
+
+ PROCEDURE NewNode(D: ARRAY OF CHAR; LinkTo: Node): Node;
+      VAR
+	   N: Node;
+ BEGIN
+      NEW(N);
+      WITH N^ DO
+	   Assign(D,Data);
+	   Next := LinkTo
+      END;
+      RETURN N
+ END NewNode;
+
+PROCEDURE NewList(): List;
+     VAR
+	  L: List;
+BEGIN
+     NEW(L);
+     WITH L^ DO
+	  Size := 0;
+	  First := NIL;
+     END;
+     RETURN L
+END NewList;
+
+PROCEDURE Add(VAR L: List; W: ARRAY OF CHAR);
+     VAR
+	  Iter: Node;
+BEGIN
+     Iter := L^.First;
+     IF Iter = NIL THEN
+	  L^.First := NewNode(W,NIL);
+     ELSE
+	  WHILE (Iter # NIL) DO (* Verify if W is already present in L *)
+	       IF (Compare(Iter^.Data,W) = equal) THEN RETURN END;
+	       Iter := Iter^.Next;
+	  END;
+	  L^.First := NewNode(W,L^.First);
+     END;
+     INC(L^.Size);
+END Add;
+
+(** Delete: Delete the contents of a List *)
+PROCEDURE Delete(VAR L: List);
+     VAR
+	  Iter: Node;
+BEGIN
+     WITH L^ DO
+	  Iter := First;
+	  WHILE (Iter # NIL) DO
+	       First := Iter^.Next;
+	       DISPOSE(Iter);
+	       Iter := First
+	  END;
+	  Size := 0
+     END
+END Delete;
+
+PROCEDURE SplitLine(Line: ARRAY OF CHAR;VAR Items: Days);
+     VAR
+	  Rd: ChanId;
+	  OMRes: OpenResults;
+	  Idx: DaysId;
+BEGIN
+     MemStream.OpenRead(Rd,read,OMRes,ADR(Line),Length(Line) + 1,TRUE);
+     IF OMRes # opened THEN
+	  WriteString("Error. Can't open stream on memory string");WriteLn;
+	  HALT(102);
+     END;
+     Idx := Sun;
+     WHILE (ReadResult(Rd) # endOfInput) DO
+	  ReadToken(Rd,Items[Idx]);
+	  INC(Idx);
+     END;
+     (* MemStream.Close(Rd) *)
+END SplitLine;
+
+PROCEDURE MaxDayLength(Items: Days): CARDINAL;
+     VAR
+	  Max: CARDINAL;
+	  Idx: DaysId;
+BEGIN
+     Max := 0;Idx := Sun;
+     WHILE Idx <= Sat DO
+	  IF Max < Length(Items[Idx]) THEN Max := Length(Items[Idx]) END;
+	  INC(Idx)
+     END;
+     RETURN Max
+END MaxDayLength;
+
+PROCEDURE ComputeStretch(Items: Days): CARDINAL;
+     VAR
+	  IdxDay: DaysId;
+	  Prefixes: List;
+	  Prefix: DayName;
+	  Idx: CARDINAL;
+
+BEGIN
+     FOR Idx := 0 TO MaxDayLength(Items) - 1 DO
+	  Prefixes := NewList();IdxDay := Sun;
+	  LOOP
+	       Extract(Items[IdxDay],0,Idx,Prefix);
+	       Capitalize(Prefix);
+	       Add(Prefixes,Prefix);
+	       IF (IdxDay = Sat) THEN EXIT END;
+	       INC(IdxDay);
+	  END;
+	  IF Prefixes^.Size = 7 THEN
+	       Delete(Prefixes);
+	       RETURN Idx
+	  END
+     END;
+     RETURN Idx;
+END ComputeStretch;
+
+PROCEDURE ShowDays(Items: Days);
+     VAR
+	  Idx: DaysId;
+BEGIN
+     WriteString(" :> ");
+     FOR Idx := Sun TO Sat DO
+	  WriteString(Items[Idx]);WriteString(" ");
+     END;
+     WriteString("<");WriteLn;
+END ShowDays;
+
+VAR
+     Fd: ChanId;
+     ORes: OpenResults;
+     Buffer: ARRAY [0 .. 4 * 1024] OF CHAR;
+     DaysOfWeek: Days;
+BEGIN
+     OpenRead(Fd,File_Name,read,ORes);
+     IF ORes # opened THEN
+	  WriteString("Error. Can't Open file to process"); WriteLn;
+	  HALT(101);
+     END;
+     ReadString(Fd,Buffer);
+     WHILE (ReadResult(Fd) # endOfInput) DO
+	  IF Buffer[0] # 0C THEN (* Skip empty lines *)
+	       SplitLine(Buffer,DaysOfWeek);
+	       WriteCard(ComputeStretch(DaysOfWeek),0);
+	       ShowDays(DaysOfWeek);
+	  END;
+	  SkipLine(Fd);
+	  ReadString(Fd,Buffer)
+     END;
+     Close(Fd);
+END AutomaticAbbreviations.

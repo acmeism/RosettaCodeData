@@ -11,7 +11,6 @@ with Parsers.Multiline_Source.Stream_IO;
 with Strings_Edit.UTF8;
 
 procedure Find_URI_In_Text is
-   use Parsers.Multiline_Source;
 
    LF : constant Character := Character'Val (10);
 
@@ -179,6 +178,7 @@ begin
    );
 
    declare
+      use Parsers.Multiline_Source;
       Code    : aliased Stream_IO.Source (Data'Access);
       Result : constant Result_Type :=
                   Match (Pattern, Code'Access, State'Access);

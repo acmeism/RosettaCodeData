@@ -1,12 +1,62 @@
-/*REXX program reads a file and copies the contents into an output file  (on a line by line basis).*/
-iFID =  'input.txt'                              /*the name of the   input  file.       */
-oFID = 'output.txt'                              /* "    "   "  "   output    "         */
-call lineout iFID,,1                             /*insure the  input starts at line one.*/      /* ◄■■■■■■ optional.*/
-call lineout oFID,,1                             /*   "    "  output    "    "   "   "  */      /* ◄■■■■■■ optional.*/
+-- 12 Jul 2026
+include Setting
 
-  do  while lines(iFID)\==0;    $=linein(iFID)   /*read records from input 'til finished*/
-             call lineout oFID, $                /*write the record just read ──► output*/
-  end   /*while*/                                /*stick a fork in it,  we're all done. */
+say 'FILE INPUT/OUTPUT'
+say version
+say
+in='Input.txt'; out='Output.txt'
+call UseLines in,out
+call Timer 'r','lines'
+call UseChunks in,out
+call Timer 'r','chunks'
+call UseFile in,out
+call Timer 'r','file'
+exit
 
-call lineout iFID                                /*close   input  file, just to be safe.*/      /* ◄■■■■■■ best programming practice.*/
-call lineout oFID                                /*  "    output    "     "   "  "   "  */      /* ◄■■■■■■ best programming practice.*/
+UseLines:
+-- Read/write a text file line by line
+-- Suitable for text files of any size, but slow
+procedure
+parse arg in,out
+call Stream in,'c','open read'
+call Stream out,'c','open write replace'
+do while Lines(in)
+   record=Linein(in)
+   call Lineout out,record
+end
+call Stream in,'c','close'
+call Stream out,'c','close'
+return
+
+UseChunks:
+-- Read/write a file in chunks of a given size (here almost 1KB)
+-- Suitable for files of any size, is fast
+procedure
+parse arg in,out
+len=Chars(in); chunk=1E3
+call Stream in,'c','open read'
+call Stream out,'c','open write replace'
+do while len>0
+   record=Charin(in,,Min(chunk,len))
+   len-=chunk
+end
+call Stream in,'c','close'
+call Stream out,'c','close'
+return
+
+UseFile:
+-- Read/write a file in one go
+-- Suitable for files up to about 1GB, is very fast
+procedure
+parse arg in,out
+len=Chars(in)
+call Stream in,'c','open read'
+call Stream out,'c','open write replace'
+record=Charin(in,,len)
+call Charout out,record
+call Stream in,'c','close'
+call Stream out,'c','close'
+return
+
+-- Timer
+include Math

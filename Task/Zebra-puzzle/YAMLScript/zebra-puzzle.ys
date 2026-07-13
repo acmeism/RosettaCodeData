@@ -1,0 +1,113 @@
+!ys-0
+
+COLORS =: qw(red green white yellow blue)
+NATIONS =: qw(Englishman Swede Dane Norwegian German)
+DRINKS =: qw(tea coffee milk beer water)
+SMOKES =: qw(Pall-Mall Dunhill Blend Blue-Master Prince)
+PETS =: qw(dog bird cat horse zebra)
+
+defn main():
+  solution =: solve()
+  zebra =: solution.filter(\(_.pet == 'zebra')).0
+  say: "The $(zebra.nation) owns the zebra."
+  each house solution:
+    say: "$(house.number): $(house.color), $(house.nation), \
+          $(house.drink), $(house.smoke), $(house.pet)"
+
+defn solve():
+  # There are five houses.
+  positions =: +[1 2 3 4 5]
+  perms =: permutations(positions)
+  some _ perms.filter(valid-colors?):
+    fn(colors):
+      red green white yellow blue =: colors
+      some _ perms:
+        fn(nations):
+          when valid-nations?(nations red blue):
+            english swede dane norwegian german =: nations
+            some _ perms:
+              fn(drinks):
+                when valid-drinks?(drinks dane green):
+                  tea coffee milk beer water =: drinks
+                  some _ perms:
+                    fn(smokes):
+                      when valid-smokes?(smokes yellow beer german water):
+                        pall-mall dunhill blend blue-master prince =: smokes
+                        some _ perms:
+                          fn(pets):
+                            pet-ok =:
+                              valid-pets?(pets swede pall-mall blend dunhill)
+                            when pet-ok:
+                              positions.map(\(house(
+                                _ colors nations drinks smokes pets)))
+
+defn valid-colors?([red green white yellow blue]):
+  # The green house is immediately to the left of the white house.
+  green.++ == white
+
+defn valid-nations?(nations red blue):
+  english swede dane norwegian german =: nations
+  # The English man lives in the red house.
+  english == red &&:
+    # The Norwegian lives in the first house.
+    norwegian == 1 &&:
+      # The Norwegian lives next to the blue house.
+      next-door?(norwegian blue)
+
+defn valid-drinks?(drinks dane green):
+  tea coffee milk beer water =: drinks
+  # In the middle house they drink milk.
+  milk == 3 &&:
+    # The Dane drinks tea.
+    dane == tea &&:
+      # They drink coffee in the green house.
+      coffee == green
+
+defn valid-smokes?(smokes yellow beer german water):
+  pall-mall dunhill blend blue-master prince =: smokes
+  # In the yellow house they smoke Dunhill.
+  dunhill == yellow &&:
+    # The man who smokes Blue Master drinks beer.
+    blue-master == beer &&:
+      # The German smokes Prince.
+      prince == german &&:
+        # They drink water in a house next to the house where they smoke
+        # Blend.
+        next-door?(blend water)
+
+defn valid-pets?(pets swede pall-mall blend dunhill):
+  dog bird cat horse zebra =: pets
+  # The Swede has a dog.
+  swede == dog &&:
+    # The man who smokes Pall Mall has a bird.
+    pall-mall == bird &&:
+      # The Blend-smoker lives in the house next to the house with a cat.
+      next-door?(blend cat) &&:
+        # In a house next to the house with a horse, they smoke Dunhill.
+        next-door?(horse dunhill)
+
+defn next-door?(a b):
+  abs(a - b) == 1
+
+defn house(n colors nations drinks smokes pets):
+  +{:number n
+    :color label-at(n COLORS colors)
+    :nation label-at(n NATIONS nations)
+    :drink label-at(n DRINKS drinks)
+    :smoke label-at(n SMOKES smokes)
+    :pet label-at(n PETS pets)}
+
+defn label-at(n labels positions):
+  some identity:
+    for i (0 .. labels.#.--):
+      when positions.$i == n:
+        labels.$i
+
+defn permutations(xs):
+  if-not xs:empty?:
+    mapcat _ (0 .. xs.#.--):
+      fn(i):
+        x =: xs.$i
+        rest =: xs.subvec(0 i).concat(xs.subvec(i.++)):V
+        permutations(rest): .map(\([x] + _))
+    else: +[[]]

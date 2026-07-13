@@ -1,7 +1,25 @@
-/*REXX program reads an entire file line-by-line  and  stores it as a continuous string.*/
-parse arg iFID .                                 /*obtain optional argument from the CL.*/
-if iFID==''  then iFID= 'a_file'                 /*Not specified?  Then use the default.*/
-$=                                               /*a string of file's contents (so far).*/
-             do  while lines(iFID)\==0           /*read the file's lines until finished.*/
-             $=$ || linein(iFID)                 /*append a (file's) line to the string,*/
-             end   /*while*/                     /*stick a fork in it,  we're all done. */
+-- 12 Jul 2026
+include Setting
+
+say 'READ ENTIRE FILE'
+say version
+say
+call Task 'Rosetta.dat'
+call Timer
+exit
+
+Task:
+procedure
+parse arg file
+len=Chars(file)
+say 'Reading' file'...'
+call Stream file,'c','open read'
+data=Charin(file,,len)
+call Stream file,'c','close'
+say Round(len/1038336,3)'MB read'
+say 'First 100 characters are'
+say Left(data,100)'...'
+return
+
+-- Timer Round
+include Math

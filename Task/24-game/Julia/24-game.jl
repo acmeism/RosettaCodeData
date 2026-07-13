@@ -8,7 +8,7 @@ function twentyfour()
     digits = sort!(rand(1:9, 4))
     while true
         print("enter expression using $digits => ")
-        ex = parse(readline())
+        ex = Meta.parse(readline())
         try
             validexpr(ex) || error("only *, /, +, - of integers is allowed")
             nums = sort!(findnumbers(ex))

@@ -41,6 +41,6 @@ const xyz = Passwd("xyz","x",1003, 1000, Personnel("X Yz", "Room 1003", "(234)55
 
 const pfile = "pfile.csv"
 writepasswd(pfile, [jsmith, jdoe])
-println("Before last record added, file is:\n$(readstring(pfile))")
+println("Before last record added, file is:\n$(read(pfile, String))")
 writepasswd(pfile, xyz)
-println("After last record added, file is:\n$(readstring(pfile))")
+println("After last record added, file is:\n$(read(pfile, String))")

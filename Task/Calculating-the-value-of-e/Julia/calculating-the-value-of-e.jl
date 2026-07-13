@@ -23,3 +23,10 @@ function NeperConst{T}() where T
 end
 
 end  # module NeperConstant
+
+
+using .NeperConstant
+
+for F in (Float16, Float32, Float64, BigFloat)
+    println(NeperConst{F}())
+end

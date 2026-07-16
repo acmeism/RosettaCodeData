@@ -1,0 +1,106 @@
+-- demo\rosetta\Riemann_surface.exw
+requires("1.0.6") -- (not yet shipped)
+without javascript -- (shd be when "")
+include theGUI.e
+
+constant title = "Riemann surface",
+         r_max = 15,
+         t_max = 70
+
+atom angle_y = 0.5,
+     angle_x = 0.6
+bool bJulia = true
+
+-- Define the multi-valued Riemann surface function
+-- f(z) = sqrt(z), where z is a complex number.
+function f(atom real,imag)
+    atom theta = atan2(imag,real)/2,
+         r = sqrt(sqrt(real*real+imag*imag))
+    return {r*cos(theta),r*sin(theta)}
+end function
+
+-- cached (not really very helpful, but anyway it did't hurt much either)
+constant xy_range = sq_div(tagset(200,-200,5),100), lxyr = length(xy_range)
+sequence w_grid, cxyz = repeat(repeat(0,t_max),r_max)
+bool init = false
+
+procedure draw_rect(gdx canvas, atom x, y, clr)
+    -- drawing 4 pixels is faster than gDrawRect.
+    -- can make Julia more surface-like by upping
+    -- the 1s to 4 or even 7, but it'll be slower.
+    for w=0 to 1 do
+        for h=0 to 1 do
+            gDrawPixel(canvas,x+w,y+h,clr)
+        end for
+    end for
+end procedure
+
+procedure redraw(gdx canvas, integer w, h)
+    atom cosx = cos(angle_x), sinx = sin(angle_y),
+         cosy = cos(angle_y), siny = sin(angle_x)
+    if not init then
+        -- (we may as well just do both here, ie +/- bJulia)
+        w_grid = repeat(repeat({0,0},lxyr),lxyr)
+        for i,x in xy_range do
+            for j,y in xy_range do
+                atom {wr,wi} = f(x,y),
+                   amplitude = sqrt(wr*wr+wi*wi),
+                   phase = (atan2(wi,wr)+PI)/(2*PI),
+                   r = floor(phase*255),
+                   clr = rgba(r,floor(abs(phase-0.5)*2*255),255-r)
+                w_grid[i][j] = {amplitude,clr}
+            end for
+        end for
+        for r=1 to r_max do
+            atom ra = (r/r_max)*1.8
+            for t=1 to t_max do
+                atom ta = (t/t_max)*4*PI
+                cxyz[r][t] = {ra*cos(ta),ra*sin(ta),sqrt(ra)*cos(ta/2)}
+            end for
+        end for
+        init = true
+    end if
+    if bJulia then
+        for i,xi in xy_range do
+            for j,yj in xy_range do
+                atom {amplitude,clr} = w_grid[i][j],
+                     z1 = xi*siny+amplitude*cosy,
+                     scale = 100,
+                     x = w/2+(xi*cosy-amplitude*siny)*scale,
+                     y = h/2-(yj*cosx-z1*sinx)*scale
+                draw_rect(canvas,x,y,clr)
+            end for
+        end for
+    else
+        for r=1 to r_max do
+            for t=1 to t_max do
+                atom {cx,cy,cz} = cxyz[r][t],
+                    z1 = cx*siny+cz*cosy,
+                    scale = 160,
+                    x = w/2+(cx*cosy-cz*siny)*scale,
+                    y = h/2-(cy*cosx-z1*sinx)*scale,
+                    c = max(0,min(floor((cz+1.4)*85),255))
+                draw_rect(canvas,x,y,rgba(c,20,255-c))
+            end for
+        end for
+    end if
+    angle_y += 0.02
+end procedure
+
+procedure action(gdx timer)
+    gdx canvas = gGetAttribute(timer,`USER_DATA`)
+    gRedraw(canvas)
+end procedure
+
+procedure key_handler(gdx dlg, integer c)
+    if upper(c)='J' then
+        bJulia = not bJulia
+        gRedraw(dlg)
+    end if
+end procedure
+
+gdx canvas = gCanvas(redraw),
+    dialog = gDialog(canvas,title,"SIZE=800x600"),
+    timer = gTimer(action,user_data:=canvas)
+gSetHandler(dialog,`KEY`,key_handler)
+gMainLoop(dialog)

@@ -37,7 +37,7 @@ torus: function [] [
 			h: Rext + (Rint * cosj)
 			x: h * (cosB * cosi + (sinA * sinB * sini)) - (Rint * cosA * sinB * sinj)
 			y: h * (sinB * cosi - (sinA * cosB * sini)) + (Rint * cosA * cosB * sinj)
-			z: h * cosA * sini + (Rint * sinA * sinj)
+			z: h *  cosA * sini + (Rint * sinA * sinj)
 			
 			; luminance calc (dot product with light source - top-front)
 			tmp: cosj * cosi * sinB - (sinA * cosj * sini * cosB) - (cosA * sinj * cosB)

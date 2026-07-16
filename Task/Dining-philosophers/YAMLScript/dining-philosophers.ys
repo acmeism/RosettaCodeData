@@ -1,0 +1,67 @@
+!ys-0
+
+PHILOSOPHERS =: qw(Aristotle Kant Spinoza Marx Russell)
+
+defn main(rounds=2):
+  forks =:
+    for [_ (1 .. PHILOSOPHERS.#)]:
+      atom: true
+  room =: atom(PHILOSOPHERS.#.--)
+  print-lock =: atom(true)
+  threads =:
+    for i (0 .. PHILOSOPHERS.#.--):
+      new Thread:
+        fn():
+          philosopher: i rounds forks room print-lock
+          =>: nil
+  each thread threads: (. thread start)
+  each thread threads: (. thread join)
+
+defn philosopher(i rounds forks room print-lock):
+  name =: PHILOSOPHERS.$i
+  left =: forks.$i
+  right =: forks.nth((i.++ %% forks.#))
+  each round (1 .. rounds):
+    report: print-lock "$name thinks"
+    pause:
+    # At most four philosophers may try to take forks at once. That leaves
+    # at least one philosopher out of the cycle, so all five forks cannot be
+    # held one-at-a-time in a deadlock.
+    enter-room: room
+    take-fork: left
+    take-fork: right
+    report: print-lock "$name eats"
+    pause:
+    put-fork: right
+    put-fork: left
+    leave-room: room
+
+defn enter-room(room):
+  loop:
+    count =: room:deref
+    acquired =:
+      when count > 0:
+        compare-and-set!: room count count.--
+    when-not acquired:
+      pause()
+      recur()
+
+defn leave-room(room):
+  swap: room inc
+
+defn take-fork(fork):
+  loop:
+    when-not compare-and-set!(fork true false):
+      pause:
+      recur:
+
+defn put-fork(fork):
+  reset: fork true
+
+defn report(print-lock text):
+  take-fork: print-lock
+  say: text
+  put-fork: print-lock
+
+defn pause():
+  sleep(rand-int(20).++ / 1000)

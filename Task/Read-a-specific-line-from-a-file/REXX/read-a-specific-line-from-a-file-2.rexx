@@ -5,10 +5,7 @@ if   n=='' |   n==","  then    n=7               /* "      "         "   "   "  
 
 if lines(FID)==0  then  call ser "wasn't found." /*see if the file    exists  (or not). */
 
-  do  n-1
-  call linein FID                                /*read all the lines previous to  N.  */
-  end   /*n-1*/
-
+call linein FID, n-1                             /*read the record previous to  N.      */
 if lines(FID)==0  then  call ser "doesn't contain"       N        'lines.'
                                                  /* [↑]  any more lines to read in file?*/
 

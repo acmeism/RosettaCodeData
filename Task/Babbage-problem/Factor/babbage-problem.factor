@@ -20,7 +20,7 @@ USING: kernel math math.ranges prettyprint sequences ;
 
 ! Factor is a stack-based language. What this means is that
 ! there is an implicit data stack in the background, waiting
-! to recieve whatever manner of thing we wish to give it. Here
+! to receive whatever manner of thing we wish to give it. Here
 ! is a simple arithmetic expression to demonstrate:
 
 ! language token | data stack

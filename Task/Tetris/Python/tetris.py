@@ -5,7 +5,8 @@ START_LEVEL = 1
 FPS = 60
 MUSIC = False
 
-piece_data = """     *  x  *     *  x  *
+piece_data = """
+     *  x  *     *  x  *
      *  x  *     *  x  *
 xxxx *  x  *xxxx *  x  *
      *  x  *     *  x  *
@@ -46,7 +47,7 @@ xxxx *  x  *xxxx *  x  *
  xx  * xx  * xx  * xx  *
   xx * x   *  xx * x   *
      *     *     *     *
-************************""".splitlines()
+************************""".splitlines()[1:]
 
 piece_names = "IOTJLZS"
 

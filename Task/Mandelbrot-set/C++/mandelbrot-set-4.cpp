@@ -61,6 +61,10 @@ int main() {
     mpfr_set_str(sz, size_str.c_str(), 10, MPFR_RNDN);
     mpfr_div_ui(st, sz, rawW, MPFR_RNDN);
     double step_d = mpfr_get_d(st, MPFR_RNDN);
+
+    double ref_rec_d = mpfr_get_d(rx, MPFR_RNDN);
+    double ref_imc_d = mpfr_get_d(ry, MPFR_RNDN);
+
     vector<ComplexDouble> ref_orbit_double(50005);
     mpfr_set_ui(zr, 0, MPFR_RNDN);
     mpfr_set_ui(zi, 0, MPFR_RNDN);
@@ -68,6 +72,7 @@ int main() {
     mpfr_set_ui(zi2, 0, MPFR_RNDN);
     uint32_t ref_i = 0;
     bool escaped = false;
+
     while (ref_i < 50000) {
         ref_orbit_double[ref_i].re = mpfr_get_d(zr, MPFR_RNDN);
         ref_orbit_double[ref_i].im = mpfr_get_d(zi, MPFR_RNDN);
@@ -83,7 +88,7 @@ int main() {
             break;
         }
         mpfr_add(tmp, zr2, zi2, MPFR_RNDN);
-        if (mpfr_cmp_d(tmp, 4.0) >= 0) {
+        if (mpfr_cmp_d(tmp, 40000.0) >= 0) {
             escaped = true;
         }
         ref_i++;
@@ -92,49 +97,77 @@ int main() {
     ref_orbit_double[ref_i].im = mpfr_get_d(zi, MPFR_RNDN);
     uint32_t max_valid_ref_iter = ref_i;
     mpfr_clears(rx, ry, zr, zi, zr2, zi2, tmp, sz, st, NULL);
+
     uint8_t pal[256][3];
     for (int a = 0; a < 255; ++a) {
-        pal[a][0] = (uint8_t)round(127.0 + 127.0 * cos(2.0 * PI * a / 255.0)); // Blue
-        pal[a][1] = (uint8_t)round(127.0 + 127.0 * sin(2.0 * PI * a / 255.0)); // Green
-        pal[a][2] = (uint8_t)round(127.0 + 127.0 * sin(2.0 * PI * a / 255.0)); // Red
+        pal[a][0] = (uint8_t)round(127.0 + 127.0 * cos(2.0 * PI * a / 255.0));
+        pal[a][1] = (uint8_t)round(127.0 + 127.0 * sin(2.0 * PI * a / 255.0));
+        pal[a][2] = (uint8_t)round(127.0 + 127.0 * sin(2.0 * PI * a / 255.0));
     }
     pal[255][0] = 255; pal[255][1] = 255; pal[255][2] = 255;
-    cout << "Step 2: Stream rendering Mandelbrot140.bmp (" << targetW << "x" << targetH << ")..." << endl;
+
+    cout << "Step 2: Stream rendering Mandelbrot Set Image.bmp (" << targetW << "x" << targetH << ")..." << endl;
     int rowSize = (targetW * 3 + 3) & ~3;
     BMPHeader header;
     header.width = targetW;
     header.height = targetH;
     header.sizeImage = rowSize * targetH;
     header.size = header.sizeImage + 54;
-    ofstream f("Mandelbrot140.bmp", ios::binary);
+    ofstream f("Mandelbrot Set Image.bmp", ios::binary);
     f.write(reinterpret_cast<char*>(&header), 54);
     vector<uint8_t> rowBuffer(rowSize);
+
     for (int y = 0; y < targetH; ++y) {
         #pragma omp parallel for schedule(dynamic)
         for (int x = 0; x < targetW; ++x) {
             uint32_t rSum = 0, gSum = 0, bSum = 0;
             const ComplexDouble* ref_ptr = ref_orbit_double.data();
+
             for (int j = 0; j < scale; ++j) {
                 size_t b = (size_t)y * scale + j;
                 double delta_imc = (double)((long long)b - (rawH / 2)) * step_d;
+
                 for (int i = 0; i < scale; ++i) {
                     size_t a = (size_t)x * scale + i;
                     double delta_rec = (double)((long long)a - (rawW / 2)) * step_d;
+
                     uint32_t index = 0;
                     double delta_re = 0.0;
                     double delta_im = 0.0;
                     double z_re = 0.0;
                     double z_im = 0.0;
                     uint32_t iter = 0;
-                    while (iter < max_valid_ref_iter) {
+                    bool has_re_based = false;
+
+                    while (iter < 50000) {
                         if ((z_re * z_re + z_im * z_im) >= 40000.0) {
                             break;
                         }
+
+                        if (index >= max_valid_ref_iter) {
+                            if (!has_re_based) {
+                                break;
+                            } else {
+                                double ld_cx = ref_rec_d + delta_rec;
+                                double ld_cy = ref_imc_d + delta_imc;
+                                while (iter < 50000 && (z_re * z_re + z_im * z_im) < 40000.0) {
+                                    double old_re = z_re;
+                                    double old_im = z_im;
+                                    z_re = old_re * old_re - old_im * old_im + ld_cx;
+                                    z_im = 2.0 * old_re * old_im + ld_cy;
+                                    iter++;
+                                }
+                                break;
+                            }
+                        }
+
                         if ((z_re * z_re + z_im * z_im) < (delta_re * delta_re + delta_im * delta_im)) {
                             index = 0;
                             delta_re = z_re;
                             delta_im = z_im;
+                            has_re_based = true;
                         }
+
                         for (int k = 0; k < 2; ++k) {
                             double Ur = ref_ptr[index].re;
                             double Ui = ref_ptr[index].im;
@@ -147,6 +180,7 @@ int main() {
                         z_im = ref_ptr[index].im + delta_im;
                         iter += 2;
                     }
+
                     int final_t = 50000 - iter;
                     uint8_t t = (final_t == 0) ? 255 : (uint8_t)(final_t % 254);
                     int colorIdx = (t == 255) ? 255 : (t - frame + 255) % 255;
@@ -166,6 +200,6 @@ int main() {
         }
     }
     f.close();
-    cout << "\nDone! Mandelbrot140.bmp successfully saved." << endl;
+    cout << "\nDone! Mandelbrot Set Image.bmp successfully saved." << endl;
     return 0;
 }

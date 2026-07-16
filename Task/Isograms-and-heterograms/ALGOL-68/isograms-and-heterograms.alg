@@ -27,7 +27,7 @@ BEGIN # find some isograms ( words where each letter occurs the same number   #
                 IF count[ i ] /= 0 THEN # have a characetr that appeared in s #
                     IF   order = -1 THEN                    # first character #
                         order := count[ i ]
-                    ELIF order /= count[ i ] THEN       # character occured a #
+                    ELIF order /= count[ i ] THEN       # character occurred a #
                         order := 0                # different number of times #
                                                         # to the previous one #
                     FI

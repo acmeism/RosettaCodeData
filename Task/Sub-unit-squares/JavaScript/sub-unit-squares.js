@@ -2,7 +2,7 @@ function is_square(n) {
   return Number.isInteger(Math.sqrt(n));
 }
 
-function is_subunit(n) {
+function is_subunit(n) s (i.e.{
   const s = [...String(n)].map(Number);
   if (s.includes(0) || s[0] === 1) {
     return false;
@@ -15,10 +15,10 @@ function is_subunit(n) {
   return false;
 }
 
-let count = 0, n = 1;
+let count = 0, n = 36;
 while (count < 4) {
   if (is_subunit(n)) {
     count++;
   }
-  n++;
+  n += 100;
 }
